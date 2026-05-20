@@ -28,11 +28,11 @@ export function getRelatedNodes(nodeId: string) {
     .filter(Boolean) as KnowledgeNode[];
 }
 
-const defaultTypes: NodeType[] = ["paper", "capability", "pattern"];
+const defaultTypes: NodeType[] = ["paper", "pattern"];
 const expandedTypes: NodeType[] = ["paper", "problem", "requirement", "principle", "feature", "artifact", "evaluation", "capability", "pattern"];
 
 export function getGraphForFilters(filters: GraphFilters = {}) {
-  const activeTypes = filters.nodeTypes?.length ? filters.nodeTypes : filters.includeExpanded ? expandedTypes : defaultTypes;
+  const activeTypes = filters.nodeTypes?.length ? filters.nodeTypes : filters.includeExpanded || filters.capabilityIds?.length ? expandedTypes : defaultTypes;
   const query = filters.query?.trim().toLowerCase();
 
   let nodes = knowledgeNodes.filter((node) => activeTypes.includes(node.type));

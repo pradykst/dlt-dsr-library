@@ -41,7 +41,7 @@ export function GraphFilters({
     <aside className="space-y-4 border-r border-line bg-white p-4">
       <div>
         <h2 className="font-serif text-xl text-ink">Explore Graph</h2>
-        <p className="mt-1 text-xs leading-5 text-muted">Default view keeps the graph sparse: papers, capabilities, and patterns.</p>
+        <p className="mt-1 text-xs leading-5 text-muted">Default view keeps the graph sparse: papers and reusable patterns. Expand the chain to inspect requirements, features, artifacts, evaluations, and capabilities.</p>
       </div>
       <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
         Search
