@@ -12,7 +12,7 @@ export default function ExplorePage() {
     <PageShell>
       <div className="mb-6">
         <h1 className="font-serif text-3xl text-ink">Explore Design Knowledge</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">Interactively inspect how DLT design knowledge flows across papers, capabilities, patterns, requirements, principles, artifacts, and evaluations.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">Interactively inspect how DLT design knowledge flows from problems to requirements, principles, features, capabilities, and reusable patterns. Source papers, artifacts, and evaluations appear in the evidence lens.</p>
       </div>
       <div className="grid gap-0 lg:grid-cols-[1fr_340px]">
         <KnowledgeGraph onSelect={setSelected} />

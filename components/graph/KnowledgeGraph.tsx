@@ -4,19 +4,24 @@ import { useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, MarkerType, MiniMap, Panel, useReactFlow, ReactFlowProvider, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
+import { GraphFilters } from "@/components/graph/GraphFilters";
 import { GraphNode } from "@/components/graph/GraphNode";
 import { getGraphForFilters } from "@/lib/knowledge";
 import type { KnowledgeEdge, KnowledgeNode, NodeType } from "@/lib/types";
 import { edgeColor, nodeTypeColors } from "@/lib/colors";
 
 const nodeTypes = { knowledge: GraphNode };
-const columns: NodeType[] = ["paper", "problem", "requirement", "principle", "feature", "artifact", "evaluation", "capability", "pattern"];
+const columns: NodeType[] = ["problem", "requirement", "principle", "feature", "capability", "pattern"];
 type ActiveSelection = { type: "node"; id: string } | { type: "edge"; id: string } | null;
 
 function getColumnForType(type: NodeType, useSparseLayout: boolean) {
   if (useSparseLayout) {
-    if (type === "paper") return 0;
-    if (type === "pattern") return 1;
+    if (type === "problem") return 0;
+    if (type === "requirement") return 1;
+    if (type === "principle") return 2;
+    if (type === "feature") return 3;
+    if (type === "capability") return 4;
+    if (type === "pattern") return 5;
   }
   return columns.indexOf(type);
 }
@@ -87,15 +92,10 @@ function InnerGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) 
   }, [focus, graph.nodes, useSparseLayout]);
 
   const edges: Edge[] = useMemo(() => graph.edges.map((edge) => {
-    const source = graph.nodes.find((node) => node.id === edge.source);
-    const target = graph.nodes.find((node) => node.id === edge.target);
-    const sourceColumn = source ? getColumnForType(source.type, useSparseLayout) : 0;
-    const targetColumn = target ? getColumnForType(target.type, useSparseLayout) : 0;
-    const goesForward = targetColumn >= sourceColumn;
     const isHighlighted = focus.edgeIds.has(edge.id);
     const isDimmed = focus.isActive && !isHighlighted;
-    return buildEdge(edge, goesForward, isHighlighted, isDimmed);
-  }), [focus, graph.edges, graph.nodes, useSparseLayout]);
+    return buildEdge(edge, isHighlighted, isDimmed);
+  }), [focus, graph.edges]);
 
   const graphCanvas = (
     <div className={isFullscreen ? "fixed inset-4 z-50 border border-line bg-white shadow-2xl" : "relative"}>
@@ -154,13 +154,11 @@ function InnerGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) 
 
   return (
     <div className="grid h-[760px] grid-cols-[280px_1fr] border border-line bg-white shadow-research">
-      <GraphFilters query={query} setQuery={setQuery} selectedType={selectedType} setSelectedType={setSelectedType} paperId={paperId} setPaperId={setPaperId} capabilityId={capabilityId} setCapabilityId={setCapabilityId} problemId={problemId} setProblemId={setProblemId} expanded={expanded} setExpanded={setExpanded} />
+      <GraphFilters query={query} setQuery={setQuery} selectedType={selectedType} setSelectedType={setSelectedType} paperId={paperId} setPaperId={setPaperId} capabilityId={capabilityId} setCapabilityId={setCapabilityId} problemId={problemId} setProblemId={setProblemId} />
       {graphCanvas}
     </div>
   );
 }
-
-import { GraphFilters } from "@/components/graph/GraphFilters";
 
 export function KnowledgeGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) {
   return (
@@ -170,14 +168,12 @@ export function KnowledgeGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) 
   );
 }
 
-function buildEdge(edge: KnowledgeEdge, goesForward: boolean, isHighlighted: boolean, isDimmed: boolean): Edge {
+function buildEdge(edge: KnowledgeEdge, isHighlighted: boolean, isDimmed: boolean): Edge {
   const stroke = isHighlighted ? "#2f5f85" : edgeColor;
   return {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    sourceHandle: goesForward ? "right-source" : "left-source",
-    targetHandle: goesForward ? "left-target" : "right-target",
     type: "smoothstep",
     label: isHighlighted ? edge.label : undefined,
     interactionWidth: 24,

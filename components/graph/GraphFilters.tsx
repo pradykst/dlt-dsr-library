@@ -5,7 +5,7 @@ import { knowledgeNodes, papers } from "@/lib/knowledge";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 
-const types: NodeType[] = ["paper", "problem", "requirement", "principle", "feature", "artifact", "evaluation", "capability", "pattern"];
+const types: NodeType[] = ["problem", "requirement", "principle", "feature", "capability", "pattern"];
 const capabilities = knowledgeNodes.filter((node) => node.type === "capability");
 const problems = knowledgeNodes.filter((node) => node.type === "problem");
 const domains = Array.from(new Set(papers.map((paper) => paper.domain)));
@@ -20,9 +20,7 @@ export function GraphFilters({
   capabilityId,
   setCapabilityId,
   problemId,
-  setProblemId,
-  expanded,
-  setExpanded
+  setProblemId
 }: {
   query: string;
   setQuery: (value: string) => void;
@@ -34,14 +32,12 @@ export function GraphFilters({
   setCapabilityId: (value: string) => void;
   problemId: string;
   setProblemId: (value: string) => void;
-  expanded: boolean;
-  setExpanded: (value: boolean) => void;
 }) {
   return (
     <aside className="space-y-4 border-r border-line bg-white p-4">
       <div>
         <h2 className="font-serif text-xl text-ink">Explore Graph</h2>
-        <p className="mt-1 text-xs leading-5 text-muted">Default view keeps the graph sparse: papers and reusable patterns. Expand the chain to inspect requirements, features, artifacts, evaluations, and capabilities.</p>
+        <p className="mt-1 text-xs leading-5 text-muted">The graph now shows design logic: problem, requirements, principles, features, capabilities, and reusable patterns. Papers, artifacts, and evaluations appear in the evidence lens when you click a node.</p>
       </div>
       <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
         Search
@@ -55,9 +51,9 @@ export function GraphFilters({
         </Select>
       </label>
       <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-        Paper
+        Evidence source
         <Select className="mt-2" value={paperId} onChange={(event) => setPaperId(event.target.value)}>
-          <option value="all">All papers</option>
+          <option value="all">All source papers</option>
           {papers.map((paper) => <option key={paper.id} value={paper.id}>{paper.shortTitle}</option>)}
         </Select>
       </label>
@@ -75,12 +71,8 @@ export function GraphFilters({
           {problems.map((problem) => <option key={problem.id} value={problem.id}>{problem.label}</option>)}
         </Select>
       </label>
-      <label className="flex items-center gap-2 border border-line bg-paper p-3 text-sm text-ink">
-        <input type="checkbox" checked={expanded} onChange={(event) => setExpanded(event.target.checked)} />
-        Expand requirements, principles, features, artifacts, and evaluations
-      </label>
       <div className="text-xs leading-5 text-muted">
-        Domains represented: {domains.length}. Clicking a paper node opens its synthesized design chain in the detail panel.
+        Domains represented: {domains.length}. Click any node or edge to inspect paper provenance, artifact context, and evaluation method.
       </div>
     </aside>
   );

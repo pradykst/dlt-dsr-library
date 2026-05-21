@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getEdgesForNode, getNodeById, getPaperById } from "@/lib/knowledge";
+import { getEdgesForNode, getNodeById, getPaperById, getPaperFlow } from "@/lib/knowledge";
 import type { KnowledgeNode } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 
@@ -14,21 +14,38 @@ export function DetailPanel({ node }: { node?: KnowledgeNode }) {
   }
 
   const edges = getEdgesForNode(node.id);
+  const sourcePaperIds = Array.from(new Set([
+    ...(node.paperIds ?? []),
+    ...edges.flatMap((edge) => edge.paperIds ?? [])
+  ]));
+  const evidence = sourcePaperIds.map((id) => {
+    const paper = getPaperById(id);
+    const flow = getPaperFlow(id);
+    return paper ? { paper, artifact: flow.artifacts[0], evaluation: flow.evaluations[0] } : null;
+  }).filter(Boolean) as Array<{
+    paper: NonNullable<ReturnType<typeof getPaperById>>;
+    artifact?: KnowledgeNode;
+    evaluation?: KnowledgeNode;
+  }>;
   return (
     <aside className="h-full overflow-y-auto border-l border-line bg-white p-5">
       <Badge>{node.type}</Badge>
       <h2 className="mt-4 font-serif text-2xl leading-tight text-ink">{node.label}</h2>
       {node.subtitle && <p className="mt-1 text-sm text-muted">{node.subtitle}</p>}
       <p className="mt-4 text-sm leading-6 text-slate-700">{node.description}</p>
-      {node.type === "paper" && <Link href={`/papers/${node.id}`} className="mt-4 inline-flex border border-line px-3 py-2 text-sm font-medium text-blue hover:border-blue">Open paper lens</Link>}
-      {node.paperIds?.length ? (
+      {evidence.length ? (
         <div className="mt-6">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Synthesized from paper</h3>
-          <div className="mt-2 space-y-2">
-            {node.paperIds.map((id) => {
-              const paper = getPaperById(id);
-              return paper ? <Link className="block text-sm text-blue hover:underline" href={`/papers/${id}`} key={id}>{paper.shortTitle}</Link> : null;
-            })}
+          <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Evidence provenance</h3>
+          <div className="mt-3 space-y-3">
+            {evidence.map(({ paper, artifact, evaluation }) => (
+              <div key={paper.id} className="border border-line bg-paper p-3">
+                <Link className="text-sm font-semibold text-blue hover:underline" href={`/papers/${paper.id}`}>{paper.shortTitle}</Link>
+                <div className="mt-2 space-y-1 text-xs leading-5 text-muted">
+                  <div><span className="font-semibold text-ink">Artifact:</span> {artifact?.label ?? paper.artifact}</div>
+                  <div><span className="font-semibold text-ink">Evaluation:</span> {evaluation?.label ?? paper.evaluation}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

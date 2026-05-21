@@ -28,8 +28,8 @@ export function getRelatedNodes(nodeId: string) {
     .filter(Boolean) as KnowledgeNode[];
 }
 
-const defaultTypes: NodeType[] = ["paper", "pattern"];
-const expandedTypes: NodeType[] = ["paper", "problem", "requirement", "principle", "feature", "artifact", "evaluation", "capability", "pattern"];
+const defaultTypes: NodeType[] = ["problem", "requirement", "principle", "feature", "capability", "pattern"];
+const expandedTypes: NodeType[] = ["problem", "requirement", "principle", "feature", "capability", "pattern"];
 
 export function getGraphForFilters(filters: GraphFilters = {}) {
   const activeTypes = filters.nodeTypes?.length ? filters.nodeTypes : filters.includeExpanded || filters.capabilityIds?.length ? expandedTypes : defaultTypes;
@@ -41,14 +41,40 @@ export function getGraphForFilters(filters: GraphFilters = {}) {
     nodes = nodes.filter((node) => `${node.label} ${node.description} ${node.tags.join(" ")}`.toLowerCase().includes(query));
   }
   if (filters.domains?.length) nodes = nodes.filter((node) => !node.domain || filters.domains?.includes(node.domain));
-  if (filters.paperIds?.length) nodes = nodes.filter((node) => node.type === "paper" ? filters.paperIds?.includes(node.id) : !node.paperIds?.length || node.paperIds.some((id) => filters.paperIds?.includes(id)));
+  if (filters.paperIds?.length) {
+    nodes = nodes.filter((node) => {
+      const directPaperMatch = node.paperIds?.some((id) => filters.paperIds?.includes(id));
+      const edgePaperMatch = getEdgesForNode(node.id).some((edge) => edge.paperIds?.some((id) => filters.paperIds?.includes(id)));
+      return directPaperMatch || edgePaperMatch;
+    });
+  }
   if (filters.capabilityIds?.length) nodes = nodes.filter((node) => node.type === "capability" ? filters.capabilityIds?.includes(node.id) : node.capabilityIds?.some((id) => filters.capabilityIds?.includes(id)));
   if (filters.problemIds?.length) nodes = nodes.filter((node) => filters.problemIds?.includes(node.id) || getEdgesForNode(node.id).some((edge) => filters.problemIds?.includes(edge.source) || filters.problemIds?.includes(edge.target)));
 
   const nodeIds = new Set(nodes.map((node) => node.id));
-  const edges = knowledgeEdges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
+  const visibleEdges = knowledgeEdges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
+  const featurePatternEdges = createFeaturePatternEdges(nodeIds);
+  const edges = [...visibleEdges, ...featurePatternEdges];
 
   return { nodes, edges };
+}
+
+function createFeaturePatternEdges(nodeIds: Set<string>) {
+  const featureNodes = knowledgeNodes.filter((node) => node.type === "feature" && nodeIds.has(node.id));
+  return patterns.flatMap((pattern) => {
+    if (!nodeIds.has(pattern.id)) return [];
+    return featureNodes
+      .filter((feature) => pattern.implementationFeatures.includes(feature.label))
+      .map((feature) => ({
+        id: `${feature.id}-generalizes_to-${pattern.id}`,
+        source: feature.id,
+        target: pattern.id,
+        type: "generalizes_to" as const,
+        label: "generalizes to",
+        strength: 1 as const,
+        paperIds: pattern.observedInPaperIds
+      }));
+  });
 }
 
 const typePlural: Record<string, keyof PaperFlow> = {

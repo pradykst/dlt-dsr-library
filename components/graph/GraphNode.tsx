@@ -20,16 +20,14 @@ export function GraphNode({ data, selected }: NodeProps<GraphNodeData>) {
         opacity: data.isDimmed ? 0.28 : 1
       }}
     >
-      <Handle id="left-target" type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot }} />
-      <Handle id="left-source" type="source" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot, top: "68%" }} />
+      <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot }} />
       <div className="mb-2 flex items-center gap-2">
         <span className="h-2 w-2" style={{ background: colors.dot }} />
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: colors.text }}>{data.type}</span>
       </div>
       <div className="text-sm font-semibold leading-5" style={{ color: colors.text }}>{data.label}</div>
       {data.subtitle && <div className="mt-1 text-xs leading-4 text-muted">{data.subtitle}</div>}
-      <Handle id="right-source" type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot }} />
-      <Handle id="right-target" type="target" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot, top: "68%" }} />
+      <Handle type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white" style={{ background: colors.dot }} />
     </div>
   );
 }
