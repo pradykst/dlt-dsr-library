@@ -4,6 +4,7 @@ import { Network } from "lucide-react";
 const nav = [
   ["Explore", "/explore"],
   ["Patterns", "/patterns"],
+  ["Ingest", "/ingest"],
   ["Flow Builder", "/flow-builder"],
   ["Methodology", "/methodology"]
 ];
