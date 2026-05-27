@@ -25,6 +25,7 @@ yarn-debug.log*
 yarn-error.log*
 dev.log
 dev.err.log
+dev-workbench*.log
 
 # local env files
 .env*.local

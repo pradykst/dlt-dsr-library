@@ -5,6 +5,7 @@ const nav = [
   ["Explore", "/explore"],
   ["Patterns", "/patterns"],
   ["Ingest", "/ingest"],
+  ["Workbench", "/workbench"],
   ["Flow Builder", "/flow-builder"],
   ["Methodology", "/methodology"]
 ];
