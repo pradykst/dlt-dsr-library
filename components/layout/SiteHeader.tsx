@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Network } from "lucide-react";
+import { ClipboardCheck, Network, PanelsTopLeft, Sparkles } from "lucide-react";
 
 const nav = [
-  ["Explore", "/explore"],
-  ["Patterns", "/patterns"],
-  ["Ingest", "/ingest"],
-  ["Workbench", "/workbench"],
-  ["Flow Builder", "/flow-builder"],
-  ["Methodology", "/methodology"]
+  { label: "Explore", href: "/explore" },
+  { label: "Patterns", href: "/patterns" },
+  { label: "Workbench", href: "/workbench", icon: PanelsTopLeft, isNew: true },
+  { label: "Feedback", href: "/desrist-evaluation", icon: ClipboardCheck, isNew: true },
+  { label: "Flow Builder", href: "/flow-builder" },
+  { label: "Methodology", href: "/methodology" }
 ];
 
 export function SiteHeader() {
@@ -24,9 +24,16 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className="flex items-center gap-1 text-sm text-muted">
-          {nav.map(([label, href]) => (
-            <Link key={href} href={href} className="px-3 py-2 transition hover:bg-white hover:text-ink">
-              {label}
+          {nav.map(({ label, href, icon: Icon, isNew }) => (
+            <Link key={href} href={href} className="inline-flex items-start gap-1.5 px-3 py-2 transition hover:bg-white hover:text-ink">
+              {Icon && <Icon className="h-3.5 w-3.5" />}
+              <span className="leading-5">{label}</span>
+              {isNew && (
+                <sup className="-ml-1 inline-flex items-center gap-0.5 border border-blue/20 bg-blue/10 px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-[0.08em] text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
+                  <Sparkles className="h-2 w-2" />
+                  New
+                </sup>
+              )}
             </Link>
           ))}
         </nav>

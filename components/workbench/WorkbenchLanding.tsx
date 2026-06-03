@@ -52,7 +52,8 @@ export function WorkbenchLanding() {
               <div className="mt-4 flex flex-wrap gap-2">
                 {paper.domain && <Badge>{paper.domain}</Badge>}
                 {paper.artifact_type && <Badge>{paper.artifact_type}</Badge>}
-                {paper.review_status && <Badge>{paper.review_status}</Badge>}
+                {paper.overall_extraction_status && <StatusBadge label="Extraction" value={paper.overall_extraction_status} />}
+                {paper.review_status && <StatusBadge label="Review" value={paper.review_status} />}
               </div>
               <Link className="mt-5 inline-flex border border-line bg-paper px-3 py-2 text-sm font-medium text-ink hover:border-blue" href={`/workbench/${encodeURIComponent(paper.paper_id)}`}>Open Workbench</Link>
             </Card>
@@ -61,5 +62,14 @@ export function WorkbenchLanding() {
         </div>
       )}
     </div>
+  );
+}
+
+function StatusBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center border border-line bg-paper text-[11px] font-medium uppercase tracking-[0.12em]">
+      <span className="border-r border-line px-2 py-0.5 text-muted">{label}</span>
+      <span className="px-2 py-0.5 text-ink">{value}</span>
+    </span>
   );
 }

@@ -69,7 +69,8 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
           <div className="flex flex-wrap gap-2">
             {paper.year && <Badge>{paper.year}</Badge>}
             {paper.domain && <Badge>{paper.domain}</Badge>}
-            {paper.overall_extraction_status && <Badge>{paper.overall_extraction_status}</Badge>}
+            {paper.overall_extraction_status && <StatusBadge label="Extraction" value={paper.overall_extraction_status} />}
+            {paper.review_status && <StatusBadge label="Review" value={paper.review_status} />}
             <Badge>{bundle.changeRequestsCount} suggestions</Badge>
           </div>
         </div>
@@ -113,6 +114,8 @@ function Overview({ bundle }: { bundle: PaperBundle }) {
           <Summary label="DOI or URL" value={paper.doi_or_url} />
           <Summary label="Artifact Type" value={paper.artifact_type} />
           <Summary label="DLT Role" value={paper.blockchain_dlt_role} />
+          <Summary label="Extraction Status" value={paper.overall_extraction_status} />
+          <Summary label="Review Status" value={paper.review_status} />
           <Summary label="Notes" value={paper.notes} />
         </div>
       </Card>
@@ -202,6 +205,15 @@ function Suggestions({ paperId, onSuggest }: { paperId: string; onSuggest: () =>
 
 function Metric({ label, value }: { label: string; value: React.ReactNode }) {
   return <Card className="p-5"><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div><div className="mt-2 font-serif text-3xl text-ink">{value}</div></Card>;
+}
+
+function StatusBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center border border-line bg-paper text-[11px] font-medium uppercase tracking-[0.12em]">
+      <span className="border-r border-line px-2 py-0.5 text-muted">{label}</span>
+      <span className="px-2 py-0.5 text-ink">{value}</span>
+    </span>
+  );
 }
 
 function Summary({ label, value }: { label: string; value: string | number | null | undefined }) {
