@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -10,6 +10,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { SuggestionForm } from "@/components/workbench/SuggestionForm";
 import { WorkbenchFlowProvider } from "@/components/workbench/WorkbenchFlow";
 import type { PaperBundle, WorkbenchElement, WorkbenchEvidence } from "@/lib/workbench/types";
+import { trackGeneratedFlowViewed, trackPaperOpened } from "@/utils/analytics";
 
 const tabs = ["Overview", "DSR Grid", "Flow", "Elements", "Evidence", "Suggestions"];
 const gridCells = [
@@ -35,6 +36,8 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
   const [tab, setTab] = useState("Overview");
   const [error, setError] = useState<string>();
   const [suggestTarget, setSuggestTarget] = useState<SuggestTarget>();
+  const trackedPaperId = useRef<string>();
+  const trackedFlowForPaperId = useRef<string>();
 
   const load = useCallback(() => {
     fetch(`/api/workbench/paper/${encodeURIComponent(paperId)}`)
@@ -51,6 +54,27 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
     const timer = window.setInterval(load, 15000);
     return () => window.clearInterval(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (!bundle) return;
+    const { paper } = bundle;
+    if (trackedPaperId.current === paper.paper_id) return;
+    trackedPaperId.current = paper.paper_id;
+    trackPaperOpened(paper.paper_id, paper.short_title ?? undefined);
+  }, [bundle]);
+
+  useEffect(() => {
+    if (!bundle || tab !== "Flow") return;
+    const { paper, elements, relations } = bundle;
+    if (trackedFlowForPaperId.current === paper.paper_id) return;
+    trackedFlowForPaperId.current = paper.paper_id;
+    trackGeneratedFlowViewed({
+      route: "/workbench/[paperId]",
+      paper_id: paper.paper_id,
+      node_count: elements.length,
+      edge_count: relations.length
+    });
+  }, [bundle, tab]);
 
   if (error) return <Card className="p-5 text-sm text-red-700">{error}</Card>;
   if (!bundle) return <Card className="p-5 text-sm text-muted">Loading paper workbench...</Card>;

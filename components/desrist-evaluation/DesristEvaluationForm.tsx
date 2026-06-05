@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +17,7 @@ import {
   type LikertKey,
   type SurveyOption
 } from "@/lib/desrist-evaluation/survey";
+import { trackSurveyCompleted, trackSurveyStarted } from "@/utils/analytics";
 
 type SurveyState = {
   role: string;
@@ -51,6 +52,10 @@ export function DesristEvaluationForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
 
+  useEffect(() => {
+    trackSurveyStarted();
+  }, []);
+
   const completedSections = useMemo(() => {
     let completed = 0;
     if (state.role && state.dsr_experience && state.dlt_experience) completed += 1;
@@ -84,6 +89,14 @@ export function DesristEvaluationForm() {
       setSubmitError([result.error, Array.isArray(result.details) ? result.details.join(" ") : result.details].filter(Boolean).join(" "));
       return;
     }
+    trackSurveyCompleted({
+      role: payload.role,
+      dsr_experience: payload.dsr_experience,
+      dlt_experience: payload.dlt_experience,
+      used_sections: payload.used_sections,
+      most_valuable_use_case: payload.most_valuable_use_case,
+      improvement_priorities: payload.improvement_priorities
+    });
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -111,6 +124,7 @@ export function DesristEvaluationForm() {
           This 2 to 4 minute survey collects formative prototype feedback after interacting with the library. Please do not enter names, emails, or identifying details.
         </p>
       </header>
+      <PrivacyNotice />
 
       <Card className="mb-5 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -191,6 +205,16 @@ function SurveySection({ number, title, children }: { number: string; title: str
         <h2 className="font-serif text-2xl text-ink">{title}</h2>
       </div>
       <div className="space-y-5">{children}</div>
+    </Card>
+  );
+}
+
+function PrivacyNotice() {
+  return (
+    <Card className="mb-5 border-blue/20 bg-blue/5 p-4">
+      <p className="text-sm leading-6 text-muted">
+        This research demo uses privacy-preserving analytics and session replay to improve the DSR Knowledge Library. Text inputs are masked and no names or emails are required.
+      </p>
     </Card>
   );
 }
@@ -288,7 +312,8 @@ function TextAreaField({ label, value, onChange }: { label: string; value: strin
     <label className="block">
       <span className="text-sm font-semibold text-ink">{label}</span>
       <textarea
-        className="mt-2 min-h-24 w-full border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue"
+        className="mp-mask mt-2 min-h-24 w-full border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue"
+        data-mp-block
         maxLength={1000}
         value={value}
         onChange={(event) => onChange(event.target.value)}

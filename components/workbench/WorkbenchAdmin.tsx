@@ -59,12 +59,12 @@ export function WorkbenchAdmin() {
       </div>
       <Card className="mb-5 p-5">
         <div className="grid gap-3 md:grid-cols-[1fr_220px_180px_auto]">
-          <Input type="password" placeholder="Admin secret" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} />
+          <Input className="mp-mask" data-mp-block type="password" placeholder="Admin secret" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} />
           <Select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</Select>
           <Input placeholder="Decided by" value={decidedBy} onChange={(event) => setDecidedBy(event.target.value)} />
           <Button type="button" disabled={!adminSecret || loading} onClick={load}>{loading ? "Loading..." : "Load requests"}</Button>
         </div>
-        <textarea className="mt-3 min-h-20 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" placeholder="Decision note" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} />
+        <textarea className="mp-mask mt-3 min-h-20 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block placeholder="Decision note" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} />
         {message && <p className="mt-3 border border-line bg-paper p-3 text-sm text-muted">{message}</p>}
       </Card>
       <div className="space-y-4">

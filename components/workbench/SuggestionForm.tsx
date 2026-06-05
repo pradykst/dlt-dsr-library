@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { trackEvent } from "@/utils/analytics";
 
 type Props = {
   paperId: string;
@@ -53,6 +54,11 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
       return;
     }
     setStatus("Suggestion submitted.");
+    trackEvent("reviewer_change_requested", {
+      paper_id: paperId,
+      target_table: targetTable,
+      target_field: targetField
+    });
     onSubmitted?.();
   }
 
@@ -71,20 +77,20 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
         <div className="space-y-4 p-5">
           <Field label="Target row key"><Input value={targetRowKey} readOnly /></Field>
           <Field label="Old value">
-            <textarea className="min-h-24 w-full border border-line bg-paper px-3 py-2 text-sm text-muted outline-none" value={oldValue} readOnly />
+            <textarea className="mp-mask min-h-24 w-full border border-line bg-paper px-3 py-2 text-sm text-muted outline-none" data-mp-block value={oldValue} readOnly />
           </Field>
           <Field label="Proposed value">
-            <textarea className="min-h-32 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" value={proposedValue} onChange={(event) => setProposedValue(event.target.value)} />
+            <textarea className="mp-mask min-h-32 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block value={proposedValue} onChange={(event) => setProposedValue(event.target.value)} />
           </Field>
           <Field label="Reason">
-            <textarea className="min-h-24 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" value={reason} onChange={(event) => setReason(event.target.value)} />
+            <textarea className="mp-mask min-h-24 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block value={reason} onChange={(event) => setReason(event.target.value)} />
           </Field>
           <Field label="Evidence note">
-            <textarea className="min-h-20 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} />
+            <textarea className="mp-mask min-h-20 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Name"><Input value={name} onChange={(event) => setName(event.target.value)} /></Field>
-            <Field label="Email"><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></Field>
+            <Field label="Name"><Input className="mp-mask" data-mp-block value={name} onChange={(event) => setName(event.target.value)} /></Field>
+            <Field label="Email"><Input className="mp-mask" data-mp-block type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></Field>
           </div>
           <Field label="Role">
             <Select value={role} onChange={(event) => setRole(event.target.value)}>

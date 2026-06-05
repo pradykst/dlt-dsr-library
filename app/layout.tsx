@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
+import { MixpanelProvider } from "@/components/MixpanelProvider";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 
@@ -16,9 +17,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${serif.variable}`}>
       <body className="font-sans antialiased">
-        <SiteHeader />
-        {children}
-        <SiteFooter />
+        <MixpanelProvider>
+          <SiteHeader />
+          {children}
+          <SiteFooter />
+        </MixpanelProvider>
       </body>
     </html>
   );

@@ -92,7 +92,7 @@ export function WorkbenchImport() {
             {(Object.keys(labels) as CsvKind[]).map((kind) => (
               <label key={kind} className="block border border-line bg-paper p-4">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">{labels[kind]}</span>
-                <input type="file" accept=".csv,text/csv" className="w-full text-sm" onChange={(event) => setFiles((current) => ({ ...current, [kind]: event.target.files?.[0] }))} />
+                <input type="file" accept=".csv,text/csv" className="w-full text-sm" data-mp-block onChange={(event) => setFiles((current) => ({ ...current, [kind]: event.target.files?.[0] }))} />
               </label>
             ))}
           </div>
@@ -100,7 +100,8 @@ export function WorkbenchImport() {
             <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-muted">Admin Secret</span>
             <span className="flex border border-line bg-white focus-within:border-blue">
               <input
-                className="w-full bg-white px-3 py-2 text-sm outline-none"
+                className="mp-mask w-full bg-white px-3 py-2 text-sm outline-none"
+                data-mp-block
                 type={showAdminSecret ? "text" : "password"}
                 value={adminSecret}
                 onChange={(event) => setAdminSecret(event.target.value)}

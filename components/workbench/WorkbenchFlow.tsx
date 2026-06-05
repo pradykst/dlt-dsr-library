@@ -6,6 +6,7 @@ import "reactflow/dist/style.css";
 import { Badge } from "@/components/ui/Badge";
 import { includesToken } from "@/lib/workbench/csv";
 import type { WorkbenchElement, WorkbenchEvidence, WorkbenchRelation } from "@/lib/workbench/types";
+import { trackFlowInteraction } from "@/utils/analytics";
 
 type Selection = { kind: "node"; element: WorkbenchElement } | { kind: "edge"; relation: WorkbenchRelation } | null;
 type FlowMode = "main" | "extended";
@@ -32,6 +33,7 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
   onSuggest: (target: { table: "elements" | "relations"; rowKey: string; field: string; oldValue: string }) => void;
 }) {
   const { fitView } = useReactFlow();
+  const paperId = elements[0]?.paper_id ?? relations[0]?.paper_id;
   const [mode, setMode] = useState<FlowMode>("main");
   const [selection, setSelection] = useState<Selection>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -149,11 +151,17 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
             minZoom={0.2}
             onNodeClick={(_, node) => {
               const element = elementById.get(node.id);
-              if (element) setSelection({ kind: "node", element });
+              if (element) {
+                trackFlowInteraction("node_clicked", paperId);
+                setSelection({ kind: "node", element });
+              }
             }}
             onEdgeClick={(_, edge) => {
               const relation = renderedRelations.find((item) => item.relation_id === edge.id);
-              if (relation) setSelection({ kind: "edge", relation });
+              if (relation) {
+                trackFlowInteraction("edge_clicked", paperId);
+                setSelection({ kind: "edge", relation });
+              }
             }}
             onEdgeMouseEnter={(_, edge) => setHoveredEdgeId(edge.id)}
             onEdgeMouseLeave={() => setHoveredEdgeId(null)}

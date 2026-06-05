@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
+import { PaperAnalytics } from "@/components/papers/PaperAnalytics";
 import { PaperLens } from "@/components/papers/PaperLens";
 import { getPaperById, papers } from "@/lib/knowledge";
 
@@ -13,6 +14,7 @@ export default async function PaperPage({ params }: { params: Promise<{ id: stri
   if (!paper) notFound();
   return (
     <PageShell>
+      <PaperAnalytics paperId={paper.id} title={paper.title} />
       <PaperLens paper={paper} />
     </PageShell>
   );
