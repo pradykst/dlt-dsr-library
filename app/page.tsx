@@ -101,10 +101,10 @@ export default function HomePage() {
         <Card className="p-5 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <SearchCheck className="h-4 w-4 text-blue" />
-            <h2 className="font-serif text-2xl text-ink">Built for DESRIST-style Evaluation</h2>
+            <h2 className="font-serif text-2xl text-ink">Built for Evaluation and Review</h2>
           </div>
           <p className="text-sm leading-7 text-muted">
-            This prototype supports formative evaluation of design knowledge reuse, visual traceability, and researcher-facing utility. It is intended for DSR researchers, reviewers, supervisors, and students who need to inspect how DLT design knowledge has been extracted, connected, and made reusable.
+            This prototype supports formative evaluation, reviewer correction, and continuous improvement of reusable DLT design knowledge. One evaluation is being collected at DESRIST, but the workflow is designed for broader research review, teaching, supervision, and iterative knowledge-base refinement.
           </p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Link href="/patterns" className="inline-flex justify-center border border-line bg-paper px-3 py-2 text-sm font-medium text-ink hover:border-blue">

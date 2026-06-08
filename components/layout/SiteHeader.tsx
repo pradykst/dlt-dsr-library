@@ -15,17 +15,17 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-paper/92 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center border border-ink/20 bg-white">
+          <span className="grid h-10 w-10 shrink-0 place-items-center border border-blue/25 bg-white shadow-[0_8px_24px_rgba(79,111,145,0.12)]">
             <Network className="h-4 w-4 text-blue" />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-semibold tracking-[0.12em] text-ink">DLT DS Library</span>
-            <span className="hidden text-xs text-muted sm:block">visual knowledge base for blockchain and DLT design research</span>
+            <span className="block truncate text-sm font-semibold tracking-[0.16em] text-ink">DLT Design Library</span>
+            <span className="hidden text-xs text-muted sm:block">Reusable DSR grids and flows</span>
           </span>
         </Link>
         <nav className="flex max-w-full items-center gap-1 overflow-x-auto pb-1 text-sm text-muted md:pb-0">
           {nav.map(({ label, href, icon: Icon, isNew }) => (
-            <Link key={href} href={href} className="inline-flex shrink-0 items-start gap-1.5 px-3 py-2 transition hover:bg-white hover:text-ink">
+            <Link key={href} href={href} className="inline-flex shrink-0 items-center gap-1.5 border border-transparent px-3 py-2 transition hover:border-line hover:bg-white hover:text-ink">
               {Icon && <Icon className="h-3.5 w-3.5" />}
               <span className="leading-5">{label}</span>
               {isNew && (
