@@ -142,8 +142,8 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
         )}
         <Legend />
       </div>
-      <div className="grid gap-0 lg:grid-cols-[1fr_340px]">
-        <div className="min-h-[650px] h-[70vh] border border-line bg-white shadow-research">
+      <div className="grid min-w-0 gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="h-[70vh] min-h-[520px] min-w-0 border border-line bg-white shadow-research lg:min-h-[650px]">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -190,17 +190,17 @@ function FlowPanel({ selection, evidence, onSuggest }: {
   evidence: WorkbenchEvidence[];
   onSuggest: (target: { table: "elements" | "relations"; rowKey: string; field: string; oldValue: string }) => void;
 }) {
-  if (!selection) return <aside className="min-h-[650px] border border-l-0 border-line bg-white p-5 text-sm text-muted">Click a node or edge to inspect source details and evidence.</aside>;
+  if (!selection) return <aside className="min-h-40 border border-line bg-white p-5 text-sm text-muted lg:min-h-[650px] lg:border-l-0">Click a node or edge to inspect source details and evidence.</aside>;
   if (selection.kind === "node") {
     const element = selection.element;
     const relatedEvidence = evidence.filter((item) => item.evidence_id === element.source_quote_id || includesToken(item.element_ids_supported, element.element_id));
     return (
-      <aside className="max-h-[70vh] min-h-[650px] overflow-y-auto border border-l-0 border-line bg-white p-5">
-        <Badge>{element.element_type}</Badge>
+      <aside className="max-h-[70vh] min-h-40 overflow-y-auto border border-line bg-white p-5 lg:min-h-[650px] lg:border-l-0">
+        <Badge>{displayElementType(element.element_type)}</Badge>
         <h2 className="mt-3 font-serif text-2xl text-ink">{element.element_name ?? element.element_id}</h2>
         <Details rows={[
           ["Element ID", element.element_id],
-          ["Element Type", element.element_type],
+          ["Element Type", displayElementType(element.element_type)],
           ["Element Name", element.element_name],
           ["Element Text", element.element_text],
           ["Normalized Text", element.normalized_text],
@@ -220,7 +220,7 @@ function FlowPanel({ selection, evidence, onSuggest }: {
   const relation = selection.relation;
   const relatedEvidence = evidence.filter((item) => item.evidence_id === relation.evidence_id || includesToken(item.relation_ids_supported, relation.relation_id));
   return (
-    <aside className="max-h-[70vh] min-h-[650px] overflow-y-auto border border-l-0 border-line bg-white p-5">
+    <aside className="max-h-[70vh] min-h-40 overflow-y-auto border border-line bg-white p-5 lg:min-h-[650px] lg:border-l-0">
       <Badge>{relation.relation_type}</Badge>
       <h2 className="mt-3 font-serif text-2xl text-ink">{relation.relation_id}</h2>
       <Details rows={[
@@ -257,7 +257,7 @@ function Legend() {
       {columns.map((label) => (
         <span key={label} className="inline-flex items-center gap-2 border border-line bg-paper px-2 py-1 text-[11px] uppercase tracking-[0.12em] text-muted">
           <span className="h-2.5 w-2.5 border border-ink/20" style={{ background: colors[label] }} />
-          {label === "Design Requirement" ? "Requirement" : label}
+          {displayElementType(label) === "Design Requirement" ? "Requirement" : displayElementType(label)}
         </span>
       ))}
     </div>
@@ -271,6 +271,10 @@ function normalizeDiagramView(value: string | null | undefined) {
   if (normalized === "extended") return "Extended";
   if (normalized === "hidden") return "Hidden";
   return value;
+}
+
+function displayElementType(value: string | null | undefined) {
+  return value === "Boundary Condition" || value === "Boundary Conditions" ? "Limitations" : value;
 }
 
 function relationCanRender(relation: WorkbenchRelation, allowedColumns: string[], elementById: Map<string, WorkbenchElement>) {

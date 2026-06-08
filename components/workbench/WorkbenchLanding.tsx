@@ -31,9 +31,9 @@ export function WorkbenchLanding() {
           <h1 className="mt-3 font-serif text-4xl text-ink">Imported Paper Datasets</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">Upload structured CSV exports, inspect the DSR grid and relation flow, and manage author or reviewer corrections.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link className="inline-flex items-center gap-2 border border-ink/20 bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-blue" href="/workbench/import"><FileUp className="h-4 w-4" />Import Paper CSVs</Link>
-          <Link className="inline-flex items-center gap-2 border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue" href="/workbench/admin"><Settings2 className="h-4 w-4" />Admin Change Requests</Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Link className="inline-flex items-center justify-center gap-2 border border-ink/20 bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-blue" href="/workbench/import"><FileUp className="h-4 w-4" />Import Paper CSVs</Link>
+          <Link className="inline-flex items-center justify-center gap-2 border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue" href="/workbench/admin"><Settings2 className="h-4 w-4" />Admin Change Requests</Link>
         </div>
       </div>
       {loading && <Card className="p-5 text-sm text-muted">Loading imported papers...</Card>}
@@ -44,7 +44,7 @@ export function WorkbenchLanding() {
             <Card key={paper.paper_id} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-serif text-2xl text-ink">{paper.short_title ?? paper.paper_id}</h2>
+                  <h2 className="break-words font-serif text-xl text-ink sm:text-2xl">{paper.short_title ?? paper.paper_id}</h2>
                   <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{paper.full_citation ?? paper.authors}</p>
                 </div>
                 {paper.year && <Badge>{paper.year}</Badge>}

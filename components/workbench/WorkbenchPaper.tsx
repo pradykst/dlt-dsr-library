@@ -13,15 +13,18 @@ import type { PaperBundle, WorkbenchElement, WorkbenchEvidence } from "@/lib/wor
 import { trackGeneratedFlowViewed, trackPaperOpened } from "@/utils/analytics";
 
 const tabs = ["Overview", "DSR Grid", "Flow", "Elements", "Evidence", "Suggestions"];
-const gridCells = [
-  ["Problem", "problem_description"],
-  ["Input Knowledge", "input_knowledge"],
-  ["Research Process", "research_process"],
-  ["Key Concepts", "key_concepts"],
-  ["Solution", "solution_description"],
-  ["Output Knowledge", "output_knowledge"],
-  ["Evaluation Summary", "evaluation_summary"],
-  ["Boundary Conditions", "boundary_conditions"]
+const gridElementGroups = [
+  { title: "Problem", types: ["Problem"], field: "normalized_text" },
+  { title: "Requirement", types: ["Design Requirement", "Requirement"], field: "normalized_text" },
+  { title: "Principle", types: ["Design Principle", "Principle"], field: "normalized_text" },
+  { title: "Feature", types: ["Design Feature", "Feature"], field: "normalized_text" },
+  { title: "Artifact", types: ["Artifact"], field: "normalized_text" },
+  { title: "Evaluation", types: ["Evaluation"], field: "normalized_text" },
+  { title: "Output Knowledge", types: ["Output Claim", "Output Knowledge"], field: "normalized_text" }
+] as const;
+const additionalContextCells = [
+  ["Summary", "evaluation_summary"],
+  ["Limitations", "boundary_conditions"]
 ] as const;
 
 type SuggestTarget = {
@@ -87,7 +90,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <Badge>{paper.paper_id}</Badge>
-            <h1 className="mt-3 font-serif text-4xl text-ink">{paper.short_title ?? paper.paper_id}</h1>
+            <h1 className="mt-3 break-words font-serif text-3xl text-ink sm:text-4xl">{paper.short_title ?? paper.paper_id}</h1>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-muted">{paper.full_citation}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -148,21 +151,53 @@ function Overview({ bundle }: { bundle: PaperBundle }) {
 }
 
 function DsrGrid({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (target: SuggestTarget) => void }) {
-  const { paper } = bundle;
+  const { paper, elements } = bundle;
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {gridCells.map(([title, field]) => {
-        const value = String(paper[field] ?? "");
-        return (
-          <Card key={field} className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-serif text-2xl text-ink">{title}</h2>
-              <button className="shrink-0 border border-line bg-paper px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "papers", rowKey: paper.paper_id, field, oldValue: value })}>Suggest edit</button>
-            </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink">{value || "No content imported."}</p>
-          </Card>
-        );
-      })}
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {gridElementGroups.map((group) => {
+          const groupElements = elements.filter((element) => group.types.some((type) => type === element.element_type));
+          return (
+            <Card key={group.title} className="p-5">
+              <h2 className="font-serif text-2xl text-ink">{group.title}</h2>
+              <div className="mt-3 space-y-3">
+                {groupElements.length ? groupElements.map((element) => {
+                  const value = element.normalized_text ?? element.element_text ?? "";
+                  return (
+                    <div key={element.element_id} className="border border-line bg-paper p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-semibold leading-5 text-ink">{element.element_name ?? element.short_label ?? element.element_id}</h3>
+                        <button className="shrink-0 border border-line bg-white px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field: group.field, oldValue: value })}>Suggest edit</button>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
+                    </div>
+                  );
+                }) : (
+                  <p className="text-sm leading-6 text-muted">No imported {group.title.toLowerCase()} element.</p>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <details className="border border-line bg-white shadow-research">
+        <summary className="cursor-pointer px-5 py-4 font-serif text-xl text-ink">Additional extracted context</summary>
+        <div className="grid gap-4 border-t border-line p-5 md:grid-cols-2">
+          {additionalContextCells.map(([title, field]) => {
+            const value = String(paper[field] ?? "");
+            return (
+              <div key={field} className="border border-line bg-paper p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-serif text-2xl text-ink">{title}</h2>
+                  <button className="shrink-0 border border-line bg-white px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "papers", rowKey: paper.paper_id, field, oldValue: value })}>Suggest edit</button>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
+              </div>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }
@@ -189,7 +224,7 @@ function ElementsTable({ elements, onSuggest }: { elements: WorkbenchElement[]; 
       <DataTable headers={["ID", "Type", "Name", "Normalized Text", "Source", "Confidence", "Review", "Quote", ""]}>
         {filtered.map((element) => (
           <tr key={element.element_id} className="border-t border-line align-top">
-            <Cell>{element.element_id}</Cell><Cell>{element.element_type}</Cell><Cell>{element.element_name}</Cell><Cell>{element.normalized_text}</Cell><Cell>{element.source_status}</Cell><Cell>{element.confidence}</Cell><Cell>{element.review_status}</Cell><Cell>{element.source_quote_id}</Cell>
+            <Cell>{element.element_id}</Cell><Cell>{displayElementType(element.element_type)}</Cell><Cell>{element.element_name}</Cell><Cell>{element.normalized_text}</Cell><Cell>{element.source_status}</Cell><Cell>{element.confidence}</Cell><Cell>{element.review_status}</Cell><Cell>{element.source_quote_id}</Cell>
             <Cell><button className="text-xs text-blue hover:text-ink" onClick={() => onSuggest({ table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field: "normalized_text", oldValue: element.normalized_text ?? "" })}>Suggest edit</button></Cell>
           </tr>
         ))}
@@ -251,6 +286,10 @@ function DataTable({ headers, children }: { headers: string[]; children: React.R
 
 function Cell({ children }: { children: React.ReactNode }) {
   return <td className="max-w-[320px] break-words px-3 py-3 text-sm leading-6 text-ink">{typeof children === "string" ? <LinkedText text={children} /> : children}</td>;
+}
+
+function displayElementType(value: string | null | undefined) {
+  return value === "Boundary Condition" || value === "Boundary Conditions" ? "Limitations" : value;
 }
 
 function unique(values: Array<string | null | undefined>) {

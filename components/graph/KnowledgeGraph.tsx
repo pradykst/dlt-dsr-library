@@ -98,7 +98,7 @@ function InnerGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) 
   }), [focus, graph.edges]);
 
   const graphCanvas = (
-    <div className={isFullscreen ? "fixed inset-4 z-50 border border-line bg-white shadow-2xl" : "relative"}>
+    <div className={isFullscreen ? "fixed inset-4 z-50 border border-line bg-white shadow-2xl" : "relative h-full min-h-[560px]"}>
       {isFullscreen && (
         <button
           type="button"
@@ -107,7 +107,7 @@ function InnerGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) 
           onClick={() => setIsFullscreen(false)}
         />
       )}
-      <div className="absolute right-3 top-3 z-10 flex gap-2">
+      <div className="absolute left-3 right-3 top-3 z-10 flex flex-wrap gap-2 sm:left-auto">
         <button className="border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-sm" onClick={() => fitView({ padding: 0.18 })}>Fit view</button>
         <button className="border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-sm" onClick={() => { setQuery(""); setSelectedType("all"); setPaperId("all"); setCapabilityId("all"); setProblemId("all"); setExpanded(false); setActiveSelection(null); onSelect(undefined); }}>Reset view</button>
         {activeSelection && <button className="border border-line bg-white px-3 py-1.5 text-xs font-medium text-blue shadow-sm" onClick={() => { setActiveSelection(null); onSelect(undefined); }}>Clear focus</button>}
@@ -153,9 +153,9 @@ function InnerGraph({ onSelect }: { onSelect: (node?: KnowledgeNode) => void }) 
   );
 
   return (
-    <div className="grid h-[760px] grid-cols-[280px_1fr] border border-line bg-white shadow-research">
+    <div className="grid min-h-[760px] min-w-0 border border-line bg-white shadow-research lg:h-[760px] lg:grid-cols-[280px_minmax(0,1fr)]">
       <GraphFilters query={query} setQuery={setQuery} selectedType={selectedType} setSelectedType={setSelectedType} paperId={paperId} setPaperId={setPaperId} capabilityId={capabilityId} setCapabilityId={setCapabilityId} problemId={problemId} setProblemId={setProblemId} />
-      {graphCanvas}
+      <div className="min-h-[560px] min-w-0 lg:h-full">{graphCanvas}</div>
     </div>
   );
 }

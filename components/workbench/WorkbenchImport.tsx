@@ -83,7 +83,7 @@ export function WorkbenchImport() {
     <div>
       <div className="mb-6">
         <Link href="/workbench" className="text-sm text-muted hover:text-ink">Back to Workbench</Link>
-        <h1 className="mt-3 font-serif text-4xl text-ink">Import Single Paper DSR Dataset</h1>
+        <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Import Single Paper DSR Dataset</h1>
         <p className="mt-2 text-sm leading-6 text-muted">Upload CSVs exported from the Excel extraction template.</p>
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -116,7 +116,7 @@ export function WorkbenchImport() {
               </button>
             </span>
           </label>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button type="button" disabled={isWorking} onClick={validate}>
               <CheckCircle2 className="h-4 w-4" />
               {working === "validating" ? "Validating..." : "Validate"}

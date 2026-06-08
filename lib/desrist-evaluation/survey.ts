@@ -9,33 +9,28 @@ export type LikertKey =
   | "q_ease_understanding"
   | "q_traceability"
   | "q_visual_clarity"
-  | "q_comparison_value"
-  | "q_trust_credibility"
-  | "q_reuse_intention"
-  | "q_ecommerce_relevance"
-  | "q_completeness"
-  | "q_recommendation";
+  | "q_reuse_intention";
 
 export type DesristEvaluationPayload = {
   role: string;
   dsr_experience: string;
   dlt_experience: string;
-  used_sections: string[];
   q_usefulness: number;
   q_ease_understanding: number;
   q_traceability: number;
   q_visual_clarity: number;
-  q_comparison_value: number;
-  q_trust_credibility: number;
   q_reuse_intention: number;
-  q_ecommerce_relevance: number;
-  q_completeness: number;
-  q_recommendation: number;
-  improvement_priorities: string[];
-  most_valuable_use_case: string;
   most_useful_part?: string;
   confusing_or_missing?: string;
-  feature_suggestion?: string;
+  improvement_suggestion?: string;
+  used_sections?: string[];
+  q_comparison_value?: number | null;
+  q_trust_credibility?: number | null;
+  q_ecommerce_relevance?: number | null;
+  q_completeness?: number | null;
+  q_recommendation?: number | null;
+  improvement_priorities?: string[];
+  most_valuable_use_case?: string;
   page_path?: string;
 };
 
@@ -76,16 +71,11 @@ export const usedSectionOptions: SurveyOption[] = [
 ];
 
 export const likertItems: Array<{ key: LikertKey; label: string }> = [
-  { key: "q_usefulness", label: "The library would help me identify reusable DLT design knowledge for a DSR project." },
+  { key: "q_usefulness", label: "The library would help me identify reusable design knowledge for a DSR project." },
   { key: "q_ease_understanding", label: "The structure of papers, requirements, principles, features, artifacts, and evidence was easy to understand." },
-  { key: "q_traceability", label: "The library made the connection between paper evidence and extracted design knowledge transparent." },
+  { key: "q_traceability", label: "The library made the connection between extracted design knowledge and source evidence transparent." },
   { key: "q_visual_clarity", label: "The flow visualization helped me understand how design knowledge moves from problem to artifact." },
-  { key: "q_comparison_value", label: "The library made it easier to compare design knowledge across multiple DLT papers." },
-  { key: "q_trust_credibility", label: "I would trust the library more because extracted claims are linked to source evidence." },
-  { key: "q_reuse_intention", label: "I would consider using this library when designing or reviewing a DSR project." },
-  { key: "q_ecommerce_relevance", label: "The library can support the development of DLT-based e-commerce instantiations." },
-  { key: "q_completeness", label: "The current library covers the most important information I would need before reusing design knowledge." },
-  { key: "q_recommendation", label: "I would recommend this library to another researcher or practitioner working on DSR or DLT." }
+  { key: "q_reuse_intention", label: "I would consider using this library when designing, reviewing, or teaching a DSR project." }
 ];
 
 export const improvementPriorityOptions: SurveyOption[] = [
@@ -129,9 +119,6 @@ export function validateDesristEvaluationPayload(input: Partial<DesristEvaluatio
   assertOneOf(input.role, roleOptions, "role", errors);
   assertOneOf(input.dsr_experience, dsrExperienceOptions, "dsr_experience", errors);
   assertOneOf(input.dlt_experience, dltExperienceOptions, "dlt_experience", errors);
-  assertArray(input.used_sections, usedSectionOptions, "used_sections", 1, undefined, errors);
-  assertArray(input.improvement_priorities, improvementPriorityOptions, "improvement_priorities", 1, 3, errors);
-  assertOneOf(input.most_valuable_use_case, valuableUseCaseOptions, "most_valuable_use_case", errors);
 
   for (const item of likertItems) {
     const value = input[item.key];
@@ -140,7 +127,7 @@ export function validateDesristEvaluationPayload(input: Partial<DesristEvaluatio
     }
   }
 
-  for (const field of ["most_useful_part", "confusing_or_missing", "feature_suggestion"] as const) {
+  for (const field of ["most_useful_part", "confusing_or_missing", "improvement_suggestion"] as const) {
     const value = input[field];
     if (value && value.length > 1000) errors.push(`${field} must be 1000 characters or fewer.`);
   }
@@ -152,16 +139,4 @@ function assertOneOf(value: unknown, options: SurveyOption[], field: string, err
   if (typeof value !== "string" || !options.some((option) => option.value === value)) {
     errors.push(`${field} is required.`);
   }
-}
-
-function assertArray(value: unknown, options: SurveyOption[], field: string, min: number, max: number | undefined, errors: string[]) {
-  if (!Array.isArray(value)) {
-    errors.push(`${field} is required.`);
-    return;
-  }
-  if (value.length < min) errors.push(`${field} must include at least ${min} selection.`);
-  if (max && value.length > max) errors.push(`${field} must include no more than ${max} selections.`);
-  const allowed = new Set(options.map((option) => option.value));
-  const unknown = value.filter((item) => typeof item !== "string" || !allowed.has(item));
-  if (unknown.length) errors.push(`${field} includes unsupported values.`);
 }

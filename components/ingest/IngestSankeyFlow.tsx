@@ -89,7 +89,7 @@ export function IngestSankeyFlow({ flow, selectedId, onSelect }: { flow?: Design
             <div className="pointer-events-none fixed z-50 max-w-sm border border-ink/20 bg-ink px-3 py-2 text-xs leading-5 text-white shadow-research" style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}>
               <div className="font-semibold">{tooltip.field.label}</div>
               <div className="mt-1 opacity-85">{tooltip.field.sourceQuote}</div>
-              <div className="mt-1 opacity-70">Page {tooltip.field.pageNumber ?? "n/a"} · confidence {tooltip.field.confidence.toFixed(2)}</div>
+              <div className="mt-1 opacity-70">Page {tooltip.field.pageNumber ?? "n/a"} / confidence {tooltip.field.confidence.toFixed(2)}</div>
             </div>
           )}
         </div>

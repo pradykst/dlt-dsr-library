@@ -18,9 +18,6 @@ export function trackSurveyCompleted(properties: {
   role: string;
   dsr_experience: string;
   dlt_experience: string;
-  used_sections: string[];
-  most_valuable_use_case: string;
-  improvement_priorities: string[];
 }) {
   trackEvent("survey_completed", properties);
 }

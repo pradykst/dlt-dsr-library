@@ -13,10 +13,10 @@ export function PaperLens({ paper }: { paper: Paper }) {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
+      <Card className="p-5 sm:p-6">
         <Badge>Synthesized design chain</Badge>
-        <h1 className="mt-4 max-w-4xl font-serif text-3xl leading-tight text-ink">{paper.title}</h1>
-        <p className="mt-3 text-sm text-muted">{paper.authors} · {paper.year} · {paper.venue}</p>
+        <h1 className="mt-4 max-w-4xl break-words font-serif text-2xl leading-tight text-ink sm:text-3xl">{paper.title}</h1>
+        <p className="mt-3 text-sm text-muted">{paper.authors} / {paper.year} / {paper.venue}</p>
         <div className="mt-5 flex flex-wrap gap-2">{paper.tags.map((tag) => <EvidenceBadge key={tag}>{tag}</EvidenceBadge>)}</div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <Info title="Domain and problem statement" text={`${paper.domain}. ${paper.problemFocus}`} />
@@ -26,7 +26,7 @@ export function PaperLens({ paper }: { paper: Paper }) {
         </div>
       </Card>
       <PaperFlow paperId={paper.id} />
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="p-5">
           <h2 className="font-serif text-2xl text-ink">Related Patterns</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

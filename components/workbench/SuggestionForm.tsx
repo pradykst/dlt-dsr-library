@@ -63,8 +63,8 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink/30 p-4">
-      <div className="ml-auto h-full max-w-xl overflow-y-auto border border-line bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-ink/30 p-2 sm:p-4">
+      <div className="ml-auto h-full w-full max-w-xl overflow-y-auto border border-line bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-line p-5">
           <div>
             <h2 className="font-serif text-2xl text-ink">Suggest Correction</h2>
@@ -101,7 +101,7 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
             </Select>
           </Field>
           {status && <p className="border border-line bg-paper p-3 text-sm text-muted">{status}</p>}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" disabled={submitting || !proposedValue} onClick={submit}>{submitting ? "Submitting..." : "Submit suggestion"}</Button>
             <button type="button" className="border border-line px-3 py-2 text-sm text-muted hover:text-ink" onClick={onClose}>Close</button>
           </div>

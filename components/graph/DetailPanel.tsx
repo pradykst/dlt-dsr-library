@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 export function DetailPanel({ node }: { node?: KnowledgeNode }) {
   if (!node) {
     return (
-      <aside className="h-full border-l border-line bg-white p-5">
+      <aside className="h-full border border-line bg-white p-5 lg:border-l">
         <h2 className="font-serif text-xl text-ink">Evidence lens</h2>
         <p className="mt-3 text-sm leading-6 text-muted">Select a node to inspect its description, immediate relationships, source papers, and synthesized design role.</p>
       </aside>
@@ -28,7 +28,7 @@ export function DetailPanel({ node }: { node?: KnowledgeNode }) {
     evaluation?: KnowledgeNode;
   }>;
   return (
-    <aside className="h-full overflow-y-auto border-l border-line bg-white p-5">
+    <aside className="h-full overflow-y-auto border border-line bg-white p-5 lg:border-l">
       <Badge>{node.type}</Badge>
       <h2 className="mt-4 font-serif text-2xl leading-tight text-ink">{node.label}</h2>
       {node.subtitle && <p className="mt-1 text-sm text-muted">{node.subtitle}</p>}

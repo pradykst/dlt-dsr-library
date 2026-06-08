@@ -54,7 +54,7 @@ export function WorkbenchAdmin() {
     <div>
       <div className="mb-6">
         <Link href="/workbench" className="text-sm text-muted hover:text-ink">Back to Workbench</Link>
-        <h1 className="mt-3 font-serif text-4xl text-ink">Admin Change Requests</h1>
+        <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Admin Change Requests</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">Review pending corrections. Accepted requests update the target Supabase field, then mark the request as accepted.</p>
       </div>
       <Card className="mb-5 p-5">
@@ -71,9 +71,9 @@ export function WorkbenchAdmin() {
         {requests.map((request) => (
           <Card key={request.id} className="p-5">
             <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-              <div>
+              <div className="min-w-0">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{request.paper_id} / {request.target_table}.{request.target_field}</div>
-                <h2 className="mt-2 font-serif text-2xl text-ink">{request.target_row_key}</h2>
+                <h2 className="mt-2 break-words font-serif text-xl text-ink sm:text-2xl">{request.target_row_key}</h2>
               </div>
               <span className="border border-line bg-paper px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">{request.status}</span>
             </div>
@@ -85,7 +85,7 @@ export function WorkbenchAdmin() {
               <Block label="Submitted by" value={`${request.submitted_by_name ?? ""} ${request.submitted_by_email ?? ""} ${request.submitted_by_role ?? ""}`} />
               <Block label="Created" value={request.created_at} />
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button type="button" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "accepted")}>Accept</Button>
               <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "rejected")}>Reject</button>
               <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "needs_clarification")}>Needs clarification</button>

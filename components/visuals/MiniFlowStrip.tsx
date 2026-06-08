@@ -4,7 +4,7 @@ const steps = ["Problem Context", "Requirements", "Principles", "Features", "Art
 
 export function MiniFlowStrip() {
   return (
-    <div className="overflow-x-auto">
+    <div className="max-w-full overflow-x-auto">
       <div className="flex min-w-[760px] items-center gap-2">
         {steps.map((step, index) => (
           <div key={step} className="flex flex-1 items-center gap-2">

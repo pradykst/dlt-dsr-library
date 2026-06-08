@@ -44,7 +44,7 @@ export function FlowBuilder() {
             <h2 className="font-serif text-2xl text-ink">Generated Design Path</h2>
             <p className="mt-1 text-sm text-muted">This is deterministic synthesis from seeded nodes and links.</p>
           </div>
-          <Button onClick={async () => { await navigator.clipboard.writeText(summary); setCopied(true); setTimeout(() => setCopied(false), 1600); }}>
+          <Button className="w-full justify-center sm:w-auto" onClick={async () => { await navigator.clipboard.writeText(summary); setCopied(true); setTimeout(() => setCopied(false), 1600); }}>
             {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
             Copy design path
           </Button>
@@ -66,9 +66,9 @@ export function FlowBuilder() {
 
 function Column({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="grid gap-2 border border-line bg-paper p-3 md:grid-cols-[180px_1fr]">
+    <div className="grid min-w-0 gap-2 border border-line bg-paper p-3 md:grid-cols-[180px_minmax(0,1fr)]">
       <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{title}</h3>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex min-w-0 flex-wrap gap-2">
         {items.length ? items.map((item) => <span key={item} className="border border-line bg-white px-2 py-1 text-sm text-ink">{item}</span>) : <span className="text-sm text-muted">No direct match in selected goals</span>}
       </div>
     </div>

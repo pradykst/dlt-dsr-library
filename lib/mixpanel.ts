@@ -51,26 +51,13 @@ export function initMixpanel() {
 }
 
 export function isPublicReplayRoute(pathname: string) {
-  if (isBlockedReplayRoute(pathname)) return false;
-  return (
-    pathname === "/desrist-evaluation" ||
-    pathname === "/workbench" ||
-    pathname.startsWith("/workbench/") ||
-    pathname.startsWith("/papers/")
-  );
+  return !isBlockedReplayRoute(pathname);
 }
 
 export function isBlockedReplayRoute(pathname: string) {
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/workbench/admin") ||
-    pathname.startsWith("/workbench/import") ||
-    pathname.startsWith("/upload") ||
-    pathname.startsWith("/reviewer") ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/ingest") ||
     pathname.startsWith("/desrist-evaluation/admin")
   );
 }
