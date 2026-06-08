@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ClipboardCheck, Network, PanelsTopLeft, Sparkles } from "lucide-react";
+import { ClipboardCheck, Menu, Network, PanelsTopLeft, Sparkles, X } from "lucide-react";
 
 const nav = [
   { label: "Explore", href: "/explore" },
@@ -11,10 +14,12 @@ const nav = [
 ];
 
 export function SiteHeader() {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/92 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-3" onClick={() => setIsOpen(false)}>
           <span className="grid h-10 w-10 shrink-0 place-items-center border border-blue/25 bg-white shadow-[0_8px_24px_rgba(79,111,145,0.12)]">
             <Network className="h-4 w-4 text-blue" />
           </span>
@@ -23,7 +28,9 @@ export function SiteHeader() {
             <span className="hidden text-xs text-muted sm:block">Reusable DSR grids and flows</span>
           </span>
         </Link>
-        <nav className="flex max-w-full items-center gap-1 overflow-x-auto pb-1 text-sm text-muted md:pb-0">
+        
+        {/* Desktop Nav */}
+        <nav className="hidden items-center gap-1 text-sm text-muted md:flex">
           {nav.map(({ label, href, icon: Icon, isNew }) => (
             <Link key={href} href={href} className="inline-flex shrink-0 items-center gap-1.5 border border-transparent px-3 py-2 transition hover:border-line hover:bg-white hover:text-ink">
               {Icon && <Icon className="h-3.5 w-3.5" />}
@@ -37,7 +44,44 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
+
+        {/* Mobile Toggle */}
+        <button type="button" className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink md:hidden transition hover:border-blue" onClick={() => setIsOpen(true)}>
+          <Menu className="h-5 w-5" />
+        </button>
       </div>
+
+      {/* Mobile Sidebar */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end md:hidden">
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-ink/10 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+          
+          {/* Sidebar */}
+          <div className="relative flex w-64 flex-col bg-paper border-l border-line h-full shadow-2xl">
+            <div className="flex h-16 items-center justify-between px-4 border-b border-line">
+              <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-muted">Navigation</span>
+              <button type="button" className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink transition hover:border-blue" onClick={() => setIsOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex flex-col gap-2 p-4 text-sm text-muted">
+              {nav.map(({ label, href, icon: Icon, isNew }) => (
+                <Link key={href} href={href} onClick={() => setIsOpen(false)} className="inline-flex items-center gap-2.5 border border-transparent px-3 py-3 transition hover:border-line hover:bg-white hover:text-ink">
+                  {Icon && <Icon className="h-4 w-4" />}
+                  <span className="leading-5">{label}</span>
+                  {isNew && (
+                    <sup className="ml-auto inline-flex items-center gap-0.5 border border-blue/20 bg-blue/10 px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-[0.08em] text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
+                      <Sparkles className="h-2 w-2" />
+                      New
+                    </sup>
+                  )}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
