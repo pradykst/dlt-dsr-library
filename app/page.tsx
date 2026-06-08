@@ -67,7 +67,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Link href="/chatbot-demo" className="block border border-blue/20 bg-white p-5 shadow-research transition hover:border-blue">
+      <Link href="/chatbot-demo" className="block relative border border-blue/40 bg-gradient-to-r from-blue/10 via-white to-white p-5 shadow-[0_0_20px_rgba(59,130,246,0.15)] transition hover:border-blue hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center border border-blue/20 bg-blue/5 text-blue">

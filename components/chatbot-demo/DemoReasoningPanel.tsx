@@ -12,15 +12,15 @@ import { DemoSourceCard } from "@/components/chatbot-demo/DemoSourceCard";
 
 export function DemoReasoningPanel({ currentStep }: { currentStep: number }) {
   return (
-    <aside className="space-y-4">
-      <section className="border border-line bg-white p-5 shadow-research">
+    <aside className="space-y-3">
+      <section className="border border-line bg-white p-4 shadow-research">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Current stage</div>
-            <h2 className="mt-2 font-serif text-2xl text-ink">{demoSteps[currentStep]}</h2>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Current stage</div>
+            <h2 className="mt-1 font-serif text-lg text-ink">{demoSteps[currentStep]}</h2>
           </div>
-          <span className="grid h-10 w-10 shrink-0 place-items-center border border-blue/20 bg-blue/5 text-blue">
-            {currentStep < 3 ? <Search className="h-4 w-4" /> : <GitBranch className="h-4 w-4" />}
+          <span className="grid h-8 w-8 shrink-0 place-items-center border border-blue/20 bg-blue/5 text-blue">
+            {currentStep < 3 ? <Search className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
           </span>
         </div>
         <div className="mt-4">
@@ -28,15 +28,15 @@ export function DemoReasoningPanel({ currentStep }: { currentStep: number }) {
         </div>
       </section>
 
-      <section className="border border-line bg-white p-5 shadow-research">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Source papers being searched</div>
+      <section className="border border-line bg-white p-4 shadow-research">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Source papers being searched</div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           {demoPapers.map((paper, index) => <DemoSourceCard key={paper.code} paper={paper} active={currentStep >= 2 && index <= Math.min(demoPapers.length - 1, currentStep + 1)} />)}
         </div>
       </section>
 
-      <section className="border border-line bg-white p-5 shadow-research">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Retrieved design knowledge elements</div>
+      <section className="border border-line bg-white p-4 shadow-research">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Retrieved design knowledge elements</div>
         <div className="mt-3 space-y-3">
           <ElementGroup title="Requirements" items={retrievedElements.requirements} active={currentStep >= 3} />
           <ElementGroup title="Design principles" items={retrievedElements.principles} active={currentStep >= 4} />
@@ -44,15 +44,15 @@ export function DemoReasoningPanel({ currentStep }: { currentStep: number }) {
         </div>
       </section>
 
-      <section className="border border-line bg-white p-5 shadow-research">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Temporary mini-flow</div>
+      <section className="border border-line bg-white p-4 shadow-research">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Temporary mini-flow</div>
         <div className="mt-3">
           <DemoFlow nodes={demoFlowNodes} visibleCount={currentStep >= 6 ? demoFlowNodes.length : Math.min(demoFlowNodes.length, currentStep + 1)} compact />
         </div>
       </section>
 
-      <section className="border border-line bg-white p-5 shadow-research">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Evaluation criteria</div>
+      <section className="border border-line bg-white p-4 shadow-research">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Evaluation criteria</div>
         <div className="mt-3 grid gap-3">
           {qualityCriteria.map((criterion, index) => {
             const active = currentStep >= 5 || index <= currentStep - 3;
@@ -141,9 +141,9 @@ function ScanningNote({ text, complete }: { text: string; complete?: boolean }) 
 function ElementGroup({ title, items, active }: { title: string; items: string[]; active: boolean }) {
   return (
     <div className={active ? "opacity-100 transition" : "opacity-45 transition"}>
-      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{title}</div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {items.map((item) => <span key={item} className="border border-line bg-paper px-2 py-1 text-xs leading-5 text-ink">{item}</span>)}
+      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{title}</div>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {items.map((item) => <span key={item} className="border border-line bg-paper px-1.5 py-0.5 text-[11px] leading-4 text-ink">{item}</span>)}
       </div>
     </div>
   );

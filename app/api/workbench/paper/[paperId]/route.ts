@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/workbench/api";
 import { getSupabaseAdmin } from "@/lib/workbench/supabase-admin";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ paperId: string }> }) {
+export async function GET(_request: Request, context: any) {
   try {
-    const { paperId } = await params;
+    const { paperId } = await context.params;
     const supabase = getSupabaseAdmin();
     const [paperResult, elementsResult, relationsResult, evidenceResult, changeRequestsResult] = await Promise.all([
       supabase.from("papers").select("*").eq("paper_id", paperId).maybeSingle(),

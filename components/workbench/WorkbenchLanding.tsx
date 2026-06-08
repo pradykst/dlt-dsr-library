@@ -54,7 +54,7 @@ export function WorkbenchLanding() {
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {paper.artifact_type && <InfoPill label="Artifact" value={primaryPhrase(paper.artifact_type)} />}
+                  {paper.artifact_type && <InfoPill label="Artifact" value={shorten(paper.artifact_type.split(";").map(s => s.trim()).filter(Boolean).join("; "), 92)} />}
                   {paper.blockchain_dlt_role && <InfoPill label="DLT Role" value={shorten(paper.blockchain_dlt_role, 92)} />}
                 </div>
 

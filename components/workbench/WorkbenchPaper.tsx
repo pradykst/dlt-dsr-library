@@ -161,18 +161,13 @@ function DsrGrid({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (targe
             <Card key={group.title} className="p-5">
               <h2 className="font-serif text-2xl text-ink">{group.title}</h2>
               <div className="mt-3 space-y-3">
-                {groupElements.length ? groupElements.map((element) => {
-                  const value = element.normalized_text ?? element.element_text ?? "";
-                  return (
-                    <div key={element.element_id} className="border border-line bg-paper p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-semibold leading-5 text-ink">{element.element_name ?? element.short_label ?? element.element_id}</h3>
-                        <button className="shrink-0 border border-line bg-white px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field: group.field, oldValue: value })}>Suggest edit</button>
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
-                    </div>
-                  );
-                }) : (
+                {groupElements.length ? (
+                  <div className="border border-line bg-paper p-3">
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">
+                      {groupElements.map((element) => element.normalized_text ?? element.element_text ?? "").filter(Boolean).join("; ")}
+                    </p>
+                  </div>
+                ) : (
                   <p className="text-sm leading-6 text-muted">No imported {group.title.toLowerCase()} element.</p>
                 )}
               </div>
