@@ -14,14 +14,13 @@ import type { Paper, PaperBundle, WorkbenchElement, WorkbenchEvidence, Workbench
 import { trackGeneratedFlowViewed, trackPaperOpened } from "@/utils/analytics";
 
 const tabs = ["Overview", "DSR Grid", "Flow", "Corrections"];
-const gridElementGroups = [
-  { title: "Problem", types: ["Problem"], field: "normalized_text" },
-  { title: "Requirement", types: ["Design Requirement", "Requirement"], field: "normalized_text" },
-  { title: "Principle", types: ["Design Principle", "Principle"], field: "normalized_text" },
-  { title: "Feature", types: ["Design Feature", "Feature"], field: "normalized_text" },
-  { title: "Artifact", types: ["Artifact"], field: "normalized_text" },
-  { title: "Evaluation", types: ["Evaluation"], field: "normalized_text" },
-  { title: "Output Knowledge", types: ["Output Claim", "Output Knowledge"], field: "normalized_text" }
+const gridCells = [
+  ["Problem", "problem_description"],
+  ["Input Knowledge", "input_knowledge"],
+  ["Research Process", "research_process"],
+  ["Key Concepts", "key_concepts"],
+  ["Solution", "solution_description"],
+  ["Output Knowledge", "output_knowledge"]
 ] as const;
 const additionalContextCells = [
   ["Summary", "evaluation_summary"],
@@ -166,26 +165,19 @@ function Overview({ bundle }: { bundle: PaperBundle }) {
 }
 
 function DsrGrid({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (target: SuggestTarget) => void }) {
-  const { paper, elements } = bundle;
+  const { paper } = bundle;
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {gridElementGroups.map((group) => {
-          const groupElements = elements.filter((element) => group.types.some((type) => type === element.element_type));
+        {gridCells.map(([title, field]) => {
+          const value = String(paper[field] ?? "");
           return (
-            <Card key={group.title} className="p-5">
-              <h2 className="font-serif text-2xl text-ink">{group.title}</h2>
-              <div className="mt-3 space-y-3">
-                {groupElements.length ? (
-                  <div className="border border-line bg-paper p-3">
-                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">
-                      {groupElements.map((element) => element.normalized_text ?? element.element_text ?? "").filter(Boolean).join("; ")}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm leading-6 text-muted">No imported {group.title.toLowerCase()} element.</p>
-                )}
+            <Card key={field} className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-serif text-2xl text-ink">{title}</h2>
+                <button className="shrink-0 border border-line bg-paper px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "papers", rowKey: paper.paper_id, field, oldValue: value })}>Suggest edit</button>
               </div>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
             </Card>
           );
         })}
