@@ -53,7 +53,7 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
       setStatus(result.error ?? "Suggestion could not be submitted.");
       return;
     }
-    setStatus("Suggestion submitted.");
+    setStatus("Change request committed.");
     trackEvent("reviewer_change_requested", {
       paper_id: paperId,
       target_table: targetTable,
@@ -67,10 +67,10 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
       <div className="ml-auto h-full w-full max-w-xl overflow-y-auto border border-line bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-line p-5">
           <div>
-            <h2 className="font-serif text-2xl text-ink">Suggest Correction</h2>
+            <h2 className="font-serif text-2xl text-ink">Request Change</h2>
             <p className="mt-1 text-xs uppercase tracking-[0.12em] text-muted">{targetTable}.{targetField}</p>
           </div>
-          <button type="button" aria-label="Close suggestion form" className="border border-line p-2 text-muted hover:text-ink" onClick={onClose}>
+          <button type="button" aria-label="Close change request form" className="border border-line p-2 text-muted hover:text-ink" onClick={onClose}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -102,7 +102,7 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
           </Field>
           {status && <p className="border border-line bg-paper p-3 text-sm text-muted">{status}</p>}
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" disabled={submitting || !proposedValue} onClick={submit}>{submitting ? "Submitting..." : "Submit suggestion"}</Button>
+            <Button type="button" disabled={submitting || !proposedValue} onClick={submit}>{submitting ? "Committing..." : "Commit change request"}</Button>
             <button type="button" className="border border-line px-3 py-2 text-sm text-muted hover:text-ink" onClick={onClose}>Close</button>
           </div>
         </div>

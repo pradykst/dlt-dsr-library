@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -9,10 +10,10 @@ import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { SuggestionForm } from "@/components/workbench/SuggestionForm";
 import { WorkbenchFlowProvider } from "@/components/workbench/WorkbenchFlow";
-import type { PaperBundle, WorkbenchElement, WorkbenchEvidence } from "@/lib/workbench/types";
+import type { Paper, PaperBundle, WorkbenchElement, WorkbenchEvidence, WorkbenchRelation } from "@/lib/workbench/types";
 import { trackGeneratedFlowViewed, trackPaperOpened } from "@/utils/analytics";
 
-const tabs = ["Overview", "DSR Grid", "Flow", "Elements", "Evidence", "Suggestions"];
+const tabs = ["Overview", "DSR Grid", "Flow", "Corrections"];
 const gridElementGroups = [
   { title: "Problem", types: ["Problem"], field: "normalized_text" },
   { title: "Requirement", types: ["Design Requirement", "Requirement"], field: "normalized_text" },
@@ -32,6 +33,20 @@ type SuggestTarget = {
   rowKey: string;
   field: string;
   oldValue: string;
+};
+
+type CorrectionRow = {
+  id: string;
+  category: "Paper" | "Element" | "Relation" | "Evidence";
+  itemType: string;
+  itemId: string;
+  field: string;
+  currentValue: string;
+  sourceStatus: string;
+  reviewStatus: string;
+  confidence: string;
+  sortOrder: number;
+  target: SuggestTarget;
 };
 
 export function WorkbenchPaper({ paperId }: { paperId: string }) {
@@ -86,7 +101,9 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/workbench" className="text-sm text-muted hover:text-ink">Back to Workbench</Link>
+        <Link href="/workbench" aria-label="Back to Workbench" title="Back to Workbench" className="inline-flex h-9 w-9 items-center justify-center border border-line bg-white text-muted shadow-research hover:border-blue hover:text-ink">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <Badge>{paper.paper_id}</Badge>
@@ -98,7 +115,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
             {paper.domain && <Badge>{paper.domain}</Badge>}
             {paper.overall_extraction_status && <StatusBadge label="Extraction" value={paper.overall_extraction_status} />}
             {paper.review_status && <StatusBadge label="Review" value={paper.review_status} />}
-            <Badge>{bundle.changeRequestsCount} suggestions</Badge>
+            <Badge>{bundle.changeRequestsCount} change requests</Badge>
           </div>
         </div>
       </div>
@@ -107,9 +124,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
         {tab === "Overview" && <Overview bundle={bundle} />}
         {tab === "DSR Grid" && <DsrGrid bundle={bundle} onSuggest={setSuggestTarget} />}
         {tab === "Flow" && <WorkbenchFlowProvider elements={elements} relations={relations} evidence={evidence} onSuggest={setSuggestTarget} />}
-        {tab === "Elements" && <ElementsTable elements={elements} onSuggest={setSuggestTarget} />}
-        {tab === "Evidence" && <EvidenceTable evidence={evidence} onSuggest={setSuggestTarget} />}
-        {tab === "Suggestions" && <Suggestions paperId={paper.paper_id} onSuggest={() => setSuggestTarget({ table: "papers", rowKey: paper.paper_id, field: "notes", oldValue: paper.notes ?? "" })} />}
+        {tab === "Corrections" && <CorrectionsPanel bundle={bundle} onSuggest={setSuggestTarget} />}
       </div>
       {suggestTarget && (
         <SuggestionForm
@@ -197,62 +212,91 @@ function DsrGrid({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (targe
   );
 }
 
-function ElementsTable({ elements, onSuggest }: { elements: WorkbenchElement[]; onSuggest: (target: SuggestTarget) => void }) {
+function CorrectionsPanel({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (target: SuggestTarget) => void }) {
+  const { paper, elements, relations, evidence } = bundle;
   const [query, setQuery] = useState("");
-  const [type, setType] = useState("all");
-  const [sourceStatus, setSourceStatus] = useState("all");
-  const [confidence, setConfidence] = useState("all");
-  const filtered = useMemo(() => elements.filter((element) => {
-    const haystack = `${element.element_id} ${element.element_type} ${element.element_name} ${element.normalized_text}`.toLowerCase();
-    return haystack.includes(query.toLowerCase()) && (type === "all" || element.element_type === type) && (sourceStatus === "all" || element.source_status === sourceStatus) && (confidence === "all" || String(element.confidence) === confidence);
-  }), [confidence, elements, query, sourceStatus, type]);
-  const types = unique(elements.map((element) => element.element_type));
-  const sourceStatuses = unique(elements.map((element) => element.source_status));
+  const [category, setCategory] = useState("all");
+  const [itemType, setItemType] = useState("all");
+  const [field, setField] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("category");
+  const rows = useMemo(() => buildCorrectionRows(paper, elements, relations, evidence), [elements, evidence, paper, relations]);
+  const itemTypes = unique(rows.map((row) => row.itemType));
+  const fields = unique(rows.map((row) => row.field));
+  const statuses = unique(rows.flatMap((row) => [row.sourceStatus, row.reviewStatus]));
+  const filtered = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return rows
+      .filter((row) => {
+        const haystack = `${row.category} ${row.itemType} ${row.itemId} ${row.field} ${row.currentValue} ${row.sourceStatus} ${row.reviewStatus}`.toLowerCase();
+        return (!normalizedQuery || haystack.includes(normalizedQuery))
+          && (category === "all" || row.category === category)
+          && (itemType === "all" || row.itemType === itemType)
+          && (field === "all" || row.field === field)
+          && (status === "all" || row.sourceStatus === status || row.reviewStatus === status);
+      })
+      .sort((a, b) => compareCorrectionRows(a, b, sort));
+  }, [category, field, itemType, query, rows, sort, status]);
+
   return (
     <Card className="overflow-hidden">
-      <div className="grid gap-3 border-b border-line p-4 md:grid-cols-4">
-        <Input placeholder="Search elements" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <Select value={type} onChange={(event) => setType(event.target.value)}><option value="all">All types</option>{types.map((item) => <option key={item}>{item}</option>)}</Select>
-        <Select value={sourceStatus} onChange={(event) => setSourceStatus(event.target.value)}><option value="all">All source statuses</option>{sourceStatuses.map((item) => <option key={item}>{item}</option>)}</Select>
-        <Select value={confidence} onChange={(event) => setConfidence(event.target.value)}><option value="all">All confidence</option><option>1</option><option>2</option><option>3</option></Select>
+      <div className="border-b border-line p-4">
+        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+          <div>
+            <h2 className="font-serif text-2xl text-ink">Corrections</h2>
+            <p className="mt-1 text-sm leading-6 text-muted">Review paper fields, extracted elements, relations, and evidence in one place before committing a change request.</p>
+          </div>
+          <Badge>{filtered.length} shown / {rows.length} editable fields</Badge>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <Input placeholder="Search corrections" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <Select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <option value="all">All categories</option>
+            <option>Paper</option>
+            <option>Element</option>
+            <option>Relation</option>
+            <option>Evidence</option>
+          </Select>
+          <Select value={itemType} onChange={(event) => setItemType(event.target.value)}>
+            <option value="all">All item types</option>
+            {itemTypes.map((item) => <option key={item}>{item}</option>)}
+          </Select>
+          <Select value={field} onChange={(event) => setField(event.target.value)}>
+            <option value="all">All fields</option>
+            {fields.map((item) => <option key={item}>{item}</option>)}
+          </Select>
+          <Select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option value="all">All statuses</option>
+            {statuses.map((item) => <option key={item}>{item}</option>)}
+          </Select>
+          <Select value={sort} onChange={(event) => setSort(event.target.value)}>
+            <option value="category">Sort by category</option>
+            <option value="type">Sort by item type</option>
+            <option value="field">Sort by field</option>
+            <option value="confidence">Sort by confidence</option>
+            <option value="id">Sort by ID</option>
+          </Select>
+        </div>
       </div>
-      <DataTable headers={["ID", "Type", "Name", "Normalized Text", "Source", "Confidence", "Review", "Quote", ""]}>
-        {filtered.map((element) => (
-          <tr key={element.element_id} className="border-t border-line align-top">
-            <Cell>{element.element_id}</Cell><Cell>{displayElementType(element.element_type)}</Cell><Cell>{element.element_name}</Cell><Cell>{element.normalized_text}</Cell><Cell>{element.source_status}</Cell><Cell>{element.confidence}</Cell><Cell>{element.review_status}</Cell><Cell>{element.source_quote_id}</Cell>
-            <Cell><button className="text-xs text-blue hover:text-ink" onClick={() => onSuggest({ table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field: "normalized_text", oldValue: element.normalized_text ?? "" })}>Suggest edit</button></Cell>
+      <DataTable headers={["Category", "ID", "Type", "Field", "Current Value", "Status", "Confidence", ""]}>
+        {filtered.map((row) => (
+          <tr key={row.id} className="border-t border-line align-top">
+            <Cell><Badge>{row.category}</Badge></Cell>
+            <Cell>{row.itemId}</Cell>
+            <Cell>{displayElementType(row.itemType)}</Cell>
+            <Cell>{humanizeField(row.field)}</Cell>
+            <Cell>{row.currentValue}</Cell>
+            <Cell>{[row.sourceStatus, row.reviewStatus].filter(Boolean).join(" / ")}</Cell>
+            <Cell>{row.confidence}</Cell>
+            <Cell><button className="whitespace-nowrap text-xs font-medium text-blue hover:text-ink" onClick={() => onSuggest(row.target)}>Request change</button></Cell>
           </tr>
         ))}
-      </DataTable>
-    </Card>
-  );
-}
-
-function EvidenceTable({ evidence, onSuggest }: { evidence: WorkbenchEvidence[]; onSuggest: (target: SuggestTarget) => void }) {
-  const [query, setQuery] = useState("");
-  const filtered = evidence.filter((item) => `${item.evidence_id} ${item.evidence_type} ${item.exact_quote_or_description} ${item.element_ids_supported} ${item.relation_ids_supported}`.toLowerCase().includes(query.toLowerCase()));
-  return (
-    <Card className="overflow-hidden">
-      <div className="border-b border-line p-4"><Input placeholder="Search evidence" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-      <DataTable headers={["ID", "Type", "Quote / Description", "Page", "Section", "Source", "Strength", "Elements", "Relations", ""]}>
-        {filtered.map((item) => (
-          <tr key={item.evidence_id} className="border-t border-line align-top">
-            <Cell>{item.evidence_id}</Cell><Cell>{item.evidence_type}</Cell><Cell>{item.exact_quote_or_description}</Cell><Cell>{item.page}</Cell><Cell>{item.section}</Cell><Cell>{item.source_status}</Cell><Cell>{item.evidence_strength}</Cell><Cell>{item.element_ids_supported}</Cell><Cell>{item.relation_ids_supported}</Cell>
-            <Cell><button className="text-xs text-blue hover:text-ink" onClick={() => onSuggest({ table: "evidence", rowKey: `${item.paper_id}:${item.evidence_id}`, field: "exact_quote_or_description", oldValue: item.exact_quote_or_description ?? "" })}>Suggest edit</button></Cell>
+        {filtered.length === 0 && (
+          <tr className="border-t border-line">
+            <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted">No correction targets match the current filters.</td>
           </tr>
-        ))}
+        )}
       </DataTable>
-    </Card>
-  );
-}
-
-function Suggestions({ paperId, onSuggest }: { paperId: string; onSuggest: () => void }) {
-  return (
-    <Card className="p-5">
-      <h2 className="font-serif text-2xl text-ink">Suggestions</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">Public suggestion details are kept minimal in this MVP. Use the correction buttons throughout the workbench to submit a proposed change; admins can review the full queue from the admin page.</p>
-      <button className="mt-4 border border-line bg-paper px-3 py-2 text-sm font-medium text-ink hover:border-blue" onClick={onSuggest}>Suggest paper-level correction</button>
-      <p className="mt-4 text-sm text-muted">Paper ID: {paperId}</p>
     </Card>
   );
 }
@@ -276,11 +320,155 @@ function Summary({ label, value }: { label: string; value: string | number | nul
 }
 
 function DataTable({ headers, children }: { headers: string[]; children: React.ReactNode }) {
-  return <div className="overflow-x-auto"><table className="min-w-[1100px] text-left text-sm"><thead className="bg-paper text-xs uppercase tracking-[0.12em] text-muted"><tr>{headers.map((header) => <th key={header} className="px-3 py-3 font-semibold">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>;
+  const widths = ["8rem", "7rem", "12rem", "11rem", "34%", "10rem", "7rem", "9rem"];
+  return (
+    <div className="max-h-[70vh] overflow-auto">
+      <table className="min-w-[1180px] text-left text-sm xl:min-w-full">
+        <colgroup>{widths.map((width, index) => <col key={index} style={{ width }} />)}</colgroup>
+        <thead className="sticky top-0 z-10 bg-paper text-xs uppercase tracking-[0.12em] text-muted">
+          <tr>{headers.map((header) => <th key={header} className="px-3 py-3 font-semibold">{header}</th>)}</tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
 }
 
 function Cell({ children }: { children: React.ReactNode }) {
   return <td className="max-w-[320px] break-words px-3 py-3 text-sm leading-6 text-ink">{typeof children === "string" ? <LinkedText text={children} /> : children}</td>;
+}
+
+function buildCorrectionRows(paper: Paper, elements: WorkbenchElement[], relations: WorkbenchRelation[], evidence: WorkbenchEvidence[]) {
+  const rows: CorrectionRow[] = [];
+  const paperFields: Array<[keyof Paper, string]> = [
+    ["short_title", "Title"],
+    ["full_citation", "Citation"],
+    ["authors", "Authors"],
+    ["doi_or_url", "DOI or URL"],
+    ["domain", "Domain"],
+    ["artifact_type", "Artifact Type"],
+    ["blockchain_dlt_role", "DLT Role"],
+    ["problem_description", "Problem"],
+    ["input_knowledge", "Input Knowledge"],
+    ["research_process", "Research Process"],
+    ["key_concepts", "Key Concepts"],
+    ["solution_description", "Solution"],
+    ["output_knowledge", "Output Knowledge"],
+    ["evaluation_summary", "Evaluation Summary"],
+    ["boundary_conditions", "Limitations"],
+    ["notes", "Notes"]
+  ];
+
+  paperFields.forEach(([field, label], index) => {
+    const value = paper[field];
+    rows.push({
+      id: `paper:${field}`,
+      category: "Paper",
+      itemType: label,
+      itemId: paper.paper_id,
+      field,
+      currentValue: value == null ? "" : String(value),
+      sourceStatus: paper.overall_extraction_status ?? "",
+      reviewStatus: paper.review_status ?? "",
+      confidence: paper.overall_confidence == null ? "" : String(paper.overall_confidence),
+      sortOrder: index,
+      target: { table: "papers", rowKey: paper.paper_id, field, oldValue: value == null ? "" : String(value) }
+    });
+  });
+
+  elements.forEach((element, index) => {
+    const field = "normalized_text";
+    rows.push({
+      id: `element:${element.element_id}:${field}`,
+      category: "Element",
+      itemType: displayElementType(element.element_type) ?? "Element",
+      itemId: element.element_id,
+      field,
+      currentValue: element.normalized_text ?? element.element_text ?? "",
+      sourceStatus: element.source_status ?? "",
+      reviewStatus: element.review_status ?? "",
+      confidence: element.confidence == null ? "" : String(element.confidence),
+      sortOrder: 1000 + index,
+      target: { table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field, oldValue: element.normalized_text ?? "" }
+    });
+  });
+
+  relations.forEach((relation, index) => {
+    const field = "notes";
+    rows.push({
+      id: `relation:${relation.relation_id}:${field}`,
+      category: "Relation",
+      itemType: relation.relation_type ?? "Relation",
+      itemId: relation.relation_id,
+      field,
+      currentValue: relation.notes ?? `${relation.source_node_id} -> ${relation.target_node_id}`,
+      sourceStatus: relation.source_status ?? "",
+      reviewStatus: relation.review_status ?? "",
+      confidence: relation.confidence == null ? "" : String(relation.confidence),
+      sortOrder: 2000 + index,
+      target: { table: "relations", rowKey: `${relation.paper_id}:${relation.relation_id}`, field, oldValue: relation.notes ?? "" }
+    });
+  });
+
+  evidence.forEach((item, index) => {
+    const field = "exact_quote_or_description";
+    rows.push({
+      id: `evidence:${item.evidence_id}:${field}`,
+      category: "Evidence",
+      itemType: item.evidence_type ?? "Evidence",
+      itemId: item.evidence_id,
+      field,
+      currentValue: item.exact_quote_or_description ?? "",
+      sourceStatus: item.source_status ?? "",
+      reviewStatus: "",
+      confidence: item.evidence_strength == null ? "" : String(item.evidence_strength),
+      sortOrder: 3000 + index,
+      target: { table: "evidence", rowKey: `${item.paper_id}:${item.evidence_id}`, field, oldValue: item.exact_quote_or_description ?? "" }
+    });
+  });
+
+  return rows;
+}
+
+function compareCorrectionRows(a: CorrectionRow, b: CorrectionRow, sort: string) {
+  if (sort === "type") return compareText(a.itemType, b.itemType) || a.sortOrder - b.sortOrder;
+  if (sort === "field") return compareText(a.field, b.field) || a.sortOrder - b.sortOrder;
+  if (sort === "confidence") return compareText(b.confidence, a.confidence) || a.sortOrder - b.sortOrder;
+  if (sort === "id") return compareText(a.itemId, b.itemId) || a.sortOrder - b.sortOrder;
+  return categoryRank(a.category) - categoryRank(b.category) || a.sortOrder - b.sortOrder;
+}
+
+function compareText(a: string, b: string) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
+function humanizeField(value: string) {
+  const labels: Record<string, string> = {
+    artifact_type: "Artifact Type",
+    blockchain_dlt_role: "DLT Role",
+    boundary_conditions: "Limitations",
+    doi_or_url: "DOI or URL",
+    evaluation_summary: "Evaluation Summary",
+    exact_quote_or_description: "Quote / Description",
+    full_citation: "Citation",
+    input_knowledge: "Input Knowledge",
+    key_concepts: "Key Concepts",
+    normalized_text: "Normalized Text",
+    output_knowledge: "Output Knowledge",
+    problem_description: "Problem",
+    research_process: "Research Process",
+    short_title: "Title",
+    solution_description: "Solution"
+  };
+  if (labels[value]) return labels[value];
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function categoryRank(category: CorrectionRow["category"]) {
+  if (category === "Paper") return 0;
+  if (category === "Element") return 1;
+  if (category === "Relation") return 2;
+  return 3;
 }
 
 function displayElementType(value: string | null | undefined) {

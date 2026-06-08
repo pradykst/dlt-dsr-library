@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import ReactFlow, { Background, Controls, MarkerType, ReactFlowProvider, useReactFlow, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { Badge } from "@/components/ui/Badge";
@@ -8,15 +8,22 @@ import { includesToken } from "@/lib/workbench/csv";
 import type { WorkbenchElement, WorkbenchEvidence, WorkbenchRelation } from "@/lib/workbench/types";
 import { trackFlowInteraction } from "@/utils/analytics";
 
-type Selection = { kind: "node"; element: WorkbenchElement } | { kind: "edge"; relation: WorkbenchRelation } | null;
-type FlowMode = "main" | "extended";
+type AggregateNode = { id: string; label: string; elementType: string; text: string; elements: WorkbenchElement[] };
+type Selection = { kind: "node"; element: WorkbenchElement } | { kind: "aggregate"; node: AggregateNode } | { kind: "edge"; relation: WorkbenchRelation } | null;
+type FlowMode = "main" | "context";
 
 const columns = ["Problem", "Design Requirement", "Design Principle", "Design Feature", "Artifact", "Evaluation", "Output Claim"];
 const extendedColumns = [...columns, "Kernel Theory", "Boundary Condition", "Future Work"];
+const mainColumns = ["Requirement", "Design Principle", "Design Feature"];
+const contextAggregateColumns = ["Problem", "Artifact", "Evaluation"];
+const contextLegendColumns = ["Problem", ...mainColumns, "Artifact", "Evaluation"];
 const colors: Record<string, string> = {
   Problem: "#f4d6dc",
+  Requirement: "#ded5eb",
   "Design Requirement": "#ded5eb",
+  Principle: "#d9eadc",
   "Design Principle": "#d9eadc",
+  Feature: "#ead7b9",
   "Design Feature": "#ead7b9",
   Artifact: "#cfe7e2",
   Evaluation: "#e5e7eb",
@@ -38,35 +45,41 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
   const [selection, setSelection] = useState<Selection>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const elementById = useMemo(() => new Map(elements.map((element) => [element.element_id, element])), [elements]);
-  const relationStats = useMemo(() => {
-    let main = 0;
-    let extended = 0;
-    let extendedOnly = 0;
-    for (const relation of relations) {
-      if (relation.diagram_include !== true) continue;
-      const view = normalizeDiagramView(relation.diagram_view);
-      if (view === "Hidden") continue;
-      const canRenderMain = relationCanRender(relation, columns, elementById);
-      const canRenderExtended = relationCanRender(relation, extendedColumns, elementById);
-      if (view === "Main" && canRenderMain) main += 1;
-      if ((view === "Main" || view === "Extended") && canRenderExtended) extended += 1;
-      if (view === "Extended" && canRenderExtended) extendedOnly += 1;
-    }
-    return { main, extended, extendedOnly };
-  }, [elementById, relations]);
+  /*
+   * Legacy full/extended flow switch, kept commented for later:
+   *
+   * const relationStats = useMemo(() => {
+   *   let main = 0;
+   *   let extended = 0;
+   *   let extendedOnly = 0;
+   *   for (const relation of relations) {
+   *     if (relation.diagram_include !== true) continue;
+   *     const view = normalizeDiagramView(relation.diagram_view);
+   *     if (view === "Hidden") continue;
+   *     const canRenderMain = relationCanRender(relation, columns, elementById);
+   *     const canRenderExtended = relationCanRender(relation, extendedColumns, elementById);
+   *     if (view === "Main" && canRenderMain) main += 1;
+   *     if ((view === "Main" || view === "Extended") && canRenderExtended) extended += 1;
+   *     if (view === "Extended" && canRenderExtended) extendedOnly += 1;
+   *   }
+   *   return { main, extended, extendedOnly };
+   * }, [elementById, relations]);
+  */
   const visibleRelations = useMemo(() => relations.filter((relation) => {
     if (relation.diagram_include !== true) return false;
     const view = normalizeDiagramView(relation.diagram_view);
     if (view === "Hidden") return false;
-    if (mode === "main") return view === "Main";
-    return view === "Main" || view === "Extended";
-  }), [mode, relations]);
-  const visibleColumns = mode === "main" ? columns : extendedColumns;
+    return view === "Main";
+  }), [relations]);
+  /*
+   * Old column selection:
+   * const visibleColumns = mode === "main" ? columns : extendedColumns;
+   */
   const renderedRelations = useMemo(() => visibleRelations.filter((relation) => {
     const source = elementById.get(relation.source_node_id);
     const target = elementById.get(relation.target_node_id);
-    return source && target && visibleColumns.includes(source.element_type ?? "") && visibleColumns.includes(target.element_type ?? "");
-  }), [elementById, visibleColumns, visibleRelations]);
+    return source && target && isMainElementType(source.element_type) && isMainElementType(target.element_type);
+  }), [elementById, visibleRelations]);
   const visibleNodeIds = useMemo(() => {
     const ids = new Set<string>();
     for (const relation of renderedRelations) {
@@ -75,37 +88,91 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
     }
     return ids;
   }, [renderedRelations]);
+  const aggregateNodes = useMemo(() => contextAggregateColumns
+    .map((elementType, index): AggregateNode | null => {
+      const groupedElements = elements
+        .filter((element) => element.element_type === elementType)
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      const text = groupedElements
+        .map((element) => element.normalized_text ?? element.element_text ?? element.element_name ?? "")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .join("; ");
+      if (!text && groupedElements.length === 0) return null;
+      return {
+        id: `aggregate-${elementType.toLowerCase().replace(/\s+/g, "-")}`,
+        label: elementType,
+        elementType,
+        text,
+        elements: groupedElements
+      };
+    })
+    .filter((node): node is AggregateNode => Boolean(node)), [elements]);
+  const aggregateNodeByType = useMemo(() => new Map(aggregateNodes.map((node) => [node.elementType, node])), [aggregateNodes]);
   const nodes: Node[] = useMemo(() => {
     const rowCount = new Map<string, number>();
-    return elements
+    const mainElementNodes: Node[] = elements
       .filter((element) => visibleNodeIds.has(element.element_id))
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       .map((element) => {
-        const column = Math.max(0, visibleColumns.indexOf(element.element_type ?? ""));
-        const row = rowCount.get(element.element_type ?? "") ?? 0;
-        rowCount.set(element.element_type ?? "", row + 1);
+        const columnType = canonicalMainElementType(element.element_type);
+        const column = Math.max(0, mainColumns.indexOf(columnType));
+        const row = rowCount.get(columnType) ?? 0;
+        rowCount.set(columnType, row + 1);
         return {
           id: element.element_id,
-          position: { x: column * 250, y: row * 126 },
+          position: { x: column * 250 + (mode === "context" ? 280 : 0), y: row * 126 },
           data: { label: element.short_label ?? element.element_name ?? element.element_id },
           style: {
             width: 180,
             minHeight: 70,
             border: "1px solid #bdb8aa",
             borderRadius: 0,
-            background: colors[element.element_type ?? ""] ?? "#ffffff",
+            background: colors[columnType] ?? colors[element.element_type ?? ""] ?? "#ffffff",
             color: "#20242a",
             fontSize: 12,
             lineHeight: 1.4,
             whiteSpace: "normal",
             overflowWrap: "anywhere",
             padding: 10
-          }
+          } satisfies CSSProperties
         };
       });
-  }, [elements, visibleColumns, visibleNodeIds]);
+
+    if (mode === "main") return mainElementNodes;
+
+    const problemNode = aggregateNodeByType.get("Problem");
+    const artifactNode = aggregateNodeByType.get("Artifact");
+    const evaluationNode = aggregateNodeByType.get("Evaluation");
+    const contextNodes: Node[] = [
+      {
+        id: "context-input-band",
+        position: { x: 210, y: -92 },
+        data: { label: "Paper-level problem context" },
+        selectable: false,
+        draggable: false,
+        focusable: false,
+        style: contextBandStyle(690, "#f4d6dc")
+      },
+      {
+        id: "context-output-band",
+        position: { x: 900, y: -92 },
+        data: { label: "Paper-level artifact and evaluation" },
+        selectable: false,
+        draggable: false,
+        focusable: false,
+        style: contextBandStyle(320, "#cfe7e2")
+      }
+    ];
+
+    if (problemNode) contextNodes.push(aggregateFlowNode(problemNode, { x: 0, y: 160 }, "Click for merged problem"));
+    if (artifactNode) contextNodes.push(aggregateFlowNode(artifactNode, { x: 980, y: 90 }, "Click for merged artifact"));
+    if (evaluationNode) contextNodes.push(aggregateFlowNode(evaluationNode, { x: 980, y: 230 }, "Click for merged evaluation"));
+    return [...contextNodes, ...mainElementNodes];
+  }, [aggregateNodeByType, elements, mode, visibleNodeIds]);
   const selectedEdgeId = selection?.kind === "edge" ? selection.relation.relation_id : null;
-  const edges: Edge[] = useMemo(() => renderedRelations.map((relation) => {
+  const edges: Edge[] = useMemo(() => {
+    return renderedRelations.map((relation) => {
     const isFocused = relation.relation_id === hoveredEdgeId || relation.relation_id === selectedEdgeId;
     return {
       id: relation.relation_id,
@@ -123,7 +190,10 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
       labelBgStyle: { fill: "#ffffff", fillOpacity: 0.94 },
       labelBgPadding: [4, 3] as [number, number]
     };
-  }), [hoveredEdgeId, renderedRelations, selectedEdgeId]);
+  });
+  }, [hoveredEdgeId, renderedRelations, selectedEdgeId]);
+  const contextCount = aggregateNodes.length + visibleNodeIds.size;
+  const legendLabels = mode === "main" ? mainColumns : contextLegendColumns;
 
   return (
     <div>
@@ -131,16 +201,22 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <p className="text-sm leading-6 text-muted">This graph renders only approved stored relations. It does not infer links automatically.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <ModeButton active={mode === "main"} onClick={() => { setMode("main"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Main Flow ({relationStats.main})</ModeButton>
-            <ModeButton active={mode === "extended"} onClick={() => { setMode("extended"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Extended Flow ({relationStats.extended})</ModeButton>
+            <ModeButton active={mode === "main"} onClick={() => { setMode("main"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Main Flow ({renderedRelations.length})</ModeButton>
+            <ModeButton active={mode === "context"} onClick={() => { setMode("context"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.24 }), 80); }}>Context Flow ({contextCount})</ModeButton>
+            {/*
+              Extended Flow is intentionally hidden for now.
+              <ModeButton active={mode === "extended"} onClick={() => { setMode("extended"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Extended Flow ({relationStats.extended})</ModeButton>
+            */}
             <button className="border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:border-blue" onClick={() => fitView({ padding: 0.2 })}>Fit view</button>
             <button className="border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:border-blue" onClick={() => { setSelection(null); setHoveredEdgeId(null); fitView({ padding: 0.2 }); }}>Reset view</button>
           </div>
         </div>
+        {/*
         {mode === "extended" && relationStats.extendedOnly === 0 && (
           <p className="mt-2 text-xs text-muted">No Extended-only relations are stored for this paper, so Extended Flow currently matches Main Flow.</p>
         )}
-        <Legend />
+        */}
+        <Legend labels={legendLabels} />
       </div>
       <div className="grid min-w-0 gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="h-[70vh] min-h-[520px] min-w-0 border border-line bg-white shadow-research lg:min-h-[650px]">
@@ -150,6 +226,12 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
             fitView
             minZoom={0.2}
             onNodeClick={(_, node) => {
+              const aggregateNode = aggregateNodes.find((item) => item.id === node.id);
+              if (aggregateNode) {
+                trackFlowInteraction("node_clicked", paperId);
+                setSelection({ kind: "aggregate", node: aggregateNode });
+                return;
+              }
               const element = elementById.get(node.id);
               if (element) {
                 trackFlowInteraction("node_clicked", paperId);
@@ -157,6 +239,7 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
               }
             }}
             onEdgeClick={(_, edge) => {
+              if (mode === "context") return;
               const relation = renderedRelations.find((item) => item.relation_id === edge.id);
               if (relation) {
                 trackFlowInteraction("edge_clicked", paperId);
@@ -217,6 +300,25 @@ function FlowPanel({ selection, evidence, onSuggest }: {
       </aside>
     );
   }
+  if (selection.kind === "aggregate") {
+    const aggregate = selection.node;
+    const elementIds = new Set(aggregate.elements.map((element) => element.element_id));
+    const relatedEvidence = evidence.filter((item) => {
+      const supportedIds = splitTokens(item.element_ids_supported);
+      return supportedIds.some((id) => elementIds.has(id));
+    });
+    return (
+      <aside className="max-h-[70vh] min-h-40 overflow-y-auto border border-line bg-white p-5 lg:min-h-[650px] lg:border-l-0">
+        <Badge>{displayElementType(aggregate.elementType)}</Badge>
+        <h2 className="mt-3 font-serif text-2xl text-ink">{aggregate.label}</h2>
+        <Details rows={[
+          ["Merged Text", aggregate.text || "No imported text found."],
+          ["Source Elements", aggregate.elements.map((element) => element.element_id).join("; ")]
+        ]} />
+        <EvidenceList evidence={relatedEvidence} />
+      </aside>
+    );
+  }
   const relation = selection.relation;
   const relatedEvidence = evidence.filter((item) => item.evidence_id === relation.evidence_id || includesToken(item.relation_ids_supported, relation.relation_id));
   return (
@@ -251,10 +353,10 @@ function ModeButton({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function Legend() {
+function Legend({ labels }: { labels: string[] }) {
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      {columns.map((label) => (
+      {labels.map((label) => (
         <span key={label} className="inline-flex items-center gap-2 border border-line bg-paper px-2 py-1 text-[11px] uppercase tracking-[0.12em] text-muted">
           <span className="h-2.5 w-2.5 border border-ink/20" style={{ background: colors[label] }} />
           {displayElementType(label) === "Design Requirement" ? "Requirement" : displayElementType(label)}
@@ -262,6 +364,46 @@ function Legend() {
       ))}
     </div>
   );
+}
+
+function aggregateFlowNode(node: AggregateNode, position: { x: number; y: number }, helperText: string): Node {
+  return {
+    id: node.id,
+    position,
+    data: { label: `${node.label}\n${helperText}` },
+    style: {
+      width: 190,
+      minHeight: 86,
+      border: "1px solid #9f9a8d",
+      borderRadius: 0,
+      background: colors[node.elementType] ?? "#ffffff",
+      color: "#20242a",
+      fontSize: 12,
+      lineHeight: 1.35,
+      whiteSpace: "pre-line",
+      overflowWrap: "anywhere",
+      padding: 10,
+      boxShadow: "0 0 0 4px rgba(255, 255, 255, 0.72)"
+    }
+  };
+}
+
+function contextBandStyle(width: number, color: string): CSSProperties {
+  return {
+    width,
+    height: 40,
+    border: `1px dashed ${color}`,
+    borderRadius: 0,
+    background: `${color}33`,
+    color: "#5a6473",
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    lineHeight: "18px",
+    padding: 10,
+    pointerEvents: "none",
+    textTransform: "uppercase"
+  };
 }
 
 function normalizeDiagramView(value: string | null | undefined) {
@@ -277,10 +419,28 @@ function displayElementType(value: string | null | undefined) {
   return value === "Boundary Condition" || value === "Boundary Conditions" ? "Limitations" : value;
 }
 
+function canonicalMainElementType(value: string | null | undefined) {
+  if (value === "Design Requirement" || value === "Requirement") return "Requirement";
+  if (value === "Design Principle" || value === "Principle") return "Design Principle";
+  if (value === "Design Feature" || value === "Feature") return "Design Feature";
+  return value ?? "";
+}
+
+function isMainElementType(value: string | null | undefined) {
+  return mainColumns.includes(canonicalMainElementType(value));
+}
+
 function relationCanRender(relation: WorkbenchRelation, allowedColumns: string[], elementById: Map<string, WorkbenchElement>) {
   const source = elementById.get(relation.source_node_id);
   const target = elementById.get(relation.target_node_id);
   return Boolean(source && target && allowedColumns.includes(source.element_type ?? "") && allowedColumns.includes(target.element_type ?? ""));
+}
+
+function splitTokens(value: string | null | undefined) {
+  return (value ?? "")
+    .split(/[;,]/)
+    .map((token) => token.trim())
+    .filter(Boolean);
 }
 
 function EvidenceList({ evidence }: { evidence: WorkbenchEvidence[] }) {
