@@ -127,8 +127,10 @@ export function ChatbotDemo() {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,2.5fr)_minmax(320px,1fr)] items-start">
-        <DemoChatPanel currentStep={currentStep} />
-        <div className="opacity-95 lg:text-sm">
+        <div className="min-w-0">
+          <DemoChatPanel currentStep={currentStep} />
+        </div>
+        <div className="min-w-0 opacity-95 lg:text-sm">
           <DemoReasoningPanel currentStep={currentStep} />
         </div>
       </section>

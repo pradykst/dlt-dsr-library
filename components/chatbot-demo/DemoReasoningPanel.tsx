@@ -12,7 +12,7 @@ import { DemoSourceCard } from "@/components/chatbot-demo/DemoSourceCard";
 
 export function DemoReasoningPanel({ currentStep }: { currentStep: number }) {
   return (
-    <aside className="space-y-3">
+    <aside className="space-y-3 min-w-0">
       <section className="border border-line bg-white p-4 shadow-research">
         <div className="flex items-start justify-between gap-4">
           <div>

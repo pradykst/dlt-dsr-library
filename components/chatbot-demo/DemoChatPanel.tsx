@@ -103,7 +103,7 @@ function statusIndexForStep(step: number) {
 function UserMessage({ children, compact }: { children: React.ReactNode; compact?: boolean }) {
   return (
     <div className="ml-auto flex max-w-[92%] items-start gap-3 sm:max-w-[82%]">
-      <div className={compact ? "border border-blue/20 bg-blue/5 px-3 py-2 text-sm leading-6 text-ink" : "border border-blue/20 bg-blue/5 px-4 py-3 text-sm leading-6 text-ink"}>
+      <div className={compact ? "min-w-0 border border-blue/20 bg-blue/5 px-3 py-2 text-sm leading-6 text-ink" : "min-w-0 border border-blue/20 bg-blue/5 px-4 py-3 text-sm leading-6 text-ink"}>
         {children}
       </div>
       <span className="grid h-8 w-8 shrink-0 place-items-center border border-blue/20 bg-white text-blue">
@@ -119,7 +119,7 @@ function AssistantMessage({ children }: { children: React.ReactNode }) {
       <span className="grid h-8 w-8 shrink-0 place-items-center border border-line bg-paper text-blue">
         <Bot className="h-4 w-4" />
       </span>
-      <div className="demo-message-in border border-line bg-paper px-4 py-3 text-sm leading-6 text-ink">
+      <div className="demo-message-in min-w-0 border border-line bg-paper px-4 py-3 text-sm leading-6 text-ink">
         {children}
       </div>
     </div>
