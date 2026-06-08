@@ -9,7 +9,7 @@ export function Hero() {
         <div>
           <div className="mb-5 inline-flex items-center gap-2 border border-line bg-paper px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-muted">
             <Library className="h-3.5 w-3.5" />
-            Version 1 research demo
+            Research prototype
           </div>
           <h1 className="max-w-3xl font-serif text-4xl leading-tight text-ink sm:text-5xl">
             DLT Design Science Knowledge Library

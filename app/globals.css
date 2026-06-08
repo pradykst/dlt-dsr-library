@@ -35,3 +35,86 @@ a {
 .react-flow__attribution {
   display: none;
 }
+
+.demo-message-in {
+  animation: demo-message-in 220ms ease-out both;
+}
+
+.demo-flow-node {
+  animation: demo-node-in 260ms ease-out both;
+}
+
+.demo-citation-badge {
+  animation: demo-citation-in 220ms ease-out both;
+}
+
+.demo-scan-dot {
+  animation: demo-scan-pulse 1.15s ease-in-out infinite;
+}
+
+.demo-typing-dots {
+  animation: demo-typing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes demo-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes demo-node-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes demo-citation-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes demo-scan-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes demo-typing-pulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-message-in,
+  .demo-flow-node,
+  .demo-citation-badge,
+  .demo-scan-dot,
+  .demo-typing-dots {
+    animation: none;
+  }
+}

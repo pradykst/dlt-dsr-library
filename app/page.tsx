@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, GitBranch, Library, SearchCheck, Workflow } from "lucide-react";
+import { ArrowRight, Bot, GitBranch, Library, SearchCheck, Workflow } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { PageShell } from "@/components/layout/PageShell";
@@ -66,6 +66,26 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
+
+      <Link href="/chatbot-demo" className="block border border-blue/20 bg-white p-5 shadow-research transition hover:border-blue">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center border border-blue/20 bg-blue/5 text-blue">
+              <Bot className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Upcoming assistant preview</div>
+              <h2 className="mt-1 font-serif text-2xl text-ink">Preview Research Assistant</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+                See how a future assistant will retrieve from paper-level flows, ask clarifying questions, and build a query-specific mini-flow with cited design guidance.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-blue">
+            Open scripted demo <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
+      </Link>
 
       <section>
         <div className="mb-4 flex items-center gap-2">
