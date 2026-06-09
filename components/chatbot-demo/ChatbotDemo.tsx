@@ -71,7 +71,7 @@ export function ChatbotDemo() {
   return (
     <div className="space-y-6">
       <section className="research-grid border border-line bg-white px-5 py-8 shadow-research sm:px-8 lg:px-10">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+        <div>
           <div>
             <Badge>Upcoming feature preview</Badge>
             <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-tight text-ink sm:text-5xl">
@@ -83,14 +83,9 @@ export function ChatbotDemo() {
             <p className="mt-4 max-w-3xl text-sm leading-7 text-muted sm:text-base">
               The assistant will retrieve reviewed design knowledge from paper-level grids and flows, ask clarifying questions, build a query-specific mini-flow, and return cited requirements, principles, features, and artifact directions.
             </p>
-            <p className="mt-3 max-w-3xl text-xs leading-5 text-muted">
+            <p className="mt-3 max-w-3xl border border-blue/20 bg-blue/10 px-3 py-2 text-xs font-semibold leading-5 text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
               This scripted demo uses preseeded example data to illustrate the planned workflow. The live chatbot is planned for launch after the conference.
             </p>
-          </div>
-
-          <div className="border border-line bg-paper/80 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Positioning</div>
-            <p className="mt-3 font-serif text-2xl leading-tight text-ink">From find knowledge to guide me using knowledge.</p>
           </div>
         </div>
       </section>

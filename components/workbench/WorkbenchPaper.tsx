@@ -112,9 +112,6 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
           <div className="flex flex-wrap gap-2">
             {paper.year && <Badge>{paper.year}</Badge>}
             {paper.domain && <Badge>{paper.domain}</Badge>}
-            {paper.overall_extraction_status && <StatusBadge label="Extraction" value={paper.overall_extraction_status} />}
-            {paper.review_status && <StatusBadge label="Review" value={paper.review_status} />}
-            <Badge>{bundle.changeRequestsCount} change requests</Badge>
           </div>
         </div>
       </div>
@@ -141,14 +138,10 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
 }
 
 function Overview({ bundle }: { bundle: PaperBundle }) {
-  const { paper, elements, relations, evidence } = bundle;
+  const { paper } = bundle;
   return (
-    <div className="grid gap-4 md:grid-cols-4">
-      <Metric label="Elements" value={elements.length} />
-      <Metric label="Relations" value={relations.length} />
-      <Metric label="Evidence" value={evidence.length} />
-      <Metric label="Confidence" value={paper.overall_confidence ?? "NA"} />
-      <Card className="p-5 md:col-span-4">
+    <div>
+      <Card className="p-5">
         <h2 className="font-serif text-2xl text-ink">Paper Summary</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Summary label="Authors" value={paper.authors} />
@@ -290,19 +283,6 @@ function CorrectionsPanel({ bundle, onSuggest }: { bundle: PaperBundle; onSugges
         )}
       </DataTable>
     </Card>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: React.ReactNode }) {
-  return <Card className="p-5"><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div><div className="mt-2 font-serif text-3xl text-ink">{value}</div></Card>;
-}
-
-function StatusBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="inline-flex items-center border border-line bg-paper text-[11px] font-medium uppercase tracking-[0.12em]">
-      <span className="border-r border-line px-2 py-0.5 text-muted">{label}</span>
-      <span className="px-2 py-0.5 text-ink">{value}</span>
-    </span>
   );
 }
 

@@ -58,11 +58,7 @@ export function WorkbenchLanding() {
                   {paper.blockchain_dlt_role && <InfoPill label="DLT Role" value={shorten(paper.blockchain_dlt_role, 92)} />}
                 </div>
 
-                <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    {paper.overall_extraction_status && <SoftStatus label="Extraction" value={paper.overall_extraction_status} />}
-                    {paper.review_status && <SoftStatus label="Review" value={paper.review_status} />}
-                  </div>
+                <div className="mt-5 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-end">
                   <Link className="inline-flex items-center justify-center gap-2 border border-line bg-paper px-3 py-2 text-sm font-medium text-ink hover:border-blue" href={`/workbench/${encodeURIComponent(paper.paper_id)}`}>
                     Open Workbench <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -83,16 +79,6 @@ function InfoPill({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>
       <div className="mt-1 text-sm leading-5 text-ink">{value}</div>
     </div>
-  );
-}
-
-function SoftStatus({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 border border-line bg-white px-2 py-1 text-[11px] font-medium uppercase tracking-[0.12em]">
-      <span className="text-muted">{label}</span>
-      <span className="h-1.5 w-1.5 bg-green" />
-      <span className="text-ink">{value}</span>
-    </span>
   );
 }
 

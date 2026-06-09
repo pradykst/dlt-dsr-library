@@ -192,7 +192,6 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
     };
   });
   }, [hoveredEdgeId, renderedRelations, selectedEdgeId]);
-  const contextCount = aggregateNodes.length + visibleNodeIds.size;
   const legendLabels = mode === "main" ? mainColumns : contextLegendColumns;
 
   return (
@@ -201,8 +200,8 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <p className="text-sm leading-6 text-muted">This graph renders only approved stored relations. It does not infer links automatically.</p>
           <div className="flex flex-wrap items-center gap-2">
-            <ModeButton active={mode === "main"} onClick={() => { setMode("main"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Main Flow ({renderedRelations.length})</ModeButton>
-            <ModeButton active={mode === "context"} onClick={() => { setMode("context"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.24 }), 80); }}>Context Flow ({contextCount})</ModeButton>
+            <ModeButton active={mode === "main"} onClick={() => { setMode("main"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Main Flow</ModeButton>
+            <ModeButton active={mode === "context"} onClick={() => { setMode("context"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.24 }), 80); }}>Context Flow</ModeButton>
             {/*
               Extended Flow is intentionally hidden for now.
               <ModeButton active={mode === "extended"} onClick={() => { setMode("extended"); setSelection(null); window.setTimeout(() => fitView({ padding: 0.2 }), 80); }}>Extended Flow ({relationStats.extended})</ModeButton>
