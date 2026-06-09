@@ -83,7 +83,7 @@ export function ChatbotDemo() {
             <p className="mt-4 max-w-3xl text-sm leading-7 text-muted sm:text-base">
               The assistant will retrieve reviewed design knowledge from paper-level grids and flows, ask clarifying questions, build a query-specific mini-flow, and return cited requirements, principles, features, and artifact directions.
             </p>
-            <p className="mt-3 max-w-3xl border border-blue/20 bg-blue/10 px-3 py-2 text-xs font-semibold leading-5 text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
+            <p className="mt-3 max-w-3xl border border-blue/30 bg-white px-3 py-2 text-xs font-semibold leading-5 text-blue shadow-[0_0_14px_rgba(79,111,145,0.3)]">
               This scripted demo uses preseeded example data to illustrate the planned workflow. The live chatbot is planned for launch after the conference.
             </p>
           </div>

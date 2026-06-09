@@ -35,6 +35,8 @@ const initialState: SurveyState = {
   confusing_or_missing: "",
   improvement_suggestion: ""
 };
+const submitAttempts = 3;
+const submitTimeoutMs = 15000;
 
 export function DesristEvaluationForm() {
   const [state, setState] = useState<SurveyState>(initialState);
@@ -66,16 +68,11 @@ export function DesristEvaluationForm() {
 
     setSubmitting(true);
     const payload = buildPayload(state);
-    const response = await fetch("/api/desrist-evaluation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
+    const result = await submitEvaluation(payload);
     setSubmitting(false);
 
-    if (!response.ok) {
-      setSubmitError([result.error, Array.isArray(result.details) ? result.details.join(" ") : result.details].filter(Boolean).join(" "));
+    if (!result.ok) {
+      setSubmitError(result.message);
       return;
     }
     trackSurveyCompleted({
@@ -172,6 +169,53 @@ export function DesristEvaluationForm() {
       </div>
     </div>
   );
+}
+
+async function submitEvaluation(payload: DesristEvaluationPayload): Promise<{ ok: true } | { ok: false; message: string }> {
+  let lastMessage = "Could not submit survey response. Please check the connection and try again.";
+
+  for (let attempt = 1; attempt <= submitAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), submitTimeoutMs);
+
+    try {
+      const response = await fetch("/api/desrist-evaluation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      const result = await safeJson(response);
+      if (response.ok) return { ok: true };
+
+      lastMessage = [result?.error, Array.isArray(result?.details) ? result.details.join(" ") : result?.details]
+        .filter(Boolean)
+        .join(" ") || `Submission failed with status ${response.status}.`;
+      if (response.status < 500) return { ok: false, message: lastMessage };
+    } catch (error) {
+      lastMessage = error instanceof DOMException && error.name === "AbortError"
+        ? "The submission timed out. Please try again."
+        : "The submission could not reach the server. Please check the connection and try again.";
+    } finally {
+      window.clearTimeout(timeout);
+    }
+
+    if (attempt < submitAttempts) await wait(600 * attempt);
+  }
+
+  return { ok: false, message: lastMessage };
+}
+
+async function safeJson(response: Response): Promise<{ error?: string; details?: string | string[] } | null> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function SurveySection({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {

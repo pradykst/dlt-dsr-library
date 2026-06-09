@@ -5,7 +5,7 @@ import { validateDesristEvaluationPayload, type DesristEvaluationPayload } from 
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Partial<DesristEvaluationPayload>;
+    const body = await readJsonBody(request);
     const errors = validateDesristEvaluationPayload(body);
     if (errors.length) return jsonError("Survey validation failed.", 400, errors);
     const improvementSuggestion = cleanOptional(body.improvement_suggestion);
@@ -36,17 +36,17 @@ export async function POST(request: Request) {
     };
 
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("desrist_evaluation_responses").insert(payload);
+    const { error } = await retryInsert(() => supabase.from("desrist_evaluation_responses").insert(payload));
     if (isMissingImprovementSuggestionColumn(error)) {
       const legacyPayload: Record<string, unknown> = { ...payload };
       delete legacyPayload.improvement_suggestion;
-      const { error: legacyError } = await supabase
+      const { error: legacyError } = await retryInsert(() => supabase
         .from("desrist_evaluation_responses")
-        .insert({ ...legacyPayload, feature_suggestion: improvementSuggestion });
+        .insert({ ...legacyPayload, feature_suggestion: improvementSuggestion }));
       if (isNotNullConstraintError(legacyError)) {
-        const { error: defaultedLegacyError } = await supabase
+        const { error: defaultedLegacyError } = await retryInsert(() => supabase
           .from("desrist_evaluation_responses")
-          .insert(withLegacyDefaults({ ...legacyPayload, feature_suggestion: improvementSuggestion }));
+          .insert(withLegacyDefaults({ ...legacyPayload, feature_suggestion: improvementSuggestion })));
         if (defaultedLegacyError) throw defaultedLegacyError;
         return NextResponse.json({ ok: true });
       }
@@ -54,15 +54,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
     if (isNotNullConstraintError(error)) {
-      const { error: defaultedError } = await supabase.from("desrist_evaluation_responses").insert(withLegacyDefaults(payload));
+      const { error: defaultedError } = await retryInsert(() => supabase.from("desrist_evaluation_responses").insert(withLegacyDefaults(payload)));
       if (defaultedError) throw defaultedError;
       return NextResponse.json({ ok: true });
     }
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof InvalidJsonError) return jsonError(error.message, 400);
     return jsonError("Could not submit survey response.", 500, readableError(error));
   }
+}
+
+async function readJsonBody(request: Request): Promise<Partial<DesristEvaluationPayload>> {
+  try {
+    return (await request.json()) as Partial<DesristEvaluationPayload>;
+  } catch {
+    throw new InvalidJsonError();
+  }
+}
+
+class InvalidJsonError extends Error {
+  constructor() {
+    super("Request body must be valid JSON.");
+  }
+}
+
+async function retryInsert<T extends { error: unknown }>(insert: () => PromiseLike<T>) {
+  let result = await insert();
+  for (let attempt = 1; attempt < 3 && isTransientInsertError(result.error); attempt += 1) {
+    await delay(250 * attempt);
+    result = await insert();
+  }
+  return result;
 }
 
 function cleanOptional(value: unknown) {
@@ -89,6 +113,23 @@ function isMissingImprovementSuggestionColumn(error: unknown) {
 
 function isNotNullConstraintError(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "23502");
+}
+
+function isTransientInsertError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const status = "status" in error && typeof error.status === "number" ? error.status : 0;
+  const message = "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return status >= 500
+    || code.startsWith("08")
+    || message.includes("timeout")
+    || message.includes("temporarily")
+    || message.includes("connection")
+    || message.includes("network");
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function withLegacyDefaults(payload: Record<string, unknown>) {

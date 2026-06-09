@@ -71,11 +71,11 @@ export const usedSectionOptions: SurveyOption[] = [
 ];
 
 export const likertItems: Array<{ key: LikertKey; label: string }> = [
+  { key: "q_ease_understanding", label: "The structure of the library/website is easy to understand." },
   { key: "q_usefulness", label: "The library would help me identify reusable design knowledge for a DSR project." },
-  { key: "q_ease_understanding", label: "The structure of papers, requirements, principles, features, artifacts, and evidence was easy to understand." },
-  { key: "q_traceability", label: "The library made the connection between extracted design knowledge and source evidence transparent." },
-  { key: "q_visual_clarity", label: "The flow visualization helped me understand how design knowledge moves from problem to artifact." },
-  { key: "q_reuse_intention", label: "I would consider using this library when designing, reviewing, or teaching a DSR project." }
+  { key: "q_traceability", label: "The library should include an (LLM-based)-Assistant." },
+  { key: "q_reuse_intention", label: "I would consider using this library when conducting a (DLT) DSR project." },
+  { key: "q_visual_clarity", label: "The library contributes to reuse in DSR." }
 ];
 
 export const improvementPriorityOptions: SurveyOption[] = [
