@@ -32,6 +32,7 @@ export function toRagSources(chunks: RagChunk[]): RagSource[] {
 
 export function formatRetrievedContext(chunks: RagChunk[]) {
   if (chunks.length === 0) return "No retrieved context.";
+  const maxContentChars = numberFromEnv("RAG_CHUNK_MAX_CHARS", 1200);
 
   return chunks.map((chunk, index) => {
     const relation = chunk.relation_type
@@ -48,7 +49,7 @@ export function formatRetrievedContext(chunks: RagChunk[]) {
       relation,
       page,
       evidence,
-      `Content: ${chunk.content}`
+      `Content: ${truncate(chunk.content, maxContentChars)}`
     ].join("\n");
   }).join("\n\n");
 }
@@ -89,4 +90,15 @@ function asNumber(value: unknown) {
 
 function asMetadata(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function truncate(value: string, maxLength: number) {
+  const clean = value.trim();
+  if (clean.length <= maxLength) return clean;
+  return `${clean.slice(0, maxLength).trim()}...`;
+}
+
+function numberFromEnv(name: string, fallback: number) {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }

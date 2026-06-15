@@ -16,9 +16,17 @@ export async function POST(request: Request) {
     const latestQuestion = [...messages].reverse().find((message) => message.role === "user")?.content;
     if (!latestQuestion) return jsonError("A user question is required.");
 
+    if (isGreeting(latestQuestion)) {
+      return NextResponse.json({
+        answer: "Hi. Ask me a question about DSR papers, elements, relations, artifacts, evaluations, or evidence, and I will answer from retrieved corpus context.",
+        sources: [],
+        retrieved: []
+      });
+    }
+
     const filters = parseFilters(payload.filters);
-    const queryEmbedding = await createQueryEmbedding(latestQuestion);
-    const retrieved = await matchRagChunks(queryEmbedding, filters);
+    const queryEmbedding = await runStage("embedding", () => createQueryEmbedding(latestQuestion));
+    const retrieved = await runStage("retrieval", () => matchRagChunks(queryEmbedding, filters));
     const sources = toRagSources(retrieved);
 
     if (retrieved.length === 0) {
@@ -33,14 +41,14 @@ export async function POST(request: Request) {
       .filter((message) => message.role === "user" || message.role === "assistant")
       .slice(-8);
 
-    const answer = await createChatCompletion([
+    const answer = await runStage("llm", () => createChatCompletion([
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Retrieved context:\n\n${formatRetrievedContext(retrieved)}\n\nUse only the retrieved context above. If a relation is not explicitly present in the retrieved relation fields or content, say it is not present in the current corpus.`
+        content: `Retrieved context:\n\n${formatRetrievedContext(retrieved)}\n\nUse only the retrieved context above. If a relation is not explicitly present in the retrieved relation fields or content, say it is not present in the current corpus. Give a concise final answer, not hidden reasoning.`
       },
       ...conversation
-    ]);
+    ]));
 
     return NextResponse.json({ answer, sources, retrieved });
   } catch (error) {
@@ -71,4 +79,16 @@ function parseFilters(value: unknown): RagFilters {
 
 function optionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+async function runStage<T>(stage: string, action: () => Promise<T>) {
+  try {
+    return await action();
+  } catch (error) {
+    throw new Error(`${stage} failed: ${readableError(error)}`);
+  }
+}
+
+function isGreeting(value: string) {
+  return /^(hi|hello|hey|yo|hallo|servus|moin)[!. ]*$/i.test(value.trim());
 }
