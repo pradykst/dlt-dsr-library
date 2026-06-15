@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "rag:index": "node scripts/index-rag-chunks.mjs",
     "lint": "eslint ."
   },
   "dependencies": {
