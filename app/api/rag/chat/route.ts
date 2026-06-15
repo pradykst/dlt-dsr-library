@@ -6,6 +6,7 @@ import type { RagChatMessage, RagFilters } from "@/lib/rag/types";
 import { jsonError, readableError } from "@/lib/workbench/api";
 
 const SYSTEM_PROMPT = "You are a DSR knowledge assistant for a curated blockchain/DLT design science research library.\nAnswer only from retrieved context.\nWhen evidence is insufficient, say that the corpus does not contain enough evidence.\nAlways cite paper title and element/evidence identifiers when making claims.\nDistinguish Problem, Requirement, Design Principle, Design Feature, Artifact, Evaluation, and Output Knowledge.\nDo not invent links between elements unless a relation exists in the retrieved workbench data.";
+const ANSWER_INSTRUCTIONS = "Write the final answer directly. Do not include a thinking process, hidden reasoning, or analysis transcript. Use concise bullets when multiple papers or elements are involved. Cite sources as [S1], [S2], etc.";
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Retrieved context:\n\n${formatRetrievedContext(retrieved)}\n\nUse only the retrieved context above. If a relation is not explicitly present in the retrieved relation fields or content, say it is not present in the current corpus. Give a concise final answer, not hidden reasoning.`
+        content: `Retrieved context:\n\n${formatRetrievedContext(retrieved)}\n\n${ANSWER_INSTRUCTIONS}\nUse only the retrieved context above. If a relation is not explicitly present in the retrieved relation fields or content, say it is not present in the current corpus.`
       },
       ...conversation
     ]));

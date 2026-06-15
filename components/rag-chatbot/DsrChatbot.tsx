@@ -123,7 +123,7 @@ export function DsrChatbot() {
             {loading && (
               <div className="flex items-center gap-2 text-sm text-muted">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Retrieving DSR chunks and drafting an evidence-grounded answer...
+                Retrieving DSR chunks and drafting an evidence-grounded answer. Local models can take a few minutes...
               </div>
             )}
           </div>
