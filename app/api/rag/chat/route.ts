@@ -3,10 +3,12 @@ import { createQueryEmbedding } from "@/lib/rag/embeddings";
 import { createChatCompletion } from "@/lib/rag/llm";
 import {
   classifyDesignFeatureQuery,
+  curateDesignFeatureQueryChunks,
   curateRetrievedChunks,
   formatRetrievedContext,
   lookupDesignFeatureChunks,
   lookupDirectSupportChunks,
+  lookupRelatedDesignFeatureChunks,
   matchRagChunks,
   toRagSources
 } from "@/lib/rag/retrieval";
@@ -35,6 +37,12 @@ export async function POST(request: Request) {
 
     const filters = parseFilters(payload.filters);
     const retrievalPlan = classifyDesignFeatureQuery(latestQuestion);
+
+    if (retrievalPlan) {
+      const result = await retrieveDesignFeatureAnswer(retrievalPlan.term, filters);
+      return NextResponse.json(result);
+    }
+
     const retrieved = await retrieveChunks(latestQuestion, filters, retrievalPlan);
     const sources = toRagSources(retrieved);
 
@@ -118,6 +126,136 @@ async function retrieveChunks(
     [...explicitMatches, ...supportMatches, ...vectorMatches],
     { term: retrievalPlan.term, explicitElementIds }
   );
+}
+
+async function retrieveDesignFeatureAnswer(term: string, filters: RagFilters) {
+  const explicitMatches = await runStage("structured retrieval", () => lookupDesignFeatureChunks(term, filters));
+  const directRelations = await runStage("support retrieval", () => lookupDirectSupportChunks(explicitMatches, term, filters));
+  const relatedMatches = await runStage("related retrieval", () => lookupRelatedDesignFeatureChunks(term, filters, explicitMatches));
+  const retrieved = curateDesignFeatureQueryChunks({
+    explicitMatches,
+    directRelations,
+    relatedMatches
+  });
+  const sources = toRagSources(retrieved);
+
+  if (retrieved.length === 0) {
+    return {
+      answer: `Direct answer\nThe corpus does not contain enough evidence to identify papers that explicitly use "${titleCase(term)}" as a Design Feature.\n\nExplicit matches\nNone found.\n\nRelated matches\nNone found.\n\nNotes/limitations\nThis answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`,
+      sources: [],
+      retrieved: []
+    };
+  }
+
+  return {
+    answer: buildDesignFeatureQueryAnswer({
+      term,
+      explicitMatches,
+      relatedMatches,
+      directRelations,
+      sources
+    }),
+    sources,
+    retrieved
+  };
+}
+
+function buildDesignFeatureQueryAnswer({
+  term,
+  explicitMatches,
+  relatedMatches,
+  directRelations,
+  sources
+}: {
+  term: string;
+  explicitMatches: RagChunk[];
+  relatedMatches: RagChunk[];
+  directRelations: RagChunk[];
+  sources: ReturnType<typeof toRagSources>;
+}) {
+  const sourceIndexByChunkId = new Map<string, number>();
+  for (const source of sources) {
+    const chunk = [...explicitMatches, ...directRelations, ...relatedMatches].find((item) =>
+      item.paper_id === source.paperId &&
+      item.element_id === source.elementId &&
+      item.chunk_type === source.chunkType
+    );
+    if (chunk) sourceIndexByChunkId.set(chunk.id, source.sourceIndex);
+  }
+
+  const explicitPapers = uniqueStrings(explicitMatches.map((chunk) => chunk.paper_title || chunk.paper_id).filter(Boolean));
+  const directAnswer = explicitPapers.length === 0
+    ? `No paper in the current workbench explicitly uses "${titleCase(term)}" as a Design Feature.`
+    : explicitPapers.length === 1
+    ? `One paper in the current workbench explicitly uses "${titleCase(term)}" as a Design Feature.`
+    : `${explicitPapers.length} papers in the current workbench explicitly use "${titleCase(term)}" as a Design Feature.`;
+
+  const explicitLines = explicitMatches.length
+    ? explicitMatches.map((chunk) => {
+      const relations = directRelations
+        .filter((relation) => sourceIndexByChunkId.has(relation.id))
+        .filter((relation) => relationTouchesChunk(relation, chunk));
+      const relationText = relationSummary(relations);
+      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}.${relationText ? ` ${relationText}` : ""}${sourceRef(sourceIndexByChunkId.get(chunk.id))}`;
+    })
+    : ["None found."];
+
+  const relatedLines = relatedMatches.length
+    ? relatedMatches.map((chunk) => `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}. ${relatedMatchExplanation(term)}${sourceRef(sourceIndexByChunkId.get(chunk.id))}`)
+    : ["None found."];
+
+  return [
+    "Direct answer",
+    directAnswer,
+    "",
+    "Explicit matches",
+    ...explicitLines,
+    "",
+    "Related matches",
+    ...relatedLines,
+    "",
+    "Notes/limitations",
+    `This answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`,
+    "",
+    "Sources",
+    "See the source panel for the cited workbench chunks."
+  ].join("\n");
+}
+
+function relationSummary(relations: RagChunk[]) {
+  if (relations.length === 0) return "";
+  const relationText = relations
+    .map((relation) => `${relation.from_element_id} to ${relation.to_element_id} via ${relation.relation_type}`)
+    .join(" and ");
+  return `The workbench maps ${relationText}.`;
+}
+
+function relatedMatchExplanation(term: string) {
+  const label = titleCase(term);
+  if (term.toLowerCase() === "tokenization") {
+    return `This is token-related, but it is not explicitly labeled "${label}".`;
+  }
+  return `This is related to ${term}, but it is not explicitly labeled "${label}".`;
+}
+
+function relationTouchesChunk(relation: RagChunk, chunk: RagChunk) {
+  return relation.from_element_id === chunk.element_id || relation.to_element_id === chunk.element_id;
+}
+
+function sourceRef(index: number | undefined) {
+  return index ? ` [S${index}]` : "";
+}
+
+function paperTitle(chunk: RagChunk) {
+  return chunk.paper_title || chunk.paper_id || "Untitled paper";
+}
+
+function titleCase(value: string) {
+  return value.replace(/\w\S*/g, (word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`);
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
 }
 
 function formatRetrievalPlan(retrievalPlan: ReturnType<typeof classifyDesignFeatureQuery>) {

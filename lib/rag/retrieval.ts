@@ -57,6 +57,32 @@ export async function lookupDesignFeatureChunks(term: string, filters: RagFilter
   let query = supabase
     .from("rag_chunks")
     .select(RAG_SELECT)
+    .eq("chunk_type", "element")
+    .ilike("element_type", "%Design Feature%")
+    .ilike("element_label", pattern)
+    .limit(20);
+
+  query = applyFilters(query, filters);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return normalizeChunks(data)
+    .filter((chunk) => isExplicitDesignFeatureMatch(chunk, term))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "explicit" as const,
+      retrievalScore: scoreChunk(chunk, term, [], "explicit")
+    }));
+}
+
+export async function lookupRelatedDesignFeatureChunks(term: string, filters: RagFilters, explicitChunks: RagChunk[] = []) {
+  const supabase = getSupabaseAdmin();
+  const pattern = ilikePattern(term);
+  const explicitIds = new Set(explicitChunks.map((chunk) => chunk.id));
+  let query = supabase
+    .from("rag_chunks")
+    .select(RAG_SELECT)
+    .eq("chunk_type", "element")
     .ilike("element_type", "%Design Feature%")
     .or(`element_label.ilike.${pattern},content.ilike.${pattern},evidence_quote.ilike.${pattern}`)
     .limit(20);
@@ -65,11 +91,14 @@ export async function lookupDesignFeatureChunks(term: string, filters: RagFilter
   const { data, error } = await query;
   if (error) throw error;
 
-  return normalizeChunks(data).map((chunk) => ({
-    ...chunk,
-    retrievalKind: "explicit" as const,
-    retrievalScore: scoreChunk(chunk, term, [], "explicit")
-  }));
+  return normalizeChunks(data)
+    .filter((chunk) => !explicitIds.has(chunk.id))
+    .filter((chunk) => !isExplicitDesignFeatureMatch(chunk, term))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "related" as const,
+      retrievalScore: scoreChunk(chunk, term, [], "related")
+    }));
 }
 
 export async function lookupDirectSupportChunks(explicitChunks: RagChunk[], term: string, filters: RagFilters) {
@@ -134,6 +163,26 @@ export function curateRetrievedChunks(chunks: RagChunk[], options?: { term?: str
     }))
     .sort((a, b) => (b.retrievalScore ?? 0) - (a.retrievalScore ?? 0))
     .slice(0, sourceLimit);
+}
+
+export function curateDesignFeatureQueryChunks(chunks: {
+  explicitMatches: RagChunk[];
+  directRelations: RagChunk[];
+  relatedMatches: RagChunk[];
+}) {
+  const sourceLimit = numberFromEnv("RAG_SOURCE_LIMIT", 5);
+  const explicitMatches = sortByScore(chunks.explicitMatches);
+  const relatedMatches = sortByScore(chunks.relatedMatches);
+  const reservedRelatedSlots = Math.min(relatedMatches.length, 2);
+  const remainingAfterExplicit = Math.max(0, sourceLimit - explicitMatches.length);
+  const directLimit = Math.max(0, remainingAfterExplicit - reservedRelatedSlots);
+  const directRelations = sortByScore(chunks.directRelations).slice(0, directLimit);
+
+  return dedupeChunks([
+    ...explicitMatches,
+    ...directRelations,
+    ...relatedMatches
+  ]).slice(0, sourceLimit);
 }
 
 export function toRagSources(chunks: RagChunk[]): RagSource[] {
@@ -244,9 +293,9 @@ function scoreChunk(chunk: RagChunk, term: string, explicitElementIds: string[],
   if (typeof chunk.distance === "number") score += Math.max(0, 10 - chunk.distance);
 
   if (kind === "explicit") score += 100;
-  if (kind === "direct_relation") score += 70;
+  if (kind === "direct_relation") score += 80;
   if (kind === "evidence") score += 55;
-  if (kind === "related") score += 20;
+  if (kind === "related") score += 40;
 
   if (isDesignFeature(chunk)) score += 35;
   if (term && labelMatches(chunk, term)) score += 35;
@@ -261,6 +310,44 @@ function scoreChunk(chunk: RagChunk, term: string, explicitElementIds: string[],
 
 function isDesignFeature(chunk: RagChunk) {
   return lower(chunk.element_type).includes("design feature");
+}
+
+function isExplicitDesignFeatureMatch(chunk: RagChunk, term: string) {
+  if (chunk.chunk_type !== "element" || !isDesignFeature(chunk)) return false;
+  const label = normalizeLabel(chunk.element_label);
+  const normalizedTerm = normalizeLabel(term);
+  if (!label || !normalizedTerm) return false;
+  if (label === normalizedTerm) return true;
+  if (containsFullPhrase(label, normalizedTerm)) return true;
+  return normalizedTerm.length >= 6 && label.length >= 6 && containsFullPhrase(normalizedTerm, label);
+}
+
+export function normalizeLabel(value: string | null | undefined) {
+  const normalized = value
+    ?.toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/-/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(safeSingularize)
+    .join(" ")
+    .trim();
+  return normalized ?? "";
+}
+
+function containsFullPhrase(value: string, phrase: string) {
+  return new RegExp(`(^|\\s)${escapeRegExp(phrase)}($|\\s)`).test(value);
+}
+
+function safeSingularize(value: string) {
+  if (value.length <= 4) return value;
+  if (value.endsWith("ies")) return `${value.slice(0, -3)}y`;
+  if (value.endsWith("s") && !value.endsWith("ss")) return value.slice(0, -1);
+  return value;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function labelMatches(chunk: RagChunk, term: string) {
@@ -295,6 +382,10 @@ function dedupeChunks(chunks: RagChunk[]) {
     result.push(chunk);
   }
   return result;
+}
+
+function sortByScore(chunks: RagChunk[]) {
+  return [...chunks].sort((a, b) => (b.retrievalScore ?? 0) - (a.retrievalScore ?? 0));
 }
 
 function unique(values: Array<string | null | undefined>) {
