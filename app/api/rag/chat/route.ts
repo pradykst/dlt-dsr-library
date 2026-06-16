@@ -196,12 +196,19 @@ function buildDesignFeatureQueryAnswer({
         .filter((relation) => sourceIndexByChunkId.has(relation.id))
         .filter((relation) => relationTouchesChunk(relation, chunk));
       const relationText = relationSummary(relations);
-      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}.${relationText ? ` ${relationText}` : ""}${sourceRef(sourceIndexByChunkId.get(chunk.id))}`;
+      const sourceRefs = uniqueStrings([
+        sourceRef(sourceIndexByChunkId.get(chunk.id)),
+        ...relations.map((relation) => sourceRef(sourceIndexByChunkId.get(relation.id)))
+      ]).join(", ");
+      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}.${relationText ? ` ${relationText}` : ""}${sourceRefs ? ` ${sourceRefs}` : ""}`;
     })
     : ["None found."];
 
   const relatedLines = relatedMatches.length
-    ? relatedMatches.map((chunk) => `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}. ${relatedMatchExplanation(term)}${sourceRef(sourceIndexByChunkId.get(chunk.id))}`)
+    ? relatedMatches.map((chunk) => {
+      const source = sourceRef(sourceIndexByChunkId.get(chunk.id));
+      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}. ${relatedMatchExplanation(term)}${source ? ` ${source}` : ""}`;
+    })
     : ["None found."];
 
   return [
@@ -215,10 +222,7 @@ function buildDesignFeatureQueryAnswer({
     ...relatedLines,
     "",
     "Notes/limitations",
-    `This answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`,
-    "",
-    "Sources",
-    "See the source panel for the cited workbench chunks."
+    `This answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`
   ].join("\n");
 }
 
@@ -243,7 +247,7 @@ function relationTouchesChunk(relation: RagChunk, chunk: RagChunk) {
 }
 
 function sourceRef(index: number | undefined) {
-  return index ? ` [S${index}]` : "";
+  return index ? `[S${index}]` : "";
 }
 
 function paperTitle(chunk: RagChunk) {
