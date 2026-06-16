@@ -1,6 +1,29 @@
 import { getSupabaseAdmin } from "@/lib/workbench/supabase-admin";
 import type { RagChunk, RagFilters, RagSource } from "@/lib/rag/types";
 
+const RAG_SELECT = [
+  "id",
+  "source_type",
+  "paper_id",
+  "paper_title",
+  "chunk_type",
+  "element_id",
+  "element_type",
+  "element_label",
+  "relation_type",
+  "from_element_id",
+  "to_element_id",
+  "evidence_quote",
+  "page_number",
+  "content",
+  "metadata"
+].join(",");
+
+export type DesignFeatureQuery = {
+  kind: "design_feature";
+  term: string;
+};
+
 export async function matchRagChunks(queryEmbedding: number[], filters: RagFilters) {
   const matchCount = Number.parseInt(process.env.RAG_MATCH_COUNT ?? "8", 10);
   const { data, error } = await getSupabaseAdmin().rpc("match_rag_chunks", {
@@ -11,6 +34,106 @@ export async function matchRagChunks(queryEmbedding: number[], filters: RagFilte
 
   if (error) throw error;
   return normalizeChunks(data);
+}
+
+export function classifyDesignFeatureQuery(question: string): DesignFeatureQuery | null {
+  const patterns = [
+    /which\s+papers\s+(?:use|used|include|included|have)\s+(.+?)\s+as\s+(?:a\s+)?design\s+feature/i,
+    /(?:use|using|used)\s+(.+?)\s+as\s+(?:a\s+)?design\s+feature/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = question.match(pattern);
+    const term = cleanQueryTerm(match?.[1]);
+    if (term) return { kind: "design_feature", term };
+  }
+
+  return null;
+}
+
+export async function lookupDesignFeatureChunks(term: string, filters: RagFilters) {
+  const supabase = getSupabaseAdmin();
+  const pattern = ilikePattern(term);
+  let query = supabase
+    .from("rag_chunks")
+    .select(RAG_SELECT)
+    .ilike("element_type", "%Design Feature%")
+    .or(`element_label.ilike.${pattern},content.ilike.${pattern},evidence_quote.ilike.${pattern}`)
+    .limit(20);
+
+  query = applyFilters(query, filters);
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return normalizeChunks(data).map((chunk) => ({
+    ...chunk,
+    retrievalKind: "explicit" as const,
+    retrievalScore: scoreChunk(chunk, term, [], "explicit")
+  }));
+}
+
+export async function lookupDirectSupportChunks(explicitChunks: RagChunk[], term: string, filters: RagFilters) {
+  const elementIds = unique(explicitChunks.map((chunk) => chunk.element_id).filter(Boolean));
+  const paperIds = unique(explicitChunks.map((chunk) => chunk.paper_id).filter(Boolean));
+  if (elementIds.length === 0 || paperIds.length === 0) return [];
+
+  const supabase = getSupabaseAdmin();
+  const relationQuery = applyFilters(
+    supabase
+      .from("rag_chunks")
+      .select(RAG_SELECT)
+      .eq("chunk_type", "relation")
+      .in("paper_id", paperIds)
+      .limit(50),
+    filters
+  );
+  const evidenceQuery = applyFilters(
+    supabase
+      .from("rag_chunks")
+      .select(RAG_SELECT)
+      .eq("chunk_type", "evidence")
+      .in("paper_id", paperIds)
+      .limit(50),
+    filters
+  );
+
+  const [relationsResult, evidenceResult] = await Promise.all([relationQuery, evidenceQuery]);
+  if (relationsResult.error) throw relationsResult.error;
+  if (evidenceResult.error) throw evidenceResult.error;
+
+  const relations = normalizeChunks(relationsResult.data)
+    .filter((chunk) => relationTouchesElement(chunk, elementIds))
+    .filter((chunk) => mentionsTermOrElement(chunk, term, elementIds))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "direct_relation" as const,
+      retrievalScore: scoreChunk(chunk, term, elementIds, "direct_relation")
+    }));
+
+  const evidence = normalizeChunks(evidenceResult.data)
+    .filter((chunk) => mentionsTermOrElement(chunk, term, elementIds))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "evidence" as const,
+      retrievalScore: scoreChunk(chunk, term, elementIds, "evidence")
+    }));
+
+  return [...relations, ...evidence];
+}
+
+export function curateRetrievedChunks(chunks: RagChunk[], options?: { term?: string; explicitElementIds?: string[] }) {
+  const term = options?.term ?? "";
+  const explicitElementIds = options?.explicitElementIds ?? [];
+  const sourceLimit = numberFromEnv("RAG_SOURCE_LIMIT", 5);
+
+  return dedupeChunks(chunks)
+    .filter((chunk) => keepChunk(chunk, term, explicitElementIds))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalScore: chunk.retrievalScore ?? scoreChunk(chunk, term, explicitElementIds, chunk.retrievalKind)
+    }))
+    .sort((a, b) => (b.retrievalScore ?? 0) - (a.retrievalScore ?? 0))
+    .slice(0, sourceLimit);
 }
 
 export function toRagSources(chunks: RagChunk[]): RagSource[] {
@@ -26,7 +149,8 @@ export function toRagSources(chunks: RagChunk[]): RagSource[] {
     fromElementId: chunk.from_element_id,
     toElementId: chunk.to_element_id,
     evidenceQuote: chunk.evidence_quote,
-    pageNumber: chunk.page_number
+    pageNumber: chunk.page_number,
+    retrievalKind: chunk.retrievalKind
   }));
 }
 
@@ -46,6 +170,7 @@ export function formatRetrievedContext(chunks: RagChunk[]) {
       `Paper: ${chunk.paper_title || chunk.paper_id || "Untitled paper"}`,
       `Chunk type: ${chunk.chunk_type ?? "unknown"}`,
       `Element: ${chunk.element_type ?? "unknown"} ${chunk.element_id ?? ""} ${chunk.element_label ? `- ${chunk.element_label}` : ""}`.trim(),
+      `Match kind: ${chunk.retrievalKind ?? "related"}`,
       relation,
       page,
       evidence,
@@ -75,9 +200,109 @@ function normalizeChunks(data: unknown): RagChunk[] {
       content: asString(item.content) ?? "",
       metadata: asMetadata(item.metadata),
       similarity: asNumber(item.similarity),
-      distance: asNumber(item.distance)
+      distance: asNumber(item.distance),
+      retrievalKind: asRetrievalKind(item.retrievalKind),
+      retrievalScore: asNumber(item.retrievalScore) ?? undefined
     }))
     .filter((chunk) => chunk.content.trim().length > 0);
+}
+
+function applyFilters<T extends {
+  eq: (column: string, value: string) => T;
+}>(query: T, filters: RagFilters) {
+  let next = query;
+  if (filters.paper_id) next = next.eq("paper_id", filters.paper_id);
+  if (filters.element_type) next = next.eq("element_type", filters.element_type);
+  if (filters.chunk_type) next = next.eq("chunk_type", filters.chunk_type);
+  return next;
+}
+
+function cleanQueryTerm(value: string | undefined) {
+  const cleaned = value
+    ?.replace(/[?!.]+$/g, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  return cleaned || null;
+}
+
+function ilikePattern(value: string) {
+  return `%${value.replace(/[%,]/g, " ").replace(/\s+/g, " ").trim()}%`;
+}
+
+function keepChunk(chunk: RagChunk, term: string, explicitElementIds: string[]) {
+  if (!term) return chunk.chunk_type !== "paper" || Boolean(chunk.similarity);
+  if (chunk.retrievalKind === "explicit" || chunk.retrievalKind === "evidence") return true;
+  if (chunk.retrievalKind === "direct_relation") return relationTouchesElement(chunk, explicitElementIds) && mentionsTermOrElement(chunk, term, explicitElementIds);
+  if (chunk.chunk_type === "relation") return relationTouchesElement(chunk, explicitElementIds) && mentionsTermOrElement(chunk, term, explicitElementIds);
+  if (chunk.chunk_type === "paper") return !explicitElementIds.length && textMatches(chunk, term);
+  return textMatches(chunk, term);
+}
+
+function scoreChunk(chunk: RagChunk, term: string, explicitElementIds: string[], kind = chunk.retrievalKind) {
+  let score = 0;
+  if (typeof chunk.similarity === "number") score += chunk.similarity * 10;
+  if (typeof chunk.distance === "number") score += Math.max(0, 10 - chunk.distance);
+
+  if (kind === "explicit") score += 100;
+  if (kind === "direct_relation") score += 70;
+  if (kind === "evidence") score += 55;
+  if (kind === "related") score += 20;
+
+  if (isDesignFeature(chunk)) score += 35;
+  if (term && labelMatches(chunk, term)) score += 35;
+  if (term && textMatches(chunk, term)) score += 15;
+  if (explicitElementIds.includes(chunk.element_id ?? "")) score += 20;
+  if (relationTouchesElement(chunk, explicitElementIds)) score += 20;
+  if (chunk.chunk_type === "paper") score -= 30;
+  if (chunk.chunk_type === "relation" && !relationTouchesElement(chunk, explicitElementIds)) score -= 30;
+
+  return score;
+}
+
+function isDesignFeature(chunk: RagChunk) {
+  return lower(chunk.element_type).includes("design feature");
+}
+
+function labelMatches(chunk: RagChunk, term: string) {
+  return lower(chunk.element_label).includes(lower(term));
+}
+
+function textMatches(chunk: RagChunk, term: string) {
+  const needle = lower(term);
+  return [
+    chunk.element_label,
+    chunk.content,
+    chunk.evidence_quote
+  ].some((value) => lower(value).includes(needle));
+}
+
+function mentionsTermOrElement(chunk: RagChunk, term: string, elementIds: string[]) {
+  if (term && textMatches(chunk, term)) return true;
+  return elementIds.some((id) => lower(chunk.content).includes(lower(id)) || chunk.from_element_id === id || chunk.to_element_id === id);
+}
+
+function relationTouchesElement(chunk: RagChunk, elementIds: string[]) {
+  if (elementIds.length === 0) return false;
+  return elementIds.includes(chunk.from_element_id ?? "") || elementIds.includes(chunk.to_element_id ?? "");
+}
+
+function dedupeChunks(chunks: RagChunk[]) {
+  const seen = new Set<string>();
+  const result: RagChunk[] = [];
+  for (const chunk of chunks) {
+    if (seen.has(chunk.id)) continue;
+    seen.add(chunk.id);
+    result.push(chunk);
+  }
+  return result;
+}
+
+function unique(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function lower(value: string | null | undefined) {
+  return value?.toLowerCase() ?? "";
 }
 
 function asString(value: unknown) {
@@ -90,6 +315,11 @@ function asNumber(value: unknown) {
 
 function asMetadata(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function asRetrievalKind(value: unknown): RagChunk["retrievalKind"] {
+  if (value === "explicit" || value === "direct_relation" || value === "evidence" || value === "related") return value;
+  return undefined;
 }
 
 function truncate(value: string, maxLength: number) {

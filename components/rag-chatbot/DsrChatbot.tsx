@@ -199,8 +199,9 @@ function SourcesPanel({ sources }: { sources: RagSource[] }) {
       {sources.map((source) => (
         <div key={source.sourceIndex} className="border border-line bg-white p-3 text-xs leading-5 text-muted">
           <div className="font-semibold text-ink">[S{source.sourceIndex}] {source.paperTitle}</div>
+          {source.retrievalKind && <div>Match: {formatMatchKind(source.retrievalKind)}</div>}
           <div>{[source.elementType, source.elementId, source.elementLabel].filter(Boolean).join(" / ") || "Element not specified"}</div>
-          {source.relationType && <div>Relation: {source.relationType} ({source.fromElementId ?? "unknown"} to {source.toElementId ?? "unknown"})</div>}
+          {source.relationType && <div>Relation: {source.fromElementId ?? "unknown"} to {source.toElementId ?? "unknown"} via {source.relationType}</div>}
           {source.chunkType && <div>Chunk: {source.chunkType}</div>}
           {source.pageNumber && <div>Page: {source.pageNumber}</div>}
           {source.evidenceQuote && <div className="mt-1 text-ink">Evidence: {source.evidenceQuote}</div>}
@@ -212,4 +213,8 @@ function SourcesPanel({ sources }: { sources: RagSource[] }) {
 
 function Avatar({ icon }: { icon: ReactNode }) {
   return <div className="grid h-8 w-8 shrink-0 place-items-center border border-line bg-white text-blue">{icon}</div>;
+}
+
+function formatMatchKind(kind: NonNullable<RagSource["retrievalKind"]>) {
+  return kind.replace("_", " ");
 }

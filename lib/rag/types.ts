@@ -29,6 +29,8 @@ export type RagChunk = {
   metadata: Record<string, unknown> | null;
   similarity?: number | null;
   distance?: number | null;
+  retrievalKind?: "explicit" | "direct_relation" | "evidence" | "related";
+  retrievalScore?: number;
 };
 
 export type RagSource = {
@@ -44,4 +46,5 @@ export type RagSource = {
   toElementId: string | null;
   evidenceQuote: string | null;
   pageNumber: number | null;
+  retrievalKind?: RagChunk["retrievalKind"];
 };
