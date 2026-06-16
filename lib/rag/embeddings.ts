@@ -4,7 +4,7 @@ export async function createQueryEmbedding(input: string) {
     throw new Error("Query embedding service is not configured. Set EMBEDDING_API_BASE_URL.");
   }
 
-  const timeoutMs = numberFromEnv("EMBEDDING_TIMEOUT_MS", 30000);
+  const timeoutMs = Math.max(numberFromEnv("EMBEDDING_TIMEOUT_MS", 120000), 120000);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 

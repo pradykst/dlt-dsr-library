@@ -11,6 +11,26 @@ export type RagFilters = {
   chunk_type?: string;
 };
 
+export type RagRetrievalIntent =
+  | "element_lookup"
+  | "paper_lookup"
+  | "relation_traversal"
+  | "evaluation_summary"
+  | "cross_paper_comparison"
+  | "design_feature_lookup"
+  | "requirement_lookup"
+  | "generic_semantic_search";
+
+export type RagQueryPlan = {
+  intents: RagRetrievalIntent[];
+  searchTerms: string[];
+  requestedElementType?: string;
+  paperIdOrTitle?: string;
+  relationType?: string;
+  relationDirection?: "from" | "to" | "any";
+  explicitLabelsOnly: boolean;
+};
+
 export type RagChunk = {
   id: string;
   source_type: string | null;
@@ -29,7 +49,7 @@ export type RagChunk = {
   metadata: Record<string, unknown> | null;
   similarity?: number | null;
   distance?: number | null;
-  retrievalKind?: "explicit" | "direct_relation" | "evidence" | "related";
+  retrievalKind?: "explicit" | "direct_relation" | "evidence" | "related" | "semantic";
   retrievalScore?: number;
 };
 

@@ -2,21 +2,25 @@ import { NextResponse } from "next/server";
 import { createQueryEmbedding } from "@/lib/rag/embeddings";
 import { createChatCompletion } from "@/lib/rag/llm";
 import {
-  classifyDesignFeatureQuery,
   curateDesignFeatureQueryChunks,
   curateRetrievedChunks,
   formatRetrievedContext,
+  formatQueryPlan,
   lookupDesignFeatureChunks,
   lookupDirectSupportChunks,
+  lookupElementChunks,
+  lookupKeywordChunks,
   lookupRelatedDesignFeatureChunks,
+  lookupRelatedElementChunks,
   matchRagChunks,
+  planRagQuery,
   toRagSources
 } from "@/lib/rag/retrieval";
-import type { RagChatMessage, RagChunk, RagFilters } from "@/lib/rag/types";
+import type { RagChatMessage, RagChunk, RagFilters, RagQueryPlan } from "@/lib/rag/types";
 import { jsonError, readableError } from "@/lib/workbench/api";
 
-const SYSTEM_PROMPT = "You are a DSR knowledge assistant for a curated blockchain/DLT design science research library.\nAnswer only from retrieved context.\nWhen evidence is insufficient, say that the corpus does not contain enough evidence.\nAlways cite paper title and element/evidence identifiers when making claims.\nDistinguish Problem, Requirement, Design Principle, Design Feature, Artifact, Evaluation, and Output Knowledge.\nDo not invent links between elements unless a relation exists in the retrieved workbench data.";
-const ANSWER_INSTRUCTIONS = "Write the final answer directly. Do not include a thinking process, hidden reasoning, or analysis transcript. Use these sections exactly: Direct answer, Explicit matches, Related matches, Notes/limitations, Sources. Cite sources as [S1], [S2], etc. Preserve relation direction: if context says DP1 instantiated_by DF1, phrase it as \"The workbench maps DP1 to DF1 via instantiated_by,\" not as \"DF1 is instantiated by DP1.\"";
+const SYSTEM_PROMPT = "You are a DSR research assistant for a curated blockchain/DLT design science research workbench.\nAnswer only from retrieved sources.\nUse source IDs like [S1].\nSeparate explicit matches from related or conceptual matches.\nDo not claim a paper has an element unless the source metadata supports it.\nDo not invent relations. Preserve relation direction exactly.\nIf evidence is incomplete, say so.\nPrefer concise, structured answers suitable for researchers.";
+const BASE_ANSWER_INSTRUCTIONS = "Write the final answer only. Do not include hidden reasoning, chain-of-thought, or analysis transcript. Use concise bullets. Cite every factual claim with [S#]. If a source is marked explicit, it can support an explicit label claim. If a source is marked related or semantic, treat it as related/conceptual unless the metadata label directly supports the claim. For relations, phrase direction as from_element_id to to_element_id via relation_type.";
 
 export async function POST(request: Request) {
   try {
@@ -31,43 +35,62 @@ export async function POST(request: Request) {
       return NextResponse.json({
         answer: "Hi. Ask me a question about DSR papers, elements, relations, artifacts, evaluations, or evidence, and I will answer from retrieved corpus context.",
         sources: [],
-        retrieved: []
+        retrieved: [],
+        retrievalMode: "greeting",
+        answerMode: "greeting"
       });
     }
 
     const filters = parseFilters(payload.filters);
-    const retrievalPlan = classifyDesignFeatureQuery(latestQuestion);
-
-    if (retrievalPlan) {
-      const result = await retrieveDesignFeatureAnswer(retrievalPlan.term, filters);
-      return NextResponse.json(result);
-    }
-
-    const retrieved = await retrieveChunks(latestQuestion, filters, retrievalPlan);
+    const queryPlan = planRagQuery(latestQuestion, filters);
+    const retrieved = await retrieveChunks(latestQuestion, filters, queryPlan);
     const sources = toRagSources(retrieved);
 
     if (retrieved.length === 0) {
       return NextResponse.json({
         answer: "The corpus does not contain enough evidence to answer this question.",
         sources: [],
-        retrieved: []
+        retrieved: [],
+        queryPlan,
+        retrievalMode: "no_evidence",
+        answerMode: "no_evidence"
       });
     }
 
     const conversation = messages
       .filter((message) => message.role === "user" || message.role === "assistant")
-      .slice(-8);
+      .slice(0, -1)
+      .slice(-6);
+    const answerMode = queryPlan.intents.includes("design_feature_lookup") ? "structured_plus_vector_llm" : "hybrid_rag_llm";
+    const finalPrompt = [
+      `User question: ${latestQuestion}`,
+      "",
+      "Query plan:",
+      formatQueryPlan(queryPlan),
+      "",
+      "Retrieved sources:",
+      formatRetrievedContext(retrieved, 650),
+      "",
+      sectionInstructions(queryPlan),
+      BASE_ANSWER_INSTRUCTIONS,
+      "Keep the answer concise. For this response, use at most 180 words unless the question explicitly asks for detail.",
+      "For design-feature lookup queries, put exact label matches under Explicit matches and token/concept-adjacent matches under Related/conceptual matches. Do not call Soulbound reputation tokens or Fungible reward tokens explicit Tokenization matches unless their element_label is Tokenization. If direct_relation sources are present for the explicit element, summarize them in the Explicit matches section with citations. For relation claims, copy the provided Direction statement wording; do not paraphrase instantiated_by as 'X instantiates Y' or 'Y is instantiated by X'."
+    ].join("\n");
 
     const answer = await runStage("llm", () => createChatCompletion([
       { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `${formatRetrievalPlan(retrievalPlan)}Retrieved context:\n\n${formatRetrievedContext(retrieved)}\n\n${ANSWER_INSTRUCTIONS}\nUse only the retrieved context above. Treat chunks marked explicit as explicit matches. Treat vector-only or related chunks as related but not explicitly labeled matches unless their element_type and element_label explicitly support the claim. If a relation is not explicitly present in the retrieved relation fields or content, say it is not present in the current corpus.`
-      },
-      ...conversation
-    ]));
+      ...conversation,
+      { role: "user", content: finalPrompt }
+    ], answerMode === "structured_plus_vector_llm" ? { conciseRetryMaxTokens: 6144 } : undefined));
 
-    return NextResponse.json({ answer, sources, retrieved });
+    return NextResponse.json({
+      answer,
+      sources,
+      retrieved,
+      queryPlan,
+      retrievalMode: answerMode,
+      answerMode
+    });
   } catch (error) {
     return jsonError("RAG chat request failed.", 500, readableError(error));
   }
@@ -101,174 +124,57 @@ function optionalString(value: unknown) {
 async function retrieveChunks(
   question: string,
   filters: RagFilters,
-  retrievalPlan: ReturnType<typeof classifyDesignFeatureQuery>
+  queryPlan: RagQueryPlan
 ) {
-  if (!retrievalPlan) {
-    const queryEmbedding = await runStage("embedding", () => createQueryEmbedding(question));
-    const vectorMatches = await runStage("retrieval", () => matchRagChunks(queryEmbedding, filters));
-    return curateRetrievedChunks(vectorMatches.map((chunk) => ({ ...chunk, retrievalKind: "related" as const })));
+  const primaryTerm = queryPlan.searchTerms[0] ?? question;
+  let explicitMatches: RagChunk[] = [];
+  let relatedMatches: RagChunk[] = [];
+  let supportMatches: RagChunk[] = [];
+  let keywordMatches: RagChunk[] = [];
+
+  if (queryPlan.intents.includes("design_feature_lookup")) {
+    explicitMatches = await runStage("structured retrieval", () => lookupDesignFeatureChunks(primaryTerm, filters));
+    relatedMatches = await runStage("related retrieval", () => lookupRelatedDesignFeatureChunks(primaryTerm, filters, explicitMatches));
+  } else if (queryPlan.requestedElementType && queryPlan.searchTerms.length > 0) {
+    const elementFilters = { ...filters, element_type: queryPlan.requestedElementType };
+    explicitMatches = await runStage("structured retrieval", () => lookupElementChunks(primaryTerm, elementFilters, queryPlan.explicitLabelsOnly));
+    relatedMatches = await runStage("related retrieval", () => lookupRelatedElementChunks(primaryTerm, elementFilters, explicitMatches));
   }
 
-  const explicitMatches = await runStage("structured retrieval", () => lookupDesignFeatureChunks(retrievalPlan.term, filters));
-  const supportMatches = await runStage("support retrieval", () => lookupDirectSupportChunks(explicitMatches, retrievalPlan.term, filters));
   const explicitElementIds = explicitMatches.map((chunk) => chunk.element_id).filter((value): value is string => Boolean(value));
-  let vectorMatches: RagChunk[] = [];
+  if (explicitMatches.length > 0 || queryPlan.intents.includes("relation_traversal")) {
+    supportMatches = await runStage("relation traversal", () => lookupDirectSupportChunks(explicitMatches, primaryTerm, filters));
+  }
+  if (queryPlan.searchTerms.length > 0) {
+    keywordMatches = await runStage("keyword retrieval", () => lookupKeywordChunks(queryPlan.searchTerms, filters));
+  }
 
-  try {
-    const queryEmbedding = await runStage("embedding", () => createQueryEmbedding(question));
-    vectorMatches = (await runStage("vector retrieval", () => matchRagChunks(queryEmbedding, filters)))
-      .map((chunk) => ({ ...chunk, retrievalKind: "related" as const }));
-  } catch (error) {
-    if (explicitMatches.length === 0) throw error;
+  const queryEmbedding = await runStage("embedding", () => createQueryEmbedding(question));
+  const vectorMatches = (await runStage("vector retrieval", () => matchRagChunks(queryEmbedding, filters)))
+    .map((chunk) => ({ ...chunk, retrievalKind: "semantic" as const }));
+
+  if (queryPlan.intents.includes("design_feature_lookup")) {
+    return curateDesignFeatureQueryChunks({
+      explicitMatches,
+      directRelations: supportMatches,
+      relatedMatches: [...relatedMatches, ...keywordMatches, ...vectorMatches]
+    });
   }
 
   return curateRetrievedChunks(
-    [...explicitMatches, ...supportMatches, ...vectorMatches],
-    { term: retrievalPlan.term, explicitElementIds }
+    [...explicitMatches, ...supportMatches, ...relatedMatches, ...keywordMatches, ...vectorMatches],
+    { term: primaryTerm, explicitElementIds }
   );
 }
 
-async function retrieveDesignFeatureAnswer(term: string, filters: RagFilters) {
-  const explicitMatches = await runStage("structured retrieval", () => lookupDesignFeatureChunks(term, filters));
-  const directRelations = await runStage("support retrieval", () => lookupDirectSupportChunks(explicitMatches, term, filters));
-  const relatedMatches = await runStage("related retrieval", () => lookupRelatedDesignFeatureChunks(term, filters, explicitMatches));
-  const retrieved = curateDesignFeatureQueryChunks({
-    explicitMatches,
-    directRelations,
-    relatedMatches
-  });
-  const sources = toRagSources(retrieved);
-
-  if (retrieved.length === 0) {
-    return {
-      answer: `Direct answer\nThe corpus does not contain enough evidence to identify papers that explicitly use "${titleCase(term)}" as a Design Feature.\n\nExplicit matches\nNone found.\n\nRelated matches\nNone found.\n\nNotes/limitations\nThis answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`,
-      sources: [],
-      retrieved: []
-    };
+function sectionInstructions(queryPlan: RagQueryPlan) {
+  if (queryPlan.intents.includes("cross_paper_comparison")) {
+    return "Use sections: Direct answer, Cross-paper comparison, Evidence table or bullets, Notes/limitations.";
   }
-
-  return {
-    answer: buildDesignFeatureQueryAnswer({
-      term,
-      explicitMatches,
-      relatedMatches,
-      directRelations,
-      sources
-    }),
-    sources,
-    retrieved
-  };
-}
-
-function buildDesignFeatureQueryAnswer({
-  term,
-  explicitMatches,
-  relatedMatches,
-  directRelations,
-  sources
-}: {
-  term: string;
-  explicitMatches: RagChunk[];
-  relatedMatches: RagChunk[];
-  directRelations: RagChunk[];
-  sources: ReturnType<typeof toRagSources>;
-}) {
-  const sourceIndexByChunkId = new Map<string, number>();
-  for (const source of sources) {
-    const chunk = [...explicitMatches, ...directRelations, ...relatedMatches].find((item) =>
-      item.paper_id === source.paperId &&
-      item.element_id === source.elementId &&
-      item.chunk_type === source.chunkType
-    );
-    if (chunk) sourceIndexByChunkId.set(chunk.id, source.sourceIndex);
+  if (queryPlan.intents.includes("element_lookup") || queryPlan.intents.includes("design_feature_lookup") || queryPlan.intents.includes("requirement_lookup")) {
+    return "Use sections: Direct answer, Explicit matches, Related/conceptual matches, Notes/limitations.";
   }
-
-  const explicitPapers = uniqueStrings(explicitMatches.map((chunk) => chunk.paper_title || chunk.paper_id).filter(Boolean));
-  const directAnswer = explicitPapers.length === 0
-    ? `No paper in the current workbench explicitly uses "${titleCase(term)}" as a Design Feature.`
-    : explicitPapers.length === 1
-    ? `One paper in the current workbench explicitly uses "${titleCase(term)}" as a Design Feature.`
-    : `${explicitPapers.length} papers in the current workbench explicitly use "${titleCase(term)}" as a Design Feature.`;
-
-  const explicitLines = explicitMatches.length
-    ? explicitMatches.map((chunk) => {
-      const relations = directRelations
-        .filter((relation) => sourceIndexByChunkId.has(relation.id))
-        .filter((relation) => relationTouchesChunk(relation, chunk));
-      const relationText = relationSummary(relations);
-      const sourceRefs = uniqueStrings([
-        sourceRef(sourceIndexByChunkId.get(chunk.id)),
-        ...relations.map((relation) => sourceRef(sourceIndexByChunkId.get(relation.id)))
-      ]).join(", ");
-      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}.${relationText ? ` ${relationText}` : ""}${sourceRefs ? ` ${sourceRefs}` : ""}`;
-    })
-    : ["None found."];
-
-  const relatedLines = relatedMatches.length
-    ? relatedMatches.map((chunk) => {
-      const source = sourceRef(sourceIndexByChunkId.get(chunk.id));
-      return `- ${paperTitle(chunk)}: ${chunk.element_id} / ${chunk.element_label}. ${relatedMatchExplanation(term)}${source ? ` ${source}` : ""}`;
-    })
-    : ["None found."];
-
-  return [
-    "Direct answer",
-    directAnswer,
-    "",
-    "Explicit matches",
-    ...explicitLines,
-    "",
-    "Related matches",
-    ...relatedLines,
-    "",
-    "Notes/limitations",
-    `This answer is based on the current workbench labels. A paper may be conceptually token-based without having a Design Feature explicitly labeled "${titleCase(term)}".`
-  ].join("\n");
-}
-
-function relationSummary(relations: RagChunk[]) {
-  if (relations.length === 0) return "";
-  const relationText = relations
-    .map((relation) => `${relation.from_element_id} to ${relation.to_element_id} via ${relation.relation_type}`)
-    .join(" and ");
-  return `The workbench maps ${relationText}.`;
-}
-
-function relatedMatchExplanation(term: string) {
-  const label = titleCase(term);
-  if (term.toLowerCase() === "tokenization") {
-    return `This is token-related, but it is not explicitly labeled "${label}".`;
-  }
-  return `This is related to ${term}, but it is not explicitly labeled "${label}".`;
-}
-
-function relationTouchesChunk(relation: RagChunk, chunk: RagChunk) {
-  return relation.from_element_id === chunk.element_id || relation.to_element_id === chunk.element_id;
-}
-
-function sourceRef(index: number | undefined) {
-  return index ? `[S${index}]` : "";
-}
-
-function paperTitle(chunk: RagChunk) {
-  return chunk.paper_title || chunk.paper_id || "Untitled paper";
-}
-
-function titleCase(value: string) {
-  return value.replace(/\w\S*/g, (word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`);
-}
-
-function uniqueStrings(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))];
-}
-
-function formatRetrievalPlan(retrievalPlan: ReturnType<typeof classifyDesignFeatureQuery>) {
-  if (!retrievalPlan) return "";
-  return [
-    `Query classification: asks which papers use "${retrievalPlan.term}" as a Design Feature.`,
-    "First use explicit Design Feature chunks matching that term. Use direct relation/evidence chunks only as support. Separate conceptually related vector matches from explicit labels.",
-    ""
-  ].join("\n");
+  return "Use sections: Direct answer, Evidence, Notes/limitations.";
 }
 
 async function runStage<T>(stage: string, action: () => Promise<T>) {

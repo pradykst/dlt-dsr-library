@@ -2,6 +2,7 @@ import type { RagChatMessage } from "@/lib/rag/types";
 
 type ChatCompletionResponse = {
   choices?: Array<{
+    finish_reason?: string;
     message?: {
       content?: string;
       reasoning_content?: string;
@@ -9,7 +10,12 @@ type ChatCompletionResponse = {
   }>;
 };
 
-export async function createChatCompletion(messages: RagChatMessage[]) {
+export type ChatCompletionOptions = {
+  maxTokens?: number;
+  conciseRetryMaxTokens?: number;
+};
+
+export async function createChatCompletion(messages: RagChatMessage[], options: ChatCompletionOptions = {}) {
   const baseUrl = process.env.LLM_BASE_URL;
   const apiKey = process.env.LLM_API_KEY;
   const model = process.env.LLM_MODEL;
@@ -18,9 +24,63 @@ export async function createChatCompletion(messages: RagChatMessage[]) {
     throw new Error("LLM is not configured. Set LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL.");
   }
 
+  const maxTokens = options.maxTokens ?? numberFromEnv("LLM_MAX_TOKENS", 4096);
+  const firstAttempt = await requestChatCompletion({
+    baseUrl,
+    apiKey,
+    model,
+    messages,
+    maxTokens,
+    conciseRetry: false
+  });
+
+  const firstAnswer = extractAnswer(firstAttempt);
+  const firstFinishReason = firstAttempt.choices?.[0]?.finish_reason;
+  if (firstAnswer && firstFinishReason !== "length") return firstAnswer;
+
+  if (firstFinishReason === "length" || !firstAnswer) {
+    const retry = await requestChatCompletion({
+      baseUrl,
+      apiKey,
+      model,
+      messages,
+      maxTokens: options.conciseRetryMaxTokens ?? Math.max(maxTokens, 4096),
+      conciseRetry: true
+    });
+    const retryAnswer = extractAnswer(retry);
+    const retryFinishReason = retry.choices?.[0]?.finish_reason;
+    if (retryAnswer && retryFinishReason !== "length") return retryAnswer;
+    if (retryFinishReason === "length") {
+      throw new Error("LLM response hit the token limit twice. Try a narrower question or increase LLM_MAX_TOKENS.");
+    }
+  }
+
+  const message = firstAttempt.choices?.[0]?.message;
+  if (message?.reasoning_content?.trim()) {
+    throw new Error("LLM returned reasoning_content but no final answer. The request adds /no_think for Qwen models; if this continues, disable reasoning/thinking in LM Studio or use a non-reasoning instruct model.");
+  }
+  throw new Error("LLM response did not include an answer.");
+}
+
+async function requestChatCompletion({
+  baseUrl,
+  apiKey,
+  model,
+  messages,
+  maxTokens,
+  conciseRetry
+}: {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  messages: RagChatMessage[];
+  maxTokens: number;
+  conciseRetry: boolean;
+}) {
   const timeoutMs = numberFromEnv("LLM_TIMEOUT_MS", 900000);
   const controller = new AbortController();
   const timeout = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+  const preparedMessages = prepareMessages(conciseRetry ? withConciseRetryInstruction(messages) : messages, model);
 
   let response: Response;
   try {
@@ -33,10 +93,15 @@ export async function createChatCompletion(messages: RagChatMessage[]) {
       },
       body: JSON.stringify({
         model,
-        messages: prepareMessages(messages, model),
+        messages: preparedMessages,
         temperature: 0.2,
-        max_tokens: numberFromEnv("LLM_MAX_TOKENS", 2048),
-        stream: false
+        max_tokens: maxTokens,
+        stream: false,
+        ...(shouldDisableThinking(model) ? {
+          enable_thinking: false,
+          chat_template_kwargs: { enable_thinking: false },
+          reasoning: { effort: "none" }
+        } : {})
       })
     });
   } catch (error) {
@@ -53,17 +118,13 @@ export async function createChatCompletion(messages: RagChatMessage[]) {
     throw new Error(`LLM request failed (${response.status}): ${details}`);
   }
 
-  const payload = await response.json() as ChatCompletionResponse;
+  return await response.json() as ChatCompletionResponse;
+}
+
+function extractAnswer(payload: ChatCompletionResponse) {
   const message = payload.choices?.[0]?.message;
   const answer = message?.content?.trim();
-  if (!answer) {
-    if (message?.reasoning_content?.trim()) {
-      throw new Error("LLM returned reasoning_content but no final answer. The request now adds /no_think for Qwen models; if this continues, disable reasoning/thinking in LM Studio or use a non-reasoning instruct model.");
-    }
-    throw new Error("LLM response did not include an answer.");
-  }
-
-  return answer;
+  return answer || null;
 }
 
 function numberFromEnv(name: string, fallback: number) {
@@ -81,7 +142,7 @@ function prepareMessages(messages: RagChatMessage[], model: string): RagChatMess
 
   prepared[lastUserIndex] = {
     ...prepared[lastUserIndex],
-    content: `${prepared[lastUserIndex].content}\n\n/no_think`
+    content: `/no_think\n\n${prepared[lastUserIndex].content}\n\n/no_think`
   };
   return prepared;
 }
@@ -90,4 +151,15 @@ function shouldDisableThinking(model: string) {
   const configured = process.env.LLM_DISABLE_THINKING;
   if (configured) return ["1", "true", "yes"].includes(configured.toLowerCase());
   return model.toLowerCase().includes("qwen");
+}
+
+function withConciseRetryInstruction(messages: RagChatMessage[]): RagChatMessage[] {
+  const prepared = [...messages];
+  const lastUserIndex = prepared.findLastIndex((message) => message.role === "user");
+  if (lastUserIndex === -1) return prepared;
+  prepared[lastUserIndex] = {
+    ...prepared[lastUserIndex],
+    content: `${prepared[lastUserIndex].content}\n\nRetry instruction: Return the final answer only, under 220 words, using the requested section headings and citations. Do not include reasoning.`
+  };
+  return prepared;
 }
