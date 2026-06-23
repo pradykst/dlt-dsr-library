@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/workbench/supabase-admin";
-import type { RagChunk, RagFilters, RagQueryPlan, RagRetrievalIntent, RagSource } from "@/lib/rag/types";
+import type { RagChunk, RagFilters, RagQueryPlan, RagQueryType, RagRetrievalIntent, RagSource } from "@/lib/rag/types";
 
 const RAG_SELECT = [
   "id",
@@ -53,6 +53,7 @@ export function classifyDesignFeatureQuery(question: string): DesignFeatureQuery
 
 export function planRagQuery(question: string, filters: RagFilters): RagQueryPlan {
   const lowerQuestion = question.toLowerCase();
+  const queryType = classifyQueryType(question);
   const designFeatureQuery = classifyDesignFeatureQuery(question);
   const intents = new Set<RagRetrievalIntent>();
   const searchTerms: string[] = [];
@@ -82,6 +83,7 @@ export function planRagQuery(question: string, filters: RagFilters): RagQueryPla
   if (searchTerms.length === 0) searchTerms.push(...extractKeywordTerms(question));
 
   return {
+    queryType,
     intents: [...intents],
     searchTerms: unique(searchTerms).slice(0, 6),
     requestedElementType,
@@ -92,6 +94,87 @@ export function planRagQuery(question: string, filters: RagFilters): RagQueryPla
   };
 }
 
+function classifyQueryType(question: string): RagQueryType {
+  const lowerQuestion = question.toLowerCase();
+  if (/\bcompare|versus| vs\.? |difference|similarities\b/i.test(lowerQuestion)) return "comparison";
+  if (/\bflow|path|relation|linked|maps?|connects?|instantiated_by|implemented_in|supports|depends_on\b/i.test(lowerQuestion)) return "relation_path_explanation";
+  if (/\bhow many\b|\bnumber of\b|\bcount\b/i.test(lowerQuestion) && /\bpaper|papers\b/i.test(lowerQuestion)) return "corpus_count";
+  if (/\bsummary|summarize|overview|tell me about\b/i.test(lowerQuestion)) return "paper_summary";
+  if (/\bdesign principles?\b/i.test(lowerQuestion)) return "design_principle_lookup";
+  if (/\bdesign features?\b|\buse|uses|used|include|includes|including\b/i.test(lowerQuestion)) return "concept_design_feature_lookup";
+  if (/\bevidence|quote|source|citation\b/i.test(lowerQuestion)) return "evidence_search";
+  if (/\bpaper|papers\b/i.test(lowerQuestion)) return "paper_lookup";
+  return "general_synthesis";
+}
+export async function lookupPaperMetadataChunks(terms: string[], filters: RagFilters) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("papers")
+    .select("paper_id,short_title,full_citation,year,authors,domain,artifact_type,blockchain_dlt_role,key_concepts,solution_description,output_knowledge,evaluation_summary,boundary_conditions")
+    .limit(200);
+  if (filters.paper_id) query = query.eq("paper_id", filters.paper_id);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows: Record<string, unknown>[] = Array.isArray(data)
+    ? data.filter((row) => Boolean(row) && typeof row === "object").map((row) => row as Record<string, unknown>)
+    : [];
+  const normalizedTerms = terms.map(normalizeLabel).filter((term) => term.length > 0);
+  const matchedRows = rows
+    .map((row) => ({ row, score: scorePaperMetadata(row, normalizedTerms) }))
+    .filter(({ score }) => normalizedTerms.length === 0 || score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return matchedRows.map(({ row, score }, index) => {
+    const paperId = asString(row.paper_id);
+    const title = asString(row.short_title) ?? asString(row.full_citation) ?? paperId ?? "Untitled paper";
+    const role = asString(row.blockchain_dlt_role);
+    const content = compactLines([
+      `Paper: ${title}`,
+      `Paper ID: ${paperId}`,
+      `Year: ${asString(row.year)}`,
+      `Authors: ${asString(row.authors)}`,
+      `Domain: ${asString(row.domain)}`,
+      `Artifact type: ${asString(row.artifact_type)}`,
+      `Blockchain/DLT role: ${role}`,
+      `Key concepts: ${asString(row.key_concepts)}`,
+      `Solution: ${asString(row.solution_description)}`,
+      `Output knowledge: ${asString(row.output_knowledge)}`,
+      `Evaluation: ${asString(row.evaluation_summary)}`,
+      `Boundary conditions: ${asString(row.boundary_conditions)}`
+    ]);
+
+    return {
+      id: `paper-metadata-${paperId ?? index}`,
+      source_type: "workbench",
+      paper_id: paperId,
+      paper_title: title,
+      chunk_type: "paper",
+      element_id: paperId,
+      element_type: "Paper metadata",
+      element_label: title,
+      relation_type: null,
+      from_element_id: null,
+      to_element_id: null,
+      evidence_quote: role || asString(row.key_concepts),
+      page_number: null,
+      content,
+      metadata: {
+        source_table: "papers",
+        year: asString(row.year),
+        domain: asString(row.domain),
+        artifact_type: asString(row.artifact_type),
+        blockchain_dlt_role: role
+      },
+      retrievalKind: "explicit" as const,
+      retrievalScore: 120 + score,
+      matchReason: normalizedTerms.length
+        ? `Paper metadata matches ${normalizedTerms.join(", ")}`
+        : "Paper metadata row from the corpus"
+    } satisfies RagChunk;
+  });
+}
 export async function lookupDesignFeatureChunks(term: string, filters: RagFilters) {
   return lookupElementChunks(term, { ...filters, element_type: "Design Feature" }, true);
 }
@@ -120,6 +203,32 @@ export async function lookupElementChunks(term: string, filters: RagFilters, exp
     }));
 }
 
+export async function lookupExactLabelChunks(terms: string[], filters: RagFilters) {
+  const chunks: RagChunk[] = [];
+  for (const term of terms) {
+    const supabase = getSupabaseAdmin();
+    const pattern = ilikePattern(term);
+    let query = supabase
+      .from("rag_chunks")
+      .select(RAG_SELECT)
+      .eq("chunk_type", "element")
+      .or(`element_label.ilike.${pattern},content.ilike.${pattern}`)
+      .limit(30);
+    query = applyFilters(query, filters);
+    const { data, error } = await query;
+    if (error) throw error;
+
+    chunks.push(...normalizeChunks(data)
+      .filter((chunk) => isExplicitElementMatch(chunk, term) || labelMatches(chunk, term))
+      .map((chunk) => ({
+        ...chunk,
+        retrievalKind: isExplicitElementMatch(chunk, term) ? "explicit" as const : "related" as const,
+        retrievalScore: scoreChunk(chunk, term, [], isExplicitElementMatch(chunk, term) ? "explicit" : "related"),
+        matchReason: isExplicitElementMatch(chunk, term) ? `Normalized label match for "${term}"` : `Label/content match for "${term}"`
+      })));
+  }
+  return dedupeChunks(chunks);
+}
 export async function lookupRelatedDesignFeatureChunks(term: string, filters: RagFilters, explicitChunks: RagChunk[] = []) {
   return lookupRelatedElementChunks(term, { ...filters, element_type: "Design Feature" }, explicitChunks);
 }
@@ -223,6 +332,80 @@ export async function lookupDirectSupportChunks(explicitChunks: RagChunk[], term
   return [...relations, ...evidence];
 }
 
+export async function lookupRelationFlowChunks(terms: string[], filters: RagFilters) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from("rag_chunks")
+    .select(RAG_SELECT)
+    .in("chunk_type", ["relation", "element", "evidence"])
+    .limit(120);
+  query = applyFilters(query, filters);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const normalizedTerms = terms.map(normalizeLabel).filter(Boolean);
+  return normalizeChunks(data)
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: chunk.chunk_type === "relation" ? "direct_relation" as const : chunk.chunk_type === "evidence" ? "evidence" as const : "related" as const,
+      retrievalScore: scoreRelationFlowChunk(chunk, normalizedTerms),
+      matchReason: chunk.chunk_type === "relation"
+        ? "Relation-flow retrieval from matched paper/context"
+        : "Element/evidence retrieved to explain the relation flow"
+    }))
+    .filter((chunk) => (chunk.retrievalScore ?? 0) > 0)
+    .sort((a, b) => (b.retrievalScore ?? 0) - (a.retrievalScore ?? 0));
+}
+export async function lookupRelationExpansionChunks(seedChunks: RagChunk[], filters: RagFilters) {
+  const elementIds = unique(seedChunks.map((chunk) => chunk.element_id).filter(Boolean));
+  const paperIds = unique(seedChunks.map((chunk) => chunk.paper_id).filter(Boolean));
+  if (elementIds.length === 0 || paperIds.length === 0) return [];
+
+  const supabase = getSupabaseAdmin();
+  const relationQuery = applyFilters(
+    supabase
+      .from("rag_chunks")
+      .select(RAG_SELECT)
+      .eq("chunk_type", "relation")
+      .in("paper_id", paperIds)
+      .limit(80),
+    filters
+  );
+  const evidenceQuery = applyFilters(
+    supabase
+      .from("rag_chunks")
+      .select(RAG_SELECT)
+      .eq("chunk_type", "evidence")
+      .in("paper_id", paperIds)
+      .limit(80),
+    filters
+  );
+
+  const [relationsResult, evidenceResult] = await Promise.all([relationQuery, evidenceQuery]);
+  if (relationsResult.error) throw relationsResult.error;
+  if (evidenceResult.error) throw evidenceResult.error;
+
+  const relations = normalizeChunks(relationsResult.data)
+    .filter((chunk) => relationTouchesElement(chunk, elementIds))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "direct_relation" as const,
+      retrievalScore: scoreChunk(chunk, "", elementIds, "direct_relation"),
+      matchReason: "Relation-aware expansion from a matched element"
+    }));
+
+  const evidence = normalizeChunks(evidenceResult.data)
+    .filter((chunk) => elementIds.some((id) => lower(chunk.content).includes(lower(id))))
+    .map((chunk) => ({
+      ...chunk,
+      retrievalKind: "evidence" as const,
+      retrievalScore: scoreChunk(chunk, "", elementIds, "evidence"),
+      matchReason: "Evidence expansion from a matched element"
+    }));
+
+  return dedupeChunks([...relations, ...evidence]);
+}
 export function curateRetrievedChunks(chunks: RagChunk[], options?: { term?: string; explicitElementIds?: string[] }) {
   const term = options?.term ?? "";
   const explicitElementIds = options?.explicitElementIds ?? [];
@@ -261,6 +444,7 @@ export function curateDesignFeatureQueryChunks(chunks: {
 export function toRagSources(chunks: RagChunk[]): RagSource[] {
   return chunks.map((chunk, index) => ({
     sourceIndex: index + 1,
+    sourceId: `S${index + 1}`,
     paperId: chunk.paper_id,
     paperTitle: chunk.paper_title || chunk.paper_id || "Untitled paper",
     chunkType: chunk.chunk_type,
@@ -272,7 +456,10 @@ export function toRagSources(chunks: RagChunk[]): RagSource[] {
     toElementId: chunk.to_element_id,
     evidenceQuote: chunk.evidence_quote,
     pageNumber: chunk.page_number,
-    retrievalKind: chunk.retrievalKind
+    retrievalKind: chunk.retrievalKind,
+    matchReason: chunk.matchReason,
+    matchStrength: chunk.retrievalScore,
+    snippet: truncate(chunk.evidence_quote || chunk.content, 260)
   }));
 }
 
@@ -306,6 +493,7 @@ export function formatRetrievedContext(chunks: RagChunk[], maxContentChars = num
 
 export function formatQueryPlan(plan: RagQueryPlan) {
   return [
+    `Query type: ${plan.queryType}`,
     `Intents: ${plan.intents.join(", ")}`,
     `Search terms: ${plan.searchTerms.length ? plan.searchTerms.join(", ") : "none"}`,
     `Requested element type: ${plan.requestedElementType ?? "none"}`,
@@ -354,6 +542,64 @@ function applyFilters<T extends {
   return next;
 }
 
+function scoreRelationFlowChunk(chunk: RagChunk, terms: string[]) {
+  let score = 0;
+  const text = normalizeLabel(`${chunk.element_type ?? ""} ${chunk.element_label ?? ""} ${chunk.content} ${chunk.evidence_quote ?? ""}`);
+  if (chunk.chunk_type === "relation") score += 120;
+  if (chunk.chunk_type === "element") score += 60;
+  if (chunk.chunk_type === "evidence") score += 45;
+  if (chunk.relation_type) score += 35;
+  if (chunk.relation_type === "instantiated_by") score += 90;
+  if (chunk.relation_type === "implemented_in") score += 60;
+  if (chunk.relation_type === "addressed_by" || chunk.relation_type === "derived_from") score += 35;
+  if (/^DP\d+/i.test(chunk.from_element_id ?? "") || /^DP\d+/i.test(chunk.to_element_id ?? "")) score += 35;
+  if (/^DF\d+/i.test(chunk.from_element_id ?? "") || /^DF\d+/i.test(chunk.to_element_id ?? "")) score += 45;
+  if (/design principle|design feature|design requirement|requirement|artifact|output|problem/.test(normalizeLabel(chunk.element_type))) score += 25;
+  for (const term of terms) {
+    if (containsFullPhrase(text, term)) score += 18;
+  }
+  return score;
+}
+function scorePaperMetadata(row: Record<string, unknown>, terms: string[]) {
+  if (terms.length === 0) return 1;
+  const titleText = normalizeLabel([row.short_title, row.full_citation].map((value) => typeof value === "string" || typeof value === "number" ? String(value) : "").join(" "));
+  const fieldText = normalizeLabel([
+    row.short_title,
+    row.full_citation,
+    row.domain,
+    row.artifact_type,
+    row.blockchain_dlt_role,
+    row.key_concepts,
+    row.solution_description,
+    row.output_knowledge,
+    row.evaluation_summary,
+    row.boundary_conditions
+  ].map((value) => typeof value === "string" || typeof value === "number" ? String(value) : "").join(" "));
+
+  return terms.reduce((score, term) => {
+    if (!term) return score;
+    if (containsFullPhrase(titleText, term)) score += 45;
+    else if (containsFullPhrase(fieldText, term)) score += 20;
+
+    const tokens = term.split(/\s+/).filter((token) => token.length > 2 && !isPaperHintStopword(token));
+    const titleHits = tokens.filter((token) => containsFullPhrase(titleText, token)).length;
+    const fieldHits = tokens.filter((token) => containsFullPhrase(fieldText, token)).length;
+    if (tokens.length > 0) {
+      score += titleHits * 12;
+      score += fieldHits * 4;
+      if (titleHits >= Math.min(2, tokens.length)) score += 20;
+    }
+    return score;
+  }, 0);
+}
+
+function isPaperHintStopword(value: string) {
+  return ["paper", "study", "article", "the", "about", "with", "using", "based"].includes(value);
+}
+
+function compactLines(lines: string[]) {
+  return lines.filter((line) => !line.endsWith(": null") && !line.endsWith(": undefined") && !line.endsWith(": ")).join("\n");
+}
 function cleanQueryTerm(value: string | undefined) {
   const cleaned = value
     ?.replace(/[?!.]+$/g, "")
@@ -522,16 +768,24 @@ function extractElementIds(question: string) {
 }
 
 function extractKeywordTerms(question: string) {
-  const stopwords = new Set(["which", "papers", "paper", "use", "uses", "used", "as", "a", "an", "the", "what", "how", "show", "compare", "across", "library", "current", "workbench"]);
+  const stopwords = new Set(["which", "papers", "paper", "use", "uses", "used", "using", "as", "a", "an", "the", "what", "how", "many", "number", "count", "show", "compare", "across", "library", "current", "workbench", "with", "that", "have", "based"]);
   return question
-    .toLowerCase()
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")
     .split(/\s+/)
-    .filter((word) => word.length > 3 && !stopwords.has(word))
-    .slice(0, 4);
+    .filter(Boolean)
+    .map((word) => ({ original: word, normalized: word.toLowerCase() }))
+    .filter(({ original, normalized }) => (normalized.length > 3 || /^[A-Z0-9]{2,}$/.test(original)) && !stopwords.has(normalized))
+    .map(({ original, normalized }) => /^[A-Z0-9]{2,}$/.test(original) ? original : normalized)
+    .slice(0, 6);
 }
 
 function extractRelationType(question: string) {
   const relationTypes = ["instantiated_by", "implemented_in", "supports", "depends_on", "addressed_by", "evaluated_by", "derived_from", "justified_by"];
   return relationTypes.find((type) => question.toLowerCase().includes(type));
 }
+
+
+
+
+
+

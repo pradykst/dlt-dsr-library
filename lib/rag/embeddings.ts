@@ -1,3 +1,9 @@
+export function getEmbeddingProviderConfig() {
+  return {
+    baseUrl: process.env.EMBEDDING_API_BASE_URL ?? "unconfigured",
+    model: process.env.EMBEDDING_MODEL ?? "unconfigured"
+  };
+}
 export async function createQueryEmbedding(input: string) {
   const baseUrl = process.env.EMBEDDING_API_BASE_URL;
   if (!baseUrl) {

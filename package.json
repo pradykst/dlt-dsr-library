@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "rag:index": "node scripts/index-rag-chunks.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "rag:eval": "node scripts/eval-rag-chatbot.mjs"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
