@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ correction: row, persisted: false, warning: "Supabase env vars are not set." });
   }
-  const { error } = await getSupabaseAdmin().from("user_corrections").insert(row as never);
+  const { error } = await getSupabaseAdmin().from("okf_user_corrections").insert(row as never);
   if (error) return NextResponse.json({ error: "Could not save correction.", details: error.message }, { status: 500 });
   return NextResponse.json({ correction: row, persisted: true });
 }

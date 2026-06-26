@@ -17,7 +17,7 @@ export async function indexOkfKnowledgeBase(kb: OkfKnowledgeBase) {
 
   const { getSupabaseAdmin } = await import("../workbench/supabase-admin.ts");
   const supabase = getSupabaseAdmin();
-  await upsertRows(supabase, "papers", kb.papers.map((paper) => ({
+  await upsertRows(supabase, "okf_papers", kb.papers.map((paper) => ({
     paper_id: paper.paper_id,
     title: paper.title,
     authors: paper.authors ?? null,
@@ -27,7 +27,7 @@ export async function indexOkfKnowledgeBase(kb: OkfKnowledgeBase) {
     updated_at: new Date().toISOString()
   })), "paper_id");
 
-  await upsertRows(supabase, "concepts", kb.concepts.map((concept) => ({
+  await upsertRows(supabase, "okf_concepts", kb.concepts.map((concept) => ({
     concept_id: concept.concept_id,
     paper_id: concept.paper_id,
     okf_path: concept.okf_path ?? concept.source_file,
@@ -43,7 +43,7 @@ export async function indexOkfKnowledgeBase(kb: OkfKnowledgeBase) {
     updated_at: new Date().toISOString()
   })), "concept_id");
 
-  await upsertRows(supabase, "evidence_items", kb.evidence_items.map((item) => ({
+  await upsertRows(supabase, "okf_evidence_items", kb.evidence_items.map((item) => ({
     evidence_id: item.evidence_id,
     paper_id: item.paper_id,
     concept_id: item.concept_id ?? null,
@@ -55,7 +55,7 @@ export async function indexOkfKnowledgeBase(kb: OkfKnowledgeBase) {
     confidence: item.confidence
   })), "evidence_id");
 
-  await upsertRows(supabase, "relations", kb.relations.map((relation) => ({
+  await upsertRows(supabase, "okf_relations", kb.relations.map((relation) => ({
     relation_id: relation.relation_id,
     source_concept_id: relation.source_concept_id,
     predicate: relation.predicate,

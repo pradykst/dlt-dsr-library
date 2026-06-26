@@ -51,7 +51,11 @@ The parser tolerates incomplete draft files and emits warnings instead of crashi
 npm run okf:index
 ```
 
-If Supabase env vars are available, the command upserts papers, concepts, evidence, and relations. Without Supabase env vars it prints a parse-only summary, which is useful for local development.
+If Supabase env vars are available, the command upserts papers, concepts, evidence, and relations into `okf_`-prefixed tables (`okf_papers`, `okf_concepts`, `okf_evidence_items`, `okf_relations`). Without Supabase env vars it prints a parse-only summary, which is useful for local development.
+
+## Supabase tables
+
+The OKF migration intentionally uses `okf_`-prefixed table names so it can coexist with existing workbench, vector, RAG, or demo tables in the same Supabase project. Paste `supabase/migrations/20260626140000_okf_chatbot.sql` into the Supabase SQL Editor only after confirming these prefixed table names.
 
 ## Retrieval
 

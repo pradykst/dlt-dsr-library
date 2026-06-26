@@ -1,6 +1,7 @@
 ﻿import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { answerOkfChat, routeOkfQuery } from "../lib/okf/chat.ts";
 import { buildOkfFlow } from "../lib/okf/flow.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
@@ -47,6 +48,36 @@ test("indexing summary is idempotent without Supabase env vars", async () => {
   assert.equal(one.papers, two.papers);
   assert.equal(one.concepts, two.concepts);
   assert.equal(one.relations, two.relations);
+});
+
+
+test("OKF database access uses prefixed table names", () => {
+  const migration = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260626140000_okf_chatbot.sql"), "utf8");
+  const indexer = readFileSync(path.join(process.cwd(), "lib", "okf", "indexer.ts"), "utf8");
+  const correctionsRoute = readFileSync(path.join(process.cwd(), "app", "api", "okf", "corrections", "route.ts"), "utf8");
+  const unprefixedTables = [
+    "papers",
+    "concepts",
+    "evidence_items",
+    "relations",
+    "conversation_sessions",
+    "session_design_state",
+    "generated_flows",
+    "flow_nodes",
+    "flow_edges",
+    "user_corrections"
+  ];
+
+  for (const table of unprefixedTables) {
+    assert.equal(new RegExp(`create table if not exists ${table}\\b`).test(migration), false);
+    assert.equal(new RegExp(`references ${table}\\(`).test(migration), false);
+    assert.equal(indexer.includes(`"${table}"`), false);
+    assert.equal(correctionsRoute.includes(`"${table}"`), false);
+  }
+
+  for (const table of ["okf_papers", "okf_concepts", "okf_evidence_items", "okf_relations", "okf_user_corrections"]) {
+    assert.ok(migration.includes(table) || indexer.includes(table) || correctionsRoute.includes(table));
+  }
 });
 
 test("query router classifies deterministic intents", () => {
