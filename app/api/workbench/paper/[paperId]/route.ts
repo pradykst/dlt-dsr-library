@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/workbench/api";
 import { getSupabaseAdmin } from "@/lib/workbench/supabase-admin";
 
-export async function GET(_request: Request, context: any) {
+export async function GET(_request: Request, context: { params: Promise<{ paperId: string }> }) {
   try {
     const { paperId } = await context.params;
     const supabase = getSupabaseAdmin();
@@ -32,3 +32,4 @@ export async function GET(_request: Request, context: any) {
     return jsonError("Could not load paper workbench data.", 500, error instanceof Error ? error.message : String(error));
   }
 }
+

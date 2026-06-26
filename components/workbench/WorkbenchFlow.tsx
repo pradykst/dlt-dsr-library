@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
 import ReactFlow, { Background, Controls, MarkerType, ReactFlowProvider, useReactFlow, type Edge, type Node } from "reactflow";
@@ -12,8 +12,6 @@ type AggregateNode = { id: string; label: string; elementType: string; text: str
 type Selection = { kind: "node"; element: WorkbenchElement } | { kind: "aggregate"; node: AggregateNode } | { kind: "edge"; relation: WorkbenchRelation } | null;
 type FlowMode = "main" | "context";
 
-const columns = ["Problem", "Design Requirement", "Design Principle", "Design Feature", "Artifact", "Evaluation", "Output Claim"];
-const extendedColumns = [...columns, "Kernel Theory", "Boundary Condition", "Future Work"];
 const mainColumns = ["Requirement", "Design Principle", "Design Feature"];
 const contextAggregateColumns = ["Problem", "Artifact", "Evaluation"];
 const contextLegendColumns = ["Problem", ...mainColumns, "Artifact", "Evaluation"];
@@ -89,7 +87,7 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
     return ids;
   }, [renderedRelations]);
   const aggregateNodes = useMemo(() => contextAggregateColumns
-    .map((elementType, index): AggregateNode | null => {
+    .map((elementType): AggregateNode | null => {
       const groupedElements = elements
         .filter((element) => element.element_type === elementType)
         .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
@@ -429,11 +427,6 @@ function isMainElementType(value: string | null | undefined) {
   return mainColumns.includes(canonicalMainElementType(value));
 }
 
-function relationCanRender(relation: WorkbenchRelation, allowedColumns: string[], elementById: Map<string, WorkbenchElement>) {
-  const source = elementById.get(relation.source_node_id);
-  const target = elementById.get(relation.target_node_id);
-  return Boolean(source && target && allowedColumns.includes(source.element_type ?? "") && allowedColumns.includes(target.element_type ?? ""));
-}
 
 function splitTokens(value: string | null | undefined) {
   return (value ?? "")
@@ -487,3 +480,5 @@ function splitTrailingPunctuation(value: string) {
   if (!match) return { href: value, trailing: "" };
   return { href: match[1], trailing: match[2] };
 }
+
+

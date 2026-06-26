@@ -1,0 +1,227 @@
+paper_id: SHORT_END_STICK_2025
+source_file: relations.yaml
+review_status: draft
+relations:
+  - relation_id: rel_001
+    source: problem_two_sided_opportunism
+    predicate: motivates
+    target: dr_001_prevent_information_manipulation
+    evidence: ev_001_paper_problem_two_sided_opportunism
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_002
+    source: problem_two_sided_opportunism
+    predicate: motivates
+    target: dr_002_prevent_information_poaching
+    evidence: ev_001_paper_problem_two_sided_opportunism
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_003
+    source: dr_001_prevent_information_manipulation
+    predicate: addressed_by
+    target: dp_001_manipulation_resistant_private_storage_with_integrity_proof
+    evidence: ev_005_dp1_storage_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_004
+    source: dr_002_prevent_information_poaching
+    predicate: addressed_by
+    target: dp_001_manipulation_resistant_private_storage_with_integrity_proof
+    evidence: ev_005_dp1_storage_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_005
+    source: dr_001_prevent_information_manipulation
+    predicate: addressed_by
+    target: dp_002_nonreversible_reliable_independent_computation
+    evidence: ev_006_dp2_processing_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_006
+    source: dr_002_prevent_information_poaching
+    predicate: addressed_by
+    target: dp_002_nonreversible_reliable_independent_computation
+    evidence: ev_006_dp2_processing_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_007
+    source: dr_001_prevent_information_manipulation
+    predicate: addressed_by
+    target: dp_003_joint_approval_for_computation_mechanism_changes
+    evidence: ev_007_dp3_governance_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_008
+    source: dr_002_prevent_information_poaching
+    predicate: addressed_by
+    target: dp_003_joint_approval_for_computation_mechanism_changes
+    evidence: ev_007_dp3_governance_principle
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_009
+    source: dp_001_manipulation_resistant_private_storage_with_integrity_proof
+    predicate: instantiated_by
+    target: df_001_private_data_collection_as_provider_only_sensitive_data_store
+    evidence: ev_012_private_data_collection_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_010
+    source: dp_001_manipulation_resistant_private_storage_with_integrity_proof
+    predicate: instantiated_by
+    target: df_002_public_hash_integrity_proof
+    evidence: ev_012_private_data_collection_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_011
+    source: dp_002_nonreversible_reliable_independent_computation
+    predicate: instantiated_by
+    target: df_003_smart_contract_stress_factor_computation
+    evidence: ev_013_smart_contract_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_012
+    source: dp_002_nonreversible_reliable_independent_computation
+    predicate: instantiated_by
+    target: df_004_nonreversible_aggregation_function
+    evidence: ev_013_smart_contract_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_013
+    source: dp_003_joint_approval_for_computation_mechanism_changes
+    predicate: instantiated_by
+    target: df_005_joint_governance_policy
+    evidence: ev_014_joint_governance_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_014
+    source: dp_002_nonreversible_reliable_independent_computation
+    predicate: instantiated_by
+    target: df_006_confidential_stress_channel
+    evidence: ev_011_hyperledger_fabric_selection
+    confidence: medium-high
+    relation_scope: paper_level
+
+  - relation_id: rel_015
+    source: dp_003_joint_approval_for_computation_mechanism_changes
+    predicate: instantiated_by
+    target: df_007_peer_and_orderer_network_structure
+    evidence: ev_011_hyperledger_fabric_selection
+    confidence: medium-high
+    relation_scope: paper_level
+
+  - relation_id: rel_016
+    source: dp_001_manipulation_resistant_private_storage_with_integrity_proof
+    predicate: instantiated_by
+    target: df_008_sensor_data_ingestion_interface
+    evidence: ev_011_hyperledger_fabric_selection
+    confidence: medium
+    relation_scope: paper_level
+
+  - relation_id: rel_017
+    source: df_001_private_data_collection_as_provider_only_sensitive_data_store
+    predicate: implements
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_015_figure3_artifact
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_018
+    source: df_002_public_hash_integrity_proof
+    predicate: implements
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_015_figure3_artifact
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_019
+    source: df_003_smart_contract_stress_factor_computation
+    predicate: implements
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_015_figure3_artifact
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_020
+    source: df_004_nonreversible_aggregation_function
+    predicate: implements
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_013_smart_contract_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_021
+    source: df_005_joint_governance_policy
+    predicate: implements
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_014_joint_governance_implementation
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_022
+    source: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    predicate: evaluated_by
+    target: eval_001_demonstration_interviews
+    evidence: ev_016_demonstration_interviews
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_023
+    source: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    predicate: evaluated_by
+    target: eval_002_vignette_survey
+    evidence: ev_020_survey_evaluation_design
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_024
+    source: eval_001_demonstration_interviews
+    predicate: supports
+    target: ok_002_design_blueprint_for_confidential_reliable_information_sharing
+    evidence: ev_017_dp1_demonstration_results
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_025
+    source: eval_002_vignette_survey
+    predicate: supports
+    target: ok_001_two_sided_opportunism_problem
+    evidence: ev_021_survey_results
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_026
+    source: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    predicate: generalizes_to
+    target: ok_003_blockchain_recombination_contribution
+    evidence: ev_023_contribution_blockchain_recombination
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_027
+    source: kt_001_transaction_cost_economics_and_opportunism
+    predicate: derived_from
+    target: problem_two_sided_opportunism
+    evidence: ev_001_paper_problem_two_sided_opportunism
+    confidence: high
+    relation_scope: paper_level
+
+  - relation_id: rel_028
+    source: kt_003_blockchain_governance_and_smart_contracts
+    predicate: derived_from
+    target: artifact_001_hyperledger_fabric_two_sided_opportunism_solution
+    evidence: ev_026_online_appendix_blockchain_mechanisms
+    confidence: medium-high
+    relation_scope: paper_level

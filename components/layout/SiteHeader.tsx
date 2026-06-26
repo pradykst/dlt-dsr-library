@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -8,8 +8,9 @@ const nav = [
   { label: "Explore", href: "/explore" },
   { label: "Patterns", href: "/patterns" },
   { label: "Workbench", href: "/workbench", icon: PanelsTopLeft, isNew: true },
+  { label: "OKF Chat", href: "/okf-chat", icon: Network, isNew: true },
   { label: "Feedback", href: "/desrist-evaluation", icon: ClipboardCheck, isNew: true },
-  { label: "Flow Builder", href: "/flow-builder" }
+  { label: "Flow Builder", href: "/flow-builder" },
   // Methodology route intentionally remains implemented but hidden from navigation for the conference demo.
 ];
 
@@ -79,3 +80,6 @@ export function SiteHeader() {
     </header>
   );
 }
+
+
+

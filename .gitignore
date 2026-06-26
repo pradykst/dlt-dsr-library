@@ -37,3 +37,6 @@ dev-workbench*.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+next-dev*.log
+run-next-dev.cmd

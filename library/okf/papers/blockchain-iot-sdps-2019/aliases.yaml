@@ -1,0 +1,55 @@
+---
+type: ConceptAliases
+paper_id: BLOCKCHAIN_IOT_SDPS_2019
+title: "Search aliases for Blockchain for the IoT"
+review_status: reviewed
+confidence: high
+---
+
+aliases:
+  BLOCKCHAIN_IOT_SDPS_2019:dr1_tamper_resistant_pipeline:
+    - tamper resistance
+    - data integrity
+    - prevent manipulation
+    - fraud prevention
+    - immutable data pipeline
+  BLOCKCHAIN_IOT_SDPS_2019:dr2_privacy_preserving_pipeline:
+    - privacy preservation
+    - sensitive data protection
+    - data owner privacy
+    - disclosure control
+  BLOCKCHAIN_IOT_SDPS_2019:dr3_large_data_volume_throughput:
+    - scalability
+    - big data throughput
+    - high-volume sensor data
+    - performance
+  BLOCKCHAIN_IOT_SDPS_2019:dr4_economic_feasibility:
+    - cost feasibility
+    - transaction costs
+    - net benefits
+    - economic viability
+  BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification:
+    - source-to-sink protection
+    - end-to-end certification
+    - pipeline protection
+  BLOCKCHAIN_IOT_SDPS_2019:dp2_cross_validation_certification:
+    - cross-validation
+    - plausibility check
+    - validation data
+  BLOCKCHAIN_IOT_SDPS_2019:dp3_data_owner_controlled_disclosure:
+    - selective disclosure
+    - access control
+    - data-owner control
+    - consent-like control
+  BLOCKCHAIN_IOT_SDPS_2019:dp4_linearly_scalable_architecture:
+    - hybrid architecture
+    - on-chain off-chain split
+    - scalable blockchain design
+  BLOCKCHAIN_IOT_SDPS_2019:df6_independent_verification_storage:
+    - hash anchoring
+    - on-chain hash
+    - independent verification storage
+  BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture:
+    - sensor data protection system
+    - SDPS
+    - blockchain IoT architecture
