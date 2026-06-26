@@ -51,6 +51,14 @@ test("indexing summary is idempotent without Supabase env vars", async () => {
 });
 
 
+
+test("OKF index script loads Next env before indexing", () => {
+  const script = readFileSync(path.join(process.cwd(), "scripts", "okf-index.ts"), "utf8");
+  assert.ok(script.includes('from "@next/env"'));
+  assert.ok(script.includes("loadEnvConfig(process.cwd());"));
+  assert.ok(script.indexOf("loadEnvConfig(process.cwd());") < script.indexOf("indexOkfKnowledgeBase(kb)"));
+});
+
 test("OKF database access uses prefixed table names", () => {
   const migration = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260626140000_okf_chatbot.sql"), "utf8");
   const indexer = readFileSync(path.join(process.cwd(), "lib", "okf", "indexer.ts"), "utf8");
