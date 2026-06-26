@@ -8,6 +8,7 @@ import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
 import { validateChatResponse } from "../lib/okf/validator.ts";
 
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures", "okf");
+const curatedFixtureRoot = path.join(process.cwd(), "tests", "fixtures", "curated-okf");
 
 test("OKF parser reads fixture papers, concepts, evidence, and relations", () => {
   const kb = parseOkfLibrary(fixtureRoot);
@@ -16,6 +17,20 @@ test("OKF parser reads fixture papers, concepts, evidence, and relations", () =>
   assert.equal(kb.evidence_items.length, 1);
   assert.equal(kb.relations.length, 4);
   assert.equal(kb.warnings.length, 0);
+});
+
+
+test("OKF parser supports curated markdown concepts and local relation ids", () => {
+  const kb = parseOkfLibrary(curatedFixtureRoot);
+  assert.equal(kb.papers.length, 1);
+  assert.equal(kb.concepts.length, 3);
+  assert.equal(kb.evidence_items.length, 2);
+  assert.equal(kb.relations.length, 2);
+  assert.equal(kb.warnings.length, 0);
+  assert.ok(kb.concepts.some((concept) => concept.concept_id === "CURATED_2026:dr_001_prevent_manipulation"));
+  assert.ok(kb.concepts.some((concept) => concept.extraction_type === "explicit-in-artifact"));
+  assert.ok(kb.relations.every((relation) => relation.source_concept_id.startsWith("CURATED_2026:")));
+  assert.ok(kb.relations.some((relation) => relation.predicate === "instantiated_by"));
 });
 
 test("relation validation emits warnings instead of crashing", () => {

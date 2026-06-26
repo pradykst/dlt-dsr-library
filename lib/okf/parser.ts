@@ -14,7 +14,6 @@ import {
 } from "./schema.ts";
 
 const requiredFrontmatter = ["type", "paper_id", "title", "review_status"];
-const conceptHeading = /^##\s+([A-Za-z]+):([A-Za-z0-9_.:-]+)\s*$/gm;
 
 export function parseOkfLibrary(rootDir = path.join(process.cwd(), "library", "okf")): OkfKnowledgeBase {
   const warnings: OkfValidationWarning[] = [];
@@ -92,26 +91,34 @@ export function validateKnowledgeBase(kb: OkfKnowledgeBase) {
 function parseConceptsFile(file: string, warnings: OkfValidationWarning[]): OkfConcept[] {
   const parsed = readMarkdown(file, warnings);
   validateFrontmatter(parsed.frontmatter, file, warnings);
-  const sections = splitHeadingSections(parsed.body);
+  const paperId = String(parsed.frontmatter.paper_id ?? inferPaperIdFromPath(file));
+  const sections = splitMarkdownSections(parsed.body).filter((section) => section.level === 2);
   return sections.flatMap((section) => {
-    if (!isOkfConceptType(section.type)) {
-      warnings.push({ file, message: `Unsupported concept type ${section.type}.` });
+    const heading = parseConceptHeading(section.heading);
+    const fields = parseStructuredMarkdownFields(section.content);
+    const typeValue = String(fields.type ?? heading.type ?? "");
+    if (!typeValue) return [];
+    if (!isOkfConceptType(typeValue)) {
+      warnings.push({ file, message: `Unsupported concept type ${typeValue} in ${section.heading}.` });
       return [];
     }
-    const fields = parseKeyValueBlock(section.content);
-    const paperId = String(fields.paper_id ?? parsed.frontmatter.paper_id ?? "UNKNOWN_PAPER");
-    const conceptId = normalizeScopedId(paperId, section.id);
+    const rawConceptId = String(fields.concept_id ?? heading.id);
+    if (!rawConceptId) {
+      warnings.push({ file, message: `Concept heading ${section.heading} has a Type field but no concept id.` });
+      return [];
+    }
+    const conceptId = normalizeScopedId(paperId, rawConceptId);
     return [{
       concept_id: conceptId,
-      paper_id: paperId,
-      type: section.type,
-      dsr_layer: String(fields.dsr_layer ?? section.type),
-      title: String(fields.title ?? titleFromId(section.id)),
+      paper_id: String(fields.paper_id ?? paperId),
+      type: typeValue,
+      dsr_layer: String(fields.dsr_layer ?? fields["dsr layer"] ?? typeValue),
+      title: String(fields.title ?? titleFromId(unscopedId(conceptId))),
       description: String(fields.description ?? ""),
-      body_text: stripKeyValueLines(section.content).trim(),
+      body_text: stripStructuredFieldLines(section.content).trim(),
       tags: normalizeList(fields.tags),
       confidence: normalizeConfidence(fields.confidence),
-      extraction_type: String(fields.extraction_type ?? "explicit") === "inferred" ? "inferred" : "explicit",
+      extraction_type: normalizeExtractionType(fields.extraction_type ?? fields["extraction type"]),
       review_status: normalizeReviewStatus(fields.review_status ?? parsed.frontmatter.review_status),
       source_file: file,
       okf_path: path.relative(process.cwd(), file)
@@ -122,22 +129,31 @@ function parseConceptsFile(file: string, warnings: OkfValidationWarning[]): OkfC
 function parseEvidenceFile(file: string, warnings: OkfValidationWarning[]): OkfEvidenceItem[] {
   const parsed = readMarkdown(file, warnings);
   validateFrontmatter(parsed.frontmatter, file, warnings);
-  const sections = splitEvidenceSections(parsed.body);
-  return sections.map((section) => {
-    const fields = parseKeyValueBlock(section.content);
-    const paperId = String(fields.paper_id ?? parsed.frontmatter.paper_id ?? "UNKNOWN_PAPER");
-    return {
-      evidence_id: normalizeScopedId(paperId, section.id),
-      paper_id: paperId,
-      concept_id: fields.concept_id ? normalizeScopedId(paperId, String(fields.concept_id)) : undefined,
-      page_number: fields.page_number ? Number(fields.page_number) : undefined,
-      section: fields.section ? String(fields.section) : undefined,
-      quote: fields.quote ? String(fields.quote) : undefined,
-      paraphrase: String(fields.paraphrase ?? stripKeyValueLines(section.content).trim()),
+  const paperId = String(parsed.frontmatter.paper_id ?? inferPaperIdFromPath(file));
+  const sections = splitMarkdownSections(parsed.body).filter((section) => section.level === 2);
+  return sections.flatMap((section) => {
+    const headingId = parseEvidenceHeading(section.heading);
+    if (!headingId) return [];
+    const fields = parseStructuredMarkdownFields(section.content);
+    const evidenceId = normalizeScopedId(paperId, String(fields.evidence_id ?? headingId));
+    const supportIds = normalizeList(fields.supports ?? fields["supports"]);
+    const conceptId = fields.concept_id
+      ? normalizeScopedId(paperId, String(fields.concept_id))
+      : supportIds[0]
+        ? normalizeScopedId(paperId, supportIds[0])
+        : undefined;
+    return [{
+      evidence_id: evidenceId,
+      paper_id: String(fields.paper_id ?? paperId),
+      concept_id: conceptId,
+      page_number: firstNumber(fields.page_number ?? fields.pdf_page ?? fields["pdf page"] ?? fields["pdf pages"]),
+      section: fields.section ? String(fields.section) : fields.source ? String(fields.source) : undefined,
+      quote: fields.quote && String(fields.quote).toLowerCase() !== "null" ? String(fields.quote) : undefined,
+      paraphrase: String(fields.paraphrase ?? stripStructuredFieldLines(section.content).trim()),
       confidence: normalizeConfidence(fields.confidence),
       source_location: fields.source_location ? String(fields.source_location) : undefined,
       source_file: file
-    } satisfies OkfEvidenceItem;
+    } satisfies OkfEvidenceItem];
   });
 }
 
@@ -147,21 +163,32 @@ function parseRelationsFile(file: string, warnings: OkfValidationWarning[]): Okf
   const paperId = String(doc.paper_id ?? inferPaperIdFromPath(file));
   const rows = Array.isArray(doc.relations) ? doc.relations as Record<string, unknown>[] : [];
   if (!Array.isArray(doc.relations)) warnings.push({ file, message: "relations.yaml should contain a relations list." });
-  return rows.map((row, index) => {
+  return rows.flatMap((row, index) => {
     const id = String(row.relation_id ?? `rel_${String(index + 1).padStart(3, "0")}`);
+    const relationId = normalizeScopedId(paperId, id);
     const predicate = String(row.predicate ?? "supported_by");
     const relationScope = String(row.relation_scope ?? "paper_level");
-    if (!isOkfRelationPredicate(predicate)) warnings.push({ file, message: `Unsupported relation predicate ${predicate}.` });
-    return {
-      relation_id: normalizeScopedId(paperId, id),
-      source_concept_id: normalizeScopedId(paperId, String(row.source_concept_id ?? "missing_source")),
+    const source = row.source_concept_id ?? row.source;
+    const target = row.target_concept_id ?? row.target;
+    const evidence = row.evidence_id ?? row.evidence;
+    if (!source || !target) {
+      warnings.push({
+        file,
+        message: `Malformed relation ${relationId}: missing ${!source ? "source" : "target"} concept id.`
+      });
+      return [];
+    }
+    if (!isOkfRelationPredicate(predicate)) warnings.push({ file, message: `Unsupported relation predicate ${predicate} in ${relationId}.` });
+    return [{
+      relation_id: relationId,
+      source_concept_id: normalizeScopedId(paperId, String(source)),
       predicate: isOkfRelationPredicate(predicate) ? predicate : "supported_by",
-      target_concept_id: normalizeScopedId(paperId, String(row.target_concept_id ?? "missing_target")),
-      evidence_id: row.evidence_id ? normalizeScopedId(paperId, String(row.evidence_id)) : undefined,
+      target_concept_id: normalizeScopedId(paperId, String(target)),
+      evidence_id: evidence ? normalizeScopedId(paperId, String(evidence)) : undefined,
       confidence: normalizeConfidence(row.confidence),
       relation_scope: relationScope === "cross_paper" || relationScope === "query_generated" ? relationScope : "paper_level",
       source_file: file
-    } satisfies OkfRelation;
+    } satisfies OkfRelation];
   });
 }
 
@@ -197,22 +224,51 @@ function normalizePaper(frontmatter: Record<string, unknown>, file: string, body
   };
 }
 
-function splitHeadingSections(body: string) {
-  const matches = Array.from(body.matchAll(conceptHeading));
+function splitMarkdownSections(body: string) {
+  const heading = /^(#{1,2})\s+(.+?)\s*$/gm;
+  const matches = Array.from(body.matchAll(heading));
   return matches.map((match, index) => ({
-    type: match[1],
-    id: match[2],
+    level: match[1].length,
+    heading: match[2].trim(),
     content: body.slice((match.index ?? 0) + match[0].length, matches[index + 1]?.index ?? body.length).trim()
   }));
 }
 
-function splitEvidenceSections(body: string) {
-  const heading = /^##\s+([A-Za-z0-9_.:-]+)\s*$/gm;
-  const matches = Array.from(body.matchAll(heading));
-  return matches.map((match, index) => ({
-    id: match[1],
-    content: body.slice((match.index ?? 0) + match[0].length, matches[index + 1]?.index ?? body.length).trim()
-  }));
+function parseConceptHeading(heading: string) {
+  const conceptMatch = heading.match(/^Concept:\s*(.+)$/i);
+  if (conceptMatch) return { id: conceptMatch[1].trim() };
+  const typedMatch = heading.match(/^([A-Za-z]+):([A-Za-z0-9_.:-]+)$/);
+  if (typedMatch) return { type: typedMatch[1], id: typedMatch[2] };
+  return { id: heading.trim() };
+}
+
+function parseEvidenceHeading(heading: string) {
+  const evidenceMatch = heading.match(/^Evidence:\s*(.+)$/i);
+  return (evidenceMatch ? evidenceMatch[1] : heading).trim();
+}
+
+function parseStructuredMarkdownFields(content: string): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  for (const fence of content.matchAll(/```ya?ml\s*\r?\n([\s\S]*?)\r?\n```/gi)) {
+    Object.assign(fields, parseKeyValueBlock(fence[1]));
+  }
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const bold = line.match(/^\*\*([^*]+?):\*\*\s*(.*?)\s*$/);
+    if (bold) fields[normalizeFieldKey(bold[1])] = parseScalar(bold[2]);
+  }
+  Object.assign(fields, parseKeyValueBlock(content.replace(/```[\s\S]*?```/g, "")));
+  return fields;
+}
+
+function stripStructuredFieldLines(content: string) {
+  return content
+    .replace(/```ya?ml\s*\r?\n[\s\S]*?\r?\n```/gi, "")
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*\*\*[^*]+?:\*\*/.test(line))
+    .filter((line) => !/^\s*[A-Za-z0-9_]+:\s*/.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 function parseKeyValueBlock(text: string): Record<string, unknown> {
@@ -222,7 +278,7 @@ function parseKeyValueBlock(text: string): Record<string, unknown> {
     if (!line || line.startsWith("#") || line.startsWith("- ")) continue;
     const match = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
     if (!match) continue;
-    result[match[1]] = parseScalar(match[2]);
+    result[normalizeFieldKey(match[1])] = parseScalar(match[2]);
   }
   return result;
 }
@@ -236,7 +292,7 @@ function parseSimpleYaml(text: string): Record<string, unknown> {
     if (!line || line.startsWith("#")) continue;
     const listMatch = line.match(/^([A-Za-z0-9_]+):\s*$/);
     if (listMatch) {
-      currentList = listMatch[1];
+      currentList = normalizeFieldKey(listMatch[1]);
       result[currentList] = [];
       continue;
     }
@@ -253,14 +309,31 @@ function parseSimpleYaml(text: string): Record<string, unknown> {
       continue;
     }
     const pair = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-    if (pair) result[pair[1]] = parseScalar(pair[2]);
+    if (pair) result[normalizeFieldKey(pair[1])] = parseScalar(pair[2]);
   }
   return result;
 }
 
 function assignYamlPair(target: Record<string, unknown>, text: string) {
   const pair = text.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-  if (pair) target[pair[1]] = parseScalar(pair[2]);
+  if (pair) target[normalizeFieldKey(pair[1])] = parseScalar(pair[2]);
+}
+
+function normalizeFieldKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function normalizeExtractionType(value: unknown) {
+  const normalized = String(value ?? "explicit").toLowerCase();
+  if (normalized === "inferred") return "inferred";
+  if (normalized === "explicit-in-artifact") return "explicit-in-artifact";
+  return "explicit";
+}
+
+function firstNumber(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  const match = String(value).match(/\d+/);
+  return match ? Number(match[0]) : undefined;
 }
 
 function parseScalar(value: string): unknown {
@@ -269,11 +342,8 @@ function parseScalar(value: string): unknown {
   if (/^\d+$/.test(trimmed)) return Number(trimmed);
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
+  if (trimmed === "null") return undefined;
   return unquote(trimmed);
-}
-
-function stripKeyValueLines(text: string) {
-  return text.split(/\r?\n/).filter((line) => !/^\s*[A-Za-z0-9_]+:\s*/.test(line)).join("\n");
 }
 
 function normalizeList(value: unknown): string[] {
@@ -287,8 +357,13 @@ function normalizeReviewStatus(value: unknown): OkfReviewStatus {
 }
 
 function normalizeScopedId(paperId: string, id: string) {
-  if (id.includes(":")) return id;
-  return `${paperId}:${id}`;
+  const cleanId = id.trim();
+  if (cleanId.includes(":")) return cleanId;
+  return `${paperId}:${cleanId}`;
+}
+
+function unscopedId(id: string) {
+  return id.includes(":") ? id.split(":").slice(1).join(":") : id;
 }
 
 function titleFromId(id: string) {

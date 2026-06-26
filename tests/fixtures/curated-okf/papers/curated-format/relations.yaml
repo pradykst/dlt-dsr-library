@@ -1,0 +1,16 @@
+﻿paper_id: CURATED_2026
+relations:
+  - relation_id: rel_001
+    source: dr_001_prevent_manipulation
+    predicate: addressed_by
+    target: dp_001_auditability
+    evidence: ev_002_principle
+    confidence: high
+    relation_scope: paper_level
+  - relation_id: rel_002
+    source_concept_id: CURATED_2026:dp_001_auditability
+    predicate: instantiated_by
+    target_concept_id: df_001_hash_anchor
+    evidence_id: ev_002_principle
+    confidence: medium-high
+    relation_scope: paper_level

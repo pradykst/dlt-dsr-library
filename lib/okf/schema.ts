@@ -8,7 +8,8 @@
   "Artifact",
   "Evaluation",
   "OutputKnowledge",
-  "KernelTheory"
+  "KernelTheory",
+  "Limitation"
 ] as const;
 
 export const okfRelationPredicates = [
@@ -23,15 +24,17 @@ export const okfRelationPredicates = [
   "derived_from",
   "contrasts_with",
   "generalizes_to",
-  "contributes_to"
+  "contributes_to",
+  "instantiated_by",
+  "supports"
 ] as const;
 
 export type OkfConceptType = (typeof okfConceptTypes)[number];
 export type OkfRelationPredicate = (typeof okfRelationPredicates)[number];
 export type OkfReviewStatus = "draft" | "reviewed";
-export type OkfExtractionType = "explicit" | "inferred";
+export type OkfExtractionType = "explicit" | "inferred" | "explicit-in-artifact";
 export type OkfRelationScope = "paper_level" | "cross_paper" | "query_generated";
-export type ConfidenceLabel = "high" | "medium" | "low";
+export type ConfidenceLabel = "high" | "medium-high" | "medium" | "low";
 
 export type OkfPaper = {
   paper_id: string;
@@ -143,8 +146,9 @@ export function isOkfRelationPredicate(value: string): value is OkfRelationPredi
 
 export function normalizeConfidence(value: unknown): ConfidenceLabel {
   const normalized = String(value ?? "low").toLowerCase();
-  if (normalized === "high" || normalized === "medium" || normalized === "low") return normalized;
+  if (normalized === "high" || normalized === "medium-high" || normalized === "medium" || normalized === "low") return normalized;
   if (normalized === "3") return "high";
   if (normalized === "2") return "medium";
   return "low";
 }
+
