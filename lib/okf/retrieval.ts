@@ -74,12 +74,12 @@ export function buildQuerySpecificFlow(query: string, selectedConcepts: OkfConce
   return buildOkfFlow(query, selectedConcepts, kb);
 }
 
-export function retrieveForDesignQuery(query: string, kb = getOkfKnowledgeBase()) {
-  const requirementMatches = getConceptsByType(["DesignRequirement", "Problem"], { query }, kb).slice(0, 6);
-  const paperMatches = getRelevantPapers(query, kb).slice(0, 4);
+export function retrieveForDesignQuery(query: string, kb = getOkfKnowledgeBase(), paperId?: string) {
+  const requirementMatches = getConceptsByType(["DesignRequirement", "Problem"], { query, paper_id: paperId }, kb).slice(0, 8);
+  const paperMatches = paperId ? kb.papers.filter((paper) => paper.paper_id === paperId) : getRelevantPapers(query, kb).slice(0, 4);
   const paperIds = new Set(paperMatches.map((paper) => paper.paper_id));
-  const seed = requirementMatches.length ? requirementMatches : kb.concepts.filter((concept) => paperIds.has(concept.paper_id) && ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact"].includes(concept.type)).slice(0, 8);
-  const traversed = traverseDsrPath(seed, ["motivates", "requires", "addressed_by", "satisfies", "instantiates", "implements", "contributes_to", "supported_by"], kb);
+  const seed = requirementMatches.length ? requirementMatches : kb.concepts.filter((concept) => paperIds.has(concept.paper_id) && ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact"].includes(concept.type)).slice(0, 12);
+  const traversed = traverseDsrPath(seed, ["motivates", "requires", "addressed_by", "satisfies", "instantiates", "instantiated_by", "implements", "evaluated_by", "supported_by", "supports", "derived_from", "contributes_to"], kb);
   const concepts = uniqueConcepts([...seed, ...traversed.concepts]).slice(0, 24);
   const conceptIds = new Set(concepts.map((concept) => concept.concept_id));
   const relations = kb.relations.filter((relation) => conceptIds.has(relation.source_concept_id) && conceptIds.has(relation.target_concept_id));

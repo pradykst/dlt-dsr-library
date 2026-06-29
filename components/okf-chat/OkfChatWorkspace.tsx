@@ -1,11 +1,12 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, BookOpen, CheckCircle2, Network, Send, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, BookOpen, CheckCircle2, GitBranch, Network, Send } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
 import type { OkfChatResponse } from "@/lib/okf/chat.ts";
-import type { OkfConcept } from "@/lib/okf/schema.ts";
+import type { OkfConcept, OkfFlowNode } from "@/lib/okf/schema.ts";
 
 const starterQuery = "I want to design a DLT-based system that helps marketplaces prevent inconsistent product identities and manipulated product descriptions. What design knowledge from prior DSR papers should I reuse?";
 const conceptGroups = [
@@ -13,7 +14,16 @@ const conceptGroups = [
   ["Design Principles", "DesignPrinciple"],
   ["Design Features", "DesignFeature"],
   ["Artifact Patterns", "Artifact"],
-  ["Evaluation Criteria", "Evaluation"]
+  ["Evaluation Criteria / Evaluation Evidence", "Evaluation"]
+] as const;
+const flowColumns = [
+  ["Problem", ["Problem", "ResearchQuestion"]],
+  ["Requirements", ["DesignRequirement"]],
+  ["Principles", ["DesignPrinciple"]],
+  ["Features", ["DesignFeature"]],
+  ["Artifact", ["Artifact"]],
+  ["Evaluation", ["Evaluation"]],
+  ["Output Knowledge", ["OutputKnowledge", "KernelTheory", "Limitation"]]
 ] as const;
 
 export function OkfChatWorkspace() {
@@ -22,6 +32,8 @@ export function OkfChatWorkspace() {
   const [loading, setLoading] = useState(false);
   const [correctionText, setCorrectionText] = useState("");
   const [correctionStatus, setCorrectionStatus] = useState("");
+  const [selectedConceptId, setSelectedConceptId] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState("Answer");
 
   async function submit() {
     setLoading(true);
@@ -31,7 +43,10 @@ export function OkfChatWorkspace() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query })
     });
-    setResponse(await result.json());
+    const payload = await result.json();
+    setResponse(payload);
+    setSelectedConceptId(undefined);
+    setActiveTab("Answer");
     setLoading(false);
   }
 
@@ -62,75 +77,142 @@ export function OkfChatWorkspace() {
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(360px,0.9fr)]">
         <div className="space-y-6">
-          <ChatTimeline query={query} setQuery={setQuery} response={response} loading={loading} submit={submit} />
-          {response && <MiniFlow response={response} />}
-          {response && <DsrGraphView response={response} />}
+          <AssistantWorkspace query={query} setQuery={setQuery} response={response} loading={loading} submit={submit} activeTab={activeTab} setActiveTab={setActiveTab} selectedConceptId={selectedConceptId} setSelectedConceptId={setSelectedConceptId} />
         </div>
         <aside className="space-y-6">
           <SourcePapersPanel response={response} />
-          <RetrievedKnowledgePanel response={response} />
-          <EvidenceDrawer response={response} />
-          <CorrectionReviewInterface response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} />
+          <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} />
+          <details className="border border-line bg-white p-4 shadow-research">
+            <summary className="cursor-pointer text-sm font-semibold text-ink">Retrieved design knowledge</summary>
+            <div className="mt-4"><RetrievedKnowledgePanel response={response} onSelectConcept={setSelectedConceptId} /></div>
+          </details>
+          <CorrectionReviewInterface response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} />
         </aside>
       </div>
     </div>
   );
 }
 
-function ChatTimeline({ query, setQuery, response, loading, submit }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void }) {
+function AssistantWorkspace({ query, setQuery, response, loading, submit, activeTab, setActiveTab, selectedConceptId, setSelectedConceptId }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void; activeTab: string; setActiveTab: (value: string) => void; selectedConceptId?: string; setSelectedConceptId: (id: string | undefined) => void }) {
   return (
-    <section className="border border-line bg-white shadow-research">
-      <div className="border-b border-line px-5 py-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-ink"><SlidersHorizontal className="h-4 w-4 text-blue" /> ChatTimeline</div>
+    <section className="flex min-h-[720px] flex-col border border-line bg-white shadow-research">
+      <div className="border-b border-line bg-paper px-5 py-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">DSR decision-support assistant</div>
+        <h2 className="mt-1 font-serif text-2xl text-ink">OKF Conversation</h2>
       </div>
-      <div className="space-y-4 p-5">
-        <textarea className="min-h-32 w-full border border-line bg-paper p-3 text-sm leading-6 outline-none focus:border-blue" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <Button type="button" onClick={submit} disabled={loading}><Send className="h-4 w-4" /> {loading ? "Retrieving OKF" : "Ask OKF assistant"}</Button>
-        <div className="space-y-3">
-          <Message role="User query" text={query} />
-          {response && <Message role="Assistant reasoning stages" text={`Intent: ${response.intent}\nRetrieved ${response.retrieved_concepts.length} concepts, ${response.evidence.length} evidence items, and ${response.flow.edges.length} flow edges.`} />}
-          {response && <Message role="Final recommendation" text={response.answer} />}
-          {response?.warnings?.length ? <Message role="Validation warnings" text={response.warnings.join("\n")} warning /> : null}
+      <div className="space-y-5 p-4 sm:p-5">
+        <div className="ml-auto max-w-[92%] border border-blue/20 bg-blue/5 p-3">
+          <textarea className="min-h-24 w-full resize-y bg-transparent text-sm leading-6 text-ink outline-none" value={query} onChange={(event) => setQuery(event.target.value)} />
+          <div className="mt-3 flex justify-end"><Button type="button" onClick={submit} disabled={loading}><Send className="h-4 w-4" /> {loading ? "Retrieving OKF" : "Ask OKF assistant"}</Button></div>
         </div>
+        <StageProgress response={response} loading={loading} />
+        {response ? (
+          <div className="space-y-5">
+            <Tabs tabs={["Answer", "Flow", "Evidence", "Retrieved Knowledge", "Debug"]} active={activeTab} onChange={setActiveTab} />
+            {activeTab === "Answer" && <AnswerTab response={response} onSelectConcept={setSelectedConceptId} />}
+            {activeTab === "Flow" && <DsrGraphView response={response} onSelectConcept={setSelectedConceptId} />}
+            {activeTab === "Evidence" && <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} />}
+            {activeTab === "Retrieved Knowledge" && <RetrievedKnowledgePanel response={response} onSelectConcept={setSelectedConceptId} />}
+            {activeTab === "Debug" && <DebugTrace query={query} response={response} />}
+          </div>
+        ) : (
+          <div className="border border-line bg-paper p-4 text-sm leading-6 text-muted">Ask a design question to retrieve OKF-backed requirements, principles, features, artifacts, evidence, and a query-specific DSR flow.</div>
+        )}
       </div>
     </section>
   );
 }
 
-function Message({ role, text, warning = false }: { role: string; text: string; warning?: boolean }) {
-  return <div className={`border ${warning ? "border-amber-300 bg-amber-50" : "border-line bg-white"} p-3`}><div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{role}</div><p className="whitespace-pre-line text-sm leading-6 text-ink">{text}</p></div>;
+function StageProgress({ response, loading }: { response: OkfChatResponse | null; loading: boolean }) {
+  const stages = [
+    ["Understanding query", response ? "Detected the requested DSR task and output shape." : "Waiting for a design or paper question."],
+    ["Selecting source papers", response ? `${response.source_papers.length} source paper panel item(s) prepared.` : "Matching paper titles, aliases, and concept metadata."],
+    ["Retrieving DSR elements", response ? `${response.retrieved_concepts.length} OKF concept(s) retrieved.` : "Looking for requirements, principles, features, artifacts, and evaluations."],
+    ["Building flow", response ? `${response.flow.edges.length} stored relation edge(s) used.` : "Constructing only relation-backed DSR paths."],
+    ["Checking evidence", response ? `${response.evidence.length} evidence item(s) linked.` : "Validating evidence and citations."],
+    ["Drafting recommendation", response ? "Deterministic recommendation ready." : "Preparing a readable researcher-facing answer."]
+  ];
+  return <div className="grid gap-2 md:grid-cols-3">{stages.map(([title, body], index) => <div key={title} className={`border p-3 ${response || loading ? "border-blue/25 bg-blue/5" : "border-line bg-paper"}`}><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink"><span className={`h-2 w-2 ${response || (loading && index < 3) ? "bg-blue" : "bg-muted/40"}`} />{title}</div><p className="mt-2 text-xs leading-5 text-muted">{body}</p></div>)}</div>;
+}
+
+function AnswerTab({ response, onSelectConcept }: { response: OkfChatResponse; onSelectConcept: (id: string) => void }) {
+  return <div className="demo-message-in space-y-5 border border-line bg-paper p-4"><div><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Final recommendation</div><h3 className="mt-2 font-serif text-2xl text-ink">Evidence-backed design guidance</h3></div><AnswerText answer={response.answer} /><GuidanceCards response={response} onSelectConcept={onSelectConcept} /><EvaluationCriteria response={response} /><MiniFlow response={response} onSelectConcept={onSelectConcept} /></div>;
+}
+
+function AnswerText({ answer }: { answer: string }) {
+  const [first, ...rest] = answer.split("\n\n");
+  return <div className="border border-line bg-white p-4"><p className="text-sm font-medium leading-6 text-ink">{first}</p>{rest.length > 0 && <div className="mt-4 space-y-3 text-sm leading-6 text-muted">{rest.map((part) => <p key={part} className="whitespace-pre-line">{part}</p>)}</div>}</div>;
+}
+
+function GuidanceCards({ response, onSelectConcept }: { response: OkfChatResponse; onSelectConcept: (id: string) => void }) {
+  const groups = [["Recommended requirements", response.requirements], ["Reusable design principles", response.principles], ["Candidate features", response.features], ["Artifact direction", response.artifact_direction]] as const;
+  return <div className="grid gap-3 md:grid-cols-2">{groups.map(([title, cards]) => <section key={title} className="border border-line bg-white p-3"><h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{title}</h4><div className="mt-3 space-y-2">{cards.length ? cards.map((card) => <button key={`${title}-${card.title}`} type="button" onClick={() => card.concept_id && onSelectConcept(card.concept_id)} className="w-full border border-line bg-paper p-3 text-left hover:border-blue"><div className="text-sm font-semibold text-ink">{card.title}</div><div className="mt-2 flex flex-wrap gap-1"><Badge>{card.paper_id === "query_generated" ? "query_generated" : card.paper_id ?? "OKF"}</Badge><Badge>{card.confidence}</Badge><Badge>{card.evidence_ids.length} evidence</Badge></div></button>) : <p className="text-sm text-muted">No direct OKF card for this group.</p>}</div></section>)}</div>;
+}
+
+function EvaluationCriteria({ response }: { response: OkfChatResponse }) {
+  const criteria = [
+    ["Comprehensiveness", response.retrieved_concepts.length >= 6 ? "Multiple relevant DSR elements were retrieved." : "The answer uses a narrow set of retrieved elements."],
+    ["Generality", response.source_papers.length > 1 ? "The recommendation abstracts across more than one paper." : "The answer is scoped to one primary paper unless cross-paper reuse was requested."],
+    ["Soundness", response.evidence.length > 0 && response.flow.edges.length > 0 ? "Recommendations are linked to evidence and stored relations." : "Evidence or stored relation coverage is limited."]
+  ];
+  return <section className="border border-line bg-white p-4"><h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Evaluation criteria</h4><div className="mt-3 grid gap-3 md:grid-cols-3">{criteria.map(([label, body]) => <div key={label} className="border border-green/30 bg-green/5 p-3"><div className="text-sm font-semibold text-ink">{label}</div><p className="mt-2 text-xs leading-5 text-muted">{body}</p></div>)}</div></section>;
+}
+
+function DebugTrace({ query, response }: { query: string; response: OkfChatResponse }) {
+  return <details className="border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Retrieved:</strong> {response.retrieved_concepts.length} concepts, {response.evidence.length} evidence items, {response.flow.edges.length} flow edges.</p>{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
 }
 
 function SourcePapersPanel({ response }: { response: OkfChatResponse | null }) {
-  return <Panel title="SourcePapersPanel" icon={<BookOpen className="h-4 w-4 text-blue" />}>{response?.source_papers.length ? response.source_papers.map((paper) => <div key={paper.paper_id} className="border border-line p-3"><div className="text-sm font-semibold text-ink">{paper.title}</div><div className="mt-1 text-xs text-muted">{paper.paper_id}</div><Badge className="mt-2">{paper.role}</Badge></div>) : <Empty text="Ask a question to see matched papers." />}</Panel>;
+  return <Panel title="SourcePapersPanel" icon={<BookOpen className="h-4 w-4 text-blue" />}>{response?.source_papers.length ? response.source_papers.map((paper) => <div key={paper.paper_id} className="border border-line p-3"><div className="text-sm font-semibold text-ink">{paper.title}</div><div className="mt-1 text-xs text-muted">{paper.paper_id}</div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{paper.reason}</Badge><Badge>{paper.role}</Badge></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted"><Metric label="Req" value={paper.requirements_count} /><Metric label="Prin" value={paper.principles_count} /><Metric label="Feat" value={paper.features_count} /><Metric label="Evid" value={paper.evidence_count} /></div></div>) : <Empty text="Ask a question to see matched papers." />}</Panel>;
 }
 
-function RetrievedKnowledgePanel({ response }: { response: OkfChatResponse | null }) {
-  return <Panel title="RetrievedKnowledgePanel" icon={<Network className="h-4 w-4 text-blue" />}>{conceptGroups.map(([label, type]) => <KnowledgeGroup key={type} label={label} concepts={(response?.retrieved_concepts ?? []).filter((concept) => concept.type === type)} />)}</Panel>;
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div className="border border-line bg-paper px-2 py-1"><span className="font-semibold text-ink">{value}</span> {label}</div>;
 }
 
-function KnowledgeGroup({ label, concepts }: { label: string; concepts: OkfConcept[] }) {
-  return <div><div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>{concepts.length ? <div className="space-y-2">{concepts.map((concept) => <div key={concept.concept_id} className="border border-line p-2"><div className="text-sm font-medium text-ink">{concept.title}</div><div className="mt-1 text-xs text-muted">{concept.concept_id} · {concept.confidence}</div></div>)}</div> : <p className="text-sm text-muted">No retrieved items.</p>}</div>;
+function RetrievedKnowledgePanel({ response, onSelectConcept }: { response: OkfChatResponse | null; onSelectConcept: (id: string) => void }) {
+  return <Panel title="RetrievedKnowledgePanel" icon={<Network className="h-4 w-4 text-blue" />}>{conceptGroups.map(([label, type]) => <KnowledgeGroup key={type} label={label} concepts={(response?.retrieved_concepts ?? []).filter((concept) => concept.type === type)} response={response} onSelectConcept={onSelectConcept} />)}</Panel>;
 }
 
-function MiniFlow({ response }: { response: OkfChatResponse }) {
-  return <section className="border border-line bg-white p-5 shadow-research"><div className="mb-4 text-sm font-semibold text-ink">MiniFlow</div><div className="flex gap-3 overflow-x-auto pb-2">{response.flow.nodes.map((node, index) => <div key={node.id} className="flex items-center gap-3"><div className="min-w-48 border border-line bg-paper p-3"><div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{node.type}{node.query_generated ? " · query_generated" : ""}</div><div className="mt-2 text-sm font-semibold text-ink">{node.label}</div><div className="mt-2 text-xs text-muted">{node.confidence}</div></div>{index < response.flow.nodes.length - 1 && <span className="text-muted">→</span>}</div>)}</div></section>;
+function KnowledgeGroup({ label, concepts, response, onSelectConcept }: { label: string; concepts: OkfConcept[]; response: OkfChatResponse | null; onSelectConcept: (id: string) => void }) {
+  return <div><div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div>{concepts.length ? <div className="space-y-2">{concepts.map((concept) => <KnowledgeCard key={concept.concept_id} concept={concept} response={response} onSelectConcept={onSelectConcept} />)}</div> : <p className="text-sm text-muted">No retrieved items.</p>}</div>;
 }
 
-function DsrGraphView({ response }: { response: OkfChatResponse }) {
-  const layout = useMemo(() => response.flow.nodes.map((node, index) => ({ node, x: 70 + index * 150, y: 80 + (index % 2) * 70 })), [response]);
-  const byId = new Map(layout.map((item) => [item.node.id, item]));
-  return <section className="border border-line bg-white p-5 shadow-research"><div className="mb-4 text-sm font-semibold text-ink">DsrGraphView</div><svg viewBox="0 0 980 260" className="h-72 w-full border border-line bg-paper">{response.flow.edges.map((edge) => { const source = byId.get(edge.source); const target = byId.get(edge.target); if (!source || !target) return null; return <g key={`${edge.source}-${edge.target}`}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke="#6c7a89" strokeWidth="2" /><text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" className="fill-slate-600 text-[10px]">{edge.predicate}</text></g>; })}{layout.map(({ node, x, y }) => <g key={node.id}><circle cx={x} cy={y} r="28" fill={node.query_generated ? "#fef3c7" : "#dbeafe"} stroke="#6c7a89" /><text x={x} y={y + 44} textAnchor="middle" className="fill-slate-800 text-[10px]"><tspan>{node.type}</tspan></text></g>)}</svg></section>;
+function KnowledgeCard({ concept, response, onSelectConcept }: { concept: OkfConcept; response: OkfChatResponse | null; onSelectConcept: (id: string) => void }) {
+  const evidenceCount = response?.evidence.filter((item) => item.concept_id === concept.concept_id).length ?? 0;
+  return <button type="button" onClick={() => onSelectConcept(concept.concept_id)} className="w-full border border-line p-3 text-left transition hover:border-blue hover:bg-blue/5"><div className="text-sm font-semibold text-ink">{concept.title}</div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{shortPaper(concept.paper_id)}</Badge><Badge>{concept.type}</Badge><Badge>{concept.confidence}</Badge><Badge>{evidenceCount} evidence</Badge><Badge>{concept.review_status}</Badge></div><details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Details</summary><div className="mt-1 break-all">{concept.concept_id}</div></details></button>;
 }
 
-function EvidenceDrawer({ response }: { response: OkfChatResponse | null }) {
-  return <Panel title="EvidenceDrawer" icon={<BookOpen className="h-4 w-4 text-blue" />}>{response?.evidence.length ? response.evidence.map((item) => <details key={item.evidence_id} className="border border-line p-3" open><summary className="cursor-pointer text-sm font-semibold text-ink">{item.paper_id}</summary><div className="mt-2 text-xs text-muted">Matched element: {item.concept_id ?? "paper-level"}</div><p className="mt-2 text-sm leading-6 text-ink">{item.quote ?? item.paraphrase}</p><div className="mt-2 text-xs text-muted">Evidence: {item.evidence_id} · {item.confidence}</div></details>) : <Empty text="Evidence will appear with retrieved concepts." />}</Panel>;
+function MiniFlow({ response, onSelectConcept }: { response: OkfChatResponse; onSelectConcept: (id: string) => void }) {
+  return <section className="border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> MiniFlow</div><LayeredFlow response={response} compact onSelectConcept={onSelectConcept} /></section>;
 }
 
-function CorrectionReviewInterface({ response, correctionText, setCorrectionText, submitCorrection, status }: { response: OkfChatResponse | null; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; status: string }) {
-  const target = response?.requirements[0]?.concept_id ?? response?.retrieved_concepts[0]?.concept_id ?? "okf-response";
+function DsrGraphView({ response, onSelectConcept }: { response: OkfChatResponse; onSelectConcept: (id: string) => void }) {
+  return <section className="border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><Network className="h-4 w-4 text-blue" /> DsrGraphView</div><LayeredFlow response={response} onSelectConcept={onSelectConcept} /></section>;
+}
+
+function LayeredFlow({ response, compact = false, onSelectConcept }: { response: OkfChatResponse; compact?: boolean; onSelectConcept: (id: string) => void }) {
+  const nodesById = new Map(response.flow.nodes.map((node) => [node.id, node]));
+  const columns = flowColumns.map(([label, types]) => ({ label, nodes: response.flow.nodes.filter((node) => (types as readonly string[]).includes(node.type)) }));
+  return <div className="overflow-x-auto pb-2"><div className="grid min-w-[1120px] grid-cols-7 gap-3">{columns.map((column) => <div key={column.label} className="border border-line bg-paper/70 p-2"><div className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{column.label}</div><div className="space-y-2">{column.nodes.length ? column.nodes.map((node) => <FlowCard key={node.id} node={node} response={response} nodesById={nodesById} compact={compact} onSelectConcept={onSelectConcept} />) : <div className="border border-dashed border-line bg-white p-2 text-center text-xs text-muted">No node</div>}</div></div>)}</div></div>;
+}
+
+function FlowCard({ node, response, nodesById, compact, onSelectConcept }: { node: OkfFlowNode; response: OkfChatResponse; nodesById: Map<string, OkfFlowNode>; compact: boolean; onSelectConcept: (id: string) => void }) {
+  const outgoing = response.flow.edges.filter((edge) => edge.source === node.id && nodesById.has(edge.target));
+  const concept = response.retrieved_concepts.find((item) => item.concept_id === node.concept_id);
+  return <button type="button" onClick={() => node.concept_id && onSelectConcept(node.concept_id)} className={`w-full border p-2 text-left transition hover:border-blue ${node.query_generated ? "border-amber-300 bg-amber-50" : "border-line bg-white"}`}><div className="text-xs font-semibold text-ink">{node.label}</div><div className="mt-1 flex flex-wrap gap-1"><span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-muted">{node.query_generated ? "query_generated" : node.type}</span>{node.paper_id && <span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] text-muted">{shortPaper(node.paper_id)}</span>}<span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] text-muted">{node.confidence}</span></div>{!compact && concept?.description && <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">{concept.description}</p>}{outgoing.length > 0 && <div className="mt-2 space-y-1">{outgoing.map((edge) => <div key={`${edge.source}-${edge.target}-${edge.relation_id ?? edge.predicate}`} className="text-[11px] leading-4 text-blue" title={edge.predicate}>→ {nodesById.get(edge.target)?.label}</div>)}</div>}</button>;
+}
+
+function EvidenceDrawer({ response, selectedConceptId }: { response: OkfChatResponse | null; selectedConceptId?: string }) {
+  const evidence = response?.evidence.filter((item) => !selectedConceptId || item.concept_id === selectedConceptId) ?? [];
+  const selectedConcept = response?.retrieved_concepts.find((concept) => concept.concept_id === selectedConceptId);
+  return <Panel title="EvidenceDrawer" icon={<BookOpen className="h-4 w-4 text-blue" />}>{selectedConcept && <div className="border border-blue/30 bg-blue/5 p-3"><div className="text-sm font-semibold text-ink">{selectedConcept.title}</div><div className="mt-1 text-xs text-muted">{selectedConcept.type} · {shortPaper(selectedConcept.paper_id)}</div></div>}{evidence.length ? evidence.map((item) => <details key={item.evidence_id} className="border border-line p-3" open><summary className="cursor-pointer text-sm font-semibold text-ink">{shortPaper(item.paper_id)}</summary><div className="mt-2 text-xs text-muted">Matched element evidence</div><p className="mt-2 text-sm leading-6 text-ink">{item.quote ?? item.paraphrase}</p><details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Details</summary><div className="mt-1 break-all">{item.evidence_id}</div></details></details>) : <Empty text="Select a concept card to inspect its evidence." />}</Panel>;
+}
+
+function CorrectionReviewInterface({ response, correctionText, setCorrectionText, submitCorrection, status, selectedConceptId }: { response: OkfChatResponse | null; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; status: string; selectedConceptId?: string }) {
+  const target = selectedConceptId ?? response?.requirements[0]?.concept_id ?? response?.retrieved_concepts[0]?.concept_id ?? "okf-response";
   return <Panel title="CorrectionReviewInterface" icon={<AlertTriangle className="h-4 w-4 text-blue" />}><textarea className="min-h-24 w-full border border-line bg-paper p-2 text-sm outline-none focus:border-blue" placeholder="Mark a recommendation, concept, relation, or evidence item as wrong..." value={correctionText} onChange={(event) => setCorrectionText(event.target.value)} /><button type="button" className="mt-2 border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue" onClick={() => submitCorrection(target)} disabled={!response}>Submit correction</button>{status && <p className="mt-2 text-sm text-muted">{status}</p>}</Panel>;
 }
 
@@ -141,3 +223,10 @@ function Panel({ title, icon, children }: { title: string; icon: React.ReactNode
 function Empty({ text }: { text: string }) {
   return <p className="text-sm leading-6 text-muted">{text}</p>;
 }
+
+function shortPaper(paperId: string) {
+  if (paperId === "BLOCKCHAIN_IOT_SDPS_2019") return "Blockchain IoT SDPS";
+  if (paperId === "SHORT_END_STICK_2025") return "Short End Stick";
+  return paperId;
+}
+

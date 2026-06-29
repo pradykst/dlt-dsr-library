@@ -88,6 +88,88 @@ test("OKF database access uses prefixed table names", () => {
   }
 });
 
+
+test("paper-specific element query returns only the named paper and both requested types", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
+  assert.equal(response.intent, "DSR_ELEMENT_QUERY");
+  assert.ok(response.retrieved_concepts.length > 0);
+  assert.ok(response.retrieved_concepts.every((concept) => concept.paper_id === "BLOCKCHAIN_IOT_SDPS_2019"));
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignRequirement").length, 4);
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignPrinciple").length, 4);
+});
+
+test("flow query is classified and uses stored relations without requirement-to-requirement chaining", async () => {
+  const kb = parseOkfLibrary();
+  assert.equal(routeOkfQuery("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection."), "DSR_FLOW_QUERY");
+  const response = await answerOkfChat("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection.", kb);
+  assert.equal(response.intent, "DSR_FLOW_QUERY");
+  const byId = new Map(response.flow.nodes.map((node) => [node.id, node]));
+  assert.ok(response.flow.edges.length > 0);
+  assert.ok(response.flow.edges.every((edge) => edge.relation_id || byId.get(edge.source)?.query_generated));
+  assert.equal(response.flow.edges.some((edge) => byId.get(edge.source)?.type === "DesignRequirement" && byId.get(edge.target)?.type === "DesignRequirement"), false);
+});
+
+test("design recommendation query marks query-generated problem nodes", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("I need a marketplace system for manipulated product descriptions.", kb);
+  assert.equal(response.intent, "DESIGN_RECOMMENDATION_QUERY");
+  assert.ok(response.flow.nodes.some((node) => node.type === "Problem" && node.query_generated === true && !node.paper_id));
+});
+
+test("source paper metadata includes meaningful reason and counts", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
+  assert.equal(response.source_papers.length, 1);
+  assert.equal(response.source_papers[0].paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+  assert.equal(response.source_papers[0].reason, "matched requirement");
+  assert.equal(response.source_papers[0].requirements_count, 4);
+  assert.equal(response.source_papers[0].principles_count, 4);
+  assert.ok(response.source_papers[0].evidence_count > 0);
+});
+
+
+test("feature element query does not mention zero requirements or principles", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Show me the design features from Blockchain for the IoT.", kb);
+  assert.equal(response.intent, "DSR_ELEMENT_QUERY");
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignFeature").length, 9);
+  assert.match(response.answer, /9 design features/i);
+  assert.equal(/0 design requirement|0 design principle/i.test(response.answer), false);
+});
+
+test("flow query answer summarizes branches instead of dumping all edges", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection.", kb);
+  assert.equal(response.intent, "DSR_FLOW_QUERY");
+  assert.match(response.answer, /Summarized Requirement/i);
+  assert.match(response.answer, /Full relation detail is available in the Flow tab/i);
+  assert.ok(response.flow.edges.length > 8);
+  assert.ok(response.answer.split("\n").length < response.flow.edges.length + 6);
+});
+
+test("design recommendation for product-description trust includes Short End principles", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("I want marketplace product-description trust controls that prevent manipulation and poaching.", kb);
+  assert.equal(response.intent, "DESIGN_RECOMMENDATION_QUERY");
+  assert.ok(response.principles.some((card) => card.paper_id === "SHORT_END_STICK_2025"));
+  assert.ok(response.artifact_direction.some((card) => card.paper_id === "query_generated" || /artifact|registry/i.test(card.title)));
+});
+
+test("OKF chat UI keeps debug trace out of the default answer surface", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes('"Answer", "Flow", "Evidence", "Retrieved Knowledge", "Debug"'));
+  assert.ok(source.includes("Debug / retrieval trace"));
+  assert.equal(source.includes('role="Assistant reasoning stages"'), false);
+});
+
+test("evidence drawer has no random selected item on initial response load", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("setSelectedConceptId(undefined);"));
+  assert.equal(source.includes("setSelectedConceptId(payload.flow"), false);
+  assert.ok(source.includes("Select a concept card to inspect its evidence."));
+});
+
 test("query router classifies deterministic intents", () => {
   assert.equal(routeOkfQuery("which papers use auditability"), "PAPER_LIST_QUERY");
   assert.equal(routeOkfQuery("what are the design principles"), "DSR_ELEMENT_QUERY");
@@ -97,7 +179,7 @@ test("query router classifies deterministic intents", () => {
 test("flow builder creates a query-generated problem if needed", () => {
   const kb = parseOkfLibrary(fixtureRoot);
   const selected = kb.concepts.filter((concept) => concept.type !== "Problem");
-  const flow = buildOkfFlow("new problem", selected, kb);
+  const flow = buildOkfFlow("new problem", selected, kb, { includeQueryProblem: true });
   assert.equal(flow.nodes[0].query_generated, true);
   assert.ok(flow.edges.length > 0);
 });
