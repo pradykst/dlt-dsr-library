@@ -69,3 +69,60 @@ Core objects:
 - Graph layout uses a simple type-column layout rather than a full academic ontology layout engine.
 - No backend, authentication, database, import workflow, or citation manager integration is included.
 - Evidence labels are synthesized from papers and should be reviewed before scholarly publication.
+
+## OKF Chatbot Evaluation Build
+
+### Run Locally
+
+```bash
+npm install
+npm run okf:validate
+npm run okf:index
+npm run dev
+```
+
+Open `/okf-chat`. The chat API loads indexed `okf_` Supabase tables when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured; otherwise it falls back to local `library/okf` files.
+
+### Run With Featherless
+
+Set server-side environment variables only:
+
+```bash
+LLM_PROVIDER=featherless
+FEATHERLESS_API_KEY=...
+FEATHERLESS_BASE_URL=https://api.featherless.ai/v1
+FEATHERLESS_MODEL=...
+FEATHERLESS_TIMEOUT_MS=60000
+FEATHERLESS_MAX_TOKENS=1800
+FEATHERLESS_TEMPERATURE=0.2
+```
+
+Featherless uses the OpenAI-compatible `/chat/completions` API. The prompt receives only retrieved OKF concepts, evidence, relations, and deterministic flow JSON. The JSON response is validated before display; unsupported paper IDs or evidence IDs fall back to deterministic output.
+
+### Health Checks
+
+- `GET /api/health`
+- `GET /api/health/llm`
+- `GET /api/health/db`
+
+### Smoke Query
+
+With the app running:
+
+```bash
+APP_URL=http://localhost:3000 node --experimental-strip-types scripts/smoke-okf-query.ts
+```
+
+The script checks the product identity reuse query for multiple source papers, flow rows, evidence refs, query-generated markings, and key source-paper coverage.
+
+### Deploy Manually
+
+1. Paste or run the `supabase/migrations/20260626140000_okf_chatbot.sql` migration in Supabase.
+2. Configure Supabase and optional Featherless env vars in the hosting provider.
+3. Run `npm run okf:index` locally or in a trusted server-side job to upsert reviewed OKF bundles.
+4. Deploy the Next.js app with `npm run build`.
+5. Verify `/api/health`, `/api/health/db`, `/api/health/llm`, and `/okf-chat`.
+
+### Known OKF Chatbot Limitations
+
+The assistant does not fabricate missing OKF paper bundles. If the database contains only two OKF papers, cross-paper queries will return a warning and cite only those loaded papers. Product-identity-specific protocol details are marked as query-generated adaptations unless they are present as stored OKF nodes.

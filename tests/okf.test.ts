@@ -2,7 +2,7 @@
 import test from "node:test";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { answerOkfChat, routeOkfQuery } from "../lib/okf/chat.ts";
+import { analyzeOkfQuery, answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/chat.ts";
 import { buildOkfFlow } from "../lib/okf/flow.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
@@ -192,3 +192,61 @@ test("citation and evidence validator accepts deterministic chat output", async 
 });
 
 
+
+const productIdentityQuery = "I want to design a cross-marketplace product identity and review-continuity protocol where the same exact product variant can be listed on multiple marketplaces, sellers can relist products, buyers can leave verified-purchase reviews, and competitors should not expose raw commercial data. Which reusable DSR design requirements, design principles, design features, and artifact patterns should I reuse from the OKF library? Build a concise Requirement -> Principle -> Feature -> Artifact flow, explain which papers support each part, show evidence, and clearly mark any product-identity-specific suggestions as query-generated.";
+
+function augmentedKb() {
+  const kb = parseOkfLibrary();
+  const paperSeeds = [
+    ["SSI_KYC_2021", "Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity", "credential issuer revocation status decentralized identity wallet KYC SSI"],
+    ["TRUST_CAPACITY_2020", "Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity", "identity reputation screening authority fairness deterrence seller review trust"],
+    ["CONSENT_HIE_2020", "Blockchain innovation for consent self-management in health information exchanges", "consent status sharing interoperability audit user-controlled"],
+    ["INTEGRATED_BLOCKCHAIN_SYSTEMS_2021", "Towards an integrated framework for developing blockchain systems", "lifecycle development implementation evaluation testing smart contract monitoring roles"],
+    ["GS1_GERMANY_BLOCKCHAIN_2020", "GS1 Germany blockchain white paper and pallet exchange blockchain pilot", "GS1 GTIN GLN ECLASS standard identifier governance variant pallet use case"]
+  ];
+  for (const [paper_id, title, text] of paperSeeds) {
+    kb.papers.push({ paper_id, title, review_status: "draft", source_file: "test", body_text: text });
+    for (const [suffix, type] of [["req", "DesignRequirement"], ["dp", "DesignPrinciple"], ["df", "DesignFeature"], ["art", "Artifact"], ["ev", "Evaluation"]] as const) {
+      const concept_id = `${paper_id}:${suffix}_001`;
+      kb.concepts.push({ concept_id, paper_id, type, dsr_layer: type, title: `${title} ${type}`, description: text, body_text: text, tags: text.split(" ").slice(0, 8), confidence: "medium", extraction_type: "explicit", review_status: "draft", source_file: "test" });
+      kb.evidence_items.push({ evidence_id: `${concept_id}:evidence`, paper_id, concept_id, paraphrase: `${title} supports ${text}.`, confidence: "medium", source_file: "test" });
+    }
+  }
+  return kb;
+}
+
+test("product identity query is classified as design_reuse_flow and cross-paper", () => {
+  const kb = augmentedKb();
+  const plan = analyzeOkfQuery(productIdentityQuery, routeOkfQuery(productIdentityQuery), kb);
+  assert.equal(plan.task_type, "design_reuse_flow");
+  assert.equal(plan.isCrossPaper, true);
+  assert.equal(plan.output_shape, "Requirement -> Principle -> Feature -> Artifact");
+});
+
+test("source selection returns at least five papers for product identity query", () => {
+  const kb = augmentedKb();
+  const papers = selectSourcePapers(productIdentityQuery, kb, 8);
+  assert.ok(papers.length >= 5);
+  assert.ok(papers.some((paper) => /Short End/i.test(paper.title)));
+  assert.ok(papers.some((paper) => /KYC|Self-Sovereign/i.test(paper.title)));
+});
+
+test("reuse flow answer has multi-paper rows and query-generated adaptations", async () => {
+  const kb = augmentedKb();
+  const response = await answerOkfChat(productIdentityQuery, kb);
+  assert.equal(response.intent, "DESIGN_REUSE_FLOW_QUERY");
+  assert.ok((response.flow_rows ?? []).length >= 6);
+  assert.ok((response.flow_rows ?? []).some((row) => row.supporting_papers.length > 1));
+  assert.ok((response.flow_rows ?? []).every((row) => row.adaptation_status === "mixed" || row.adaptation_status === "query_generated"));
+  assert.equal(response.answer.includes("No direct OKF card"), false);
+  const evidenceIds = new Set(response.evidence.map((item) => item.evidence_id));
+  for (const row of response.flow_rows ?? []) for (const id of row.evidence_ids) assert.ok(evidenceIds.has(id));
+});
+
+test("Featherless provider files enforce grounded JSON synthesis", () => {
+  const provider = readFileSync(path.join(process.cwd(), "lib", "llm", "featherless.ts"), "utf8");
+  const prompt = readFileSync(path.join(process.cwd(), "lib", "llm", "prompts", "dsrReuseSynthesis.ts"), "utf8");
+  assert.ok(provider.includes("/chat/completions"));
+  assert.ok(provider.includes("answerPayloadSchema.parse"));
+  assert.ok(prompt.includes("Never claim that a paper supports something"));
+});

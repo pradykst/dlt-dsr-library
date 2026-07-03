@@ -1,26 +1,19 @@
 ﻿import type { OkfChatResponse } from "./chat.ts";
+import { getLlmProviderName, type LlmProviderName } from "../llm/provider.ts";
+import { synthesizeWithFeatherless } from "../llm/featherless.ts";
 
-export type LlmProvider = "none" | "featherless" | "groq" | "openai";
+export type LlmProvider = LlmProviderName;
 
 export function getConfiguredLlmProvider(): LlmProvider {
-  const provider = (process.env.LLM_PROVIDER ?? "none").toLowerCase() as LlmProvider;
-  if (!provider || provider === "none") return "none";
-  if (provider === "featherless" && process.env.FEATHERLESS_API_KEY) return provider;
-  if (provider === "groq" && process.env.GROQ_API_KEY) return provider;
-  if (provider === "openai" && process.env.OPENAI_API_KEY) return provider;
-  return "none";
+  return getLlmProviderName();
 }
 
 export async function synthesizeWithOptionalLlm(deterministic: OkfChatResponse): Promise<OkfChatResponse> {
   const provider = getConfiguredLlmProvider();
+  if (provider === "featherless") return synthesizeWithFeatherless(deterministic);
   if (provider === "none") return deterministic;
-
-  // Provider calls are intentionally not implemented until the reviewed prompt and model choice are finalized.
-  // The deterministic response remains the safety baseline and contains only retrieved OKF graph data.
-  return {
-    ...deterministic,
-    warnings: [...deterministic.warnings, `LLM_PROVIDER=${provider} is configured, but MVP synthesis is using deterministic output to avoid unsupported claims.`]
-  };
+  return { ...deterministic, warnings: [...deterministic.warnings, `LLM_PROVIDER=${provider} is configured, but only Featherless synthesis is implemented for OKF reuse answers.`] };
 }
 
-export const okfSystemPrompt = `You explain only the supplied OKF concepts, evidence items, relations, and flow JSON. Do not invent graph nodes, paper IDs, concept IDs, relations, citations, pages, or claims. If evidence is insufficient, say so explicitly.`;
+export const okfSystemPrompt = "You explain only the supplied OKF concepts, evidence items, relations, and flow JSON. Do not invent graph nodes, paper IDs, concept IDs, relations, citations, pages, or claims. If evidence is insufficient, say so explicitly.";
+

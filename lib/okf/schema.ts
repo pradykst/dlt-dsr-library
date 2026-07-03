@@ -132,10 +132,55 @@ export type OkfChatIntent =
   | "PAPER_DETAIL_QUERY"
   | "DSR_ELEMENT_QUERY"
   | "DESIGN_RECOMMENDATION_QUERY"
+  | "DESIGN_REUSE_FLOW_QUERY"
   | "DSR_FLOW_QUERY"
   | "COMPARE_QUERY"
   | "EVIDENCE_QUERY"
   | "UNKNOWN_QUERY";
+
+export type OkfTaskType = "paper_lookup" | "element_lookup" | "evidence_lookup" | "design_reuse_flow" | "design_recommendation" | "unknown";
+
+export type OkfReuseFlowRow = {
+  row_id: string;
+  requirement_label: string;
+  principle_label: string;
+  feature_label: string;
+  artifact_pattern: string;
+  supporting_papers: string[];
+  evidence_ids: string[];
+  concept_ids: string[];
+  adaptation_text: string;
+  adaptation_status: "stored" | "query_generated" | "mixed";
+  confidence: ConfidenceLabel;
+};
+
+export type OkfPaperSupport = {
+  paper_id: string;
+  title: string;
+  reason: string;
+  score: number;
+};
+
+export type OkfEvidenceRef = {
+  evidence_id: string;
+  paper_id: string;
+  concept_id?: string;
+  excerpt: string;
+  section?: string;
+  page_number?: number;
+  confidence: ConfidenceLabel;
+  relation_path?: string;
+};
+
+export type OkfAnswerPayload = {
+  direct_answer: string;
+  flow_rows: OkfReuseFlowRow[];
+  paper_support: OkfPaperSupport[];
+  evidence: OkfEvidenceRef[];
+  query_generated_notes: string[];
+  limitations: string[];
+  debug?: Record<string, unknown>;
+};
 
 export function isOkfConceptType(value: string): value is OkfConceptType {
   return (okfConceptTypes as readonly string[]).includes(value);
@@ -152,4 +197,8 @@ export function normalizeConfidence(value: unknown): ConfidenceLabel {
   if (normalized === "2") return "medium";
   return "low";
 }
+
+
+
+
 

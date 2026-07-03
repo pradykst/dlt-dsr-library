@@ -1,16 +1,48 @@
 ﻿import { parseOkfLibrary } from "./parser.ts";
 import { buildOkfFlow } from "./flow.ts";
-import type { OkfConcept, OkfConceptType, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate } from "./schema.ts";
+import type { ConfidenceLabel, OkfConcept, OkfConceptType, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate } from "./schema.ts";
 
 export type ConceptFilters = { paper_id?: string; tags?: string[]; query?: string; review_status?: string };
 
 let cachedKb: OkfKnowledgeBase | null = null;
+let cachedDbKb: OkfKnowledgeBase | null = null;
 
 export function getOkfKnowledgeBase(force = false) {
   if (!cachedKb || force) cachedKb = parseOkfLibrary();
   return cachedKb;
 }
 
+export async function getOkfKnowledgeBaseForChat(force = false) {
+  if (!force && cachedDbKb) return cachedDbKb;
+  const dbKb = await loadOkfKnowledgeBaseFromSupabase();
+  cachedDbKb = dbKb ?? getOkfKnowledgeBase(force);
+  return cachedDbKb;
+}
+
+export async function loadOkfKnowledgeBaseFromSupabase(): Promise<OkfKnowledgeBase | null> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const { getSupabaseAdmin } = await import("../workbench/supabase-admin.ts");
+    const supabase = getSupabaseAdmin();
+    const [papersResult, conceptsResult, evidenceResult, relationsResult] = await Promise.all([
+      supabase.from("okf_papers").select("paper_id,title,authors,year,source_pdf_path,review_status"),
+      supabase.from("okf_concepts").select("concept_id,paper_id,okf_path,type,dsr_layer,title,description,body_text,tags,confidence,extraction_type,review_status"),
+      supabase.from("okf_evidence_items").select("evidence_id,paper_id,concept_id,page_number,section,quote,paraphrase,source_location,confidence"),
+      supabase.from("okf_relations").select("relation_id,source_concept_id,predicate,target_concept_id,evidence_id,confidence,relation_scope")
+    ]);
+    const firstError = papersResult.error ?? conceptsResult.error ?? evidenceResult.error ?? relationsResult.error;
+    if (firstError) throw firstError;
+    const papers = (papersResult.data ?? []).map((paper) => ({ paper_id: String(paper.paper_id), title: String(paper.title), authors: Array.isArray(paper.authors) ? paper.authors.map(String) : undefined, year: typeof paper.year === "number" ? paper.year : undefined, source_pdf_path: paper.source_pdf_path ? String(paper.source_pdf_path) : undefined, review_status: paper.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_papers" }));
+    if (!papers.length) return null;
+    const concepts = (conceptsResult.data ?? []).map((concept) => ({ concept_id: String(concept.concept_id), paper_id: String(concept.paper_id), type: String(concept.type) as OkfConceptType, dsr_layer: String(concept.dsr_layer ?? ""), title: String(concept.title), description: String(concept.description ?? ""), body_text: String(concept.body_text ?? ""), tags: Array.isArray(concept.tags) ? concept.tags.map(String) : [], confidence: confidenceLabel(String(concept.confidence ?? "low")), extraction_type: concept.extraction_type === "explicit-in-artifact" ? "explicit-in-artifact" as const : concept.extraction_type === "explicit" ? "explicit" as const : "inferred" as const, review_status: concept.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_concepts", okf_path: concept.okf_path ? String(concept.okf_path) : undefined }));
+    const evidence_items = (evidenceResult.data ?? []).map((item) => ({ evidence_id: String(item.evidence_id), paper_id: String(item.paper_id), concept_id: item.concept_id ? String(item.concept_id) : undefined, page_number: typeof item.page_number === "number" ? item.page_number : undefined, section: item.section ? String(item.section) : undefined, quote: item.quote ? String(item.quote) : undefined, paraphrase: String(item.paraphrase ?? ""), source_location: item.source_location ? String(item.source_location) : undefined, confidence: confidenceLabel(String(item.confidence ?? "low")), source_file: "supabase:okf_evidence_items" }));
+    const relations = (relationsResult.data ?? []).map((relation) => ({ relation_id: String(relation.relation_id), source_concept_id: String(relation.source_concept_id), predicate: String(relation.predicate) as OkfRelationPredicate, target_concept_id: String(relation.target_concept_id), evidence_id: relation.evidence_id ? String(relation.evidence_id) : undefined, confidence: confidenceLabel(String(relation.confidence ?? "low")), relation_scope: relation.relation_scope === "cross_paper" ? "cross_paper" as const : relation.relation_scope === "query_generated" ? "query_generated" as const : "paper_level" as const, source_file: "supabase:okf_relations" }));
+    return { papers, concepts, evidence_items, relations, warnings: [] };
+  } catch (error) {
+    console.warn("Unable to load OKF knowledge base from Supabase; falling back to local OKF files.", error);
+    return null;
+  }
+}
 export function getRelevantPapers(query: string, kb = getOkfKnowledgeBase()) {
   const terms = tokenize(query);
   return kb.papers
@@ -113,6 +145,17 @@ function uniqueConcepts(concepts: OkfConcept[]) {
 
 function confidenceRank(value: string) {
   return value === "high" ? 3 : value === "medium" ? 2 : 1;
+}
+
+
+
+
+
+
+
+function confidenceLabel(value: string): ConfidenceLabel {
+  if (value === "high" || value === "medium-high" || value === "medium" || value === "low") return value;
+  return "low";
 }
 
 
