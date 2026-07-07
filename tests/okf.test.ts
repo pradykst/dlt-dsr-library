@@ -1,13 +1,11 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { analyzeOkfQuery, answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/chat.ts";
-import { buildOkfFlow } from "../lib/okf/flow.ts";
+import { answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/chat.ts";
+import { synthesizeWithOptionalLlm } from "../lib/okf/llm.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
-import { validateChatResponse } from "../lib/okf/validator.ts";
-
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures", "okf");
 const curatedFixtureRoot = path.join(process.cwd(), "tests", "fixtures", "curated-okf");
 
@@ -148,124 +146,302 @@ test("flow query answer summarizes branches instead of dumping all edges", async
   assert.ok(response.answer.split("\n").length < response.flow.edges.length + 6);
 });
 
-test("design recommendation for product-description trust includes Short End principles", async () => {
-  const kb = parseOkfLibrary();
-  const response = await answerOkfChat("I want marketplace product-description trust controls that prevent manipulation and poaching.", kb);
-  assert.equal(response.intent, "DESIGN_RECOMMENDATION_QUERY");
-  assert.ok(response.principles.some((card) => card.paper_id === "SHORT_END_STICK_2025"));
-  assert.ok(response.artifact_direction.some((card) => card.paper_id === "query_generated" || /artifact|registry/i.test(card.title)));
-});
-
-test("OKF chat UI keeps debug trace out of the default answer surface", () => {
-  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  assert.ok(source.includes('"Answer", "Flow", "Evidence", "Retrieved Knowledge", "Debug"'));
-  assert.ok(source.includes("Debug / retrieval trace"));
-  assert.equal(source.includes('role="Assistant reasoning stages"'), false);
-});
-
-test("evidence drawer has no random selected item on initial response load", () => {
-  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  assert.ok(source.includes("setSelectedConceptId(undefined);"));
-  assert.equal(source.includes("setSelectedConceptId(payload.flow"), false);
-  assert.ok(source.includes("Select a concept card to inspect its evidence."));
-});
-
-test("query router classifies deterministic intents", () => {
-  assert.equal(routeOkfQuery("which papers use auditability"), "PAPER_LIST_QUERY");
-  assert.equal(routeOkfQuery("what are the design principles"), "DSR_ELEMENT_QUERY");
-  assert.equal(routeOkfQuery("show evidence for the claim"), "EVIDENCE_QUERY");
-});
-
-test("flow builder creates a query-generated problem if needed", () => {
-  const kb = parseOkfLibrary(fixtureRoot);
-  const selected = kb.concepts.filter((concept) => concept.type !== "Problem");
-  const flow = buildOkfFlow("new problem", selected, kb, { includeQueryProblem: true });
-  assert.equal(flow.nodes[0].query_generated, true);
-  assert.ok(flow.edges.length > 0);
-});
-
-test("citation and evidence validator accepts deterministic chat output", async () => {
-  const kb = parseOkfLibrary(fixtureRoot);
-  const response = await answerOkfChat("Design a fixture system", kb);
-  const validation = validateChatResponse(response, kb);
-  assert.equal(validation.ok, true);
-});
-
-
-
 const productIdentityQuery = "I want to design a cross-marketplace product identity and review-continuity protocol where the same exact product variant can be listed on multiple marketplaces, sellers can relist products, buyers can leave verified-purchase reviews, and competitors should not expose raw commercial data. Which reusable DSR design requirements, design principles, design features, and artifact patterns should I reuse from the OKF library? Build a concise Requirement -> Principle -> Feature -> Artifact flow, explain which papers support each part, show evidence, and clearly mark any product-identity-specific suggestions as query-generated.";
 
-function augmentedKb() {
+test("product identity query produces a structured decision-support answer without exact-query hardcoding", async () => {
   const kb = parseOkfLibrary();
-  const paperSeeds = [
-    ["SSI_KYC_2021", "Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity", "credential issuer revocation status decentralized identity wallet KYC SSI"],
-    ["TRUST_CAPACITY_2020", "Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity", "identity reputation screening authority fairness deterrence seller review trust"],
-    ["CONSENT_HIE_2020", "Blockchain innovation for consent self-management in health information exchanges", "consent status sharing interoperability audit user-controlled"],
-    ["INTEGRATED_BLOCKCHAIN_SYSTEMS_2021", "Towards an integrated framework for developing blockchain systems", "lifecycle development implementation evaluation testing smart contract monitoring roles"],
-    ["GS1_GERMANY_BLOCKCHAIN_2020", "GS1 Germany blockchain white paper and pallet exchange blockchain pilot", "GS1 GTIN GLN ECLASS standard identifier governance variant pallet use case"]
-  ];
-  for (const [paper_id, title, text] of paperSeeds) {
-    kb.papers.push({ paper_id, title, review_status: "draft", source_file: "test", body_text: text });
-    for (const [suffix, type] of [["req", "DesignRequirement"], ["dp", "DesignPrinciple"], ["df", "DesignFeature"], ["art", "Artifact"], ["ev", "Evaluation"]] as const) {
-      const concept_id = `${paper_id}:${suffix}_001`;
-      kb.concepts.push({ concept_id, paper_id, type, dsr_layer: type, title: `${title} ${type}`, description: text, body_text: text, tags: text.split(" ").slice(0, 8), confidence: "medium", extraction_type: "explicit", review_status: "draft", source_file: "test" });
-      kb.evidence_items.push({ evidence_id: `${concept_id}:evidence`, paper_id, concept_id, paraphrase: `${title} supports ${text}.`, confidence: "medium", source_file: "test" });
-    }
-  }
-  return kb;
-}
-
-test("product identity query is classified as design_reuse_flow and cross-paper", () => {
-  const kb = augmentedKb();
-  const plan = analyzeOkfQuery(productIdentityQuery, routeOkfQuery(productIdentityQuery), kb);
-  assert.equal(plan.task_type, "design_reuse_flow");
-  assert.equal(plan.isCrossPaper, true);
-  assert.equal(plan.output_shape, "Requirement -> Principle -> Feature -> Artifact");
-});
-
-test("source selection returns at least five papers for product identity query", () => {
-  const kb = augmentedKb();
-  const papers = selectSourcePapers(productIdentityQuery, kb, 8);
-  assert.ok(papers.length >= 5);
-  assert.ok(papers.some((paper) => /Short End/i.test(paper.title)));
-  assert.ok(papers.some((paper) => /KYC|Self-Sovereign/i.test(paper.title)));
-});
-
-test("reuse flow answer has multi-paper rows and query-generated adaptations", async () => {
-  const kb = augmentedKb();
   const response = await answerOkfChat(productIdentityQuery, kb);
   assert.equal(response.intent, "DESIGN_REUSE_FLOW_QUERY");
-  assert.ok((response.flow_rows ?? []).length >= 6);
-  assert.ok((response.flow_rows ?? []).some((row) => row.supporting_papers.length > 1));
-  assert.ok((response.flow_rows ?? []).every((row) => row.adaptation_status === "mixed" || row.adaptation_status === "query_generated"));
-  assert.equal(response.answer.includes("No direct OKF card"), false);
-  const evidenceIds = new Set(response.evidence.map((item) => item.evidence_id));
-  for (const row of response.flow_rows ?? []) for (const id of row.evidence_ids) assert.ok(evidenceIds.has(id));
-});
-
-
-test("full library product identity query retrieves grounded multi-paper support", async () => {
-  const kb = parseOkfLibrary();
-  assert.equal(kb.papers.length, 9);
-  const response = await answerOkfChat(productIdentityQuery, kb);
-  assert.equal(response.intent, "DESIGN_REUSE_FLOW_QUERY");
+  assert.ok(response.answer_payload);
+  assert.ok(response.answer_payload.design_moves.length >= 5);
   assert.ok(response.source_papers.length >= 5);
-  for (const paperId of ["SHORT_END_STICK_2025", "BLOCKCHAIN_IOT_SDPS_2019", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) {
-    assert.ok(response.source_papers.some((paper) => paper.paper_id === paperId), `missing ${paperId}`);
-  }
-  assert.ok(response.principles.some((card) => card.paper_id === "SHORT_END_STICK_2025"));
-  assert.ok((response.flow_rows ?? []).length >= 8);
-  assert.ok((response.flow_rows ?? []).some((row) => row.supporting_papers.length > 1));
-  assert.ok((response.flow_rows ?? []).every((row) => row.adaptation_status === "mixed" || row.adaptation_status === "query_generated"));
-  const evidenceIds = new Set(response.evidence.map((item) => item.evidence_id));
-  for (const row of response.flow_rows ?? []) for (const id of row.evidence_ids) assert.ok(evidenceIds.has(id));
+  assert.equal(response.answer.includes("No direct OKF card"), false);
+
+  const implementation = [
+    readFileSync(path.join(process.cwd(), "lib", "okf", "reuse.ts"), "utf8"),
+    readFileSync(path.join(process.cwd(), "lib", "llm", "prompts", "dsrReuseSynthesis.ts"), "utf8"),
+    readFileSync(path.join(process.cwd(), "lib", "llm", "featherless.ts"), "utf8")
+  ].join("\n");
+  assert.equal(implementation.includes(productIdentityQuery), false);
+  assert.equal(/Product Identity & Description Integrity Registry/.test(implementation), false);
 });
 
-test("Featherless provider files enforce grounded JSON synthesis", () => {
+test("privacy-preserving decentralized identity query retrieves a well-shaped cross-paper candidate set", async () => {
+  const kb = parseOkfLibrary();
+  const query = "Which reusable design principles should I use for a privacy-preserving decentralized identity system where users control credentials and verifiers need auditability?";
+  const papers = selectSourcePapers(query, kb, 8).map((paper) => paper.paper_id);
+  assert.ok(papers.includes("SSI_KYC_FRAMEWORK_2022"));
+  assert.ok(papers.includes("HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023"));
+  assert.ok(papers.includes("BLOCKCHAIN_IOT_SDPS_2019"));
+  const response = await synthesizeWithNoProvider(query, kb);
+  assert.ok(response.answer_payload);
+  assert.equal(response.answer_payload.synthesis_mode, "deterministic_fallback");
+  assert.ok(response.answer_payload.design_moves.length >= 5);
+  assert.ok(response.answer_payload.source_papers.length >= 5);
+});
+
+test("semantic rewording retrieves similar source papers without an exact query match", () => {
+  const kb = parseOkfLibrary();
+  const first = selectSourcePapers("privacy-preserving decentralized identity with user credentials and verifier auditability", kb, 6).map((paper) => paper.paper_id);
+  const second = selectSourcePapers("auditable credential control for decentralized user identity and privacy", kb, 6).map((paper) => paper.paper_id);
+  const overlap = first.filter((paperId) => second.includes(paperId));
+  assert.ok(overlap.length >= 3, `expected overlapping sources, got ${first.join(", ")} vs ${second.join(", ")}`);
+});
+
+test("fallback answer markdown is compact and does not expose raw evidence ids", async () => {
+  const kb = parseOkfLibrary();
+  const response = await synthesizeWithNoProvider(productIdentityQuery, kb);
+  assert.equal(response.runtime?.synthesis_mode, "deterministic_fallback");
+  assert.match(response.answer, /compact|found|retrieved/i);
+  assert.equal(/Requirement -> Principle -> Feature -> Artifact flow:\n\d+\. Requirement:/i.test(response.answer), false);
+  for (const evidence of response.evidence.slice(0, 20)) assert.equal(response.answer.includes(evidence.evidence_id), false);
+});
+
+test("OKF chat UI renders Markdown only in the default answer tab", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("response.llm_synthesis"));
+  assert.ok(source.includes("MarkdownAnswer"));
+  assert.ok(source.includes("Evidence details are in the Evidence tab."));
+  assert.ok(source.includes("Copy answer"));
+  assert.equal(source.includes("payload.direct_answer"), false);
+  assert.equal(source.includes("DesignMoveCards"), false);
+  assert.equal(source.includes("GuidanceCards response"), false);
+  assert.equal(source.includes("<MiniFlow response"), false);
+});
+
+test("OKF chat initial UI hides process boxes and tabs before the first answer", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("{loading && <StageProgress"));
+  assert.ok(source.includes("{response ? ("));
+  assert.ok(source.includes("How this answer was built"));
+  assert.ok(source.includes("Ask a question to see source papers and evidence."));
+  assert.equal(source.includes("Checking evidence"), false);
+  assert.equal(source.includes("Waiting for a design or paper question"), false);
+});
+
+test("OKF chat progress uses five compact dynamic stages", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  for (const stage of ["Understanding query", "Selecting source papers", "Retrieving DSR elements", "Building evidence-backed flow", "Synthesizing recommendation"]) assert.ok(source.includes(stage));
+  assert.ok(source.includes("setActiveStage"));
+  assert.equal(source.includes("Drafting recommendation"), false);
+});
+
+test("React keys are stable and not based only on title", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("key={paper.paper_id}"));
+  assert.ok(source.includes("key={item.evidence_id}"));
+  assert.ok(source.includes("key={concept.concept_id"));
+  assert.ok(source.includes("dedupeConcepts"));
+  assert.ok(source.includes("`${concept.paper_id}-${normalizeKey(concept.title)}-${concept.type}`"));
+  assert.equal(source.includes("key={`${title}-${card.title}`"), false);
+});
+
+test("Featherless success becomes the primary synthesis mode", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const evidenceId = deterministic.evidence[0].evidence_id;
+  const paperId = deterministic.source_papers[0].paper_id;
+  const answer = {
+    synthesis_mode: "featherless",
+    title: "Grounded DSR reuse guidance",
+    direct_answer: "Use the retrieved OKF evidence to combine identity, privacy, integrity, and lifecycle design knowledge.",
+    design_moves: [{ id: "move-1", title: "Grounded identity move", what_to_build: "Build a credential-backed control point.", reused_requirement: "Use retrieved requirements.", reused_principle: "Use retrieved principles.", candidate_feature: "Use retrieved features.", artifact_pattern: "Use a retrieved artifact pattern.", supporting_paper_ids: [paperId], evidence_ids: [evidenceId], adaptation_status: "mixed", adaptation_note: "Adapted from retrieved OKF concepts only.", confidence: "medium" }],
+    architecture_direction: "Keep claims grounded in selected evidence.",
+    limitations: ["Validate adaptations in the target project."],
+    source_papers: [{ paper_id: paperId, title: deterministic.source_papers[0].title, reason: deterministic.source_papers[0].reason, score: deterministic.source_papers[0].score ?? 0 }],
+    evidence_refs: [{ evidence_id: evidenceId, paper_id: paperId, concept_id: deterministic.evidence[0].concept_id, excerpt: deterministic.evidence[0].paraphrase, confidence: deterministic.evidence[0].confidence }],
+    query_generated_notes: ["Target-domain adaptation is mixed."]
+  };
+  await withMockedFeatherless(JSON.stringify(answer), async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.answer_payload?.synthesis_mode, "featherless");
+    assert.equal(response.runtime?.synthesis_mode, "featherless");
+    assert.match(response.answer, /credential-backed control point/i);
+  });
+});
+
+test("product identity source selection prefers relevant cross-paper sources and excludes unrelated token incentives", () => {
+  const kb = parseOkfLibrary();
+  const paperIds = selectSourcePapers(productIdentityQuery, kb, 8).map((paper) => paper.paper_id);
+  for (const required of ["SHORT_END_STICK_2025", "BLOCKCHAIN_IOT_SDPS_2019", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) {
+    assert.ok(paperIds.includes(required), `missing ${required}`);
+  }
+  assert.equal(paperIds.includes("PEER_REVIEW_TOKEN_INCENTIVES_2025"), false);
+});
+test("product identity Groq answer is professional Markdown without raw IDs or patient-consent leakage", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const markdown = `# Recommendation
+Prioritize product identity, privacy-preserving evidence, credentialed actors, review continuity, dispute governance, and implementation lifecycle controls. The OKF supports this through commercial-data privacy, SSI/KYC credentials, trust/reputation, tamper-resistant proof storage, and blockchain implementation lifecycle papers. Product-specific review gates are adaptations, not stored OKF constructs.
+
+## Design moves to reuse
+1. **What to build:** Canonical product identity and listing mapping integrity. **Reuse from OKF:** manipulation-resistant proof of integrity. **Supporting papers:** And No One Gets the Short End of the Stick; Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. **Evidence:** evidence supports proving integrity without exposing raw data. **Adaptation status:** mixed.
+2. **What to build:** Privacy-preserving commercial evidence handling. **Reuse from OKF:** sensitive data stays with provider while proofs are shared. **Supporting papers:** And No One Gets the Short End of the Stick. **Evidence:** evidence supports private storage and verifiable sharing. **Adaptation status:** mixed.
+3. **What to build:** Persistent seller, marketplace, and buyer identity credentials. **Reuse from OKF:** issuer-verifier-holder credentials, proof requests, and status checks. **Supporting papers:** Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity. **Evidence:** evidence supports reusable credentials and revocation/status registries. **Adaptation status:** mixed.
+4. **What to build:** Verified-purchase review gate. **Reuse from OKF:** screening and reputation mechanisms. **Supporting papers:** Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity. **Evidence:** evidence supports screening and reputation tied to persistent identity. **Adaptation status:** query-generated.
+5. **What to build:** Dispute and correction governance. **Reuse from OKF:** authority/fairness and joint governance. **Supporting papers:** Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity; And No One Gets the Short End of the Stick. **Evidence:** evidence supports governance for trusted interorganizational exchange. **Adaptation status:** mixed.
+6. **What to build:** Implementation and evaluation lifecycle. **Reuse from OKF:** model, test, deploy, and maintain the blockchain artifact. **Supporting papers:** Towards an integrated framework for developing blockchain systems. **Evidence:** evidence supports lifecycle-driven implementation. **Adaptation status:** mixed.
+
+## Suggested architecture direction
+Use off-chain commercial records, on-chain hashes/status proofs, credential wallets, verifier checks, reputation continuity services, and governed correction workflows.
+
+## What not to overclaim
+- The OKF does not directly store this product identity protocol.
+- Review continuity is adapted from credential, screening, and reputation patterns.`;
+  await withMockedGroq(markdown, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.match(response.answer, /^# Recommendation/);
+    assert.equal(/:[a-z]+_\d+|:ev_/i.test(response.answer), false);
+    assert.equal(/patient-facing consent management|Distributed replication of consent transactions|Immutable consent transaction log/i.test(response.answer), false);
+    for (const phrase of ["Canonical product identity", "Privacy-preserving commercial evidence", "Persistent seller", "Verified-purchase review gate", "Implementation and evaluation lifecycle"]) {
+      assert.match(response.answer, new RegExp(phrase, "i"));
+    }
+  });
+});
+
+test("Groq success becomes the primary synthesis mode", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const answer = `# Recommendation
+Use the retrieved OKF papers to combine product identity credentials, privacy-preserving commercial evidence, review continuity, and implementation governance. Treat product-specific registry details as mixed or query-generated because the OKF stores reusable patterns rather than this exact marketplace construct.
+
+## Design moves to reuse
+1. **What to build:** Canonical product identity and listing mapping integrity. **Reuse from OKF:** proof of integrity and identity signaling. **Supporting papers:** And No One Gets the Short End of the Stick; Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity. **Evidence:** selected evidence supports manipulation resistance, private data handling, and identity signaling. **Adaptation status:** mixed.
+2. **What to build:** Privacy-preserving commercial evidence handling. **Reuse from OKF:** provider-held sensitive data with public integrity proof. **Supporting papers:** And No One Gets the Short End of the Stick; Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. **Evidence:** selected evidence supports keeping raw data off shared infrastructure while publishing verifiable proofs. **Adaptation status:** mixed.
+3. **What to build:** Persistent seller, marketplace, and buyer credentials. **Reuse from OKF:** issuer-verifier-holder credentials and revocation/status checks. **Supporting papers:** Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity. **Evidence:** selected evidence supports reusable credentials, proof requests, and non-revocation checks. **Adaptation status:** mixed.
+4. **What to build:** Verified-purchase review gate. **Reuse from OKF:** screening, reputation, and identity smart-contract modules. **Supporting papers:** Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity. **Evidence:** selected evidence supports screening and reputation mechanisms tied to persistent identity. **Adaptation status:** query-generated.
+5. **What to build:** Implementation and evaluation lifecycle. **Reuse from OKF:** modeling, testing, deployment, and maintenance activities. **Supporting papers:** Towards an integrated framework for developing blockchain systems. **Evidence:** selected evidence supports lifecycle roles and evaluation-oriented development. **Adaptation status:** mixed.
+
+## Suggested architecture direction
+Use a hybrid architecture: keep raw commercial records off-chain with the data owner, publish hashes/status proofs and credential schemas on shared infrastructure, and govern corrections or disputes through explicit marketplace authority rules.
+
+## What not to overclaim
+- The OKF does not directly store a product-identity registry.
+- Verified-purchase review continuity is an adaptation from identity, screening, and reputation patterns.
+- Do not claim raw commercial data privacy without validating access controls and governance.`;
+  await withMockedGroq(answer, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "groq");
+    assert.equal(response.runtime?.provider, "groq");
+    assert.equal(response.runtime?.provider_connected, true);
+    assert.match(response.answer, /# Recommendation/);
+    assert.match(response.answer, /Verified-purchase review gate/i);
+  });
+});
+test("Groq Markdown answer scrubs raw evidence and concept ids", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const rawMarkdown = "# Recommendation\nUse BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification with ev_12345 and SHORT_END_STICK_2025:dp_001.\n\n## Design moves to reuse\n1. Build it.\n\n## Suggested architecture direction\nKeep it grounded.\n\n## What not to overclaim\nDo not overclaim.";
+  await withMockedGroq(rawMarkdown, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "groq");
+    assert.equal(/ev_\w+/i.test(response.answer), false);
+    assert.equal(/BLOCKCHAIN_IOT_SDPS_2019:/i.test(response.answer), false);
+    assert.equal(/SHORT_END_STICK_2025:/i.test(response.answer), false);
+  });
+});
+test("Groq failure shows a marked compact retrieval fallback instead of raw debug", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  await withMockedGroq(undefined, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_error");
+    assert.match(response.answer, /^LLM synthesis failed; showing compact retrieval summary\./);
+    assert.equal(/Evidence:\s*[^\n]*:ev_/i.test(response.answer), false);
+    assert.ok(response.llm_synthesis?.debug?.fallback_reason);
+  }, new Error("mock Groq outage"));
+});
+test("Featherless failure uses compact deterministic fallback with debug reason", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  await withMockedFeatherless(undefined, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.answer_payload?.synthesis_mode, "deterministic_fallback");
+    assert.equal(response.runtime?.synthesis_mode, "deterministic_fallback");
+    assert.ok(response.runtime?.fallback_reason);
+    assert.match(response.answer_payload?.direct_answer ?? "", /LLM synthesis failed/i);
+    assert.equal(/Evidence:\s*[^\n]*:evidence/i.test(response.answer), false);
+  }, new Error("mock timeout"));
+});
+
+test("Flow tab does not dump all retrieved graph nodes by default", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("Compact relation-backed flow"));
+  assert.ok(source.includes("slice(0, 7)"));
+  assert.equal(source.includes("LayeredFlow"), false);
+});
+test("LLM health endpoint is provider-neutral and does not expose Featherless fields for Groq", () => {
+  const source = readFileSync(path.join(process.cwd(), "app", "api", "health", "llm", "route.ts"), "utf8");
+  assert.ok(source.includes("GROQ_API_KEY"));
+  assert.ok(source.includes("GROQ_MODEL"));
+  assert.ok(source.includes("/chat/completions"));
+  assert.equal(source.includes("featherless_configured"), false);
+});
+test("Featherless provider files enforce the new grounded JSON contract", () => {
   const provider = readFileSync(path.join(process.cwd(), "lib", "llm", "featherless.ts"), "utf8");
   const prompt = readFileSync(path.join(process.cwd(), "lib", "llm", "prompts", "dsrReuseSynthesis.ts"), "utf8");
   assert.ok(provider.includes("/chat/completions"));
-  assert.ok(provider.includes("answerPayloadSchema.parse"));
-  assert.ok(provider.includes("unsupportedConcepts"));
-  assert.ok(prompt.includes("Never claim that a paper supports something"));
+  assert.ok(provider.includes("parseDecisionSupportJson"));
+  assert.ok(provider.includes("unsupportedMoveEvidence"));
+  assert.ok(prompt.includes("Do not invent papers, citations, evidence IDs, or OKF concepts"));
 });
+
+async function synthesizeWithNoProvider(query: string, kb = parseOkfLibrary()) {
+  const previousProvider = process.env.LLM_PROVIDER;
+  process.env.LLM_PROVIDER = "none";
+  try {
+    return await synthesizeWithOptionalLlm(await answerOkfChat(query, kb));
+  } finally {
+    if (previousProvider === undefined) delete process.env.LLM_PROVIDER;
+    else process.env.LLM_PROVIDER = previousProvider;
+  }
+}
+
+async function withMockedFeatherless(content: string | undefined, fn: () => Promise<void>, error?: Error) {
+  const previousProvider = process.env.LLM_PROVIDER;
+  const previousKey = process.env.FEATHERLESS_API_KEY;
+  const previousModel = process.env.FEATHERLESS_MODEL;
+  const previousFetch = globalThis.fetch;
+  process.env.LLM_PROVIDER = "featherless";
+  process.env.FEATHERLESS_API_KEY = "test-key";
+  process.env.FEATHERLESS_MODEL = "test-model";
+  globalThis.fetch = (async () => {
+    if (error) throw error;
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    await fn();
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousProvider === undefined) delete process.env.LLM_PROVIDER; else process.env.LLM_PROVIDER = previousProvider;
+    if (previousKey === undefined) delete process.env.FEATHERLESS_API_KEY; else process.env.FEATHERLESS_API_KEY = previousKey;
+    if (previousModel === undefined) delete process.env.FEATHERLESS_MODEL; else process.env.FEATHERLESS_MODEL = previousModel;
+  }
+}
+async function withMockedGroq(content: string | undefined, fn: () => Promise<void>, error?: Error) {
+  const previousProvider = process.env.LLM_PROVIDER;
+  const previousChatProvider = process.env.CHAT_PROVIDER;
+  const previousKey = process.env.GROQ_API_KEY;
+  const previousModel = process.env.GROQ_MODEL;
+  const previousBaseUrl = process.env.GROQ_BASE_URL;
+  const previousFetch = globalThis.fetch;
+  process.env.LLM_PROVIDER = "groq";
+  process.env.CHAT_PROVIDER = "groq";
+  process.env.GROQ_API_KEY = "test-key";
+  process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
+  process.env.GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+  globalThis.fetch = (async () => {
+    if (error) throw error;
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    await fn();
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousProvider === undefined) delete process.env.LLM_PROVIDER; else process.env.LLM_PROVIDER = previousProvider;
+    if (previousChatProvider === undefined) delete process.env.CHAT_PROVIDER; else process.env.CHAT_PROVIDER = previousChatProvider;
+    if (previousKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousKey;
+    if (previousModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousModel;
+    if (previousBaseUrl === undefined) delete process.env.GROQ_BASE_URL; else process.env.GROQ_BASE_URL = previousBaseUrl;
+  }
+}

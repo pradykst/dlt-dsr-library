@@ -1,6 +1,6 @@
-﻿import { buildOkfFlow } from "./flow.ts";
+import { buildOkfFlow } from "./flow.ts";
 import { getConceptsByType, getOkfKnowledgeBase, getRelevantPapers, retrieveForDesignQuery, tokenize } from "./retrieval.ts";
-import type { OkfAnswerPayload, OkfChatIntent, OkfConcept, OkfConceptType, OkfKnowledgeBase, OkfPaper, OkfReuseFlowRow, OkfTaskType } from "./schema.ts";
+import type { OkfAnswerPayload, OkfChatIntent, OkfConcept, OkfConceptType, OkfKnowledgeBase, OkfPaper, OkfReuseFlowRow, LlmSynthesisResult, OkfRuntimeMetadata, OkfTaskType } from "./schema.ts";
 import { validateChatResponse } from "./validator.ts";
 import { buildReuseFlowResponse, selectSourcePapers } from "./reuse.ts";
 
@@ -9,7 +9,7 @@ export { selectSourcePapers };
 export type OkfRecommendationCard = { title: string; concept_id?: string; evidence_ids: string[]; confidence: string; paper_id?: string };
 export type OkfSourcePaper = { paper_id: string; title: string; role: string; reason: string; requirements_count: number; principles_count: number; features_count: number; evidence_count: number; score?: number };
 export type OkfQueryPlan = { intent: OkfChatIntent; task_type: OkfTaskType; output_shape: "Requirement -> Principle -> Feature -> Artifact" | "element_list" | "paper_list" | "evidence" | "open"; targetPaper?: OkfPaper; requestedTypes: OkfConceptType[]; isCrossPaper: boolean; domainTerms: string[] };
-export type OkfChatResponse = { intent: OkfChatIntent; task_type?: OkfTaskType; answer: string; interpreted_problem?: string; requirements: OkfRecommendationCard[]; principles: OkfRecommendationCard[]; features: OkfRecommendationCard[]; artifact_direction: OkfRecommendationCard[]; source_papers: OkfSourcePaper[]; retrieved_concepts: OkfConcept[]; evidence: { evidence_id: string; paper_id: string; concept_id?: string; paraphrase: string; quote?: string; confidence: string; section?: string; page_number?: number }[]; flow: ReturnType<typeof buildOkfFlow>; flow_rows?: OkfReuseFlowRow[]; answer_payload?: OkfAnswerPayload; assumptions: string[]; limitations: string[]; warnings: string[] };
+export type OkfChatResponse = { intent: OkfChatIntent; task_type?: OkfTaskType; answer: string; interpreted_problem?: string; requirements: OkfRecommendationCard[]; principles: OkfRecommendationCard[]; features: OkfRecommendationCard[]; artifact_direction: OkfRecommendationCard[]; source_papers: OkfSourcePaper[]; retrieved_concepts: OkfConcept[]; evidence: { evidence_id: string; paper_id: string; concept_id?: string; paraphrase: string; quote?: string; confidence: string; section?: string; page_number?: number }[]; flow: ReturnType<typeof buildOkfFlow>; flow_rows?: OkfReuseFlowRow[]; answer_payload?: OkfAnswerPayload; assumptions: string[]; limitations: string[]; warnings: string[]; runtime?: OkfRuntimeMetadata; llm_synthesis?: LlmSynthesisResult };
 
 const reusePattern = /reuse|okf library|support each part|artifact patterns|which reusable|which papers|evidence|recommendation|recommend/i;
 const crossPaperPattern = /which papers|papers support|support each part|reuse|okf library|evidence|artifact patterns|cross-paper|cross paper|multi-paper/i;
@@ -246,7 +246,7 @@ function shortConceptLabel(concept: OkfConcept) {
 }
 
 function queryGeneratedArtifactCard(query: string, concepts: OkfConcept[], kb: OkfKnowledgeBase): OkfRecommendationCard {
-  const title = /product|marketplace|description|identity/i.test(query) ? "Query-generated Product Identity & Description Integrity Registry" : "Query-generated DLT integrity registry";
+  const title = "Query-generated DSR artifact pattern";
   const evidenceIds = concepts.flatMap((concept) => kb.evidence_items.filter((item) => item.concept_id === concept.concept_id).map((item) => item.evidence_id)).slice(0, 6);
   return { title, evidence_ids: evidenceIds, confidence: "low", paper_id: "query_generated" };
 }

@@ -1,4 +1,4 @@
-﻿export const okfConceptTypes = [
+export const okfConceptTypes = [
   "Paper",
   "Problem",
   "ResearchQuestion",
@@ -172,14 +172,58 @@ export type OkfEvidenceRef = {
   relation_path?: string;
 };
 
-export type OkfAnswerPayload = {
+export type DesignMove = {
+  id: string;
+  title: string;
+  what_to_build: string;
+  reused_requirement?: string;
+  reused_principle?: string;
+  candidate_feature?: string;
+  artifact_pattern?: string;
+  supporting_paper_ids: string[];
+  evidence_ids: string[];
+  adaptation_status: "stored" | "mixed" | "query_generated";
+  adaptation_note: string;
+  confidence: ConfidenceLabel;
+};
+
+export type DecisionSupportAnswer = {
+  synthesis_mode: "featherless" | "groq" | "deterministic_fallback" | "fallback_error";
+  title: string;
   direct_answer: string;
-  flow_rows: OkfReuseFlowRow[];
-  paper_support: OkfPaperSupport[];
-  evidence: OkfEvidenceRef[];
-  query_generated_notes: string[];
+  design_moves: DesignMove[];
+  architecture_direction?: string;
   limitations: string[];
+  source_papers: OkfPaperSupport[];
+  evidence_refs: OkfEvidenceRef[];
+  query_generated_notes: string[];
   debug?: Record<string, unknown>;
+};
+
+export type OkfAnswerPayload = DecisionSupportAnswer;
+
+
+export type LlmSynthesisResult = {
+  synthesis_mode: "groq" | "fallback_error";
+  answer_markdown: string;
+  provider_metadata: {
+    provider: "groq" | "featherless" | "openai" | "none";
+    model?: string;
+    status?: number;
+    base_url?: string;
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+  debug?: Record<string, unknown>;
+};
+export type OkfRuntimeMetadata = {
+  provider_configured: boolean;
+  provider_connected: boolean;
+  synthesis_attempted: boolean;
+  synthesis_mode: "featherless" | "groq" | "deterministic_fallback" | "fallback_error";
+  provider?: "none" | "featherless" | "groq" | "openai";
+  fallback_reason?: string;
 };
 
 export function isOkfConceptType(value: string): value is OkfConceptType {

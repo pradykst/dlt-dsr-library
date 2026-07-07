@@ -9,6 +9,7 @@
     "okf:validate": "node --experimental-strip-types scripts/okf-validate.ts",
     "okf:index": "node --experimental-strip-types scripts/okf-index.ts",
     "test": "node --experimental-strip-types tests/okf.test.ts",
+    "test:llm": "node --experimental-strip-types scripts/test-llm.ts",
     "smoke:okf-query": "node --experimental-strip-types scripts/smoke-okf-query.ts"
   },
   "dependencies": {
