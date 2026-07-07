@@ -1,0 +1,503 @@
+type: AliasCollection
+paper_id: PEER_REVIEW_TOKEN_INCENTIVES_2025
+review_status: reviewed
+aliases:
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem
+  terms:
+  - Reviewer recruitment and incentive shortage in academic peer review
+  - academic publishing
+  - academic-publishing
+  - incentives
+  - peer review
+  - peer-review
+  - reviewer shortage
+  - reviewer-shortage
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:rq_001_design_peer_review_incentive_systems
+  terms:
+  - How can peer review systems be effectively designed to better incentivize reviewers?
+  - incentive design
+  - incentive-design
+  - peer review
+  - peer-review
+  - research question
+  - research-question
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers
+  terms:
+  - Attract and retain enough willing peer reviewers
+  - participation
+  - review capacity
+  - review-capacity
+  - reviewer recruitment
+  - reviewer-recruitment
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types
+  terms:
+  - Support multiple reviewer motivation types
+  - intrinsic extrinsic
+  - intrinsic-extrinsic
+  - motivation
+  - reviewer preferences
+  - reviewer-preferences
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_003_enable_journal_specific_reward_flexibility
+  terms:
+  - Enable journal-specific reward-policy flexibility
+  - customizable incentives
+  - customizable-incentives
+  - flexibility
+  - journal policy
+  - journal-policy
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness
+  terms:
+  - Preserve reviewer trust, anonymity, and fair incentive allocation
+  - anonymity
+  - blind review
+  - blind-review
+  - fair reward allocation
+  - fairness
+  - reviewer anonymity
+  - trust
+  - trustworthy peer review
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_005_integrate_with_existing_peer_review_workflows
+  terms:
+  - Integrate with existing journal workflows with limited disruption
+  - legacy systems
+  - legacy-systems
+  - parallel conversion
+  - parallel-conversion
+  - workflow integration
+  - workflow-integration
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility
+  terms:
+  - Ensure economic and technical feasibility of token rewards
+  - FT
+  - SBT
+  - blockchain token reward
+  - cost
+  - polygon
+  - reviewer tokens
+  - scalability
+  - technical feasibility
+  - technical-feasibility
+  - token incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_007_mitigate_review_quality_gaming
+  terms:
+  - Mitigate reward gaming and review-quality degradation
+  - fairness
+  - gaming risk
+  - gaming-risk
+  - quality control
+  - quality-control
+  - review quality
+  - review-quality
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives
+  terms:
+  - Provide incentives that appeal to reviewers’ specific motivations
+  - design principle
+  - design-principle
+  - incentives
+  - motivation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility
+  terms:
+  - Allow editors and journals to customize incentive schemes
+  - customizable policy
+  - customizable-policy
+  - design principle
+  - design-principle
+  - flexibility
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust
+  terms:
+  - Enhance trust in reviewer anonymity and reward allocation
+  - anonymity
+  - blind review
+  - design principle
+  - design-principle
+  - fair allocation
+  - fair reward allocation
+  - fair-allocation
+  - reviewer anonymity
+  - trust
+  - trustworthy peer review
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization
+  terms:
+  - FT
+  - SBT
+  - Tokenization of reviewer incentives
+  - blockchain token reward
+  - design feature
+  - design-feature
+  - reviewer incentives
+  - reviewer tokens
+  - reviewer-incentives
+  - token incentives
+  - tokenization
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability
+  terms:
+  - Immutable reward records
+  - auditability
+  - design feature
+  - design-feature
+  - immutability
+  - reward records
+  - reward-records
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization
+  terms:
+  - Decentralized reward-data storage
+  - decentralization
+  - design feature
+  - design-feature
+  - resilience
+  - vendor lock in
+  - vendor-lock-in
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_004_public_blockchain_reward_infrastructure
+  terms:
+  - FT
+  - Public blockchain infrastructure for reward tokens
+  - SBT
+  - blockchain token reward
+  - decision model
+  - decision-model
+  - public blockchain
+  - public-blockchain
+  - reviewer tokens
+  - reward infrastructure
+  - reward-infrastructure
+  - token incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_005_polygon_smart_contracts_for_token_issuance
+  terms:
+  - FT
+  - Polygon smart contracts for token issuance and administration
+  - SBT
+  - admin functions
+  - admin-functions
+  - blockchain token reward
+  - minting
+  - polygon
+  - reviewer tokens
+  - smart contract
+  - smart-contract
+  - token incentives
+  - token transfer
+  - token-transfer
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage
+  terms:
+  - Off-chain storage for confidential peer-review process data
+  - confidentiality
+  - hybrid architecture
+  - hybrid-architecture
+  - off chain storage
+  - off-chain-storage
+  - reviewer anonymity
+  - reviewer-anonymity
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens
+  terms:
+  - FT
+  - SBT
+  - Soulbound reputation tokens for review recognition
+  - blockchain token reward
+  - erc 721
+  - erc-721
+  - nft
+  - recognition
+  - reviewer reputation
+  - reviewer tokens
+  - reviewer-reputation
+  - soulbound token
+  - soulbound-token
+  - token incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens
+  terms:
+  - FT
+  - Fungible reward tokens for reviewer compensation and credits
+  - SBT
+  - blockchain token reward
+  - compensation
+  - erc 20
+  - erc-20
+  - fungible token
+  - fungible-token
+  - review credit
+  - review-credit
+  - reviewer tokens
+  - token incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_009_wallet_based_reviewer_identifier
+  terms:
+  - Wallet-based reviewer identifier
+  - orcid analogy
+  - orcid-analogy
+  - public key
+  - public-key
+  - reviewer identifier
+  - reviewer-identifier
+  - wallet
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_010_batch_reward_processing
+  terms:
+  - Batch processing of reward allocation
+  - batch processing
+  - batch-processing
+  - privacy
+  - reward allocation
+  - reward-allocation
+  - timing obfuscation
+  - timing-obfuscation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui
+  terms:
+  - Editor reward-settings interface
+  - editor ui
+  - editor-ui
+  - policy configuration
+  - policy-configuration
+  - reward settings
+  - reward-settings
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_012_reviewer_reputation_page
+  terms:
+  - FT
+  - Reviewer reputation and accolade page
+  - SBT
+  - accolades
+  - blockchain token reward
+  - reputation page
+  - reputation-page
+  - reviewer tokens
+  - reviewer ui
+  - reviewer-ui
+  - token display
+  - token incentives
+  - token-display
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:df_013_smart_contract_security_analysis
+  terms:
+  - Smart contract security analysis with Mythril and Slither
+  - mythril
+  - security analysis
+  - security-analysis
+  - slither
+  - solidity
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system
+  terms:
+  - FT
+  - SBT
+  - Token-based peer review incentive system
+  - artifact
+  - blockchain token reward
+  - peer review system
+  - peer-review-system
+  - reviewer tokens
+  - token incentives
+  - token-incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform
+  terms:
+  - Open-source peer review platform prototype
+  - artifact
+  - peer review
+  - peer-review
+  - prototype
+  - web platform
+  - web-platform
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts
+  terms:
+  - FT
+  - Polygon token smart-contract suite
+  - SBT
+  - artifact
+  - blockchain token reward
+  - polygon
+  - reviewer tokens
+  - smart contracts
+  - smart-contracts
+  - token incentives
+  - token suite
+  - token-suite
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture
+  terms:
+  - Hybrid off-chain review / on-chain reward architecture
+  - artifact
+  - hybrid architecture
+  - hybrid-architecture
+  - off chain
+  - off-chain
+  - on chain
+  - on-chain
+  - privacy
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_001_dsrm_based_design_process
+  terms:
+  - DSRM-based design and demonstration process
+  - design process
+  - design-process
+  - dsrm
+  - evaluation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_002_design_feature_mapping_evaluation
+  terms:
+  - Design-principle to feature mapping evaluation
+  - design principle mapping
+  - design-principle-mapping
+  - evaluation
+  - figure 2
+  - figure-2
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis
+  terms:
+  - Polygon transaction-cost and compensation-cost analysis
+  - cost analysis
+  - cost-analysis
+  - evaluation
+  - gas
+  - polygon
+  - reviewer compensation
+  - reviewer-compensation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users
+  terms:
+  - Field survey of potential system users
+  - evaluation
+  - is success model
+  - is-success-model
+  - survey
+  - system users
+  - system-users
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation
+  terms:
+  - Qualitative evaluation with editors and reviewers
+  - editors
+  - evaluation
+  - interviews
+  - qualitative
+  - reviewers
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_001_linked_dp_df_theory_for_reviewer_incentives
+  terms:
+  - Linked DSR design knowledge for reviewer incentive systems
+  - design features
+  - design principles
+  - design-features
+  - design-principles
+  - output knowledge
+  - output-knowledge
+  - reviewer incentives
+  - reviewer-incentives
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_002_tokenization_as_incentive_design_mechanism
+  terms:
+  - FT
+  - SBT
+  - Tokenization as a flexible reviewer-incentive mechanism
+  - blockchain token reward
+  - flexibility
+  - incentives
+  - output knowledge
+  - output-knowledge
+  - reviewer tokens
+  - token incentives
+  - tokenization
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_003_blockchain_as_reward_log_not_review_backbone
+  terms:
+  - Blockchain should log reward data, not the full confidential review process
+  - blockchain log
+  - blockchain-log
+  - hybrid architecture
+  - hybrid-architecture
+  - output knowledge
+  - output-knowledge
+  - privacy
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_004_formal_design_theory_for_peer_review_incentives
+  terms:
+  - FT
+  - Formal design theory for tokenized peer-review incentives
+  - SBT
+  - blockchain token reward
+  - design theory
+  - design-theory
+  - output knowledge
+  - output-knowledge
+  - peer review
+  - peer-review
+  - reviewer tokens
+  - token incentives
+  - tokens
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_001_organismic_integration_theory
+  terms:
+  - Organismic Integration Theory for reviewer motivation
+  - kernel theory
+  - kernel-theory
+  - motivation
+  - oit
+  - self determination
+  - self-determination
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_002_expectancy_theory
+  terms:
+  - Expectancy theory for flexible reward preferences
+  - expectancy theory
+  - expectancy-theory
+  - flexibility
+  - kernel theory
+  - kernel-theory
+  - motivation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_003_information_systems_success_model
+  terms:
+  - Information Systems Success Model for adoption evaluation
+  - is success model
+  - is-success-model
+  - kernel theory
+  - kernel-theory
+  - system quality
+  - system-quality
+  - use intention
+  - use-intention
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_004_gregor_jones_design_theory
+  terms:
+  - Gregor and Jones design theory anatomy
+  - design theory
+  - design-theory
+  - gregor jones
+  - gregor-jones
+  - kernel theory
+  - kernel-theory
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_005_blockchain_adoption_decision_model
+  terms:
+  - Blockchain adoption decision model
+  - blockchain decision model
+  - blockchain-decision-model
+  - kernel theory
+  - kernel-theory
+  - public blockchain
+  - public-blockchain
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_001_adoption_and_usability_resistance
+  terms:
+  - Adoption and usability resistance from nontechnical stakeholders
+  - adoption
+  - limitation
+  - stakeholders
+  - usability
+  - wallets
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_002_funding_model_uncertainty
+  terms:
+  - Uncertain funding model for reviewer compensation
+  - business model
+  - business-model
+  - compensation
+  - funding
+  - limitation
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_003_review_quality_gaming_risk
+  terms:
+  - Risk of quantity-over-quality review behavior
+  - gaming
+  - limitation
+  - quality risk
+  - quality-risk
+  - reviewer behavior
+  - reviewer-behavior
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_004_token_volatility_and_revocation_challenges
+  terms:
+  - FT
+  - SBT
+  - Token volatility and soulbound-token revocation challenges
+  - blockchain token reward
+  - limitation
+  - reviewer tokens
+  - sbt revocation
+  - sbt-revocation
+  - stablecoins
+  - token incentives
+  - token volatility
+  - token-volatility
+- concept_id: PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_005_no_live_peer_review_deployment_yet
+  terms:
+  - Lack of live peer-review deployment validation
+  - field deployment
+  - field-deployment
+  - limitation
+  - real world validation
+  - real-world-validation

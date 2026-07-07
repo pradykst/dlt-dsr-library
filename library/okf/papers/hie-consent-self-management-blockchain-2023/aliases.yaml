@@ -1,0 +1,62 @@
+type: ConceptAliases
+paper_id: HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023
+title: Search aliases for HIE consent self-management blockchain paper
+review_status: reviewed
+confidence: high
+aliases:
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem:
+  - HIE consent problem
+  - fragmented health information exchange
+  - patient consent self-management
+  - PHI sharing problem
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_001_privacy_of_consent_status:
+  - privacy
+  - protected health information
+  - PHI privacy
+  - consent status privacy
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_002_patient_self_management:
+  - self-management
+  - patient control
+  - grant revoke consent
+  - manage consent
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_004_regulatory_compliance_and_auditability:
+  - compliance
+  - auditability
+  - consent regulation
+  - HIPAA consent
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_005_interoperability_across_fragmented_hies:
+  - interoperability
+  - cross HIE
+  - fragmented HIE
+  - share consent across HIEs
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status:
+  - permissioned view
+  - authorized providers
+  - authorized HIEs
+  - consent visibility
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status:
+  - only patient changes consent
+  - patient revocation
+  - patient grant consent
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history:
+  - auditable history
+  - immutable consent log
+  - audit trail
+  - transaction history
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_004_cross_hie_communication_without_central_authority:
+  - no central authority
+  - decentralized HIE
+  - cross-HIE communication
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_006_permissioned_blockchain_access_model:
+  - permissioned blockchain
+  - private blockchain
+  - access controlled blockchain
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp:
+  - DApp
+  - consent app
+  - online consent management
+  - MetaMask consent
+  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp:
+  - Consent Self-Management DApp
+  - blockchain consent app
+  - patient consent DApp
