@@ -35,6 +35,7 @@ export function OkfChatWorkspace() {
   const [correctionText, setCorrectionText] = useState("");
   const [correctionStatus, setCorrectionStatus] = useState("");
   const [selectedConceptId, setSelectedConceptId] = useState<string | undefined>();
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[] | undefined>();
   const [activeTab, setActiveTab] = useState("Answer");
   const [llmHealth, setLlmHealth] = useState<LlmHealth | null>(null);
 
@@ -58,6 +59,7 @@ export function OkfChatWorkspace() {
     const payload = await result.json();
     setResponse(payload);
     setSelectedConceptId(undefined);
+    setSelectedEvidenceIds(undefined);
     setActiveTab("Answer");
     setLoading(false);
   }
@@ -89,11 +91,11 @@ export function OkfChatWorkspace() {
 
       <div className="grid gap-6 min-[1050px]:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
         <div className="space-y-6">
-          <AssistantWorkspace query={query} setQuery={setQuery} response={response} loading={loading} submit={submit} activeTab={activeTab} setActiveTab={setActiveTab} selectedConceptId={selectedConceptId} setSelectedConceptId={setSelectedConceptId} />
+          <AssistantWorkspace query={query} setQuery={setQuery} response={response} loading={loading} submit={submit} activeTab={activeTab} setActiveTab={setActiveTab} selectedConceptId={selectedConceptId} setSelectedConceptId={setSelectedConceptId} selectedEvidenceIds={selectedEvidenceIds} setSelectedEvidenceIds={setSelectedEvidenceIds} />
         </div>
         <aside className="min-w-0 space-y-6 min-[1050px]:sticky min-[1050px]:top-24 min-[1050px]:max-h-[calc(100vh-96px)] min-[1050px]:overflow-auto">
           <SourcePapersPanel response={response} />
-          <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} />
+          <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} selectedEvidenceIds={selectedEvidenceIds} />
           <details className="border border-line bg-white p-4 shadow-research">
             <summary className="cursor-pointer text-sm font-semibold text-ink">Retrieved design knowledge</summary>
             <div className="mt-4"><RetrievedKnowledgePanel response={response} onSelectConcept={setSelectedConceptId} /></div>
@@ -117,7 +119,7 @@ function LlmStatusBadge({ health }: { health: LlmHealth | null }) {
     </div>
   );
 }
-function AssistantWorkspace({ query, setQuery, response, loading, submit, activeTab, setActiveTab, selectedConceptId, setSelectedConceptId }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void; activeTab: string; setActiveTab: (value: string) => void; selectedConceptId?: string; setSelectedConceptId: (id: string | undefined) => void }) {
+function AssistantWorkspace({ query, setQuery, response, loading, submit, activeTab, setActiveTab, selectedConceptId, setSelectedConceptId, selectedEvidenceIds, setSelectedEvidenceIds }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void; activeTab: string; setActiveTab: (value: string) => void; selectedConceptId?: string; setSelectedConceptId: (id: string | undefined) => void; selectedEvidenceIds?: string[]; setSelectedEvidenceIds: (ids: string[] | undefined) => void }) {
   return (
     <section className="flex min-h-[720px] flex-col border border-line bg-white shadow-research">
       <div className="border-b border-line bg-paper px-5 py-4">
@@ -133,9 +135,9 @@ function AssistantWorkspace({ query, setQuery, response, loading, submit, active
         {response ? (
           <div className="space-y-5">
             <Tabs tabs={["Answer", "Flow", "Evidence", "Retrieved Knowledge", "Debug"]} active={activeTab} onChange={setActiveTab} />
-            {activeTab === "Answer" && <AnswerTab response={response} onSelectConcept={setSelectedConceptId} setActiveTab={setActiveTab} />}
+            {activeTab === "Answer" && <AnswerTab response={response} onSelectConcept={setSelectedConceptId} setActiveTab={setActiveTab} onSelectEvidenceIds={setSelectedEvidenceIds} />}
             {activeTab === "Flow" && <DsrGraphView response={response} onSelectConcept={setSelectedConceptId} />}
-            {activeTab === "Evidence" && <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} />}
+            {activeTab === "Evidence" && <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} selectedEvidenceIds={selectedEvidenceIds} />}
             {activeTab === "Retrieved Knowledge" && <RetrievedKnowledgePanel response={response} onSelectConcept={setSelectedConceptId} />}
             {activeTab === "Debug" && <DebugTrace query={query} response={response} />}
           </div>
@@ -159,8 +161,8 @@ function StageProgress({ response, loading }: { response: OkfChatResponse | null
   return <div className="grid gap-2 md:grid-cols-3">{stages.map(([title, body], index) => <div key={title} className={`border p-3 ${response || loading ? "border-blue/25 bg-blue/5" : "border-line bg-paper"}`}><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink"><span className={`h-2 w-2 ${response || (loading && index < 3) ? "bg-blue" : "bg-muted/40"}`} />{title}</div><p className="mt-2 text-xs leading-5 text-muted">{body}</p></div>)}</div>;
 }
 
-function AnswerTab({ response, onSelectConcept, setActiveTab }: { response: OkfChatResponse; onSelectConcept: (id: string) => void; setActiveTab: (tab: string) => void }) {
-  return <div className="demo-message-in min-w-0 space-y-5 border border-line bg-paper p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Final recommendation</div><h3 className="mt-2 font-serif text-2xl text-ink">Evidence-backed design guidance</h3></div><button type="button" onClick={() => navigator.clipboard?.writeText(response.answer)} className="border border-line bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:border-blue">Copy answer markdown</button></div><AnswerText answer={response.answer} /><FlowRows response={response} setActiveTab={setActiveTab} /><GuidanceCards response={response} onSelectConcept={onSelectConcept} /><EvaluationCriteria response={response} /><MiniFlow response={response} onSelectConcept={onSelectConcept} /></div>;
+function AnswerTab({ response, onSelectConcept, setActiveTab, onSelectEvidenceIds }: { response: OkfChatResponse; onSelectConcept: (id: string) => void; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
+  return <div className="demo-message-in min-w-0 space-y-5 border border-line bg-paper p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Final recommendation</div><h3 className="mt-2 font-serif text-2xl text-ink">Evidence-backed design guidance</h3></div><button type="button" onClick={() => navigator.clipboard?.writeText(response.answer)} className="border border-line bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink hover:border-blue">Copy answer markdown</button></div><AnswerText answer={response.answer} /><FlowRows response={response} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /><GuidanceCards response={response} onSelectConcept={onSelectConcept} /><EvaluationCriteria response={response} /><MiniFlow response={response} onSelectConcept={onSelectConcept} /></div>;
 }
 
 function AnswerText({ answer }: { answer: string }) {
@@ -168,10 +170,10 @@ function AnswerText({ answer }: { answer: string }) {
   return <div className="border border-line bg-white p-4"><p className="text-sm font-medium leading-6 text-ink">{first}</p>{rest.length > 0 && <div className="mt-4 space-y-3 text-sm leading-6 text-muted">{rest.map((part) => <p key={part} className="whitespace-pre-line">{part}</p>)}</div>}</div>;
 }
 
-function FlowRows({ response, setActiveTab }: { response: OkfChatResponse; setActiveTab: (tab: string) => void }) {
+function FlowRows({ response, setActiveTab, onSelectEvidenceIds }: { response: OkfChatResponse; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
   const rows = response.flow_rows ?? response.answer_payload?.flow_rows ?? [];
   if (!rows.length) return null;
-  return <section className="border border-line bg-white p-4"><h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Requirement {"->"} Principle {"->"} Feature {"->"} Artifact rows</h4><div className="mt-3 space-y-3">{rows.map((row) => <div key={row.row_id} className="min-w-0 border border-line bg-paper p-3"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="text-sm font-semibold text-ink">{row.requirement_label}</div><p className="mt-2 [overflow-wrap:anywhere] text-xs leading-5 text-muted">{row.principle_label} {"->"} {row.feature_label} {"->"} {row.artifact_pattern}</p></div><button type="button" onClick={() => setActiveTab("Evidence")} className="shrink-0 border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence ({row.evidence_ids.length})</button></div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{row.adaptation_status}</Badge><Badge>{row.confidence}</Badge>{row.supporting_papers.map((paper) => <Badge key={`${row.row_id}-${paper}`}>{shortPaper(paper)}</Badge>)}</div><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-muted">Evidence ids and adaptation</summary><p className="mt-2 text-xs leading-5 text-muted">{row.adaptation_text}</p><div className="mt-1 break-all text-xs text-muted">{row.evidence_ids.join(", ") || "No linked evidence"}</div></details></div>)}</div></section>;
+  return <section className="border border-line bg-white p-4"><h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Requirement {"->"} Principle {"->"} Feature {"->"} Artifact rows</h4><div className="mt-3 space-y-3">{rows.map((row) => <div key={row.row_id} className="min-w-0 border border-line bg-paper p-3"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><div className="text-sm font-semibold text-ink">{row.requirement_label}</div><p className="mt-2 [overflow-wrap:anywhere] text-xs leading-5 text-muted">{row.principle_label} {"->"} {row.feature_label} {"->"} {row.artifact_pattern}</p></div><button type="button" onClick={() => { onSelectEvidenceIds(row.evidence_ids); setActiveTab("Evidence"); }} className="shrink-0 border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence ({row.evidence_ids.length})</button></div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{row.adaptation_status}</Badge><Badge>{row.confidence}</Badge>{row.supporting_papers.map((paper) => <Badge key={`${row.row_id}-${paper}`}>{shortPaper(paper)}</Badge>)}</div><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-muted">Evidence ids and adaptation</summary><p className="mt-2 text-xs leading-5 text-muted">{row.adaptation_text}</p><div className="mt-1 break-all text-xs text-muted">{row.evidence_ids.join(", ") || "No linked evidence"}</div></details></div>)}</div></section>;
 }
 function GuidanceCards({ response, onSelectConcept }: { response: OkfChatResponse; onSelectConcept: (id: string) => void }) {
   const groups = [["Recommended requirements", response.requirements], ["Reusable design principles", response.principles], ["Candidate features", response.features], ["Artifact direction", response.artifact_direction]] as const;
@@ -232,10 +234,12 @@ function FlowCard({ node, response, nodesById, compact, onSelectConcept }: { nod
   return <button type="button" onClick={() => node.concept_id && onSelectConcept(node.concept_id)} className={`w-full border p-2 text-left transition hover:border-blue ${node.query_generated ? "border-amber-300 bg-amber-50" : "border-line bg-white"}`}><div className="text-xs font-semibold text-ink">{node.label}</div><div className="mt-1 flex flex-wrap gap-1"><span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-muted">{node.query_generated ? "query_generated" : node.type}</span>{node.paper_id && <span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] text-muted">{shortPaper(node.paper_id)}</span>}<span className="border border-line bg-paper px-1.5 py-0.5 text-[10px] text-muted">{node.confidence}</span></div>{!compact && concept?.description && <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">{concept.description}</p>}{outgoing.length > 0 && <div className="mt-2 space-y-1">{outgoing.map((edge) => <div key={`${edge.source}-${edge.target}-${edge.relation_id ?? edge.predicate}`} className="text-[11px] leading-4 text-blue" title={edge.predicate}>? {nodesById.get(edge.target)?.label}</div>)}</div>}</button>;
 }
 
-function EvidenceDrawer({ response, selectedConceptId }: { response: OkfChatResponse | null; selectedConceptId?: string }) {
-  const evidence = response?.evidence.filter((item) => !selectedConceptId || item.concept_id === selectedConceptId) ?? [];
+function EvidenceDrawer({ response, selectedConceptId, selectedEvidenceIds }: { response: OkfChatResponse | null; selectedConceptId?: string; selectedEvidenceIds?: string[] }) {
+  const paperTitles = new Map((response?.source_papers ?? []).map((paper) => [paper.paper_id, paper.title]));
+  const selectedEvidenceSet = selectedEvidenceIds?.length ? new Set(selectedEvidenceIds) : undefined;
+  const evidence = response?.evidence.filter((item) => selectedEvidenceSet ? selectedEvidenceSet.has(item.evidence_id) : !selectedConceptId || item.concept_id === selectedConceptId) ?? [];
   const selectedConcept = response?.retrieved_concepts.find((concept) => concept.concept_id === selectedConceptId);
-  return <Panel title="Evidence" icon={<BookOpen className="h-4 w-4 text-blue" />}>{selectedConcept && <div className="border border-blue/30 bg-blue/5 p-3"><div className="text-sm font-semibold text-ink">{selectedConcept.title}</div><div className="mt-1 text-xs text-muted">{selectedConcept.type} · {shortPaper(selectedConcept.paper_id)}</div></div>}{evidence.length ? evidence.map((item) => <details key={item.evidence_id} className="border border-line p-3" open><summary className="cursor-pointer text-sm font-semibold text-ink">{shortPaper(item.paper_id)}</summary><div className="mt-2 text-xs text-muted">Matched element evidence</div><p className="mt-2 text-sm leading-6 text-ink">{item.quote ?? item.paraphrase}</p><details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Details</summary><div className="mt-1 break-all">{item.evidence_id}</div></details></details>) : <Empty text="Select a concept card to inspect its evidence." />}</Panel>;
+  return <Panel title="Evidence" icon={<BookOpen className="h-4 w-4 text-blue" />}>{selectedEvidenceSet && <div className="border border-blue/30 bg-blue/5 p-3"><div className="text-sm font-semibold text-ink">Selected flow-row evidence</div><div className="mt-1 text-xs text-muted">{selectedEvidenceSet.size} evidence reference(s) filtered from the answer row.</div></div>}{!selectedEvidenceSet && selectedConcept && <div className="border border-blue/30 bg-blue/5 p-3"><div className="text-sm font-semibold text-ink">{selectedConcept.title}</div><div className="mt-1 text-xs text-muted">{selectedConcept.type} ? {shortPaper(selectedConcept.paper_id)}</div></div>}{evidence.length ? evidence.map((item) => <details key={item.evidence_id} className="border border-line p-3" open><summary className="cursor-pointer text-sm font-semibold text-ink">{paperTitles.get(item.paper_id) ?? shortPaper(item.paper_id)}</summary><div className="mt-2 text-xs text-muted">{item.section || item.page_number ? `${item.section ?? "section unknown"}${item.page_number ? ` ? page ${item.page_number}` : ""}` : "Matched element evidence"}</div><p className="mt-2 text-sm leading-6 text-ink">{item.quote ?? item.paraphrase}</p><details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">Details</summary><div className="mt-1 break-all">{item.evidence_id}</div>{item.concept_id && <div className="mt-1 break-all">{item.concept_id}</div>}</details></details>) : <Empty text="Select a concept card to inspect its evidence." />}</Panel>;
 }
 
 function CorrectionReviewInterface({ response, correctionText, setCorrectionText, submitCorrection, status, selectedConceptId }: { response: OkfChatResponse | null; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; status: string; selectedConceptId?: string }) {

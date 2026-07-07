@@ -35,9 +35,11 @@ export async function synthesizeWithFeatherless(deterministic: OkfChatResponse):
     const parsed = answerPayloadSchema.parse(JSON.parse(content));
     const evidenceIds = new Set(deterministic.evidence.map((item) => item.evidence_id));
     const paperIds = new Set(deterministic.source_papers.map((paper) => paper.paper_id));
+    const conceptIds = new Set(deterministic.retrieved_concepts.map((concept) => concept.concept_id));
     const unsupportedEvidence = parsed.flow_rows.flatMap((row) => row.evidence_ids).filter((id) => !evidenceIds.has(id));
     const unsupportedPapers = parsed.flow_rows.flatMap((row) => row.supporting_papers).filter((id) => !paperIds.has(id));
-    if (unsupportedEvidence.length || unsupportedPapers.length) throw new Error("Featherless output introduced unsupported evidence or paper ids.");
+    const unsupportedConcepts = parsed.flow_rows.flatMap((row) => row.concept_ids).filter((id) => !conceptIds.has(id));
+    if (unsupportedEvidence.length || unsupportedPapers.length || unsupportedConcepts.length) throw new Error("Featherless output introduced unsupported evidence, paper, or concept ids.");
     return { ...deterministic, answer_payload: parsed, flow_rows: parsed.flow_rows, answer: renderPayload(parsed), warnings: [...deterministic.warnings, "LLM synthesis applied with Featherless and validated against retrieved OKF ids."] };
   } catch (error) {
     return { ...deterministic, warnings: [...deterministic.warnings, `Featherless synthesis failed; deterministic output used. ${error instanceof Error ? error.message : "Unknown error"}`] };

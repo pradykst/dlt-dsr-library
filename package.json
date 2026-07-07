@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "okf:validate": "node --experimental-strip-types scripts/okf-validate.ts",
     "okf:index": "node --experimental-strip-types scripts/okf-index.ts",
-    "test": "node --experimental-strip-types tests/okf.test.ts"
+    "test": "node --experimental-strip-types tests/okf.test.ts",
+    "smoke:okf-query": "node --experimental-strip-types scripts/smoke-okf-query.ts"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
