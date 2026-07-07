@@ -243,10 +243,29 @@ test("reuse flow answer has multi-paper rows and query-generated adaptations", a
   for (const row of response.flow_rows ?? []) for (const id of row.evidence_ids) assert.ok(evidenceIds.has(id));
 });
 
+
+test("full library product identity query retrieves grounded multi-paper support", async () => {
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  const response = await answerOkfChat(productIdentityQuery, kb);
+  assert.equal(response.intent, "DESIGN_REUSE_FLOW_QUERY");
+  assert.ok(response.source_papers.length >= 5);
+  for (const paperId of ["SHORT_END_STICK_2025", "BLOCKCHAIN_IOT_SDPS_2019", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) {
+    assert.ok(response.source_papers.some((paper) => paper.paper_id === paperId), `missing ${paperId}`);
+  }
+  assert.ok(response.principles.some((card) => card.paper_id === "SHORT_END_STICK_2025"));
+  assert.ok((response.flow_rows ?? []).length >= 8);
+  assert.ok((response.flow_rows ?? []).some((row) => row.supporting_papers.length > 1));
+  assert.ok((response.flow_rows ?? []).every((row) => row.adaptation_status === "mixed" || row.adaptation_status === "query_generated"));
+  const evidenceIds = new Set(response.evidence.map((item) => item.evidence_id));
+  for (const row of response.flow_rows ?? []) for (const id of row.evidence_ids) assert.ok(evidenceIds.has(id));
+});
+
 test("Featherless provider files enforce grounded JSON synthesis", () => {
   const provider = readFileSync(path.join(process.cwd(), "lib", "llm", "featherless.ts"), "utf8");
   const prompt = readFileSync(path.join(process.cwd(), "lib", "llm", "prompts", "dsrReuseSynthesis.ts"), "utf8");
   assert.ok(provider.includes("/chat/completions"));
   assert.ok(provider.includes("answerPayloadSchema.parse"));
+  assert.ok(provider.includes("unsupportedConcepts"));
   assert.ok(prompt.includes("Never claim that a paper supports something"));
 });
