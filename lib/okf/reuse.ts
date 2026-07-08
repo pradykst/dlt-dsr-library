@@ -103,11 +103,42 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
 }
 
 export function renderDecisionSupportMarkdown(payload: DecisionSupportAnswer) {
-  const moves = payload.design_moves.map((move, index) => `${index + 1}. ${move.title}: ${move.what_to_build}`).join("\n");
-  const papers = payload.source_papers.map((paper) => paper.title).join("; ") || "No source papers selected";
-  return [payload.direct_answer, moves ? `Design moves:\n${moves}` : "Design moves: no grounded moves were available.", payload.architecture_direction ? `Architecture direction: ${payload.architecture_direction}` : undefined, `Source papers: ${papers}`, `Evidence coverage: ${payload.evidence_refs.length} selected evidence snippet(s).`].filter(Boolean).join("\n\n");
+  const paperTitles = new Map(payload.source_papers.map((paper) => [paper.paper_id, paper.title]));
+  const moves = payload.design_moves.map((move, index) => {
+    const supportingPapers = move.supporting_paper_ids.map((paperId) => paperTitles.get(paperId)).filter(Boolean).join("; ") || "Retrieved OKF source papers";
+    const reuse = [...new Set([move.reused_requirement, move.reused_principle, move.candidate_feature].filter(Boolean))].join("; ") || "Retrieved OKF design knowledge";
+    return [
+      `### ${index + 1}. ${move.title}`,
+      `- **What to build:** ${move.what_to_build}`,
+      `- **Reuse from OKF:** ${reuse}`,
+      `- **Supporting papers:** ${supportingPapers}`,
+      `- **Evidence:** ${move.adaptation_note}`,
+      `- **Adaptation status:** ${move.adaptation_status}`
+    ].join("\n");
+  }).join("\n\n");
+  return [
+    "# Recommendation",
+    payload.direct_answer,
+    "## Design moves to reuse",
+    moves || "No grounded moves were available.",
+    "## Suggested architecture direction",
+    architectureBullets(payload.architecture_direction),
+    "## What not to overclaim",
+    payload.limitations.length ? payload.limitations.map((item) => `- ${item}`).join("\n") : "- The retrieved OKF context is decision support, not a complete evaluated target-domain artifact."
+  ].filter(Boolean).join("\n\n");
 }
 
+function architectureBullets(direction: string | undefined) {
+  if (!direction) return "- Use the retrieved OKF concepts to separate private records, shared proofs, actor credentials, governance rules, and evaluation activities.";
+  const normalized = direction.replace(/^Use\s+/i, "").replace(/\.$/, "");
+  const parts = normalized.split(/;\s+|,\s+(?=publish|verify|govern|keep|maintain|model|test|deploy|monitor)/i).map((item) => item.trim()).filter(Boolean);
+  if (parts.length >= 3) return parts.slice(0, 6).map((item) => `- ${capitalizeFirst(item.replace(/^and\s+/i, ""))}.`).join("\n");
+  return `- ${capitalizeFirst(normalized)}.`;
+}
+
+function capitalizeFirst(value: string) {
+  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
+}
 function retrieveConcepts(query: string, kb: OkfKnowledgeBase, paperIds: string[]) {
   const terms = expandQueryTerms(tokenize(query));
   const themes = inferDesignThemes(query);
@@ -242,7 +273,7 @@ function thematicDesignMoves(query: string, rows: OkfReuseFlowRow[], papers: Okf
   const evidenceFor = (paperTerms: string[]) => rows.filter((row) => row.supporting_papers.some((paperId) => paperTerms.some((term) => normalizeText(paperId).includes(term)))).flatMap((row) => row.evidence_ids).slice(0, 6);
   const paperIdsFor = (paperTerms: string[]) => papers.filter((paper) => paperTerms.some((term) => normalizeText(`${paper.paper_id} ${paper.title} ${paper.role}`).includes(term))).map((paper) => paper.paper_id).slice(0, 3);
   const moves: DesignMove[] = [];
-  const add = (title: string, what: string, reused: string, terms: string[], status: DesignMove["adaptation_status"]) => {
+  const add = (title: string, what: string, reused: string, terms: string[], status: DesignMove["adaptation_status"], evidenceSummary: string) => {
     moves.push({
       id: `theme-${moves.length + 1}-${normalizeText(title).replace(/\s+/g, "-").slice(0, 36)}`,
       title,
@@ -254,23 +285,23 @@ function thematicDesignMoves(query: string, rows: OkfReuseFlowRow[], papers: Okf
       supporting_paper_ids: paperIdsFor(terms),
       evidence_ids: evidenceFor(terms),
       adaptation_status: status,
-      adaptation_note: "Theme-derived fallback move synthesized from selected OKF papers; validate the domain adaptation in the target project.",
+      adaptation_note: evidenceSummary,
       confidence: evidenceFor(terms).length >= 2 ? "medium" : "low"
     });
   };
-  if (themes.has("identity") && (themes.has("integrity") || themes.has("auditability") || has(["product", "listing", "variant", "relist", "relisting"]))) add(has(["product", "listing", "variant"]) ? "Canonical product identity and listing mapping integrity" : "Canonical entity identity mapping integrity", "Build a canonical mapping component that links equivalent entities across participating systems and records integrity proofs for changes.", "identity credentials plus manipulation-resistant proof of integrity", ["short end", "ssi", "trust capacity", "iot"], "mixed");
-  if (themes.has("privacy")) add(has(["commercial", "raw", "sensitive", "competitor"]) ? "Privacy-preserving commercial evidence handling" : "Privacy-preserving evidence handling", "Keep raw sensitive records under the data owner's control while sharing hashes, attestations, or minimal proofs needed for verification.", "private sensitive-data storage with public proof and data minimization", ["short end", "iot", "ssi"], "mixed");
-  if (themes.has("identity")) add(has(["seller", "buyer", "marketplace", "credential", "verified"]) ? "Persistent seller, marketplace, and buyer credentials" : "Persistent actor credentials and status checks", "Issue reusable credentials for participating actors and verify status, revocation, and authority before accepting claims or actions.", "issuer-verifier-holder credentials, proof requests, and status/revocation checks", ["ssi", "trust capacity"], "mixed");
-  if (themes.has("trust")) add(has(["review", "purchase"]) ? "Verified-purchase review gate and reputation continuity" : "Screening and reputation continuity", "Accept reputation events only when an eligible actor credential and qualifying action can be verified without exposing unnecessary raw data.", "screening, reputation, persistent identity, and deterrence patterns", ["trust capacity", "ssi"], has(["review", "purchase"]) ? "query_generated" : "mixed");
-  if (themes.has("auditability")) add("Status-history continuity and audit trail", "Maintain append-only status history for identity mappings, relisting events, verification decisions, and corrections.", "auditability, status history, and tamper-resistant proof patterns", ["iot", "ssi", "short end"], "mixed");
-  if (themes.has("governance")) add("Dispute and correction governance", "Define authority rules, correction workflows, and fairness controls for false mappings, manipulated descriptions, or contested reputation events.", "authority/fairness and joint-governance design knowledge", ["trust capacity", "short end", "isdm"], "mixed");
-  if (themes.has("lifecycle")) add("Implementation and evaluation lifecycle", "Model roles, data flows, verification transactions, tests, deployment, and maintenance before committing to a blockchain architecture.", "implementation lifecycle, modeling, testing, and maintenance guidance", ["isdm"], "mixed");
+  if (themes.has("identity") && (themes.has("integrity") || themes.has("auditability") || has(["product", "listing", "variant", "relist", "relisting"]))) add(has(["product", "listing", "variant"]) ? "Canonical product identity and listing mapping integrity" : "Canonical entity identity mapping integrity", has(["product", "listing", "variant"]) ? "Build a canonical product and variant registry that maps marketplace listings to the same underlying item, records listing changes, and keeps relisting continuity visible." : "Build a canonical mapping component that links equivalent entities across participating systems and records integrity proofs for changes.", "identity credentials, manipulation-resistant proof of integrity, and independently executed verification logic", ["short end", "ssi", "trust capacity", "iot"], "mixed", "OKF evidence supports combining identity signaling with provider-held records, public integrity proofs, and tamper-resistant status records; the canonical registry/listing map is a target-domain adaptation.");
+  if (themes.has("privacy")) add(has(["commercial", "raw", "sensitive", "competitor"]) ? "Privacy-preserving commercial evidence handling" : "Privacy-preserving evidence handling", "Keep raw sensitive records with the information provider while exposing hashes, attestations, or minimal proofs that allow integrity checks without revealing commercial details.", "store sensitive data only with the provider, create proof of integrity, and use nonreversible reliable independently executed computation", ["short end", "iot", "ssi"], "mixed", "OKF evidence from commercial-data sharing and hybrid storage supports provider-held sensitive data, proof-of-integrity sharing, and off-chain raw data with on-chain or shared verification proofs.");
+  if (themes.has("identity")) add(has(["seller", "buyer", "marketplace", "credential", "verified"]) ? "Persistent seller, marketplace, and buyer credentials" : "Persistent actor credentials and status checks", "Issue reusable credentials for participating actors and verify wallet-held proofs, issuer authority, and revocation/status before accepting identity claims, listings, purchases, or reviews.", "DID/wallet, issuer, verifier, verifiable credential, verifiable presentation, revocation registry, and privacy-preserving proof patterns", ["ssi", "trust capacity"], "mixed", "OKF evidence supports holder-controlled credentials, verifier proof requests, issuer trust anchors, revocation/status checks, and keeping blockchain use to public trust data.");
+  if (themes.has("trust")) add(has(["review", "purchase"]) ? "Verified-purchase review gate and reputation continuity" : "Screening and reputation continuity", "Accept reputation events only when an eligible actor credential and qualifying action can be verified, then bind the event to persistent reputation history without exposing unnecessary raw data.", "signal information relevant to identity, screening functionality, reputation mechanism, authority/fairness, and incentive/deterrence mechanisms", ["trust capacity", "ssi"], has(["review", "purchase"]) ? "query_generated" : "mixed", "OKF evidence supports screening, identity signaling, reputation, authority, and deterrence as trust-building mechanisms; verified-purchase review gates are target-domain adaptations.");
+  if (themes.has("auditability")) add(has(["review", "seller", "relist", "relisting"]) ? "Review and seller-history continuity" : "Status-history continuity and audit trail", "Maintain append-only status history for identity mappings, relisting events, verification decisions, reviews, seller history, and corrections.", "off-chain raw data storage, hash-based integrity records, status history, and tamper-resistant retrieval/certification services", ["iot", "ssi", "short end"], "mixed", "OKF evidence supports hybrid off-chain/on-chain integrity records and auditable status histories; review-continuity ledgers and seller relisting continuity are target-domain adaptations.");
+  if (themes.has("governance")) add("Dispute and correction governance", "Define authority rules, correction workflows, fairness controls, and joint approval for changes to computation or verification mechanisms.", "authority/fairness, joint approval for computation-mechanism changes, and governance over shared rules", ["trust capacity", "short end", "isdm"], "mixed", "OKF evidence supports authority and fairness controls plus joint governance so no party can unilaterally change verification logic or correct contested records without review.");
+  if (themes.has("lifecycle")) add("Implementation and evaluation lifecycle", "Run analysis, actor identification, off-chain/on-chain design, smart-contract skeletoning, testing, deployment, and monitoring before committing to the production architecture.", "analysis, actor identification, off/on-chain design, smart contract skeleton, testing, deployment, and monitoring stages", ["isdm"], "mixed", "OKF evidence supports a lifecycle sequence for blockchain systems, including analysis, actors, off/on-chain design, smart contracts, tests, deployment, and monitoring.");
   return moves.filter((move) => move.supporting_paper_ids.length || move.evidence_ids.length);
 }
 
 function thematicArchitectureDirection(query: string) {
   const q = normalizeText(query);
-  if (q.includes("privacy") || q.includes("commercial") || q.includes("raw")) return "Use a hybrid architecture: keep raw sensitive data off shared infrastructure, publish only minimal proofs or status records, verify actor credentials at decision points, and govern corrections through explicit authority rules.";
+  if (q.includes("privacy") || q.includes("commercial") || q.includes("raw")) return "Use a coherent hybrid protocol architecture: maintain a canonical identity and variant registry; map marketplace listings and seller relistings to that canonical identity; keep raw commercial records off-chain with the data provider; publish integrity hashes, status proofs, and credential trust anchors only; gate reviews through verified purchase proofs; maintain review and seller-history continuity; govern disputes and corrections through explicit authority and joint-change rules.";
   return "Use a layered architecture that separates private records, shared verification proofs, actor credentials, reputation/status services, governance workflows, and implementation/evaluation activities.";
 }
 
@@ -293,7 +324,7 @@ function designMoveFromRow(row: OkfReuseFlowRow, index: number): DesignMove {
 
 function compactDirectAnswer(_query: string, paperCount: number, moveCount: number, evidenceCount: number) {
   if (!paperCount) return "I could not find a sufficiently grounded OKF match for this question. Try naming a paper, DSR element type, or design domain from the library.";
-  return `I found ${paperCount} relevant OKF source paper(s), ${moveCount} reusable design move(s), and ${evidenceCount} selected evidence snippet(s). Use these as decision support: reuse stored requirements/principles/features where they match, and treat domain-specific adaptations as mixed or query_generated.`;
+  return `Use the retrieved OKF knowledge as decision support for a domain-adapted architecture, not as a paper summary. I found ${paperCount} relevant OKF source paper(s), ${moveCount} reusable design move(s), and ${evidenceCount} selected evidence snippet(s); reuse stored requirements, principles, and features where they match, and treat target-domain constructs as mixed or query-generated adaptations.`;
 }
 
 function architectureDirection(rows: OkfReuseFlowRow[]) {
@@ -343,8 +374,8 @@ function relationConnected(concepts: OkfConcept[], kb: OkfKnowledgeBase) {
 }
 
 function reasonForPaper(concepts: OkfConcept[], terms: string[], kb: OkfKnowledgeBase, themes: DesignTheme[], paperId: string) {
-  const role = paperDomainRole(paperId, "");
-  if (role) return role;
+  const domainReason = paperDomainReason(paperId);
+  if (domainReason) return domainReason;
   const typeScores = answerConceptTypes.map((type) => ({ type, score: concepts.filter((concept) => concept.type === type).reduce((sum, concept) => sum + scoreConceptWithEvidence(concept, terms, kb, themes), 0) })).sort((a, b) => b.score - a.score);
   const best = typeScores.find((item) => item.score > 0);
   const theme = themes[0]?.label;
@@ -532,7 +563,7 @@ function scoreThemes(text: string, themes: DesignTheme[]) {
 function paperThemeRoleBoost(paperId: string, themes: DesignTheme[]) {
   const ids = new Set(themes.map((theme) => theme.id));
   const paperRoles: Record<string, string[]> = {
-    SHORT_END_STICK_2025: ["integrity", "privacy", "privacy", "governance"],
+    SHORT_END_STICK_2025: ["integrity", "integrity", "privacy", "privacy", "privacy", "privacy", "governance", "governance"],
     SSI_KYC_FRAMEWORK_2022: ["identity", "privacy", "auditability"],
     TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024: ["trust", "identity", "governance"],
     BLOCKCHAIN_IOT_SDPS_2019: ["integrity", "integrity", "privacy", "auditability"],
@@ -544,18 +575,30 @@ function paperThemeRoleBoost(paperId: string, themes: DesignTheme[]) {
 
 function paperDomainRole(paperId: string, title: string) {
   const key = normalizeText(`${paperId} ${title}`);
-  if (key.includes("short end stick")) return "commercial-data privacy";
-  if (key.includes("ssi kyc")) return "identity credentials";
-  if (key.includes("trust capacity")) return "trust/reputation";
-  if (key.includes("blockchain iot")) return "tamper-resistant storage";
-  if (key.includes("integrated blockchain isdm")) return "implementation lifecycle";
-  if (key.includes("hie consent")) return "permissioned status sharing";
-  if (key.includes("peer review token")) return "token incentives";
-  if (key.includes("nil nft")) return "NFT marketplace governance";
-  if (key.includes("newsvendor")) return "oracle/payment coordination";
+  if (key.includes("short end stick")) return "COMMERCIAL-DATA PRIVACY";
+  if (key.includes("ssi kyc")) return "IDENTITY CREDENTIALS";
+  if (key.includes("trust capacity")) return "TRUST / REPUTATION";
+  if (key.includes("blockchain iot")) return "TAMPER-RESISTANT EVIDENCE";
+  if (key.includes("integrated blockchain isdm")) return "IMPLEMENTATION LIFECYCLE";
+  if (key.includes("hie consent")) return "PERMISSIONED STATUS SHARING";
+  if (key.includes("peer review token")) return "TOKEN INCENTIVES";
+  if (key.includes("nil nft")) return "NFT MARKETPLACE GOVERNANCE";
+  if (key.includes("newsvendor")) return "ORACLE / PAYMENT COORDINATION";
   return undefined;
 }
 
+function paperDomainReason(paperId: string) {
+  if (paperId === "SHORT_END_STICK_2025") return "Supports proof-of-integrity sharing without exposing provider-held sensitive data, with independent computation and joint mechanism governance.";
+  if (paperId === "SSI_KYC_FRAMEWORK_2022") return "Supports reusable actor credentials, verifier proof checks, revocation/status handling, and blockchain use only for public trust data.";
+  if (paperId === "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024") return "Supports identity signaling, screening, reputation, authority/fairness, and deterrence mechanisms for trusted exchange.";
+  if (paperId === "BLOCKCHAIN_IOT_SDPS_2019") return "Supports hybrid raw-data storage, hash-based integrity proofs, certification/retrieval services, and access-key management.";
+  if (paperId === "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024") return "Supports the lifecycle from analysis and actor identification through off/on-chain design, smart contracts, testing, deployment, and monitoring.";
+  if (paperId === "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023") return "Supports auditable permission/status sharing, interoperability, and permissioned access when adapted outside healthcare.";
+  if (paperId === "PEER_REVIEW_TOKEN_INCENTIVES_2025") return "Supports token incentives only when reviewer rewards or tokenized contribution mechanisms are part of the design problem.";
+  if (paperId === "NIL_NFT_MARKETPLACE_2026") return "Supports NFT marketplace fairness, royalties, and allocation mechanisms only when those themes are part of the design problem.";
+  if (paperId === "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021") return "Supports oracle and payment coordination when forecasting, inventory, or settlement are part of the design problem.";
+  return undefined;
+}
 function tokenize(value: string) {
   return normalizeText(value).split(/\s+/).filter((term) => term.length > 2 && !["the", "and", "for", "with", "that", "what", "which", "use", "from", "prior", "paper", "papers", "should", "where", "need", "needs", "into", "same", "exact"].includes(term));
 }

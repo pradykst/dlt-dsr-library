@@ -10,7 +10,7 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
 
   const baseUrl = process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1";
   const timeoutMs = Number(process.env.GROQ_TIMEOUT_MS ?? 60000);
-  const maxTokens = Number(process.env.GROQ_MAX_TOKENS ?? 450);
+  const maxTokens = Number(process.env.GROQ_MAX_TOKENS ?? 1600);
   const temperature = Number(process.env.GROQ_TEMPERATURE ?? 0.2);
   const context = buildMarkdownSynthesisContext(deterministic);
   const controller = new AbortController();
@@ -78,7 +78,7 @@ export function buildMarkdownSynthesisContext(response: OkfChatResponse) {
   const themes = inferDesignThemes(query).map((theme) => ({ id: theme.id, label: theme.label }));
   const relationConceptIds = new Set(response.flow.edges.flatMap((edge) => [nodeConceptId(response, edge.source), nodeConceptId(response, edge.target)]).filter((id): id is string => Boolean(id)));
   const evidenceConceptIds = new Set(response.evidence.map((item) => item.concept_id).filter((id): id is string => Boolean(id)));
-  const selectedPapers = response.source_papers.slice(0, 5);
+  const selectedPapers = response.source_papers.slice(0, 6);
   const selectedPaperIds = new Set(selectedPapers.map((paper) => paper.paper_id));
   const concepts = response.retrieved_concepts.filter((concept) => selectedPaperIds.has(concept.paper_id));
   const conceptScore = (concept: OkfConcept) => (relationConceptIds.has(concept.concept_id) ? 3 : 0) + (evidenceConceptIds.has(concept.concept_id) ? 2 : 0) + confidenceScore(concept.confidence);
@@ -97,14 +97,36 @@ export function buildMarkdownSynthesisContext(response: OkfChatResponse) {
     .filter((item) => selectedPaperIds.has(item.paper_id))
     .map((item) => ({ ...item, relation_connected: item.concept_id ? relationConceptIds.has(item.concept_id) : false, source_rank: selectedPapers.findIndex((paper) => paper.paper_id === item.paper_id) }))
     .sort((a, b) => Number(b.relation_connected) - Number(a.relation_connected) || a.source_rank - b.source_rank)
-    .slice(0, 6)
-    .map((item) => ({ paper_title: clip(paperTitle(response, item.paper_id), 70), element_title: item.concept_id ? clip(adaptSourceDomainLabel(conceptTitle(response, item.concept_id), query), 70) : undefined, snippet: clip(adaptSourceDomainLabel(item.quote ?? item.paraphrase, query), 90) }));
-
+    .slice(0, 12)
+    .map((item) => ({ paper_title: clip(paperTitle(response, item.paper_id), 70), element_title: item.concept_id ? clip(adaptSourceDomainLabel(conceptTitle(response, item.concept_id), query), 70) : undefined, snippet: clip(adaptSourceDomainLabel(item.quote ?? item.paraphrase, query), 140) }));
+  const paperContexts = selectedPapers.map((paper) => {
+    const paperConcepts = concepts.filter((concept) => concept.paper_id === paper.paper_id).sort((a, b) => conceptScore(b) - conceptScore(a));
+    const topByType = (types: string[], limit: number) => paperConcepts
+      .filter((concept) => types.includes(concept.type))
+      .slice(0, limit)
+      .map((concept) => ({ title: clip(adaptSourceDomainLabel(concept.title, query), 90), why_relevant: relevantTo(concept).join("; ") || clip(adaptSourceDomainLabel(concept.description || concept.body_text, query), 120) || "matched retrieved OKF concept" }));
+    const paperEvidence = response.evidence
+      .filter((item) => item.paper_id === paper.paper_id)
+      .map((item) => ({ ...item, relation_connected: item.concept_id ? relationConceptIds.has(item.concept_id) : false }))
+      .sort((a, b) => Number(b.relation_connected) - Number(a.relation_connected))
+      .slice(0, 3)
+      .map((item) => ({ element_title: item.concept_id ? clip(adaptSourceDomainLabel(conceptTitle(response, item.concept_id), query), 80) : undefined, snippet: clip(adaptSourceDomainLabel(item.quote ?? item.paraphrase, query), 160) }));
+    return {
+      paper_id: paper.paper_id,
+      title: clip(paper.title, 110),
+      role_for_this_query: paper.role,
+      reason_for_selection: clip(paper.reason, 180),
+      top_relevant_requirements: topByType(["DesignRequirement"], 2),
+      top_relevant_principles: topByType(["DesignPrinciple"], 2),
+      top_relevant_features_artifacts: topByType(["DesignFeature", "Artifact", "OutputKnowledge"], 3),
+      top_evidence_snippets: paperEvidence
+    };
+  });
   return {
     user_query: clip(query, 320),
     intent: response.intent,
     inferred_design_themes: themes,
-    selected_source_papers: selectedPapers.map((paper) => ({ title: clip(paper.title, 90), reason_for_selection: clip(paper.reason, 70), role: paper.role })),
+    selected_source_papers: paperContexts,
     top_relevant_design_requirements: byType(["DesignRequirement"], 3),
     top_relevant_design_principles: byType(["DesignPrinciple"], 3),
     top_relevant_design_features: byType(["DesignFeature"], 3),
@@ -116,18 +138,21 @@ export function buildMarkdownSynthesisContext(response: OkfChatResponse) {
   };
 }
 
-const markdownSystemPrompt = "You are an evidence-grounded DSR decision-support assistant for reusing a curated OKF library. Do not summarize papers generically. Convert retrieved requirements, principles, features, artifacts, evaluations, and evidence into actionable design guidance for the user's design problem. Use only retrieved context. Mark domain adaptations as mixed or query-generated. Do not invent papers or evidence. Do not output raw evidence IDs, raw concept IDs, or paper IDs. Do not use healthcare/HIE-specific labels unless the user asks about healthcare, HIE, or consent. Return concise Markdown only.";
+const markdownSystemPrompt = "You are an evidence-grounded DSR decision-support assistant. Do not summarize the papers. Convert retrieved DSR knowledge into actionable design guidance for the user's design problem. Use only the retrieved OKF context. When adapting a concept to the user's domain, mark it mixed or query-generated. Prefer domain-appropriate phrasing over literal paper labels. Do not output raw evidence IDs, raw concept IDs, or a naked bibliography list in the default answer. Do not invent papers, citations, evidence, or OKF concepts. Do not use healthcare/HIE-specific terms unless the user asks about healthcare, HIE, or consent. Return concise Markdown only.";
 
 function markdownUserPrompt(context: ReturnType<typeof buildMarkdownSynthesisContext>) {
   return [
-    "Write concise Markdown with exactly: # Recommendation, ## Design moves to reuse, ## Suggested architecture direction, ## What not to overclaim.",
-    "Recommendation: 3 sentences. Design moves: 5 numbered moves. Each move must include **What to build:**, **Reuse from OKF:**, **Supporting papers:**, **Evidence:**, **Adaptation status:**.",
-    "Rules: mention paper names naturally, never raw evidence IDs, never raw concept IDs, never paper IDs, never naked source-paper lists. Exclude weakly relevant papers from design moves. Name design moves in the user's domain using inferred themes and query_adaptation_targets; source-domain labels such as capacity exchange, KYC onboarding, sensor data, token exchanger, or HIE consent are supporting patterns, not the thing to build, unless the user asked for that source domain. Prefer domain adaptation over literal copying. If a product-specific construct is not directly stored in OKF, mark it mixed or query-generated. Do not use HIE-specific labels directly unless the user asks about healthcare or consent.",
+    "Write Markdown with exactly these sections: # Recommendation, ## Design moves to reuse, ## Suggested architecture direction, ## What not to overclaim.",
+    "# Recommendation must be 3-5 sentences and directly answer the design question.",
+    "Under ## Design moves to reuse, provide 5-7 moves. For each move use a level-3 heading like ### 1. <short move title>, then bullets for **What to build:**, **Reuse from OKF:**, **Supporting papers:**, **Evidence:**, and **Adaptation status:**.",
+    "Under ## Suggested architecture direction, provide 4-6 bullets. Make it read like a coherent protocol architecture when the query asks about identity, marketplace, review, continuity, or evidence handling.",
+    "Under ## What not to overclaim, provide 2-4 limitations.",
+    "Rules: use only retrieved OKF context; mention paper names naturally; never output raw evidence IDs, raw concept IDs, or paper IDs; never end with a raw source-paper list; exclude weakly relevant papers from design moves; synthesize across papers when the user asks for cross-paper reuse.",
+    "Domain adaptation rules: prefer the user's domain terms over literal source-domain labels. Do not use HIE-specific terms unless the query asks about healthcare or consent. Do not use NIL random minting unless the query asks about NFTs, royalties, fairness, or random allocation. Do not use peer-review tokenization unless the query asks about token incentives or reviewer rewards. Mark product-specific constructs such as canonical variant registry, verified-purchase review gate, seller relisting continuity, and review-continuity ledger as mixed or query-generated unless directly stored in OKF.",
     "Compact retrieved OKF context:",
     JSON.stringify(context)
   ].join("\n\n");
 }
-
 function groqFallback(response: OkfChatResponse, reason: string, status?: number, rawProviderOutput?: string, connected = false, rawProviderError?: string, compactContext?: ReturnType<typeof buildMarkdownSynthesisContext>): OkfChatResponse {
   const baseUrl = process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1";
   const evidenceRefs: OkfEvidenceRef[] = response.evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence as OkfEvidenceRef["confidence"] }));
@@ -214,12 +239,13 @@ function clip(value: string | undefined, limit: number) {
 
 function scrubDefaultAnswerMarkdown(value: string) {
   return value
+    .replace(/\n+#{1,3}\s*(?:Source papers|Sources|Bibliography)\s*\n[\s\S]*$/i, "")
+    .replace(/\n+Source papers:\s*[\s\S]*$/i, "")
     .replace(/\b[A-Z][A-Z0-9_]{2,}:[A-Za-z0-9_.:-]+\b/g, "stored OKF concept")
     .replace(/\bev[_-][A-Za-z0-9_.:-]+\b/gi, "evidence snippet")
     .replace(/\b[A-Z][A-Z0-9_]{2,}_(?:19|20)\d{2}\b/g, "the retrieved paper")
     .trim();
 }
-
 function providerErrorMessage(data: unknown) {
   if (!data || typeof data !== "object") return undefined;
   const record = data as Record<string, unknown>;

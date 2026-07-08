@@ -4,6 +4,7 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/chat.ts";
 import { synthesizeWithOptionalLlm } from "../lib/okf/llm.ts";
+import { buildMarkdownSynthesisContext } from "../lib/llm/groq.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures", "okf");
@@ -166,6 +167,42 @@ test("product identity query produces a structured decision-support answer witho
   assert.equal(/Product Identity & Description Integrity Registry/.test(implementation), false);
 });
 
+
+test("product identity answer includes targeted OKF reuse logic and no naked source-paper tail", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat(productIdentityQuery, kb);
+  assert.match(response.answer, /provider-held sensitive data|sensitive records with the information provider/i);
+  assert.match(response.answer, /proof-of-integrity|proof of integrity|integrity proofs/i);
+  assert.match(response.answer, /nonreversible reliable independently executed computation|independently executed verification/i);
+  assert.match(response.answer, /DID\/wallet|verifiable credential|revocation\/status|privacy-preserving proof/i);
+  assert.match(response.answer, /screening|reputation|deterrence|authority\/fairness/i);
+  assert.match(response.answer, /analysis, actor identification|off\/on-chain design|testing, deployment, and monitoring/i);
+  for (const phrase of ["canonical product and variant registry", "verified-purchase review gate", "seller-history continuity", "review-continuity ledgers"]) assert.match(response.answer, new RegExp(phrase, "i"));
+  assert.equal(/\nSource papers:\s*/i.test(response.answer), false);
+  assert.equal(/patient-facing consent/i.test(response.answer), false);
+});
+
+test("product identity source paper cards separate role badge from reason sentence", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat(productIdentityQuery, kb);
+  const shortEnd = response.source_papers.find((paper) => paper.paper_id === "SHORT_END_STICK_2025");
+  assert.ok(shortEnd);
+  assert.equal(shortEnd.role, "COMMERCIAL-DATA PRIVACY");
+  assert.notEqual(shortEnd.role.toLowerCase(), shortEnd.reason.toLowerCase());
+  for (const paper of response.source_papers) assert.notEqual(paper.role.trim().toLowerCase(), paper.reason.trim().toLowerCase());
+});
+
+test("Groq compact context annotates selected papers with roles, reasons, concepts, and evidence", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat(productIdentityQuery, kb);
+  const context = buildMarkdownSynthesisContext(response);
+  const shortEnd = context.selected_source_papers.find((paper) => paper.paper_id === "SHORT_END_STICK_2025");
+  assert.ok(shortEnd);
+  assert.equal(shortEnd.role_for_this_query, "COMMERCIAL-DATA PRIVACY");
+  assert.match(shortEnd.reason_for_selection, /proof-of-integrity|provider-held sensitive data/i);
+  assert.ok(shortEnd.top_relevant_principles.length > 0 || shortEnd.top_relevant_features_artifacts.length > 0);
+  assert.ok(shortEnd.top_evidence_snippets.length > 0);
+});
 test("privacy-preserving decentralized identity query retrieves a well-shaped cross-paper candidate set", async () => {
   const kb = parseOkfLibrary();
   const query = "Which reusable design principles should I use for a privacy-preserving decentralized identity system where users control credentials and verifiers need auditability?";
@@ -201,7 +238,7 @@ test("OKF chat UI renders Markdown only in the default answer tab", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
   assert.ok(source.includes("response.llm_synthesis"));
   assert.ok(source.includes("MarkdownAnswer"));
-  assert.ok(source.includes("Evidence details are in the Evidence tab."));
+  assert.ok(source.includes("Evidence details are available in the Evidence tab."));
   assert.ok(source.includes("Copy answer"));
   assert.equal(source.includes("payload.direct_answer"), false);
   assert.equal(source.includes("DesignMoveCards"), false);
@@ -209,23 +246,36 @@ test("OKF chat UI renders Markdown only in the default answer tab", () => {
   assert.equal(source.includes("<MiniFlow response"), false);
 });
 
-test("OKF chat initial UI hides process boxes and tabs before the first answer", () => {
+test("OKF chat initial UI is clean and hides tabs/context before the first answer", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("DSR OKF Decision Assistant"));
+  assert.ok(source.includes("Evidence-grounded design knowledge reuse across curated DSR papers."));
+  assert.ok(source.includes("exampleQuestions"));
+  assert.ok(source.includes("Ask a design problem, paper-specific question, or DSR flow question."));
   assert.ok(source.includes("{loading && <StageProgress"));
-  assert.ok(source.includes("{response ? ("));
+  assert.ok(source.includes("{response && ("));
   assert.ok(source.includes("How this answer was built"));
-  assert.ok(source.includes("Ask a question to see source papers and evidence."));
-  assert.equal(source.includes("Checking evidence"), false);
-  assert.equal(source.includes("Waiting for a design or paper question"), false);
+  assert.equal(source.includes("The MVP works without an LLM key"), false);
+  assert.equal(source.includes("Ask a question to see source papers and evidence."), false);
+  assert.equal(source.includes("CorrectionReviewInterface"), false);
 });
 
 test("OKF chat progress uses five compact dynamic stages", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  for (const stage of ["Understanding query", "Selecting source papers", "Retrieving DSR elements", "Building evidence-backed flow", "Synthesizing recommendation"]) assert.ok(source.includes(stage));
+  for (const stage of ["Understanding query", "Selecting sources", "Retrieving OKF knowledge", "Checking evidence", "Synthesizing answer"]) assert.ok(source.includes(stage));
   assert.ok(source.includes("setActiveStage"));
+  assert.ok(source.includes("Loader2"));
   assert.equal(source.includes("Drafting recommendation"), false);
 });
 
+
+test("OKF chat keeps correction review hidden behind report issue drawer", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("Report issue"));
+  assert.ok(source.includes("ReportIssueDrawer"));
+  assert.equal(source.includes("Correction review"), false);
+  assert.equal(source.includes("<CorrectionReviewInterface"), false);
+});
 test("React keys are stable and not based only on title", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
   assert.ok(source.includes("key={paper.paper_id}"));
@@ -366,7 +416,7 @@ test("Featherless failure uses compact deterministic fallback with debug reason"
 
 test("Flow tab does not dump all retrieved graph nodes by default", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  assert.ok(source.includes("Compact relation-backed flow"));
+  assert.ok(source.includes("Compact design move paths"));
   assert.ok(source.includes("slice(0, 7)"));
   assert.equal(source.includes("LayeredFlow"), false);
 });
