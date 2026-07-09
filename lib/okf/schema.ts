@@ -1,4 +1,4 @@
-export const okfConceptTypes = [
+﻿export const okfConceptTypes = [
   "Paper",
   "Problem",
   "ResearchQuestion",
@@ -128,17 +128,34 @@ export type OkfFlow = {
 };
 
 export type OkfChatIntent =
-  | "PAPER_LIST_QUERY"
-  | "PAPER_DETAIL_QUERY"
-  | "DSR_ELEMENT_QUERY"
-  | "DESIGN_RECOMMENDATION_QUERY"
+  | "LIBRARY_STATS_QUERY"
+  | "PAPER_DISCOVERY_QUERY"
+  | "PAPER_ELEMENT_QUERY"
   | "DESIGN_REUSE_FLOW_QUERY"
+  | "DESIGN_REUSE_QUERY"
   | "DSR_FLOW_QUERY"
-  | "COMPARE_QUERY"
   | "EVIDENCE_QUERY"
-  | "UNKNOWN_QUERY";
+  | "COMPARISON_QUERY"
+  | "IMPLEMENTATION_LIFECYCLE_QUERY"
+  | "EVALUATION_PLANNING_QUERY"
+  | "LIBRARY_OVERVIEW_QUERY"
+  | "NEGATIVE_OR_EXISTENCE_QUERY"
+  | "CLARIFICATION_QUERY";
 
-export type OkfTaskType = "paper_lookup" | "element_lookup" | "evidence_lookup" | "design_reuse_flow" | "design_recommendation" | "unknown";
+export type OkfTaskType =
+  | "library_stats"
+  | "paper_discovery"
+  | "paper_element"
+  | "dsr_flow"
+  | "design_reuse"
+  | "design_reuse_flow"
+  | "evidence"
+  | "comparison"
+  | "implementation_lifecycle"
+  | "evaluation_planning"
+  | "library_overview"
+  | "existence"
+  | "clarification";
 
 export type OkfReuseFlowRow = {
   row_id: string;
@@ -187,8 +204,11 @@ export type DesignMove = {
   confidence: ConfidenceLabel;
 };
 
+export type OkfProviderName = "none" | "featherless" | "groq" | "openai" | "mock";
+export type OkfSynthesisMode = "featherless" | "groq" | "mock" | "structured_okf_answer" | "fallback_rate_limited" | "fallback_provider_error" | "fallback_validation_error";
+
 export type DecisionSupportAnswer = {
-  synthesis_mode: "featherless" | "groq" | "deterministic_fallback" | "fallback_error";
+  synthesis_mode: OkfSynthesisMode;
   title: string;
   direct_answer: string;
   design_moves: DesignMove[];
@@ -204,12 +224,13 @@ export type OkfAnswerPayload = DecisionSupportAnswer;
 
 
 export type LlmSynthesisResult = {
-  synthesis_mode: "groq" | "fallback_error";
+  synthesis_mode: OkfSynthesisMode;
   answer_markdown: string;
   provider_metadata: {
-    provider: "groq" | "featherless" | "openai" | "none";
+    provider: OkfProviderName;
     model?: string;
     status?: number;
+    error_type?: string;
     base_url?: string;
     prompt_tokens?: number;
     completion_tokens?: number;
@@ -221,9 +242,14 @@ export type OkfRuntimeMetadata = {
   provider_configured: boolean;
   provider_connected: boolean;
   synthesis_attempted: boolean;
-  synthesis_mode: "featherless" | "groq" | "deterministic_fallback" | "fallback_error";
-  provider?: "none" | "featherless" | "groq" | "openai";
+  synthesis_mode: OkfSynthesisMode;
+  provider?: OkfProviderName;
   fallback_reason?: string;
+  provider_status_code?: number;
+  provider_error_type?: string;
+  db_loaded_from?: "supabase" | "local_okf_fallback";
+  db_error_code?: string;
+  db_error_message?: string;
 };
 
 export function isOkfConceptType(value: string): value is OkfConceptType {
@@ -241,7 +267,6 @@ export function normalizeConfidence(value: unknown): ConfidenceLabel {
   if (normalized === "2") return "medium";
   return "low";
 }
-
 
 
 

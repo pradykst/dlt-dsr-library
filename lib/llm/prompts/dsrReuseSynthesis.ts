@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 export const designMoveSchema = z.object({
   id: z.string().min(1),
@@ -34,7 +34,7 @@ export const evidenceRefSchema = z.object({
 });
 
 export const decisionSupportAnswerSchema = z.object({
-  synthesis_mode: z.enum(["featherless", "groq", "deterministic_fallback"]),
+  synthesis_mode: z.enum(["featherless", "groq", "structured_okf_answer"]),
   title: z.string().min(1),
   direct_answer: z.string().min(1),
   design_moves: z.array(designMoveSchema).max(7),
@@ -57,7 +57,7 @@ export function parseDecisionSupportJson(content: string) {
 
 function normalizeDecisionSupportCandidate(value: Record<string, unknown>) {
   const normalized = { ...value };
-  if (normalized.synthesis_mode !== "featherless" && normalized.synthesis_mode !== "groq" && normalized.synthesis_mode !== "deterministic_fallback") normalized.synthesis_mode = "featherless";
+  if (normalized.synthesis_mode !== "featherless" && normalized.synthesis_mode !== "groq" && normalized.synthesis_mode !== "structured_okf_answer") normalized.synthesis_mode = "featherless";
   normalized.limitations = arrayOfStrings(normalized.limitations);
   normalized.query_generated_notes = arrayOfStrings(normalized.query_generated_notes);
   normalized.design_moves = Array.isArray(normalized.design_moves) ? normalized.design_moves.map(normalizeDesignMove) : [];

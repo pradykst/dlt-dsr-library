@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { getConfiguredLlmProvider } from "@/lib/okf/llm.ts";
 import { getRequestedLlmProviderName, type LlmProviderName } from "@/lib/llm/provider.ts";
 
@@ -13,6 +13,7 @@ type ProviderHealthConfig = {
 export async function GET() {
   const requestedProvider = getRequestedLlmProviderName();
   const provider = getConfiguredLlmProvider() === "none" ? requestedProvider : getConfiguredLlmProvider();
+  if (provider === "mock") return NextResponse.json({ ok: true, provider, provider_configured: true, provider_connected: true, status: 200, base_url: "mock" });
   const config = providerConfig(provider);
   const provider_configured = Boolean(config?.apiKey && config.model);
   const health = config && provider_configured ? await checkProviderConnection(config) : { connected: false, status: undefined as number | undefined, error: config ? missingConfigError(config.provider) : "No LLM provider configured" };
@@ -78,6 +79,7 @@ function missingConfigError(provider: LlmProviderName) {
   if (provider === "groq") return "Missing GROQ_API_KEY or GROQ_MODEL";
   if (provider === "featherless") return "Missing FEATHERLESS_API_KEY or FEATHERLESS_MODEL";
   if (provider === "openai") return "Missing OPENAI_API_KEY or OPENAI_MODEL";
+  if (provider === "mock") return undefined;
   return "No LLM provider configured";
 }
 
@@ -85,5 +87,7 @@ function providerLabel(provider: LlmProviderName) {
   if (provider === "groq") return "Groq";
   if (provider === "featherless") return "Featherless";
   if (provider === "openai") return "OpenAI";
+  if (provider === "mock") return "Mock";
   return "LLM";
 }
+

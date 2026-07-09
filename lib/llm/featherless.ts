@@ -1,4 +1,4 @@
-import { decisionSupportUserPrompt, dsrReuseSystemPrompt, parseDecisionSupportJson } from "./prompts/dsrReuseSynthesis.ts";
+﻿import { decisionSupportUserPrompt, dsrReuseSystemPrompt, parseDecisionSupportJson } from "./prompts/dsrReuseSynthesis.ts";
 import type { OkfChatResponse } from "../okf/chat.ts";
 import type { DecisionSupportAnswer, OkfConcept, OkfEvidenceRef, OkfReuseFlowRow } from "../okf/schema.ts";
 import { buildFallbackAnswer, renderDecisionSupportMarkdown } from "../okf/reuse.ts";
@@ -44,7 +44,7 @@ export async function synthesizeWithFeatherless(deterministic: OkfChatResponse):
       ...deterministic,
       answer_payload: answer,
       answer: renderDecisionSupportMarkdown(answer),
-      runtime: { provider_configured: true, provider_connected: true, synthesis_attempted: true, synthesis_mode: "featherless", provider: "featherless" },
+      runtime: { ...deterministic.runtime, provider_configured: true, provider_connected: true, synthesis_attempted: true, synthesis_mode: "featherless", provider: "featherless" },
       warnings: [...deterministic.warnings, "Featherless synthesis applied and validated against retrieved OKF paper/evidence ids."]
     };
   } catch (error) {
@@ -85,12 +85,13 @@ export function buildSynthesisContext(response: OkfChatResponse) {
 export function synthesizeWithCompactFallback(response: OkfChatResponse, reason: string, attempted = false, connected = false, provider: LlmProviderName = "none"): OkfChatResponse {
   const rows = (response.flow_rows?.length ? response.flow_rows : rowsFromResponse(response)).slice(0, 7);
   const evidenceRefs = toEvidenceRefs(response.evidence);
-  const fallback = buildFallbackAnswer(response.interpreted_problem ?? "OKF query", rows, response.source_papers, evidenceRefs, undefined, reason);
+  const mode = attempted ? "fallback_provider_error" as const : "structured_okf_answer" as const;
+  const fallback = { ...buildFallbackAnswer(response.interpreted_problem ?? "OKF query", rows, response.source_papers, evidenceRefs, undefined, reason), synthesis_mode: mode };
   return {
     ...response,
     answer_payload: fallback,
     answer: renderDecisionSupportMarkdown(fallback),
-    runtime: { provider_configured: isProviderConfigured(provider), provider_connected: connected, synthesis_attempted: attempted, synthesis_mode: "deterministic_fallback", provider, fallback_reason: reason },
+    runtime: { ...response.runtime, provider_configured: isProviderConfigured(provider), provider_connected: connected, synthesis_attempted: attempted, synthesis_mode: mode, provider, fallback_reason: reason },
     warnings: [...response.warnings, `${providerLabel(provider)} synthesis unavailable; compact deterministic fallback used. ${reason}`]
   };
 }
@@ -98,6 +99,7 @@ export function synthesizeWithCompactFallback(response: OkfChatResponse, reason:
 
 
 function isProviderConfigured(provider: LlmProviderName) {
+  if (provider === "mock") return true;
   if (provider === "featherless") return Boolean(process.env.FEATHERLESS_API_KEY && process.env.FEATHERLESS_MODEL);
   if (provider === "groq") return Boolean(process.env.GROQ_API_KEY && process.env.GROQ_MODEL);
   if (provider === "openai") return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
@@ -107,6 +109,7 @@ function isProviderConfigured(provider: LlmProviderName) {
 function providerLabel(provider: LlmProviderName) {
   if (provider === "groq") return "Groq";
   if (provider === "openai") return "OpenAI";
+  if (provider === "mock") return "Mock";
   if (provider === "featherless") return "Featherless";
   return "LLM";
 }
@@ -183,3 +186,5 @@ function rowsFromResponse(response: OkfChatResponse): OkfReuseFlowRow[] {
 function toEvidenceRefs(evidence: OkfChatResponse["evidence"]): OkfEvidenceRef[] {
   return evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence as OkfEvidenceRef["confidence"] }));
 }
+
+

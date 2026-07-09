@@ -17,6 +17,7 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let status: number | undefined;
   let rawProviderError: string | undefined;
+  let rawProviderErrorType: string | undefined;
   let rawProviderOutput: string | undefined;
 
   try {
@@ -37,13 +38,15 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
     status = response.status;
     const data = await response.json().catch(async () => ({ raw: await response.text().catch(() => "") }));
     if (!response.ok) {
-      rawProviderError = providerErrorMessage(data) ?? `Groq request failed: ${response.status}`;
+      const errorInfo = providerErrorInfo(data);
+      rawProviderError = errorInfo.message ?? `Groq request failed: ${response.status}`;
+      rawProviderErrorType = errorInfo.type;
       throw new Error(rawProviderError);
     }
     const content = data?.choices?.[0]?.message?.content;
     rawProviderOutput = typeof content === "string" ? content : JSON.stringify(data).slice(0, 2000);
     if (typeof content !== "string" || !content.trim()) throw new Error("Groq response did not contain Markdown content.");
-    const answerMarkdown = scrubDefaultAnswerMarkdown(content.trim());
+    const answerMarkdown = scrubDefaultAnswerMarkdown(content.trim(), deterministic.source_papers.map((paper) => paper.title));
     const synthesis: LlmSynthesisResult = {
       synthesis_mode: "groq",
       answer_markdown: answerMarkdown,
@@ -62,12 +65,12 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
       ...deterministic,
       answer: answerMarkdown,
       llm_synthesis: synthesis,
-      runtime: { provider_configured: true, provider_connected: true, synthesis_attempted: true, synthesis_mode: "groq", provider: "groq" },
+      runtime: { ...deterministic.runtime, provider_configured: true, provider_connected: true, synthesis_attempted: true, synthesis_mode: "groq", provider: "groq" },
       warnings: [...deterministic.warnings, "Groq Markdown synthesis used for the default answer."]
     };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Unknown Groq synthesis error";
-    return groqFallback(deterministic, reason, status, rawProviderOutput, providerErrorStillConnected(reason), rawProviderError, context);
+    return groqFallback(deterministic, reason, status, rawProviderOutput, providerErrorStillConnected(reason, status, rawProviderErrorType), rawProviderError, context, rawProviderErrorType);
   } finally {
     clearTimeout(timer);
   }
@@ -123,6 +126,7 @@ export function buildMarkdownSynthesisContext(response: OkfChatResponse) {
     };
   });
   return {
+    answer_plan: response.answer_plan ? { intent: response.answer_plan.intent, answer_shape: response.answer_plan.answer_shape, selected_papers: response.answer_plan.selected_papers, paper_matches: response.answer_plan.paper_matches, design_moves: response.answer_plan.design_moves, flow_rows: response.answer_plan.flow_rows, comparison_rows: response.answer_plan.comparison_rows, evidence_pack: response.answer_plan.evidence_pack, constraints: response.answer_plan.constraints, things_to_avoid: response.answer_plan.things_to_avoid, synthesis_policy: response.answer_plan.synthesis_policy, criteria: response.answer_plan.criteria } : undefined,
     user_query: clip(query, 320),
     intent: response.intent,
     inferred_design_themes: themes,
@@ -138,43 +142,61 @@ export function buildMarkdownSynthesisContext(response: OkfChatResponse) {
   };
 }
 
-const markdownSystemPrompt = "You are an evidence-grounded DSR decision-support assistant. Do not summarize the papers. Convert retrieved DSR knowledge into actionable design guidance for the user's design problem. Use only the retrieved OKF context. When adapting a concept to the user's domain, mark it mixed or query-generated. Prefer domain-appropriate phrasing over literal paper labels. Do not output raw evidence IDs, raw concept IDs, or a naked bibliography list in the default answer. Do not invent papers, citations, evidence, or OKF concepts. Do not use healthcare/HIE-specific terms unless the user asks about healthcare, HIE, or consent. Return concise Markdown only.";
+const markdownSystemPrompt = "You are an evidence-grounded DSR decision-support assistant. You receive a validated deterministic AnswerPlan plus compact OKF context. Use only that plan, its papers, concepts, relation rows, and evidence. Never add papers, citations, evidence, concepts, or unsupported mechanisms. Do not output raw evidence IDs or concept IDs in the default answer. Follow the answer-type prompt exactly and keep Markdown concise.";
 
 function markdownUserPrompt(context: ReturnType<typeof buildMarkdownSynthesisContext>) {
   return [
-    "Write Markdown with exactly these sections: # Recommendation, ## Design moves to reuse, ## Suggested architecture direction, ## What not to overclaim.",
-    "# Recommendation must be 3-5 sentences and directly answer the design question.",
-    "Under ## Design moves to reuse, provide 5-7 moves. For each move use a level-3 heading like ### 1. <short move title>, then bullets for **What to build:**, **Reuse from OKF:**, **Supporting papers:**, **Evidence:**, and **Adaptation status:**.",
-    "Under ## Suggested architecture direction, provide 4-6 bullets. Make it read like a coherent protocol architecture when the query asks about identity, marketplace, review, continuity, or evidence handling.",
-    "Under ## What not to overclaim, provide 2-4 limitations.",
-    "Rules: use only retrieved OKF context; mention paper names naturally; never output raw evidence IDs, raw concept IDs, or paper IDs; never end with a raw source-paper list; exclude weakly relevant papers from design moves; synthesize across papers when the user asks for cross-paper reuse.",
-    "Domain adaptation rules: prefer the user's domain terms over literal source-domain labels. Do not use HIE-specific terms unless the query asks about healthcare or consent. Do not use NIL random minting unless the query asks about NFTs, royalties, fairness, or random allocation. Do not use peer-review tokenization unless the query asks about token incentives or reviewer rewards. Mark product-specific constructs such as canonical variant registry, verified-purchase review gate, seller relisting continuity, and review-continuity ledger as mixed or query-generated unless directly stored in OKF.",
-    "Compact retrieved OKF context:",
+    promptTemplateForIntent(context.intent),
+    "AnswerPlan rules: use only answer_plan and compact retrieved OKF context; do not add papers, evidence, concepts, relation rows, or unsupported mechanisms; do not expose raw evidence IDs, concept IDs, or paper IDs; opening paragraph must reference the actual task and dominant source(s).",
+    "Domain adaptation rules: mark adapted target-domain constructs as mixed or query-generated. Do not use HIE/healthcare labels unless the query asks about healthcare, HIE, or consent. Do not use NIL/NFT allocation unless the query asks about NFTs, royalties, fairness, or random allocation. Do not use peer-review tokenization unless the query asks about token incentives or reviewer rewards.",
+    "Validated AnswerPlan and compact OKF context:",
     JSON.stringify(context)
   ].join("\n\n");
 }
-function groqFallback(response: OkfChatResponse, reason: string, status?: number, rawProviderOutput?: string, connected = false, rawProviderError?: string, compactContext?: ReturnType<typeof buildMarkdownSynthesisContext>): OkfChatResponse {
+
+function promptTemplateForIntent(intent: string) {
+  const templates: Record<string, string> = {
+    PAPER_DISCOVERY_QUERY: "Write concise Markdown for a paper discovery answer. Start with 'I found <n> strong matches and <n> partial matches'. Return ranked papers grouped into strong and partial matches. Do not recommend an architecture.",
+    PAPER_ELEMENT_QUERY: "Write concise Markdown for exact extraction from the named paper. Group by requested element type. Do not mention unrelated papers and do not provide architecture guidance.",
+    DSR_FLOW_QUERY: "Write concise Markdown for a relation-backed DSR flow. Include Requirement -> Principle -> Feature rows from answer_plan.flow_rows. Do not output generic design moves or a raw graph dump.",
+    DESIGN_REUSE_QUERY: "Write Markdown with sections # Recommendation, ## Design moves to reuse, ## Suggested architecture direction, ## What not to overclaim. Provide 5-7 grounded design moves from answer_plan.design_moves.",
+    DESIGN_REUSE_FLOW_QUERY: "Write Markdown with sections # Recommendation, ## Design moves to reuse, ## Requirement -> Principle -> Feature -> Artifact flow, ## Suggested architecture direction, ## What not to overclaim. Use answer_plan.flow_rows for the flow.",
+    EVIDENCE_QUERY: "Write concise Markdown grouped by paper and concept evidence. Do not generate architecture recommendations. Say when evidence is related but not exact.",
+    COMPARISON_QUERY: "Write concise Markdown with a comparison table by paper and DSR element type, then similarities, differences, and reuse implications. Do not collapse it into generic design advice.",
+    IMPLEMENTATION_LIFECYCLE_QUERY: "Write concise Markdown centered on Integrated Blockchain ISDM. Include analysis -> preliminary design -> detailed design -> construction -> transition -> maintenance -> retirement, plus roles and models. Avoid IoT/HIE/privacy content unless requested.",
+    EVALUATION_PLANNING_QUERY: "Write concise Markdown with evaluation design options, what retrieved papers did, limitations, and fit to artifact maturity.",
+    LIBRARY_OVERVIEW_QUERY: "Write a deterministic-style loaded-paper overview with one-line contribution per paper. No extra recommendations.",
+    LIBRARY_STATS_QUERY: "Write a deterministic-style statistics answer. Preserve exact counts from answer_plan and do not estimate.",
+    NEGATIVE_OR_EXISTENCE_QUERY: "Write a strict existence/no-match answer. If no formal stored DesignPrinciple matches, say so. Related mechanisms must be clearly marked as related, not formal.",
+    CLARIFICATION_QUERY: "Ask one concise clarification or give 2-3 possible interpretations. Do not retrieve broadly."
+  };
+  return templates[intent] ?? templates.DESIGN_REUSE_QUERY;
+}
+
+function groqFallback(response: OkfChatResponse, reason: string, status?: number, rawProviderOutput?: string, connected = false, rawProviderError?: string, compactContext?: ReturnType<typeof buildMarkdownSynthesisContext>, errorType?: string): OkfChatResponse {
   const baseUrl = process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1";
   const evidenceRefs: OkfEvidenceRef[] = response.evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence as OkfEvidenceRef["confidence"] }));
-  const fallbackPayload = buildFallbackAnswer(response.interpreted_problem ?? "OKF query", (response.flow_rows ?? []).slice(0, 7), response.source_papers, evidenceRefs, undefined, reason);
-  const answer = `LLM synthesis failed; showing compact retrieval summary.
-
-${renderDecisionSupportMarkdown(fallbackPayload)}`;
+  const rateLimited = status === 429 || /429|rate limit/i.test(reason) || errorType === "rate_limit_exceeded";
+  const fallbackMode = rateLimited ? "fallback_rate_limited" as const : "fallback_provider_error" as const;
+  const providerErrorType = errorType ?? (rateLimited ? "rate_limit_exceeded" : undefined);
+  const prefix = rateLimited ? "Groq rate limit reached; showing structured OKF answer." : "LLM synthesis failed; showing structured OKF answer.";
+  const shouldUseReuseFallback = response.intent === "DESIGN_REUSE_QUERY" || response.intent === "DESIGN_REUSE_FLOW_QUERY";
+  const fallbackPayload = shouldUseReuseFallback ? { ...buildFallbackAnswer(response.interpreted_problem ?? "OKF query", (response.flow_rows ?? []).slice(0, 7), response.source_papers, evidenceRefs, undefined, reason), synthesis_mode: fallbackMode } : response.answer_payload ? { ...response.answer_payload, synthesis_mode: fallbackMode } : undefined;
+  const answer = shouldUseReuseFallback && fallbackPayload ? `${prefix}\n\n${renderDecisionSupportMarkdown(fallbackPayload)}` : `${prefix}\n\n${response.answer}`;
   return {
     ...response,
     answer,
     answer_payload: fallbackPayload,
     llm_synthesis: {
-      synthesis_mode: "fallback_error",
+      synthesis_mode: fallbackMode,
       answer_markdown: answer,
-      provider_metadata: { provider: "groq", model: process.env.GROQ_MODEL, status, base_url: safeBaseUrl(baseUrl) },
-      debug: { fallback_reason: reason, provider_response_status: status, raw_provider_error: rawProviderError, raw_provider_output: rawProviderOutput, compact_context: compactContext }
+      provider_metadata: { provider: "groq", model: process.env.GROQ_MODEL, status, error_type: providerErrorType, base_url: safeBaseUrl(baseUrl) },
+      debug: { fallback_reason: reason, provider_response_status: status, provider_error_type: providerErrorType, raw_provider_error: rawProviderError, raw_provider_output: rawProviderOutput, compact_context: compactContext }
     },
-    runtime: { provider_configured: Boolean(process.env.GROQ_API_KEY && process.env.GROQ_MODEL), provider_connected: connected, synthesis_attempted: true, synthesis_mode: "fallback_error", provider: "groq", fallback_reason: reason },
-    warnings: [...response.warnings, `Groq Markdown synthesis failed. ${reason}`]
+    runtime: { ...response.runtime, provider_configured: Boolean(process.env.GROQ_API_KEY && process.env.GROQ_MODEL), provider_connected: rateLimited || connected, synthesis_attempted: true, synthesis_mode: fallbackMode, provider: "groq", fallback_reason: reason, provider_status_code: status, provider_error_type: providerErrorType },
+    warnings: [...response.warnings, `Groq Markdown synthesis fell back. ${reason}`]
   };
 }
-
 function nodeConceptId(response: OkfChatResponse, nodeId: string) {
   return response.flow.nodes.find((node) => node.id === nodeId)?.concept_id;
 }
@@ -237,8 +259,8 @@ function clip(value: string | undefined, limit: number) {
   return text.length > limit ? `${text.slice(0, limit - 1)}...` : text;
 }
 
-function scrubDefaultAnswerMarkdown(value: string) {
-  return value
+function scrubDefaultAnswerMarkdown(value: string, paperTitles: string[] = []) {
+  return stripNakedPaperTitleTail(value, paperTitles)
     .replace(/\n+#{1,3}\s*(?:Source papers|Sources|Bibliography)\s*\n[\s\S]*$/i, "")
     .replace(/\n+Source papers:\s*[\s\S]*$/i, "")
     .replace(/\b[A-Z][A-Z0-9_]{2,}:[A-Za-z0-9_.:-]+\b/g, "stored OKF concept")
@@ -246,16 +268,45 @@ function scrubDefaultAnswerMarkdown(value: string) {
     .replace(/\b[A-Z][A-Z0-9_]{2,}_(?:19|20)\d{2}\b/g, "the retrieved paper")
     .trim();
 }
-function providerErrorMessage(data: unknown) {
-  if (!data || typeof data !== "object") return undefined;
-  const record = data as Record<string, unknown>;
-  const error = record.error;
-  if (error && typeof error === "object" && "message" in error) return String((error as { message?: unknown }).message);
-  if (typeof record.message === "string") return record.message;
-  if (typeof record.raw === "string") return record.raw.slice(0, 500);
-  return undefined;
+
+function stripNakedPaperTitleTail(value: string, paperTitles: string[]) {
+  const lines = value.replace(/\s+$/g, "").split(/\r?\n/);
+  let index = lines.length - 1;
+  while (index >= 0 && !lines[index].trim()) index -= 1;
+  const tail: string[] = [];
+  while (index >= 0 && isBarePaperTitleLine(lines[index], paperTitles)) {
+    tail.unshift(lines[index]);
+    index -= 1;
+    while (index >= 0 && !lines[index].trim()) index -= 1;
+  }
+  if (tail.length < 2) return value;
+  return lines.slice(0, index + 1).join("\n");
 }
 
+function isBarePaperTitleLine(line: string, paperTitles: string[]) {
+  const normalized = normalizePaperTitle(line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, ""));
+  return paperTitles.some((title) => {
+    const full = normalizePaperTitle(title);
+    const short = normalizePaperTitle(title.includes(":") ? title.split(":")[0] : title);
+    return normalized === full || normalized === short;
+  });
+}
+
+function normalizePaperTitle(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+function providerErrorInfo(data: unknown): { message?: string; type?: string } {
+  if (!data || typeof data !== "object") return {};
+  const record = data as Record<string, unknown>;
+  const error = record.error;
+  if (error && typeof error === "object") {
+    const err = error as { message?: unknown; type?: unknown; code?: unknown };
+    return { message: err.message ? String(err.message) : undefined, type: err.type ? String(err.type) : err.code ? String(err.code) : undefined };
+  }
+  if (typeof record.message === "string") return { message: record.message, type: typeof record.type === "string" ? record.type : undefined };
+  if (typeof record.raw === "string") return { message: record.raw.slice(0, 500) };
+  return {};
+}
 function safeBaseUrl(value: string) {
   try {
     const url = new URL(value);
@@ -265,6 +316,11 @@ function safeBaseUrl(value: string) {
   }
 }
 
-function providerErrorStillConnected(reason: string) {
-  return !/(request failed:\s*(401|403)|fetch failed|network|abort|timeout|ECONN|ENOTFOUND|ETIMEDOUT|rate limit|429)/i.test(reason);
+function providerErrorStillConnected(reason: string, status?: number, errorType?: string) {
+  if (status === 429 || errorType === "rate_limit_exceeded" || /rate limit|429/i.test(reason)) return true;
+  if (status === 401 || status === 403) return false;
+  return !/(request failed:\s*(401|403)|fetch failed|network|abort|timeout|ECONN|ENOTFOUND|ETIMEDOUT)/i.test(reason);
 }
+
+
+

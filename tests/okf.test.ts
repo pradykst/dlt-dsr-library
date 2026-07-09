@@ -91,7 +91,7 @@ test("OKF database access uses prefixed table names", () => {
 test("paper-specific element query returns only the named paper and both requested types", async () => {
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
-  assert.equal(response.intent, "DSR_ELEMENT_QUERY");
+  assert.equal(response.intent, "PAPER_ELEMENT_QUERY");
   assert.ok(response.retrieved_concepts.length > 0);
   assert.ok(response.retrieved_concepts.every((concept) => concept.paper_id === "BLOCKCHAIN_IOT_SDPS_2019"));
   assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignRequirement").length, 4);
@@ -112,7 +112,7 @@ test("flow query is classified and uses stored relations without requirement-to-
 test("design recommendation query marks query-generated problem nodes", async () => {
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("I need a marketplace system for manipulated product descriptions.", kb);
-  assert.equal(response.intent, "DESIGN_RECOMMENDATION_QUERY");
+  assert.equal(response.intent, "DESIGN_REUSE_QUERY");
   assert.ok(response.flow.nodes.some((node) => node.type === "Problem" && node.query_generated === true && !node.paper_id));
 });
 
@@ -121,7 +121,7 @@ test("source paper metadata includes meaningful reason and counts", async () => 
   const response = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
   assert.equal(response.source_papers.length, 1);
   assert.equal(response.source_papers[0].paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
-  assert.equal(response.source_papers[0].reason, "matched requirement");
+  assert.equal(response.source_papers[0].reason, "Named paper hard filter.");
   assert.equal(response.source_papers[0].requirements_count, 4);
   assert.equal(response.source_papers[0].principles_count, 4);
   assert.ok(response.source_papers[0].evidence_count > 0);
@@ -131,7 +131,7 @@ test("source paper metadata includes meaningful reason and counts", async () => 
 test("feature element query does not mention zero requirements or principles", async () => {
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Show me the design features from Blockchain for the IoT.", kb);
-  assert.equal(response.intent, "DSR_ELEMENT_QUERY");
+  assert.equal(response.intent, "PAPER_ELEMENT_QUERY");
   assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignFeature").length, 9);
   assert.match(response.answer, /9 design features/i);
   assert.equal(/0 design requirement|0 design principle/i.test(response.answer), false);
@@ -141,7 +141,7 @@ test("flow query answer summarizes branches instead of dumping all edges", async
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(response.intent, "DSR_FLOW_QUERY");
-  assert.match(response.answer, /Summarized Requirement/i);
+  assert.match(response.answer, /Requirement -> Principle -> Feature rows/i);
   assert.match(response.answer, /Full relation detail is available in the Flow tab/i);
   assert.ok(response.flow.edges.length > 8);
   assert.ok(response.answer.split("\n").length < response.flow.edges.length + 6);
@@ -212,7 +212,7 @@ test("privacy-preserving decentralized identity query retrieves a well-shaped cr
   assert.ok(papers.includes("BLOCKCHAIN_IOT_SDPS_2019"));
   const response = await synthesizeWithNoProvider(query, kb);
   assert.ok(response.answer_payload);
-  assert.equal(response.answer_payload.synthesis_mode, "deterministic_fallback");
+  assert.equal(response.answer_payload.synthesis_mode, "structured_okf_answer");
   assert.ok(response.answer_payload.design_moves.length >= 5);
   assert.ok(response.answer_payload.source_papers.length >= 5);
 });
@@ -228,7 +228,7 @@ test("semantic rewording retrieves similar source papers without an exact query 
 test("fallback answer markdown is compact and does not expose raw evidence ids", async () => {
   const kb = parseOkfLibrary();
   const response = await synthesizeWithNoProvider(productIdentityQuery, kb);
-  assert.equal(response.runtime?.synthesis_mode, "deterministic_fallback");
+  assert.equal(response.runtime?.synthesis_mode, "structured_okf_answer");
   assert.match(response.answer, /compact|found|retrieved/i);
   assert.equal(/Requirement -> Principle -> Feature -> Artifact flow:\n\d+\. Requirement:/i.test(response.answer), false);
   for (const evidence of response.evidence.slice(0, 20)) assert.equal(response.answer.includes(evidence.evidence_id), false);
@@ -395,8 +395,8 @@ test("Groq failure shows a marked compact retrieval fallback instead of raw debu
   const deterministic = await answerOkfChat(productIdentityQuery, kb);
   await withMockedGroq(undefined, async () => {
     const response = await synthesizeWithOptionalLlm(deterministic);
-    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_error");
-    assert.match(response.answer, /^LLM synthesis failed; showing compact retrieval summary\./);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_provider_error");
+    assert.match(response.answer, /^LLM synthesis failed; showing structured OKF answer\./);
     assert.equal(/Evidence:\s*[^\n]*:ev_/i.test(response.answer), false);
     assert.ok(response.llm_synthesis?.debug?.fallback_reason);
   }, new Error("mock Groq outage"));
@@ -406,19 +406,99 @@ test("Featherless failure uses compact deterministic fallback with debug reason"
   const deterministic = await answerOkfChat(productIdentityQuery, kb);
   await withMockedFeatherless(undefined, async () => {
     const response = await synthesizeWithOptionalLlm(deterministic);
-    assert.equal(response.answer_payload?.synthesis_mode, "deterministic_fallback");
-    assert.equal(response.runtime?.synthesis_mode, "deterministic_fallback");
+    assert.equal(response.answer_payload?.synthesis_mode, "fallback_provider_error");
+    assert.equal(response.runtime?.synthesis_mode, "fallback_provider_error");
     assert.ok(response.runtime?.fallback_reason);
     assert.match(response.answer_payload?.direct_answer ?? "", /LLM synthesis failed/i);
     assert.equal(/Evidence:\s*[^\n]*:evidence/i.test(response.answer), false);
   }, new Error("mock timeout"));
 });
 
+test("deterministic stats query reports structured OKF answer with configured Groq and no live call", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat("How many papers are in the OKF library?", kb);
+  let called = false;
+  await withGroqEnv(async () => {
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = (async () => { called = true; throw new Error("live Groq should not be called for stats"); }) as typeof fetch;
+    try {
+      const response = await synthesizeWithOptionalLlm(deterministic);
+      assert.equal(response.runtime?.synthesis_mode, "structured_okf_answer");
+      assert.equal(response.runtime?.provider_configured, true);
+      assert.equal(response.runtime?.provider_connected, true);
+      assert.equal(response.runtime?.synthesis_attempted, false);
+      assert.equal(called, false);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
+test("Groq 429 produces rate-limit fallback without disconnecting provider", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  await withMockedGroqError(429, { error: { message: "rate limit exceeded", type: "rate_limit_exceeded" } }, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_rate_limited");
+    assert.equal(response.runtime?.synthesis_mode, "fallback_rate_limited");
+    assert.equal(response.runtime?.provider_connected, true);
+    assert.equal(response.runtime?.provider_status_code, 429);
+    assert.equal(response.runtime?.provider_error_type, "rate_limit_exceeded");
+    assert.match(response.answer, /^Groq rate limit reached; showing structured OKF answer\./);
+  });
+});
+
+test("Groq auth failure reports provider-error fallback", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  await withMockedGroqError(401, { error: { message: "invalid api key", type: "invalid_request_error" } }, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_provider_error");
+    assert.equal(response.runtime?.provider_connected, false);
+    assert.equal(response.runtime?.provider_status_code, 401);
+    assert.equal(response.runtime?.provider_error_type, "invalid_request_error");
+  });
+});
+
+test("mock LLM provider synthesizes offline without live fetch", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const previousProvider = process.env.LLM_PROVIDER;
+  const previousMock = process.env.GROQ_MOCK;
+  const previousFetch = globalThis.fetch;
+  let called = false;
+  process.env.LLM_PROVIDER = "mock";
+  delete process.env.GROQ_MOCK;
+  globalThis.fetch = (async () => { called = true; throw new Error("mock provider should not fetch"); }) as typeof fetch;
+  try {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(response.runtime?.provider, "mock");
+    assert.equal(response.runtime?.synthesis_mode, "mock");
+    assert.equal(response.llm_synthesis?.synthesis_mode, "mock");
+    assert.match(response.answer, /^# Recommendation|^# Mock OKF synthesis/);
+    assert.equal(called, false);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousProvider === undefined) delete process.env.LLM_PROVIDER; else process.env.LLM_PROVIDER = previousProvider;
+    if (previousMock === undefined) delete process.env.GROQ_MOCK; else process.env.GROQ_MOCK = previousMock;
+  }
+});
 test("Flow tab does not dump all retrieved graph nodes by default", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
   assert.ok(source.includes("Compact design move paths"));
   assert.ok(source.includes("slice(0, 7)"));
   assert.equal(source.includes("LayeredFlow"), false);
+});
+test("DB health and chat debug expose Supabase clock-skew fallback metadata", () => {
+  const retrieval = readFileSync(path.join(process.cwd(), "lib", "okf", "retrieval.ts"), "utf8");
+  const dbHealth = readFileSync(path.join(process.cwd(), "app", "api", "health", "db", "route.ts"), "utf8");
+  const chatRoute = readFileSync(path.join(process.cwd(), "app", "api", "okf", "chat", "route.ts"), "utf8");
+  const ui = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(retrieval.includes("PGRST303"));
+  assert.ok(retrieval.includes("Supabase rejected JWT: local system clock may be out of sync."));
+  assert.ok(dbHealth.includes("supabaseClockSkewMessage"));
+  assert.ok(chatRoute.includes("getOkfKnowledgeBaseLoadMetadata"));
+  assert.ok(ui.includes("DB loaded from"));
 });
 test("LLM health endpoint is provider-neutral and does not expose Featherless fields for Groq", () => {
   const source = readFileSync(path.join(process.cwd(), "app", "api", "health", "llm", "route.ts"), "utf8");
@@ -436,6 +516,221 @@ test("Featherless provider files enforce the new grounded JSON contract", () => 
   assert.ok(prompt.includes("Do not invent papers, citations, evidence IDs, or OKF concepts"));
 });
 
+
+test("final evaluation queries Q1-Q4 follow the new answer policies", async () => {
+  const kb = parseOkfLibrary();
+
+  const q1 = await answerOkfChat(productIdentityQuery, kb);
+  assert.equal(q1.intent, "DESIGN_REUSE_FLOW_QUERY");
+  for (const required of ["SHORT_END_STICK_2025", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "BLOCKCHAIN_IOT_SDPS_2019", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) assert.ok(q1.source_papers.some((paper) => paper.paper_id === required), `Q1 missing ${required}`);
+  assert.equal(q1.source_papers.some((paper) => paper.paper_id === "PEER_REVIEW_TOKEN_INCENTIVES_2025"), false);
+  assert.ok(q1.answer_plan?.design_moves.length || q1.answer_payload?.design_moves.length);
+
+  const q2 = await answerOkfChat("Find me papers that discuss privacy-preserving identity, credentials, and revocation.", kb);
+  assert.equal(q2.intent, "PAPER_DISCOVERY_QUERY");
+  assert.equal(q2.source_papers[0].paper_id, "SSI_KYC_FRAMEWORK_2022");
+  assert.ok(q2.source_papers.some((paper) => paper.paper_id === "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023"));
+  assert.notEqual(q2.source_papers[0].paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+  assert.equal(/Suggested architecture|Recommendation/i.test(q2.answer), false);
+
+  const q3 = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
+  assert.equal(q3.intent, "PAPER_ELEMENT_QUERY");
+  assert.deepEqual([...new Set(q3.retrieved_concepts.map((concept) => concept.paper_id))], ["BLOCKCHAIN_IOT_SDPS_2019"]);
+  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "DesignRequirement").length, 4);
+  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "DesignPrinciple").length, 4);
+
+  const q4 = await answerOkfChat("Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.", kb);
+  assert.equal(q4.intent, "DSR_FLOW_QUERY");
+  assert.equal(q4.source_papers[0].paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+  assert.ok((q4.flow_rows ?? []).length >= 4);
+  assert.match(q4.answer, /Requirement -> Principle -> Feature rows/i);
+  assert.equal(/Design moves to reuse/i.test(q4.answer), false);
+});
+
+test("final evaluation queries Q5-Q10 pick the correct primary DSR source", async () => {
+  const kb = parseOkfLibrary();
+  const cases = [
+    ["What design knowledge should I reuse for sensitive commercial data where parties compute or verify without exposing raw data?", "SHORT_END_STICK_2025", /proof of integrity|proof-of-integrity|nonreversible|joint approval/i],
+    ["What design knowledge should I reuse for a B2B capacity marketplace with trust, reputation, and screening?", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", /signaling|screening|reputation|authority|fairness|deterrence/i],
+    ["How should I structure the implementation lifecycle for a blockchain-based artifact?", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024", /analysis -> preliminary design -> detailed design -> construction -> transition -> maintenance -> retirement/i],
+    ["What design knowledge should I reuse for token incentives and reviewer motivation?", "PEER_REVIEW_TOKEN_INCENTIVES_2025", /token|incentive|reviewer|motivation|reward/i],
+    ["What design knowledge should I reuse for a fair inclusive marketplace?", "NIL_NFT_MARKETPLACE_2026", /inclusive|fair|meritocratic|market thickness|market safety|random minting|royalt/i],
+    ["What design knowledge should I reuse for consent status and auditability?", "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023", /consent|status|audit|permission|interoperability/i]
+  ] as const;
+
+  for (const [query, primary, pattern] of cases) {
+    const response = await answerOkfChat(query, kb);
+    assert.equal(response.source_papers[0].paper_id, primary, query);
+    assert.match(response.answer, pattern, query);
+  }
+});
+
+test("library stats queries return exact OKF counts", async () => {
+  const kb = parseOkfLibrary();
+  const papers = await answerOkfChat("How many papers are in the OKF library?", kb);
+  assert.equal(papers.intent, "LIBRARY_STATS_QUERY");
+  assert.equal(papers.library_stats?.counts.papers, kb.papers.length);
+  assert.match(papers.answer, new RegExp(`${kb.papers.length} paper`));
+
+  const researchQuestions = await answerOkfChat("How many research questions are in the library?", kb);
+  const rqCount = kb.concepts.filter((concept) => concept.type === "ResearchQuestion").length;
+  assert.equal(researchQuestions.library_stats?.counts.by_type.ResearchQuestion, rqCount);
+  assert.match(researchQuestions.answer, new RegExp(`${rqCount} ResearchQuestion`));
+
+  const principles = await answerOkfChat("How many design principles are stored?", kb);
+  const principleCount = kb.concepts.filter((concept) => concept.type === "DesignPrinciple").length;
+  assert.equal(principles.library_stats?.counts.by_type.DesignPrinciple, principleCount);
+  assert.match(principles.answer, new RegExp(`${principleCount} design principle`));
+
+  const ambiguous = await answerOkfChat("How many questions are in the library?", kb);
+  assert.equal(ambiguous.intent, "LIBRARY_STATS_QUERY");
+  assert.match(ambiguous.answer, /Do you mean research questions extracted from papers, or example\/user questions/i);
+  assert.match(ambiguous.answer, new RegExp(`${rqCount} ResearchQuestion`));
+});
+test("negative ZKP and library overview queries stay deterministic and honest", async () => {
+  const kb = parseOkfLibrary();
+  const negative = await answerOkfChat("Which paper uses zero-knowledge proofs as a formal design principle?", kb);
+  assert.equal(negative.intent, "NEGATIVE_OR_EXISTENCE_QUERY");
+  assert.match(negative.answer, /did not find a formal stored DesignPrinciple/i);
+  assert.equal(/formal stored design principle match\(es\):\n1\./i.test(negative.answer), false);
+
+  const overview = await answerOkfChat("List all papers currently in the OKF library.", kb);
+  assert.equal(overview.intent, "LIBRARY_OVERVIEW_QUERY");
+  assert.equal(kb.papers.length, 9);
+  assert.equal(overview.source_papers.length, kb.papers.length);
+  for (const paper of kb.papers) assert.ok(overview.answer.includes(paper.title));
+});
+
+test("paper discovery variants rank sources without architecture recommendations", async () => {
+  const kb = parseOkfLibrary();
+  const discoveryQueries = [
+    ["Which papers have design principles for reputation and screening?", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024"],
+    ["Which papers contain features for off-chain storage and on-chain hash storage?", "BLOCKCHAIN_IOT_SDPS_2019"],
+    ["Find papers that have token incentives or reviewer rewards.", "PEER_REVIEW_TOKEN_INCENTIVES_2025"],
+    ["Find papers about zero-knowledge proofs as a formal design principle.", "NEGATIVE_OR_EXISTENCE_QUERY"]
+  ] as const;
+
+  for (const [query, expected] of discoveryQueries) {
+    const response = await answerOkfChat(query, kb);
+    if (expected === "NEGATIVE_OR_EXISTENCE_QUERY") assert.equal(response.intent, expected);
+    else {
+      assert.equal(response.intent, "PAPER_DISCOVERY_QUERY");
+      assert.equal(response.source_papers[0].paper_id, expected, query);
+      assert.equal(/Suggested architecture|Design moves to reuse/i.test(response.answer), false);
+    }
+  }
+});
+test("paper discovery separates strong and partial privacy credential matches", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Find me papers that discuss privacy-preserving identity, credentials, and revocation.", kb);
+  assert.equal(response.intent, "PAPER_DISCOVERY_QUERY");
+  const matches = new Map((response.answer_plan?.paper_matches ?? []).map((match) => [match.paper_id, match]));
+  assert.equal(matches.get("SSI_KYC_FRAMEWORK_2022")?.match_strength, "strong");
+  for (const paperId of ["HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023", "BLOCKCHAIN_IOT_SDPS_2019", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024"]) {
+    assert.notEqual(matches.get(paperId)?.match_strength, "strong", paperId);
+  }
+  assert.ok((response.answer_plan?.paper_matches ?? []).some((match) => match.match_strength === "partial"));
+  assert.ok((response.answer_plan?.paper_matches ?? []).filter((match) => match.match_strength === "strong").length < (response.answer_plan?.paper_matches ?? []).length);
+  assert.ok(response.source_papers.every((paper) => paper.match_strength === "strong" || paper.match_strength === "partial"));
+  assertNoNakedPaperTitleTail(response);
+});
+
+test("paper discovery marks sensitive commercial data sources with focused strength", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Which papers help me design interorganizational information sharing where companies can compute or verify shared information without exposing raw sensitive commercial data?", kb);
+  assert.equal(response.intent, "PAPER_DISCOVERY_QUERY");
+  const matches = new Map((response.answer_plan?.paper_matches ?? []).map((match) => [match.paper_id, match]));
+  assert.equal(response.source_papers[0].paper_id, "SHORT_END_STICK_2025");
+  assert.equal(matches.get("SHORT_END_STICK_2025")?.match_strength, "strong");
+  assert.equal(matches.get("SSI_KYC_FRAMEWORK_2022")?.match_strength, "partial");
+  assert.notEqual(matches.get("INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024")?.match_strength, "strong");
+  assertNoNakedPaperTitleTail(response);
+});
+
+test("default answers do not end with a naked source-paper title list", async () => {
+  const kb = parseOkfLibrary();
+  const queries = [
+    "How many papers are in the OKF library?",
+    "Find me papers that discuss privacy-preserving identity, credentials, and revocation.",
+    "Show me the design requirements and design principles from Blockchain for the IoT.",
+    "Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.",
+    "Show evidence for revocation in the SSI KYC framework.",
+    "What design knowledge should I reuse for sensitive commercial data where parties compute or verify without exposing raw data?",
+    productIdentityQuery,
+    "How should I structure the implementation lifecycle for a blockchain artifact?"
+  ];
+  for (const query of queries) assertNoNakedPaperTitleTail(await answerOkfChat(query, kb));
+});
+
+test("DSR flow answer strips command phrase from the human-readable subject", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.", kb);
+  assert.equal(response.intent, "DSR_FLOW_QUERY");
+  assert.match(response.answer, /^The relation-backed flow for tamper-resistant sensor-data protection is built from stored OKF relations\./);
+  assert.equal(/Build a Requirement/i.test(response.answer), false);
+});
+
+test("implementation lifecycle answer includes all seven ISDM stages with roles and models", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("How should I structure the implementation lifecycle for a blockchain artifact?", kb);
+  assert.equal(response.intent, "IMPLEMENTATION_LIFECYCLE_QUERY");
+  for (const stage of ["Analysis", "Preliminary design", "Detailed design", "Construction", "Transition", "Maintenance", "Retirement"]) assert.match(response.answer, new RegExp(stage, "i"));
+  assert.match(response.answer, /blockchain user, legal professional, architect, security\/core blockchain developer, smart contract developer, integrator\/auditor/i);
+  assert.match(response.answer, /use case, prototype, requirements, smart contract\/base architecture, data flow\/interactions\/consensus\/transactions, and executable smart contracts/i);
+  assert.match(response.answer, /domain-specific privacy, IoT, or identity patterns only after the lifecycle framing/i);
+});
+
+test("Flow tab uses DSR-layer colored card metadata and non-flow empty state", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  for (const token of ["okf-flow-card-requirement", "okf-flow-card-principle", "okf-flow-card-feature", "okf-flow-card-artifact", "data-dsr-layer", "bg-[#E9DDF7]", "bg-[#DFF3E5]", "bg-[#F4E2BF]", "bg-[#E4EEF9]"]) assert.ok(source.includes(token), token);
+  assert.ok(source.includes("ArrowRight"));
+  assert.ok(source.includes("ArrowDown"));
+  assert.ok(source.includes("No flow requested for this answer."));
+});
+
+test("source paper panel keeps role and reason compact while exposing discovery strength", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  assert.ok(source.includes("sourcePaperReason"));
+  assert.ok(source.includes("paper.match_strength"));
+  assert.ok(source.includes("formatMatchStrength(paper.match_strength)"));
+  assert.equal(source.includes("{paper.reason}</p>"), false);
+});
+
+test("Groq Markdown answer scrubs naked source-paper title tails", async () => {
+  const kb = parseOkfLibrary();
+  const deterministic = await answerOkfChat(productIdentityQuery, kb);
+  const titleTail = deterministic.source_papers.slice(0, 3).map((paper) => paper.title).join("\n");
+  const markdown = `# Recommendation\nUse the retrieved OKF papers for grounded design guidance.\n\n## Design moves to reuse\n1. Build a grounded move.\n\n## Suggested architecture direction\nKeep it grounded.\n\n## What not to overclaim\n- Do not overclaim.\n\n${titleTail}`;
+  await withMockedGroq(markdown, async () => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assertNoNakedPaperTitleTail(response);
+  });
+});
+function assertNoNakedPaperTitleTail(response: Awaited<ReturnType<typeof answerOkfChat>>) {
+  assert.equal(/\nSource papers:\s*/i.test(response.answer), false, response.intent);
+  assert.equal(hasNakedPaperTitleTail(response.answer, response.source_papers.map((paper) => paper.title)), false, response.intent);
+}
+
+function hasNakedPaperTitleTail(markdown: string, paperTitles: string[]) {
+  const lines = markdown.trim().split(/\r?\n/);
+  let index = lines.length - 1;
+  const tail: string[] = [];
+  while (index >= 0 && isBarePaperTitleLine(lines[index], paperTitles)) {
+    tail.unshift(lines[index]);
+    index -= 1;
+    while (index >= 0 && !lines[index].trim()) index -= 1;
+  }
+  return tail.length >= 2;
+}
+
+function isBarePaperTitleLine(line: string, paperTitles: string[]) {
+  const normalized = normalizeTitleForTail(line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, ""));
+  return paperTitles.some((title) => normalized === normalizeTitleForTail(title) || normalized === normalizeTitleForTail(title.includes(":") ? title.split(":")[0] : title));
+}
+
+function normalizeTitleForTail(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
 async function synthesizeWithNoProvider(query: string, kb = parseOkfLibrary()) {
   const previousProvider = process.env.LLM_PROVIDER;
   process.env.LLM_PROVIDER = "none";
@@ -445,6 +740,43 @@ async function synthesizeWithNoProvider(query: string, kb = parseOkfLibrary()) {
     if (previousProvider === undefined) delete process.env.LLM_PROVIDER;
     else process.env.LLM_PROVIDER = previousProvider;
   }
+}
+
+async function withGroqEnv(fn: () => Promise<void>) {
+  const previousProvider = process.env.LLM_PROVIDER;
+  const previousChatProvider = process.env.CHAT_PROVIDER;
+  const previousKey = process.env.GROQ_API_KEY;
+  const previousModel = process.env.GROQ_MODEL;
+  const previousSafeMode = process.env.GROQ_DAILY_SAFE_MODE;
+  const previousDisable = process.env.GROQ_DISABLE_LIVE_SYNTHESIS;
+  process.env.LLM_PROVIDER = "groq";
+  process.env.CHAT_PROVIDER = "groq";
+  process.env.GROQ_API_KEY = "test-key";
+  process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
+  process.env.GROQ_DAILY_SAFE_MODE = "false";
+  process.env.GROQ_DISABLE_LIVE_SYNTHESIS = "false";
+  try {
+    await fn();
+  } finally {
+    if (previousProvider === undefined) delete process.env.LLM_PROVIDER; else process.env.LLM_PROVIDER = previousProvider;
+    if (previousChatProvider === undefined) delete process.env.CHAT_PROVIDER; else process.env.CHAT_PROVIDER = previousChatProvider;
+    if (previousKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousKey;
+    if (previousModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousModel;
+    if (previousSafeMode === undefined) delete process.env.GROQ_DAILY_SAFE_MODE; else process.env.GROQ_DAILY_SAFE_MODE = previousSafeMode;
+    if (previousDisable === undefined) delete process.env.GROQ_DISABLE_LIVE_SYNTHESIS; else process.env.GROQ_DISABLE_LIVE_SYNTHESIS = previousDisable;
+  }
+}
+
+async function withMockedGroqError(status: number, body: unknown, fn: () => Promise<void>) {
+  const previousFetch = globalThis.fetch;
+  await withGroqEnv(async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })) as typeof fetch;
+    try {
+      await fn();
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
 }
 
 async function withMockedFeatherless(content: string | undefined, fn: () => Promise<void>, error?: Error) {
@@ -474,12 +806,16 @@ async function withMockedGroq(content: string | undefined, fn: () => Promise<voi
   const previousKey = process.env.GROQ_API_KEY;
   const previousModel = process.env.GROQ_MODEL;
   const previousBaseUrl = process.env.GROQ_BASE_URL;
+  const previousSafeMode = process.env.GROQ_DAILY_SAFE_MODE;
+  const previousDisable = process.env.GROQ_DISABLE_LIVE_SYNTHESIS;
   const previousFetch = globalThis.fetch;
   process.env.LLM_PROVIDER = "groq";
   process.env.CHAT_PROVIDER = "groq";
   process.env.GROQ_API_KEY = "test-key";
   process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
   process.env.GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+  process.env.GROQ_DAILY_SAFE_MODE = "false";
+  process.env.GROQ_DISABLE_LIVE_SYNTHESIS = "false";
   globalThis.fetch = (async () => {
     if (error) throw error;
     return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -493,5 +829,10 @@ async function withMockedGroq(content: string | undefined, fn: () => Promise<voi
     if (previousKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousKey;
     if (previousModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousModel;
     if (previousBaseUrl === undefined) delete process.env.GROQ_BASE_URL; else process.env.GROQ_BASE_URL = previousBaseUrl;
+    if (previousSafeMode === undefined) delete process.env.GROQ_DAILY_SAFE_MODE; else process.env.GROQ_DAILY_SAFE_MODE = previousSafeMode;
+    if (previousDisable === undefined) delete process.env.GROQ_DISABLE_LIVE_SYNTHESIS; else process.env.GROQ_DISABLE_LIVE_SYNTHESIS = previousDisable;
   }
 }
+
+
+

@@ -6,6 +6,12 @@ export type ConceptFilters = { paper_id?: string; tags?: string[]; query?: strin
 
 let cachedKb: OkfKnowledgeBase | null = null;
 let cachedDbKb: OkfKnowledgeBase | null = null;
+export type OkfKnowledgeBaseLoadMetadata = { db_loaded_from: "supabase" | "local_okf_fallback"; db_error_code?: string; db_error_message?: string };
+let lastKbLoadMetadata: OkfKnowledgeBaseLoadMetadata = { db_loaded_from: "local_okf_fallback" };
+
+export function getOkfKnowledgeBaseLoadMetadata(): OkfKnowledgeBaseLoadMetadata {
+  return lastKbLoadMetadata;
+}
 
 export function getOkfKnowledgeBase(force = false) {
   if (!cachedKb || force) cachedKb = parseOkfLibrary();
@@ -20,7 +26,10 @@ export async function getOkfKnowledgeBaseForChat(force = false) {
 }
 
 export async function loadOkfKnowledgeBaseFromSupabase(): Promise<OkfKnowledgeBase | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_message: "Supabase OKF knowledge base is not configured." };
+    return null;
+  }
   try {
     const { getSupabaseAdmin } = await import("../workbench/supabase-admin.ts");
     const supabase = getSupabaseAdmin();
@@ -33,15 +42,42 @@ export async function loadOkfKnowledgeBaseFromSupabase(): Promise<OkfKnowledgeBa
     const firstError = papersResult.error ?? conceptsResult.error ?? evidenceResult.error ?? relationsResult.error;
     if (firstError) throw firstError;
     const papers = (papersResult.data ?? []).map((paper) => ({ paper_id: String(paper.paper_id), title: String(paper.title), authors: Array.isArray(paper.authors) ? paper.authors.map(String) : undefined, year: typeof paper.year === "number" ? paper.year : undefined, source_pdf_path: paper.source_pdf_path ? String(paper.source_pdf_path) : undefined, review_status: paper.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_papers" }));
-    if (!papers.length) return null;
+    if (!papers.length) {
+      lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_message: "Supabase returned no OKF papers." };
+      return null;
+    }
     const concepts = (conceptsResult.data ?? []).map((concept) => ({ concept_id: String(concept.concept_id), paper_id: String(concept.paper_id), type: String(concept.type) as OkfConceptType, dsr_layer: String(concept.dsr_layer ?? ""), title: String(concept.title), description: String(concept.description ?? ""), body_text: String(concept.body_text ?? ""), tags: Array.isArray(concept.tags) ? concept.tags.map(String) : [], confidence: confidenceLabel(String(concept.confidence ?? "low")), extraction_type: concept.extraction_type === "explicit-in-artifact" ? "explicit-in-artifact" as const : concept.extraction_type === "explicit" ? "explicit" as const : "inferred" as const, review_status: concept.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_concepts", okf_path: concept.okf_path ? String(concept.okf_path) : undefined }));
     const evidence_items = (evidenceResult.data ?? []).map((item) => ({ evidence_id: String(item.evidence_id), paper_id: String(item.paper_id), concept_id: item.concept_id ? String(item.concept_id) : undefined, page_number: typeof item.page_number === "number" ? item.page_number : undefined, section: item.section ? String(item.section) : undefined, quote: item.quote ? String(item.quote) : undefined, paraphrase: String(item.paraphrase ?? ""), source_location: item.source_location ? String(item.source_location) : undefined, confidence: confidenceLabel(String(item.confidence ?? "low")), source_file: "supabase:okf_evidence_items" }));
     const relations = (relationsResult.data ?? []).map((relation) => ({ relation_id: String(relation.relation_id), source_concept_id: String(relation.source_concept_id), predicate: String(relation.predicate) as OkfRelationPredicate, target_concept_id: String(relation.target_concept_id), evidence_id: relation.evidence_id ? String(relation.evidence_id) : undefined, confidence: confidenceLabel(String(relation.confidence ?? "low")), relation_scope: relation.relation_scope === "cross_paper" ? "cross_paper" as const : relation.relation_scope === "query_generated" ? "query_generated" as const : "paper_level" as const, source_file: "supabase:okf_relations" }));
+    lastKbLoadMetadata = { db_loaded_from: "supabase" };
     return { papers, concepts, evidence_items, relations, warnings: [] };
   } catch (error) {
+    const db_error_code = supabaseErrorCode(error);
+    const db_error_message = db_error_code === "PGRST303" ? supabaseClockSkewMessage() : supabaseErrorMessage(error);
+    lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_code, db_error_message };
     console.warn("Unable to load OKF knowledge base from Supabase; falling back to local OKF files.", error);
     return null;
   }
+}
+function supabaseErrorCode(error: unknown) {
+  if (!error || typeof error !== "object") return undefined;
+  const record = error as { code?: unknown; details?: unknown; message?: unknown };
+  if (record.code) return String(record.code);
+  const text = [record.message, record.details].filter(Boolean).join(" ");
+  return text.includes("PGRST303") ? "PGRST303" : undefined;
+}
+
+function supabaseErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as { message?: unknown; details?: unknown };
+    return String(record.message ?? record.details ?? "Supabase OKF knowledge base unavailable.");
+  }
+  return "Supabase OKF knowledge base unavailable.";
+}
+
+export function supabaseClockSkewMessage() {
+  return "Supabase rejected JWT: local system clock may be out of sync.";
 }
 export function getRelevantPapers(query: string, kb = getOkfKnowledgeBase()) {
   const terms = tokenize(query);
@@ -157,6 +193,8 @@ function confidenceLabel(value: string): ConfidenceLabel {
   if (value === "high" || value === "medium-high" || value === "medium" || value === "low") return value;
   return "low";
 }
+
+
 
 
 

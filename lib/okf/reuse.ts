@@ -1,4 +1,5 @@
-import { buildOkfFlow } from "./flow.ts";
+﻿import { buildOkfFlow } from "./flow.ts";
+import { selectPolicySourcePapers } from "./policy.ts";
 import type { ConfidenceLabel, DecisionSupportAnswer, DesignMove, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfKnowledgeBase, OkfPaperSupport, OkfReuseFlowRow } from "./schema.ts";
 import type { OkfChatResponse, OkfQueryPlan } from "./chat.ts";
 
@@ -25,27 +26,7 @@ const designThemes: DesignTheme[] = [
 ];
 
 export function selectSourcePapers(query: string, kb: OkfKnowledgeBase, maxPapers = 8): OkfPaperSupport[] {
-  const terms = expandQueryTerms(tokenize(query));
-  const themes = inferDesignThemes(query);
-  return kb.papers
-    .map((paper) => {
-      const concepts = kb.concepts.filter((concept) => concept.paper_id === paper.paper_id);
-      const evidence = kb.evidence_items.filter((item) => item.paper_id === paper.paper_id);
-      const haystack = normalizeText([
-        paper.paper_id,
-        paper.title,
-        paper.body_text,
-        ...concepts.flatMap((concept) => [concept.title, concept.description, concept.body_text, concept.tags.join(" "), concept.type, concept.dsr_layer]),
-        ...evidence.flatMap((item) => [item.paraphrase, item.quote, item.section])
-      ].join(" "));
-      const themeScore = scoreThemes(haystack, themes) + paperThemeRoleBoost(paper.paper_id, themes);
-      const score = scoreText(haystack, terms) + conceptCoverageScore(concepts, terms, kb, themes) + titlePhraseScore(paper.title, query) + themeScore + paperRelevanceAdjustment(paper.paper_id, paper.title, query, themes);
-      const reason = reasonForPaper(concepts, terms, kb, themes, paper.paper_id);
-      return { paper_id: paper.paper_id, title: paper.title, reason, score };
-    })
-    .filter((paper) => paper.score > 0)
-    .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
-    .slice(0, maxPapers);
+  return selectPolicySourcePapers(query, kb, maxPapers);
 }
 
 export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase): OkfChatResponse {
@@ -89,7 +70,7 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
     ? "I retrieved relevant OKF knowledge, but LLM synthesis failed. Here is a compact evidence-backed summary."
     : compactDirectAnswer(query, source_papers.length, designMoves.length, evidenceRefs.length);
   return {
-    synthesis_mode: "deterministic_fallback",
+    synthesis_mode: "structured_okf_answer",
     title: fallbackReason ? "Compact OKF fallback summary" : "OKF decision-support summary",
     direct_answer: direct,
     design_moves: designMoves,
@@ -373,37 +354,6 @@ function relationConnected(concepts: OkfConcept[], kb: OkfKnowledgeBase) {
   return kb.relations.some((relation) => ids.has(relation.source_concept_id) && ids.has(relation.target_concept_id));
 }
 
-function reasonForPaper(concepts: OkfConcept[], terms: string[], kb: OkfKnowledgeBase, themes: DesignTheme[], paperId: string) {
-  const domainReason = paperDomainReason(paperId);
-  if (domainReason) return domainReason;
-  const typeScores = answerConceptTypes.map((type) => ({ type, score: concepts.filter((concept) => concept.type === type).reduce((sum, concept) => sum + scoreConceptWithEvidence(concept, terms, kb, themes), 0) })).sort((a, b) => b.score - a.score);
-  const best = typeScores.find((item) => item.score > 0);
-  const theme = themes[0]?.label;
-  return best ? `matched ${theme ?? roleLabel(best.type).toLowerCase()}` : "matched OKF concept metadata";
-}
-
-function conceptCoverageScore(concepts: OkfConcept[], terms: string[], kb: OkfKnowledgeBase, themes: DesignTheme[]) {
-  const matchedTypes = new Set(concepts.filter((concept) => scoreConceptWithEvidence(concept, terms, kb, themes) > 0).map((concept) => concept.type));
-  const usefulTypes = [...matchedTypes].filter((type) => answerConceptTypes.includes(type));
-  return usefulTypes.length * 3;
-}
-
-
-function paperRelevanceAdjustment(paperId: string, title: string, query: string, themes: DesignTheme[]) {
-  const paperKey = normalizeText(`${paperId} ${title}`);
-  const q = normalizeText(query);
-  const hasAny = (terms: string[]) => terms.some((term) => q.includes(normalizeText(term)));
-  if ((paperKey.includes("peer review") || paperKey.includes("token incentive")) && !hasAny(["token", "incentive", "reward", "reviewer", "journal", "peer review", "academic review"])) return -120;
-  if ((paperKey.includes("nil") || paperKey.includes("nft") || paperKey.includes("marketplace")) && !hasAny(["nft", "royalty", "royalties", "fairness", "minting", "random", "market design", "student athlete", "nil"])) return -80;
-  if ((paperKey.includes("newsvendor") || paperKey.includes("forecasting")) && !hasAny(["forecast", "forecasting", "newsvendor", "oracle", "payment", "inventory", "supply"])) return -80;
-  if (paperKey.includes("hie") && !hasAny(["health", "healthcare", "patient", "consent", "medical", "hie"]) && themes.some((theme) => ["privacy", "auditability"].includes(theme.id))) return -35;
-  return 0;
-}
-function titlePhraseScore(title: string, query: string) {
-  const titleTerms = new Set(tokenize(title));
-  return tokenize(query).filter((term) => titleTerms.has(term)).length * 3;
-}
-
 function scoreConceptWithEvidence(concept: OkfConcept, terms: string[], kb: OkfKnowledgeBase, themes: DesignTheme[]) {
   const evidenceText = kb.evidence_items.filter((item) => item.concept_id === concept.concept_id).map((item) => [item.paraphrase, item.quote, item.section].join(" ")).join(" ");
   const withEvidence = { ...concept, body_text: `${concept.body_text} ${evidenceText}` };
@@ -560,19 +510,6 @@ function scoreThemes(text: string, themes: DesignTheme[]) {
   return themes.reduce((sum, theme) => sum + Math.min(6, theme.matchTerms.reduce((hits, term) => hits + (text.includes(normalizeText(term)) ? 1 : 0), 0)), 0);
 }
 
-function paperThemeRoleBoost(paperId: string, themes: DesignTheme[]) {
-  const ids = new Set(themes.map((theme) => theme.id));
-  const paperRoles: Record<string, string[]> = {
-    SHORT_END_STICK_2025: ["integrity", "integrity", "privacy", "privacy", "privacy", "privacy", "governance", "governance"],
-    SSI_KYC_FRAMEWORK_2022: ["identity", "privacy", "auditability"],
-    TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024: ["trust", "identity", "governance"],
-    BLOCKCHAIN_IOT_SDPS_2019: ["integrity", "integrity", "privacy", "auditability"],
-    INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024: ["lifecycle", "governance"],
-    HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023: ["privacy", "auditability"]
-  };
-  return (paperRoles[paperId] ?? []).reduce((score, themeId) => score + (ids.has(themeId) ? 10 : 0), 0);
-}
-
 function paperDomainRole(paperId: string, title: string) {
   const key = normalizeText(`${paperId} ${title}`);
   if (key.includes("short end stick")) return "COMMERCIAL-DATA PRIVACY";
@@ -587,18 +524,6 @@ function paperDomainRole(paperId: string, title: string) {
   return undefined;
 }
 
-function paperDomainReason(paperId: string) {
-  if (paperId === "SHORT_END_STICK_2025") return "Supports proof-of-integrity sharing without exposing provider-held sensitive data, with independent computation and joint mechanism governance.";
-  if (paperId === "SSI_KYC_FRAMEWORK_2022") return "Supports reusable actor credentials, verifier proof checks, revocation/status handling, and blockchain use only for public trust data.";
-  if (paperId === "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024") return "Supports identity signaling, screening, reputation, authority/fairness, and deterrence mechanisms for trusted exchange.";
-  if (paperId === "BLOCKCHAIN_IOT_SDPS_2019") return "Supports hybrid raw-data storage, hash-based integrity proofs, certification/retrieval services, and access-key management.";
-  if (paperId === "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024") return "Supports the lifecycle from analysis and actor identification through off/on-chain design, smart contracts, testing, deployment, and monitoring.";
-  if (paperId === "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023") return "Supports auditable permission/status sharing, interoperability, and permissioned access when adapted outside healthcare.";
-  if (paperId === "PEER_REVIEW_TOKEN_INCENTIVES_2025") return "Supports token incentives only when reviewer rewards or tokenized contribution mechanisms are part of the design problem.";
-  if (paperId === "NIL_NFT_MARKETPLACE_2026") return "Supports NFT marketplace fairness, royalties, and allocation mechanisms only when those themes are part of the design problem.";
-  if (paperId === "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021") return "Supports oracle and payment coordination when forecasting, inventory, or settlement are part of the design problem.";
-  return undefined;
-}
 function tokenize(value: string) {
   return normalizeText(value).split(/\s+/).filter((term) => term.length > 2 && !["the", "and", "for", "with", "that", "what", "which", "use", "from", "prior", "paper", "papers", "should", "where", "need", "needs", "into", "same", "exact"].includes(term));
 }
@@ -606,3 +531,5 @@ function tokenize(value: string) {
 function normalizeText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
+
+

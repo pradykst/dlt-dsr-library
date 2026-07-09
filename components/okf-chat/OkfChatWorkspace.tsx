@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, CheckCircle2, ChevronDown, Clipboard, Filter, GitBranch, Loader2, MessageSquareWarning, Network, Send } from "lucide-react";
+import { ArrowDown, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clipboard, Filter, GitBranch, Loader2, MessageSquareWarning, Network, Send } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
@@ -22,7 +22,7 @@ const conceptGroups = [
   ["Evaluation Criteria / Evidence", "Evaluation"]
 ] as const;
 
-type LlmHealth = { ok: boolean; provider: string; provider_configured?: boolean; provider_connected?: boolean };
+type LlmHealth = { ok: boolean; provider: string; provider_configured?: boolean; provider_connected?: boolean; status?: number; error?: string };
 
 export function OkfChatWorkspace() {
   const [query, setQuery] = useState("");
@@ -125,18 +125,12 @@ function LlmStatusBadge({ health, response }: { health: LlmHealth | null; respon
   const runtime = response?.runtime;
   const provider = providerLabel(runtime?.provider ?? health?.provider ?? "groq");
   const mode = runtime?.synthesis_mode;
+  const configured = runtime?.provider_configured ?? health?.provider_configured ?? false;
   const connected = runtime?.provider_connected ?? health?.provider_connected ?? false;
-  const label = mode === "groq" || mode === "featherless"
-    ? `${provider} connected \u00b7 synthesis used`
-    : mode === "fallback_error" && connected
-      ? `${provider} connected \u00b7 synthesis failed`
-      : connected
-        ? `${provider} connected \u00b7 synthesis available`
-        : `${provider} not connected \u00b7 compact fallback`;
-  const tone = mode === "fallback_error" ? "border-red-200 bg-red-50 text-red-700" : connected ? "border-green/30 bg-green/5 text-green" : "border-amber-300 bg-amber-50 text-amber-700";
+  const label = providerStatusLabel(provider, mode, configured, connected);
+  const tone = providerStatusTone(mode, configured, connected);
   return <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium ${tone}`} title={label}><CheckCircle2 className="h-4 w-4" /><span>{label}</span></div>;
 }
-
 function AssistantWorkspace({ query, setQuery, response, loading, submit, activeTab, setActiveTab, selectedConceptId, setSelectedConceptId, selectedEvidenceIds, setSelectedEvidenceIds, correctionText, setCorrectionText, submitCorrection, correctionStatus }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void; activeTab: string; setActiveTab: (value: string) => void; selectedConceptId?: string; setSelectedConceptId: (id: string | undefined) => void; selectedEvidenceIds?: string[]; setSelectedEvidenceIds: (ids: string[] | undefined) => void; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; correctionStatus: string }) {
   return (
     <section className="min-w-0 rounded-lg border border-line bg-white shadow-research">
@@ -195,8 +189,9 @@ function StageProgress({ response, loading }: { response: OkfChatResponse | null
 
 function AnswerTab({ response, correctionText, setCorrectionText, submitCorrection, correctionStatus, selectedConceptId }: { response: OkfChatResponse; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; correctionStatus: string; selectedConceptId?: string }) {
   const synthesis = response.llm_synthesis;
-  const markdown = synthesis?.answer_markdown ?? response.answer;
-  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final recommendation</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(markdown)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={markdown} failed={synthesis?.synthesis_mode === "fallback_error"} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2">{response.source_papers.slice(0, 4).map((paper) => <Badge key={paper.paper_id}>{shortPaperTitle(paper.title)}</Badge>)}</div><p className="mt-3 text-sm text-muted">Evidence details are available in the Evidence tab.</p></div><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
+  const rawMarkdown = synthesis?.answer_markdown ?? response.answer;
+  const markdown = stripSourcePaperTail(rawMarkdown, response.source_papers.map((paper) => paper.title));
+  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final answer - {response.intent.replace(/_/g, " ").toLowerCase()}</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(markdown)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={markdown} failed={Boolean(synthesis?.synthesis_mode?.startsWith("fallback_"))} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2">{response.source_papers.slice(0, 4).map((paper) => <Badge key={paper.paper_id}>{shortPaperTitle(paper.title)}</Badge>)}</div><p className="mt-3 text-sm text-muted">Evidence details are available in the Evidence tab.</p></div><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
 }
 
 function MarkdownAnswer({ markdown, failed }: { markdown: string; failed: boolean }) {
@@ -223,42 +218,59 @@ function escapeHtml(value: string) {
 function AnswerRuntimeBadge({ response }: { response: OkfChatResponse }) {
   const runtime = response.runtime;
   const provider = providerLabel(runtime?.provider);
-  const usedSynthesis = runtime?.synthesis_mode === "groq" || runtime?.synthesis_mode === "featherless";
-  const failed = runtime?.synthesis_mode === "fallback_error";
-  const label = usedSynthesis ? `${provider} connected \u00b7 synthesis used` : failed && runtime?.provider_connected ? `${provider} connected \u00b7 synthesis failed` : `${provider} not connected \u00b7 compact fallback`;
-  const tone = usedSynthesis ? "border-green/30 bg-green/5 text-green" : failed ? "border-red-200 bg-red-50 text-red-700" : "border-amber-300 bg-amber-50 text-amber-700";
+  const mode = runtime?.synthesis_mode;
+  const label = providerStatusLabel(provider, mode, runtime?.provider_configured ?? false, runtime?.provider_connected ?? false);
+  const tone = providerStatusTone(mode, runtime?.provider_configured ?? false, runtime?.provider_connected ?? false);
   return <div className={`rounded-full border px-3 py-2 text-xs font-medium ${tone}`}>{label}</div>;
 }
+type FlowLayerLabel = "Requirement" | "Principle" | "Feature" | "Artifact";
+
+const flowLayerStyles: Record<FlowLayerLabel, string> = {
+  Requirement: "okf-flow-card-requirement border-[#cdb8ec] bg-[#E9DDF7]",
+  Principle: "okf-flow-card-principle border-[#b7dfc2] bg-[#DFF3E5]",
+  Feature: "okf-flow-card-feature border-[#e3c98f] bg-[#F4E2BF]",
+  Artifact: "okf-flow-card-artifact border-[#bed0e8] bg-[#E4EEF9]"
+};
 
 function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { response: OkfChatResponse; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
   const rows = (response.flow_rows ?? []).slice(0, 7);
-  return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> Compact design move paths</div>{rows.length ? <div className="space-y-3">{rows.map((row, index) => <div key={row.row_id || `flow-row-${index}`} className="grid min-w-0 gap-3 rounded-md border border-line bg-paper p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"><FlowStep label="Requirement" value={row.requirement_label} /><FlowStep label="Principle" value={row.principle_label} /><FlowStep label="Feature" value={row.feature_label} /><FlowStep label="Artifact" value={row.artifact_pattern} /><div className="flex flex-wrap items-center gap-2 md:col-span-4"><Badge>{row.adaptation_status}</Badge><Badge>{row.confidence}</Badge><button type="button" onClick={() => { onSelectEvidenceIds(row.evidence_ids); setActiveTab("Evidence"); }} className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence ({row.evidence_ids.length})</button></div></div>)}</div> : <p className="text-sm leading-6 text-muted">Flow is partially query-generated from retrieved OKF concepts.</p>}</section>;
+  const flowRequested = ["DSR_FLOW_QUERY", "DESIGN_REUSE_FLOW_QUERY", "DESIGN_REUSE_QUERY"].includes(response.intent);
+  if (!flowRequested) return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> Compact design move paths</div><p className="text-sm leading-6 text-muted">No flow requested for this answer.</p></section>;
+  return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> Compact design move paths</div>{rows.length ? <div className="space-y-3">{rows.map((row, index) => <div key={row.row_id || `flow-row-${index}`} className="min-w-0 rounded-md border border-line bg-paper/70 p-3"><div className="grid min-w-0 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"><FlowStep label="Requirement" value={row.requirement_label} /><FlowArrow /><FlowStep label="Principle" value={row.principle_label} /><FlowArrow /><FlowStep label="Feature" value={row.feature_label} /><FlowArrow /><FlowStep label="Artifact" value={row.artifact_pattern} /></div><div className="mt-3 flex flex-wrap items-center gap-2"><Badge>{row.adaptation_status}</Badge><Badge>{row.confidence}</Badge><button type="button" onClick={() => { onSelectEvidenceIds(row.evidence_ids); setActiveTab("Evidence"); }} className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence ({row.evidence_ids.length})</button></div></div>)}</div> : <p className="text-sm leading-6 text-muted">No relation-backed flow rows were returned for this answer.</p>}</section>;
 }
 
-function FlowStep({ label, value }: { label: string; value?: string }) {
-  return <div className="min-w-0 rounded-md border border-line bg-white p-2"><div className="text-[11px] font-medium text-muted">{label}</div><div className="mt-1 [overflow-wrap:anywhere] text-xs font-medium leading-5 text-ink">{value ?? "Not specified"}</div></div>;
+function FlowArrow() {
+  return <div className="flex items-center justify-center text-muted"><ArrowDown className="h-4 w-4 md:hidden" /><ArrowRight className="hidden h-4 w-4 md:block" /></div>;
+}
+
+function FlowStep({ label, value }: { label: FlowLayerLabel; value?: string }) {
+  return <div data-dsr-layer={label} className={`min-w-0 rounded-md border p-2.5 text-ink ${flowLayerStyles[label]}`}><div className="text-[11px] font-semibold uppercase tracking-wide text-ink/70">{label}</div><div className="mt-1 [overflow-wrap:anywhere] text-xs font-semibold leading-5 text-ink">{value || "Not specified"}</div></div>;
 }
 
 function synthesisStageLabel(response: OkfChatResponse) {
   const provider = providerLabel(response.runtime?.provider);
-  if (response.runtime?.synthesis_mode === "groq" || response.runtime?.synthesis_mode === "featherless") return `${provider} synthesis used`;
-  if (response.runtime?.synthesis_mode === "fallback_error") return `${provider} synthesis failed; see Debug`;
+  const mode = response.runtime?.synthesis_mode;
+  if (mode === "groq" || mode === "featherless" || mode === "mock") return `${provider} synthesis used`;
+  if (mode === "fallback_rate_limited") return `${provider} rate limit fallback`;
+  if (mode === "fallback_provider_error") return `${provider} provider fallback; see Debug`;
+  if (mode === "fallback_validation_error") return `${provider} validation fallback; see Debug`;
+  if (mode === "structured_okf_answer") return "Structured OKF answer";
   if (response.runtime?.provider_connected) return `${provider} synthesis available`;
   return `${provider} compact fallback`;
 }
-
 function DebugTrace({ query, response }: { query: string; response: OkfChatResponse }) {
   const synthesis = response.llm_synthesis;
   const evidenceIds = response.evidence.map((item) => item.evidence_id);
   const paperIds = response.source_papers.map((paper) => paper.paper_id);
   const counts = response.retrieved_concepts.reduce<Record<string, number>>((acc, concept) => ({ ...acc, [concept.type]: (acc[concept.type] ?? 0) + 1 }), {});
-  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {response.runtime?.provider ?? "none"}; mode {response.runtime?.synthesis_mode ?? "none"}</p><p><strong className="text-ink">Provider status:</strong> {String(response.runtime?.provider_connected ?? false)}; fallback {response.runtime?.fallback_reason ?? "none"}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
+  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {response.runtime?.provider ?? "none"}; mode {response.runtime?.synthesis_mode ?? "none"}</p><p><strong className="text-ink">Provider status:</strong> {String(response.runtime?.provider_connected ?? false)}; status {response.runtime?.provider_status_code ?? "none"}; error type {response.runtime?.provider_error_type ?? "none"}; fallback {response.runtime?.fallback_reason ?? "none"}</p><p><strong className="text-ink">DB loaded from:</strong> {response.runtime?.db_loaded_from ?? "unknown"}{response.runtime?.db_error_message ? `; ${response.runtime.db_error_message}` : ""}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
 }
 
 function SourcePapersPanel({ response, onSelectEvidenceIds }: { response: OkfChatResponse | null; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
   return <Panel title="Source papers" icon={<BookOpen className="h-4 w-4 text-blue" />}>{response?.source_papers.length ? <div className="space-y-3">{response.source_papers.slice(0, 8).map((paper) => {
     const evidenceIds = response.evidence.filter((item) => item.paper_id === paper.paper_id).map((item) => item.evidence_id);
-    return <div key={paper.paper_id} className="rounded-md border border-line p-3"><div className="[overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink" title={paper.title}>{shortPaperTitle(paper.title)}</div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{paper.role}</Badge></div><p className="mt-2 text-xs leading-5 text-muted">{paper.reason}</p><div className="mt-3 grid grid-cols-4 gap-1.5 text-xs text-muted"><Metric label="Req" value={paper.requirements_count} /><Metric label="Prin" value={paper.principles_count} /><Metric label="Feat" value={paper.features_count} /><Metric label="Evid" value={paper.evidence_count} /></div><button type="button" onClick={() => onSelectEvidenceIds(evidenceIds)} className="mt-3 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence</button></div>;
+    const reason = sourcePaperReason(paper.role, paper.reason);
+    return <div key={paper.paper_id} className="rounded-md border border-line p-3"><div className="[overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink" title={paper.title}>{shortPaperTitle(paper.title)}</div><div className="mt-2 flex flex-wrap gap-1.5"><Badge>{paper.role}</Badge>{response.intent === "PAPER_DISCOVERY_QUERY" && paper.match_strength && <Badge>{formatMatchStrength(paper.match_strength)} match</Badge>}</div>{reason && <p className="mt-2 text-xs leading-5 text-muted">{reason}</p>}<div className="mt-3 grid grid-cols-4 gap-1.5 text-xs text-muted"><Metric label="Req" value={paper.requirements_count} /><Metric label="Prin" value={paper.principles_count} /><Metric label="Feat" value={paper.features_count} /><Metric label="Evid" value={paper.evidence_count} /></div><button type="button" onClick={() => onSelectEvidenceIds(evidenceIds)} className="mt-3 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence</button></div>;
   })}</div> : <Empty text="Ask a question to see source papers." />}</Panel>;
 }
 
@@ -304,6 +316,41 @@ function Empty({ text }: { text: string }) {
   return <p className="text-sm leading-6 text-muted">{text}</p>;
 }
 
+function sourcePaperReason(role: string, reason: string) {
+  return normalizeKey(role) === normalizeKey(reason) ? undefined : reason;
+}
+
+function formatMatchStrength(strength: string) {
+  return strength.charAt(0).toUpperCase() + strength.slice(1);
+}
+
+function stripSourcePaperTail(markdown: string, paperTitles: string[]) {
+  const lines = markdown.replace(/\s+$/g, "").split(/\r?\n/);
+  let index = lines.length - 1;
+  while (index >= 0 && !lines[index].trim()) index -= 1;
+  const tail: string[] = [];
+  while (index >= 0 && isBarePaperTitleLine(lines[index], paperTitles)) {
+    tail.unshift(lines[index]);
+    index -= 1;
+    while (index >= 0 && !lines[index].trim()) index -= 1;
+  }
+  if (tail.length < 2) return markdown;
+  return lines.slice(0, index + 1).join("\n").trim();
+}
+
+function isBarePaperTitleLine(line: string, paperTitles: string[]) {
+  const normalized = normalizePaperTitle(line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, ""));
+  return paperTitles.some((title) => {
+    const full = normalizePaperTitle(title);
+    const short = normalizePaperTitle(shortPaperTitle(title));
+    return normalized === full || normalized === short;
+  });
+}
+
+function normalizePaperTitle(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 function shortPaper(paperId: string) {
   return paperId.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -326,9 +373,32 @@ function normalizeKey(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+function providerStatusLabel(provider: string, mode: string | undefined, configured: boolean, connected: boolean) {
+  if (mode === "groq" || mode === "featherless" || mode === "mock") return `${provider} connected · synthesis used`;
+  if (mode === "fallback_rate_limited") return `${provider} connected · rate limit fallback`;
+  if (mode === "fallback_provider_error") return `${provider} unavailable · compact fallback`;
+  if (mode === "fallback_validation_error") return `${provider} connected · validation fallback`;
+  if (mode === "structured_okf_answer") return configured ? `${provider} connected · structured OKF answer` : `${provider} not configured · structured OKF answer`;
+  if (connected) return `${provider} connected · synthesis available`;
+  return configured ? `${provider} unavailable · compact fallback` : `${provider} not configured · structured OKF answer`;
+}
+
+function providerStatusTone(mode: string | undefined, configured: boolean, connected: boolean) {
+  if (mode === "groq" || mode === "featherless" || mode === "mock") return "border-green/30 bg-green/5 text-green";
+  if (mode === "fallback_provider_error" || mode === "fallback_validation_error") return "border-red-200 bg-red-50 text-red-700";
+  if (mode === "fallback_rate_limited") return "border-amber-300 bg-amber-50 text-amber-700";
+  if (mode === "structured_okf_answer" && connected) return "border-blue/30 bg-blue/5 text-blue";
+  if (connected) return "border-green/30 bg-green/5 text-green";
+  return configured ? "border-red-200 bg-red-50 text-red-700" : "border-amber-300 bg-amber-50 text-amber-700";
+}
 function providerLabel(provider?: string) {
   if (provider === "groq") return "Groq";
   if (provider === "openai") return "OpenAI";
   if (provider === "featherless") return "Featherless";
+  if (provider === "mock") return "Mock";
   return "Groq";
 }
+
+
+
+
