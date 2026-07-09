@@ -103,10 +103,14 @@ test("flow query is classified and uses stored relations without requirement-to-
   assert.equal(routeOkfQuery("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection."), "DSR_FLOW_QUERY");
   const response = await answerOkfChat("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(response.intent, "DSR_FLOW_QUERY");
+  assert.equal(response.flow_graph.mode, "stored_paper_flow");
+  assert.equal(response.answer_plan?.query_plan.requested_output_shape, "flow_graph");
+  assert.equal(response.answer_plan?.query_plan.requires_graph, true);
   const byId = new Map(response.flow.nodes.map((node) => [node.id, node]));
   assert.ok(response.flow.edges.length > 0);
-  assert.ok(response.flow.edges.every((edge) => edge.relation_id || byId.get(edge.source)?.query_generated));
+  assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored" && edge.relation_id));
   assert.equal(response.flow.edges.some((edge) => byId.get(edge.source)?.type === "DesignRequirement" && byId.get(edge.target)?.type === "DesignRequirement"), false);
+  for (const layer of ["Requirement", "Principle", "Feature", "Artifact"]) assert.ok(response.flow_graph.nodes.some((node) => node.layer === layer), layer);
 });
 
 test("design recommendation query marks query-generated problem nodes", async () => {
@@ -141,12 +145,23 @@ test("flow query answer summarizes branches instead of dumping all edges", async
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Build a Requirement ? Principle ? Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(response.intent, "DSR_FLOW_QUERY");
-  assert.match(response.answer, /Requirement -> Principle -> Feature rows/i);
-  assert.match(response.answer, /Full relation detail is available in the Flow tab/i);
-  assert.ok(response.flow.edges.length > 8);
-  assert.ok(response.answer.split("\n").length < response.flow.edges.length + 6);
+  assert.match(response.answer, /The layered graph is in the Flow tab/i);
+  assert.match(response.answer, /Short branch summary/i);
+  assert.equal(/Requirement -> Principle -> Feature rows/i.test(response.answer), false);
+  assert.ok(response.flow_graph.edges.length > 8);
+  assert.ok(response.answer.split("\n").length < response.flow_graph.edges.length + 6);
 });
 
+test("paper-specific flow query uses only Blockchain IoT stored relations", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Show the Requirement -> Principle -> Feature flow from Blockchain for the IoT.", kb);
+  assert.equal(response.intent, "DSR_FLOW_QUERY");
+  assert.deepEqual([...new Set(response.source_papers.map((paper) => paper.paper_id))], ["BLOCKCHAIN_IOT_SDPS_2019"]);
+  assert.equal(response.flow_graph.mode, "stored_paper_flow");
+  assert.ok(response.flow_graph.edges.length > 8);
+  assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored"));
+  assert.equal(response.flow_graph.edges.some((edge) => edge.provenance === "query_generated"), false);
+});
 const productIdentityQuery = "I want to design a cross-marketplace product identity and review-continuity protocol where the same exact product variant can be listed on multiple marketplaces, sellers can relist products, buyers can leave verified-purchase reviews, and competitors should not expose raw commercial data. Which reusable DSR design requirements, design principles, design features, and artifact patterns should I reuse from the OKF library? Build a concise Requirement -> Principle -> Feature -> Artifact flow, explain which papers support each part, show evidence, and clearly mark any product-identity-specific suggestions as query-generated.";
 
 test("product identity query produces a structured decision-support answer without exact-query hardcoding", async () => {
@@ -156,6 +171,10 @@ test("product identity query produces a structured decision-support answer witho
   assert.ok(response.answer_payload);
   assert.ok(response.answer_payload.design_moves.length >= 5);
   assert.ok(response.source_papers.length >= 5);
+  assert.equal(response.flow_graph.mode, "mixed_reuse_flow");
+  for (const required of ["SHORT_END_STICK_2025", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "BLOCKCHAIN_IOT_SDPS_2019", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) assert.ok(response.flow_graph.nodes.some((node) => node.paper_id === required), required);
+  assert.ok(response.flow_graph.nodes.some((node) => node.provenance === "query_generated"));
+  assert.ok(response.flow_graph.edges.some((edge) => edge.provenance === "query_generated" || edge.provenance === "mixed"));
   assert.equal(response.answer.includes("No direct OKF card"), false);
 
   const implementation = [
@@ -168,6 +187,16 @@ test("product identity query produces a structured decision-support answer witho
 });
 
 
+test("short product identity flow query produces a mixed reuse flow graph", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Build a Requirement -> Principle -> Feature -> Artifact flow for a cross-marketplace product identity and review-continuity protocol.", kb);
+  assert.equal(response.intent, "DESIGN_REUSE_FLOW_QUERY");
+  assert.ok(response.flow_graph.mode === "mixed_reuse_flow" || response.flow_graph.mode === "query_generated_flow");
+  for (const required of ["SHORT_END_STICK_2025", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "BLOCKCHAIN_IOT_SDPS_2019", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) assert.ok(response.source_papers.some((paper) => paper.paper_id === required), required);
+  assert.ok(response.flow_graph.nodes.some((node) => node.provenance === "query_generated"));
+  assert.ok(response.flow_graph.edges.some((edge) => edge.provenance === "query_generated" || edge.provenance === "mixed"));
+  assert.equal(/\b[A-Z][A-Z0-9_]{2,}:[A-Za-z0-9_.:-]+\b/.test(response.answer), false);
+});
 test("product identity answer includes targeted OKF reuse logic and no naked source-paper tail", async () => {
   const kb = parseOkfLibrary();
   const response = await answerOkfChat(productIdentityQuery, kb);
@@ -483,11 +512,14 @@ test("mock LLM provider synthesizes offline without live fetch", async () => {
     if (previousMock === undefined) delete process.env.GROQ_MOCK; else process.env.GROQ_MOCK = previousMock;
   }
 });
-test("Flow tab does not dump all retrieved graph nodes by default", () => {
+test("Flow tab renders a layered graph instead of row cards", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  assert.ok(source.includes("Compact design move paths"));
-  assert.ok(source.includes("slice(0, 7)"));
-  assert.equal(source.includes("LayeredFlow"), false);
+  assert.ok(source.includes("DSR flow graph"));
+  assert.ok(source.includes("ReactFlow"));
+  assert.ok(source.includes("response.flow_graph"));
+  assert.ok(source.includes("FlowGraph JSON"));
+  assert.equal(source.includes("Compact design move paths"), false);
+  assert.equal(source.includes("slice(0, 7)"), false);
 });
 test("DB health and chat debug expose Supabase clock-skew fallback metadata", () => {
   const retrieval = readFileSync(path.join(process.cwd(), "lib", "okf", "retrieval.ts"), "utf8");
@@ -543,7 +575,8 @@ test("final evaluation queries Q1-Q4 follow the new answer policies", async () =
   assert.equal(q4.intent, "DSR_FLOW_QUERY");
   assert.equal(q4.source_papers[0].paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
   assert.ok((q4.flow_rows ?? []).length >= 4);
-  assert.match(q4.answer, /Requirement -> Principle -> Feature rows/i);
+  assert.equal(q4.flow_graph.mode, "stored_paper_flow");
+  assert.match(q4.answer, /The layered graph is in the Flow tab/i);
   assert.equal(/Design moves to reuse/i.test(q4.answer), false);
 });
 
@@ -666,7 +699,7 @@ test("DSR flow answer strips command phrase from the human-readable subject", as
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(response.intent, "DSR_FLOW_QUERY");
-  assert.match(response.answer, /^The relation-backed flow for tamper-resistant sensor-data protection is built from stored OKF relations\./);
+  assert.match(response.answer, /^The relation-backed flow for tamper-resistant sensor-data protection is built from stored OKF relations in Blockchain for the IoT\./);
   assert.equal(/Build a Requirement/i.test(response.answer), false);
 });
 
@@ -680,11 +713,11 @@ test("implementation lifecycle answer includes all seven ISDM stages with roles 
   assert.match(response.answer, /domain-specific privacy, IoT, or identity patterns only after the lifecycle framing/i);
 });
 
-test("Flow tab uses DSR-layer colored card metadata and non-flow empty state", () => {
+test("Flow tab uses layered graph classes, edge provenance classes, and non-flow empty state", () => {
   const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
-  for (const token of ["okf-flow-card-requirement", "okf-flow-card-principle", "okf-flow-card-feature", "okf-flow-card-artifact", "data-dsr-layer", "bg-[#E9DDF7]", "bg-[#DFF3E5]", "bg-[#F4E2BF]", "bg-[#E4EEF9]"]) assert.ok(source.includes(token), token);
-  assert.ok(source.includes("ArrowRight"));
-  assert.ok(source.includes("ArrowDown"));
+  for (const token of ["flow-node--requirement", "flow-node--principle", "flow-node--feature", "flow-node--artifact", "flow-edge--stored", "flow-edge--query-generated", "flow-edge--mixed", "data-dsr-layer", "#E9DDF7", "#DFF3E5", "#F4E2BF", "#E4EEF9"]) assert.ok(source.includes(token), token);
+  assert.ok(source.includes("nodes={reactNodes}"));
+  assert.ok(source.includes("edges={reactEdges}"));
   assert.ok(source.includes("No flow requested for this answer."));
 });
 

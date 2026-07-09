@@ -1,4 +1,4 @@
-﻿export const okfConceptTypes = [
+export const okfConceptTypes = [
   "Paper",
   "Problem",
   "ResearchQuestion",
@@ -101,28 +101,62 @@ export type OkfKnowledgeBase = {
   warnings: OkfValidationWarning[];
 };
 
-export type OkfFlowNode = {
+export type FlowGraphLayer =
+  | "Problem"
+  | "Requirement"
+  | "Principle"
+  | "Feature"
+  | "Artifact"
+  | "Evaluation"
+  | "OutputKnowledge";
+
+export type FlowGraphMode = "stored_paper_flow" | "query_generated_flow" | "mixed_reuse_flow";
+export type FlowGraphProvenance = "stored" | "query_generated" | "mixed";
+
+export type FlowGraphNode = {
   id: string;
   label: string;
-  type: OkfConceptType | "Evidence";
-  concept_id?: string;
-  evidence_id?: string;
+  layer: FlowGraphLayer;
   paper_id?: string;
+  concept_id?: string;
+  provenance: FlowGraphProvenance;
   confidence: ConfidenceLabel;
+  evidence_ids: string[];
+  short_description?: string;
+};
+
+export type FlowGraphEdge = {
+  id: string;
+  source: string;
+  target: string;
+  predicate: string;
+  relation_id?: string;
+  provenance: FlowGraphProvenance;
+  confidence: ConfidenceLabel;
+  evidence_ids: string[];
+};
+
+export type FlowGraph = {
+  graph_id: string;
+  title: string;
+  mode: FlowGraphMode;
+  layers: FlowGraphLayer[];
+  nodes: FlowGraphNode[];
+  edges: FlowGraphEdge[];
+  evidence_refs: OkfEvidenceRef[];
+  warnings: string[];
+};
+
+export type OkfFlowNode = FlowGraphNode & {
+  type: OkfConceptType | "Evidence";
+  evidence_id?: string;
   query_generated?: boolean;
 };
 
-export type OkfFlowEdge = {
-  source: string;
-  target: string;
-  predicate: OkfRelationPredicate;
-  relation_id?: string;
-  confidence: ConfidenceLabel;
-};
+export type OkfFlowEdge = FlowGraphEdge;
 
-export type OkfFlow = {
+export type OkfFlow = Omit<FlowGraph, "nodes" | "edges"> & {
   flow_id: string;
-  title: string;
   nodes: OkfFlowNode[];
   edges: OkfFlowEdge[];
 };

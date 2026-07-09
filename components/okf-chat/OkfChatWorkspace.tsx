@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowDown, ArrowRight, BookOpen, CheckCircle2, ChevronDown, Clipboard, Filter, GitBranch, Loader2, MessageSquareWarning, Network, Send } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { BookOpen, CheckCircle2, ChevronDown, Clipboard, Filter, GitBranch, Loader2, MessageSquareWarning, Network, Send } from "lucide-react";
+import ReactFlow, { Background, Controls, MarkerType, type Edge, type Node } from "reactflow";
+import "reactflow/dist/style.css";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
@@ -224,27 +226,127 @@ function AnswerRuntimeBadge({ response }: { response: OkfChatResponse }) {
   return <div className={`rounded-full border px-3 py-2 text-xs font-medium ${tone}`}>{label}</div>;
 }
 type FlowLayerLabel = "Requirement" | "Principle" | "Feature" | "Artifact";
+type FlowGraphSelection = { kind: "node"; id: string } | { kind: "edge"; id: string } | null;
 
-const flowLayerStyles: Record<FlowLayerLabel, string> = {
-  Requirement: "okf-flow-card-requirement border-[#cdb8ec] bg-[#E9DDF7]",
-  Principle: "okf-flow-card-principle border-[#b7dfc2] bg-[#DFF3E5]",
-  Feature: "okf-flow-card-feature border-[#e3c98f] bg-[#F4E2BF]",
-  Artifact: "okf-flow-card-artifact border-[#bed0e8] bg-[#E4EEF9]"
+type GraphNode = OkfChatResponse["flow_graph"]["nodes"][number];
+type GraphEdge = OkfChatResponse["flow_graph"]["edges"][number];
+
+const visibleFlowLayers: FlowLayerLabel[] = ["Requirement", "Principle", "Feature", "Artifact"];
+const flowEdgeClassNames = { stored: "flow-edge--stored", mixed: "flow-edge--mixed", query_generated: "flow-edge--query-generated" } as const;
+const flowLayerStyles: Record<FlowLayerLabel, { className: string; background: string; border: string }> = {
+  Requirement: { className: "flow-node--requirement", background: "#E9DDF7", border: "#cdb8ec" },
+  Principle: { className: "flow-node--principle", background: "#DFF3E5", border: "#b7dfc2" },
+  Feature: { className: "flow-node--feature", background: "#F4E2BF", border: "#e3c98f" },
+  Artifact: { className: "flow-node--artifact", background: "#E4EEF9", border: "#bed0e8" }
 };
 
 function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { response: OkfChatResponse; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
-  const rows = (response.flow_rows ?? []).slice(0, 7);
-  const flowRequested = ["DSR_FLOW_QUERY", "DESIGN_REUSE_FLOW_QUERY", "DESIGN_REUSE_QUERY"].includes(response.intent);
-  if (!flowRequested) return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> Compact design move paths</div><p className="text-sm leading-6 text-muted">No flow requested for this answer.</p></section>;
-  return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> Compact design move paths</div>{rows.length ? <div className="space-y-3">{rows.map((row, index) => <div key={row.row_id || `flow-row-${index}`} className="min-w-0 rounded-md border border-line bg-paper/70 p-3"><div className="grid min-w-0 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"><FlowStep label="Requirement" value={row.requirement_label} /><FlowArrow /><FlowStep label="Principle" value={row.principle_label} /><FlowArrow /><FlowStep label="Feature" value={row.feature_label} /><FlowArrow /><FlowStep label="Artifact" value={row.artifact_pattern} /></div><div className="mt-3 flex flex-wrap items-center gap-2"><Badge>{row.adaptation_status}</Badge><Badge>{row.confidence}</Badge><button type="button" onClick={() => { onSelectEvidenceIds(row.evidence_ids); setActiveTab("Evidence"); }} className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:border-blue">View evidence ({row.evidence_ids.length})</button></div></div>)}</div> : <p className="text-sm leading-6 text-muted">No relation-backed flow rows were returned for this answer.</p>}</section>;
+  const graph = response.flow_graph ?? response.flow;
+  const [selection, setSelection] = useState<FlowGraphSelection>(null);
+  const flowRequested = response.intent === "DSR_FLOW_QUERY" || response.intent === "DESIGN_REUSE_FLOW_QUERY";
+  const visibleGraphNodes = useMemo(() => graph.nodes.filter((node) => visibleFlowLayers.includes(node.layer as FlowLayerLabel)), [graph.nodes]);
+  const visibleNodeIds = useMemo(() => new Set(visibleGraphNodes.map((node) => node.id)), [visibleGraphNodes]);
+  const reactNodes: Node[] = useMemo(() => {
+    const rowCount = new Map<string, number>();
+    return visibleGraphNodes.map((node) => {
+      const layer = node.layer as FlowLayerLabel;
+      const column = visibleFlowLayers.indexOf(layer);
+      const row = rowCount.get(layer) ?? 0;
+      rowCount.set(layer, row + 1);
+      const style = flowLayerStyles[layer];
+      return {
+        id: node.id,
+        position: { x: column * 275, y: row * 118 },
+        data: { label: <FlowGraphNodeLabel node={node} /> },
+        className: `flow-node ${style.className} flow-node--${node.provenance.replace("_", "-")}`,
+        style: {
+          width: 210,
+          minHeight: 78,
+          border: `1px solid ${style.border}`,
+          borderRadius: 6,
+          background: style.background,
+          color: "#20242a",
+          fontSize: 12,
+          lineHeight: 1.35,
+          whiteSpace: "normal",
+          overflowWrap: "anywhere",
+          padding: 10,
+          boxShadow: selection?.kind === "node" && selection.id === node.id ? "0 0 0 3px rgba(32, 36, 42, 0.16)" : "none"
+        } satisfies CSSProperties
+      };
+    });
+  }, [selection, visibleGraphNodes]);
+  const reactEdges: Edge[] = useMemo(() => graph.edges
+    .filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
+    .map((edge) => {
+      const focused = selection?.kind === "edge" && selection.id === edge.id;
+      return {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: "smoothstep",
+        label: focused ? readablePredicate(edge.predicate) : undefined,
+        className: `flow-edge ${flowEdgeClassNames[edge.provenance]}`,
+        markerEnd: { type: MarkerType.ArrowClosed, color: focused ? "#20242a" : edgeColor(edge.provenance) },
+        style: {
+          stroke: focused ? "#20242a" : edgeColor(edge.provenance),
+          strokeWidth: focused ? 3 : edge.provenance === "stored" ? 2.2 : 2,
+          strokeDasharray: edgeDash(edge.provenance),
+          opacity: focused ? 0.95 : 0.72
+        },
+        labelStyle: { fill: "#20242a", fontSize: 10, fontWeight: 700 },
+        labelBgStyle: { fill: "#ffffff", fillOpacity: 0.94 },
+        labelBgPadding: [4, 3] as [number, number]
+      };
+    }), [graph.edges, selection, visibleNodeIds]);
+
+  if (!flowRequested || !visibleGraphNodes.length) {
+    return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="text-sm leading-6 text-muted">No flow requested for this answer.</p></section>;
+  }
+
+  const selectedNode = selection?.kind === "node" ? graph.nodes.find((node) => node.id === selection.id) : undefined;
+  const selectedEdge = selection?.kind === "edge" ? graph.edges.find((edge) => edge.id === selection.id) : undefined;
+
+  return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="mt-2 text-xs leading-5 text-muted">{flowModeNotice(graph.mode)}</p></div><FlowLegend /></div><div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_310px]"><div className="h-[620px] min-w-0 border border-line bg-paper/50"><ReactFlow nodes={reactNodes} edges={reactEdges} fitView minZoom={0.28} nodesDraggable={false} onNodeClick={(_, node) => { const graphNode = graph.nodes.find((item) => item.id === node.id); setSelection({ kind: "node", id: node.id }); onSelectEvidenceIds(graphNode?.evidence_ids.length ? graphNode.evidence_ids : undefined); }} onEdgeClick={(_, edge) => { const graphEdge = graph.edges.find((item) => item.id === edge.id); setSelection({ kind: "edge", id: edge.id }); onSelectEvidenceIds(graphEdge?.evidence_ids.length ? graphEdge.evidence_ids : undefined); }} onPaneClick={() => { setSelection(null); onSelectEvidenceIds(undefined); }}><Background color="#d8d6cc" gap={28} /><Controls /></ReactFlow></div><FlowGraphInspector node={selectedNode} edge={selectedEdge} graph={graph} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /></div></section>;
 }
 
-function FlowArrow() {
-  return <div className="flex items-center justify-center text-muted"><ArrowDown className="h-4 w-4 md:hidden" /><ArrowRight className="hidden h-4 w-4 md:block" /></div>;
+function FlowGraphNodeLabel({ node }: { node: GraphNode }) {
+  return <div data-dsr-layer={node.layer} className="min-w-0"><div className="text-[10px] font-semibold uppercase tracking-wide text-ink/65">{node.layer}</div><div className="mt-1 [overflow-wrap:anywhere] text-xs font-semibold leading-5 text-ink">{node.label}</div><div className="mt-2 flex flex-wrap gap-1"><span className="rounded-sm border border-ink/10 bg-white/55 px-1.5 py-0.5 text-[10px] font-medium text-ink/70">{node.provenance}</span><span className="rounded-sm border border-ink/10 bg-white/55 px-1.5 py-0.5 text-[10px] font-medium text-ink/70">{node.confidence}</span></div></div>;
 }
 
-function FlowStep({ label, value }: { label: FlowLayerLabel; value?: string }) {
-  return <div data-dsr-layer={label} className={`min-w-0 rounded-md border p-2.5 text-ink ${flowLayerStyles[label]}`}><div className="text-[11px] font-semibold uppercase tracking-wide text-ink/70">{label}</div><div className="mt-1 [overflow-wrap:anywhere] text-xs font-semibold leading-5 text-ink">{value || "Not specified"}</div></div>;
+function FlowGraphInspector({ node, edge, graph, setActiveTab, onSelectEvidenceIds }: { node?: GraphNode; edge?: GraphEdge; graph: OkfChatResponse["flow_graph"]; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
+  const selected = node ?? edge;
+  if (!selected) return <aside className="min-h-[220px] border border-line bg-white p-4 text-sm leading-6 text-muted xl:border-l-0">Click a graph node or edge to filter the evidence panel.</aside>;
+  const evidenceIds = selected.evidence_ids ?? [];
+  const source = edge ? graph.nodes.find((item) => item.id === edge.source) : undefined;
+  const target = edge ? graph.nodes.find((item) => item.id === edge.target) : undefined;
+  return <aside className="max-h-[620px] min-h-[220px] overflow-y-auto border border-line bg-white p-4 xl:border-l-0"><Badge>{selected.provenance}</Badge><h3 className="mt-3 [overflow-wrap:anywhere] text-base font-semibold leading-6 text-ink">{node ? node.label : `${source?.label ?? "Source"} -> ${target?.label ?? "Target"}`}</h3><div className="mt-3 space-y-2 text-xs leading-5 text-muted"><p><strong className="text-ink">Confidence:</strong> {selected.confidence}</p>{edge && <p><strong className="text-ink">Relation:</strong> {readablePredicate(edge.predicate)}</p>}{node?.short_description && <p>{node.short_description}</p>}<p><strong className="text-ink">Evidence refs:</strong> {evidenceIds.length}</p></div>{evidenceIds.length > 0 && <button type="button" onClick={() => { onSelectEvidenceIds(evidenceIds); setActiveTab("Evidence"); }} className="mt-4 rounded-md border border-line bg-paper px-3 py-2 text-xs font-medium text-ink hover:border-blue">Open evidence</button>}</aside>;
+}
+
+function FlowLegend() {
+  return <div className="flex flex-wrap gap-2">{visibleFlowLayers.map((layer) => <span key={layer} className="inline-flex items-center gap-2 rounded-sm border border-line bg-paper px-2 py-1 text-[11px] uppercase tracking-wide text-muted"><span className="h-2.5 w-2.5 border border-ink/20" style={{ background: flowLayerStyles[layer].background }} />{layer}</span>)}<span className="inline-flex items-center gap-2 rounded-sm border border-line bg-paper px-2 py-1 text-[11px] uppercase tracking-wide text-muted"><span className="h-px w-5 bg-[#4f6f91]" />Stored</span><span className="inline-flex items-center gap-2 rounded-sm border border-line bg-paper px-2 py-1 text-[11px] uppercase tracking-wide text-muted"><span className="h-px w-5 border-t border-dashed border-[#8a6f35]" />Generated</span></div>;
+}
+
+function flowModeNotice(mode: string) {
+  if (mode === "stored_paper_flow") return "Stored OKF relations are rendered as solid edges. Node and edge clicks filter evidence.";
+  if (mode === "mixed_reuse_flow") return "This flow is partly query-generated from retrieved OKF design knowledge. Stored edges are solid; mixed/generated edges are visually distinguished.";
+  return "This flow is query-generated from retrieved OKF design knowledge and should be treated as a design hypothesis.";
+}
+
+function edgeColor(provenance: string) {
+  if (provenance === "stored") return "#4f6f91";
+  if (provenance === "mixed") return "#7a6f58";
+  return "#8a6f35";
+}
+
+function edgeDash(provenance: string) {
+  if (provenance === "query_generated") return "6 5";
+  if (provenance === "mixed") return "2 4";
+  return undefined;
+}
+
+function readablePredicate(value: string) {
+  return value.replace(/_/g, " ");
 }
 
 function synthesisStageLabel(response: OkfChatResponse) {
@@ -263,7 +365,7 @@ function DebugTrace({ query, response }: { query: string; response: OkfChatRespo
   const evidenceIds = response.evidence.map((item) => item.evidence_id);
   const paperIds = response.source_papers.map((paper) => paper.paper_id);
   const counts = response.retrieved_concepts.reduce<Record<string, number>>((acc, concept) => ({ ...acc, [concept.type]: (acc[concept.type] ?? 0) + 1 }), {});
-  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {response.runtime?.provider ?? "none"}; mode {response.runtime?.synthesis_mode ?? "none"}</p><p><strong className="text-ink">Provider status:</strong> {String(response.runtime?.provider_connected ?? false)}; status {response.runtime?.provider_status_code ?? "none"}; error type {response.runtime?.provider_error_type ?? "none"}; fallback {response.runtime?.fallback_reason ?? "none"}</p><p><strong className="text-ink">DB loaded from:</strong> {response.runtime?.db_loaded_from ?? "unknown"}{response.runtime?.db_error_message ? `; ${response.runtime.db_error_message}` : ""}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
+  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {response.runtime?.provider ?? "none"}; mode {response.runtime?.synthesis_mode ?? "none"}</p><p><strong className="text-ink">Provider status:</strong> {String(response.runtime?.provider_connected ?? false)}; status {response.runtime?.provider_status_code ?? "none"}; error type {response.runtime?.provider_error_type ?? "none"}; fallback {response.runtime?.fallback_reason ?? "none"}</p><p><strong className="text-ink">DB loaded from:</strong> {response.runtime?.db_loaded_from ?? "unknown"}{response.runtime?.db_error_message ? `; ${response.runtime.db_error_message}` : ""}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details><details><summary className="cursor-pointer font-semibold text-ink">FlowGraph JSON</summary><pre className="mt-2 max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify(response.flow_graph ?? response.flow, null, 2)}</pre></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
 }
 
 function SourcePapersPanel({ response, onSelectEvidenceIds }: { response: OkfChatResponse | null; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {

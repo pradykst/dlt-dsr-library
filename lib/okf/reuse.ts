@@ -1,4 +1,4 @@
-﻿import { buildOkfFlow } from "./flow.ts";
+import { buildOkfFlow } from "./flow.ts";
 import { selectPolicySourcePapers } from "./policy.ts";
 import type { ConfidenceLabel, DecisionSupportAnswer, DesignMove, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfKnowledgeBase, OkfPaperSupport, OkfReuseFlowRow } from "./schema.ts";
 import type { OkfChatResponse, OkfQueryPlan } from "./chat.ts";
@@ -34,7 +34,8 @@ export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, kb: Ok
   const concepts = retrieveConcepts(query, kb, paperSupport.map((paper) => paper.paper_id));
   const evidenceRefs = evidenceForConcepts(concepts, kb);
   const rows = buildRows(query, paperSupport, concepts, evidenceRefs, kb).slice(0, 8);
-  const flow = buildOkfFlow(query, concepts, kb, { includeQueryProblem: true });
+  const flowMode = rows.some((row) => row.adaptation_status === "stored" || row.adaptation_status === "mixed") ? "mixed_reuse_flow" as const : "query_generated_flow" as const;
+  const flow = buildOkfFlow(query, concepts, kb, { includeQueryProblem: true, mode: flowMode, flowRows: rows, title: "Mixed OKF reuse flow" });
   const sourcePapers = sourceRoles(concepts, kb, paperSupport);
   const payload = buildFallbackAnswer(query, rows, sourcePapers, evidenceRefs, plan, undefined);
   const warnings = sourcePapers.length === 0 ? ["No OKF source paper matched the query strongly enough for grounded reuse guidance."] : [];
@@ -52,6 +53,7 @@ export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, kb: Ok
     retrieved_concepts: concepts,
     evidence: evidenceRefs.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, paraphrase: item.excerpt, confidence: item.confidence, section: item.section, page_number: item.page_number })),
     flow,
+    flow_graph: flow,
     flow_rows: rows,
     answer_payload: payload,
     assumptions: payload.query_generated_notes,
@@ -68,7 +70,9 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
   const designMoves = thematicMoves.length >= 5 ? thematicMoves.slice(0, 7) : rows.slice(0, 7).map((row, index) => designMoveFromRow(row, index));
   const direct = fallbackReason
     ? "I retrieved relevant OKF knowledge, but LLM synthesis failed. Here is a compact evidence-backed summary."
-    : compactDirectAnswer(query, source_papers.length, designMoves.length, evidenceRefs.length);
+    : plan?.intent === "DESIGN_REUSE_FLOW_QUERY"
+      ? compactFlowDirectAnswer(source_papers.length, designMoves.length, evidenceRefs.length)
+      : compactDirectAnswer(query, source_papers.length, designMoves.length, evidenceRefs.length);
   return {
     synthesis_mode: "structured_okf_answer",
     title: fallbackReason ? "Compact OKF fallback summary" : "OKF decision-support summary",
@@ -303,6 +307,10 @@ function designMoveFromRow(row: OkfReuseFlowRow, index: number): DesignMove {
   };
 }
 
+function compactFlowDirectAnswer(paperCount: number, moveCount: number, evidenceCount: number) {
+  if (!paperCount) return "I could not find a sufficiently grounded OKF match for this flow request. Try naming a paper, DSR element type, or design domain from the library.";
+  return `The graph is a mixed reuse flow. Stored OKF concepts support the design moves; product/problem-specific nodes are marked query_generated. This flow is partly query-generated from retrieved OKF design knowledge. I found ${paperCount} relevant OKF source paper(s), ${moveCount} reusable design move(s), and ${evidenceCount} selected evidence snippet(s).`;
+}
 function compactDirectAnswer(_query: string, paperCount: number, moveCount: number, evidenceCount: number) {
   if (!paperCount) return "I could not find a sufficiently grounded OKF match for this question. Try naming a paper, DSR element type, or design domain from the library.";
   return `Use the retrieved OKF knowledge as decision support for a domain-adapted architecture, not as a paper summary. I found ${paperCount} relevant OKF source paper(s), ${moveCount} reusable design move(s), and ${evidenceCount} selected evidence snippet(s); reuse stored requirements, principles, and features where they match, and treat target-domain constructs as mixed or query-generated adaptations.`;
