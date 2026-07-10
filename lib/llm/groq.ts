@@ -167,6 +167,7 @@ function promptTemplateForIntent(intent: string) {
     EVALUATION_PLANNING_QUERY: "Write concise Markdown with evaluation design options, what retrieved papers did, limitations, and fit to artifact maturity.",
     LIBRARY_OVERVIEW_QUERY: "Write a deterministic-style loaded-paper overview with one-line contribution per paper. No extra recommendations.",
     LIBRARY_STATS_QUERY: "Write a deterministic-style statistics answer. Preserve exact counts from answer_plan and do not estimate.",
+    LIBRARY_COVERAGE_QUERY: "Write a deterministic-style library coverage answer. Preserve exact categories from answer_plan and do not invent unloaded papers.",
     NEGATIVE_OR_EXISTENCE_QUERY: "Write a strict existence/no-match answer. If no formal stored DesignPrinciple matches, say so. Related mechanisms must be clearly marked as related, not formal.",
     CLARIFICATION_QUERY: "Ask one concise clarification or give 2-3 possible interpretations. Do not retrieve broadly."
   };

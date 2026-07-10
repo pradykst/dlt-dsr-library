@@ -206,6 +206,11 @@ function querySpecificNodeSpecs(query: string): Array<{ layer: FlowGraphLayer; l
   const q = normalizeText(query);
   const specs: Array<{ layer: FlowGraphLayer; label: string }> = [];
   const has = (terms: string[]) => terms.some((term) => q.includes(normalizeText(term)));
+  if (has(["product", "product data", "catalog"]) && has(["fragmented", "fragmentation", "quality", "consistency", "identity"])) {
+    specs.push({ layer: "Requirement", label: "Create consistent product data identity across fragmented sources" });
+    specs.push({ layer: "Feature", label: "Anchor product data changes with verification proofs and status history" });
+    specs.push({ layer: "Artifact", label: "Product data registry with evidence, identity, and governance services" });
+  }
   if (has(["product", "variant", "listing", "marketplace"]) && has(["identity", "review", "reputation", "relist", "continuity"])) {
     specs.push({ layer: "Requirement", label: "Maintain cross-marketplace product identity and review continuity" });
     specs.push({ layer: "Feature", label: "Gate reviews through verified-purchase and relisting-continuity checks" });

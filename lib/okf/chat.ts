@@ -4,31 +4,19 @@ import type { ConfidenceLabel, DesignMove, OkfAnswerPayload, OkfChatIntent, OkfC
 import { validateChatResponse } from "./validator.ts";
 import { buildReuseFlowResponse } from "./reuse.ts";
 import { buildDeterministicQueryPlan, planOkfQuery, type QueryPlan } from "./query-planner.ts";
+import { detectDeterministicIntent } from "./query-interpreter.ts";
 export { selectSourcePapers } from "./reuse.ts";
-import { detectNamedPapers, expandPolicyTerms, extractQueryCriteria, inferRequestedTypes, normalizeText, paperContribution, paperRoleLabel, paperRoleReason, selectPolicySourcePapers, tokenizePolicy, unique, type PolicyThemeId, type QueryCriteria } from "./policy.ts";
+import { expandPolicyTerms, extractQueryCriteria, normalizeText, paperContribution, paperRoleLabel, paperRoleReason, selectPolicySourcePapers, tokenizePolicy, unique, type PolicyThemeId, type QueryCriteria } from "./policy.ts";
 
 export type OkfRecommendationCard = { title: string; concept_id?: string; evidence_ids: string[]; confidence: string; paper_id?: string };
 export type OkfSourcePaper = { paper_id: string; title: string; role: string; reason: string; requirements_count: number; principles_count: number; features_count: number; evidence_count: number; score?: number; match_strength?: "strong" | "partial" | "weak" };
 export type LibraryStatsAnswer = { intent: "LIBRARY_STATS_QUERY"; direct_answer: string; counts: { papers: number; concepts_total: number; by_type: Record<string, number>; relations: number; evidence_items: number; by_review_status: Record<string, { papers: number; concepts: number }>; by_paper: Array<{ paper_id: string; title: string; concepts: number; evidence_items: number; relations: number; by_type: Record<string, number> }> }; caveats: string[] };
-export type OkfQueryPlan = { intent: OkfChatIntent; task_type: OkfTaskType; output_shape: "Requirement -> Principle -> Feature -> Artifact" | "element_list" | "paper_list" | "evidence" | "comparison" | "lifecycle" | "overview" | "stats" | "clarification" | "open"; targetPaper?: OkfPaper; requestedTypes: OkfConceptType[]; isCrossPaper: boolean; domainTerms: string[]; criteria: QueryCriteria; query_plan: QueryPlan };
+export type LibraryCoverageAnswer = { intent: "LIBRARY_COVERAGE_QUERY"; direct_answer: string; categories: Array<{ category: string; papers: Array<{ paper_id: string; title: string; reason: string }>; count: number }>; no_match_note?: string };
+export type OkfQueryPlan = { intent: OkfChatIntent; task_type: OkfTaskType; output_shape: "Requirement -> Principle -> Feature -> Artifact" | "element_list" | "paper_list" | "evidence" | "comparison" | "lifecycle" | "overview" | "stats" | "library_coverage" | "clarification" | "open"; targetPaper?: OkfPaper; requestedTypes: OkfConceptType[]; isCrossPaper: boolean; domainTerms: string[]; criteria: QueryCriteria; query_plan: QueryPlan };
 export type OkfPaperMatch = { paper_id: string; title: string; match_strength: "strong" | "partial" | "weak"; matched_criteria: string[]; matched_element_types: OkfConceptType[]; top_relevant_concepts: string[]; evidence_count: number; short_reason: string };
 export type OkfAnswerPlan = { intent: OkfChatIntent; user_query: string; query_plan: QueryPlan; answer_shape: OkfQueryPlan["output_shape"]; selected_papers: Array<{ paper_id: string; title: string; role_for_query: string; reason_for_selection: string; relevance_score: number; matched_criteria: string[]; top_concepts: string[]; top_evidence: string[] }>; required_sections: string[]; extraction_items: Array<{ concept_id: string; paper_id: string; type: OkfConceptType; title: string }>; paper_matches: OkfPaperMatch[]; design_moves: DesignMove[]; flow_rows: OkfReuseFlowRow[]; comparison_rows: Array<{ paper_id: string; title: string; element_type: string; summary: string }>; evidence_pack: Array<{ evidence_id: string; paper_id: string; concept_id?: string; excerpt: string; confidence: ConfidenceLabel }>; constraints: string[]; things_to_avoid: string[]; synthesis_policy: "deterministic" | "groq_optional" | "groq_preferred"; criteria: QueryCriteria };
-export type OkfChatResponse = { intent: OkfChatIntent; task_type?: OkfTaskType; answer: string; interpreted_problem?: string; requirements: OkfRecommendationCard[]; principles: OkfRecommendationCard[]; features: OkfRecommendationCard[]; artifact_direction: OkfRecommendationCard[]; source_papers: OkfSourcePaper[]; retrieved_concepts: OkfConcept[]; evidence: { evidence_id: string; paper_id: string; concept_id?: string; paraphrase: string; quote?: string; confidence: string; section?: string; page_number?: number }[]; flow: ReturnType<typeof buildOkfFlow>; flow_graph: ReturnType<typeof buildOkfFlow>; flow_rows?: OkfReuseFlowRow[]; library_stats?: LibraryStatsAnswer; answer_payload?: OkfAnswerPayload; answer_plan?: OkfAnswerPlan; assumptions: string[]; limitations: string[]; warnings: string[]; runtime?: OkfRuntimeMetadata; llm_synthesis?: LlmSynthesisResult };
+export type OkfChatResponse = { intent: OkfChatIntent; task_type?: OkfTaskType; answer: string; interpreted_problem?: string; requirements: OkfRecommendationCard[]; principles: OkfRecommendationCard[]; features: OkfRecommendationCard[]; artifact_direction: OkfRecommendationCard[]; source_papers: OkfSourcePaper[]; retrieved_concepts: OkfConcept[]; evidence: { evidence_id: string; paper_id: string; concept_id?: string; paraphrase: string; quote?: string; confidence: string; section?: string; page_number?: number }[]; flow: ReturnType<typeof buildOkfFlow>; flow_graph: ReturnType<typeof buildOkfFlow>; flow_rows?: OkfReuseFlowRow[]; library_stats?: LibraryStatsAnswer; library_coverage?: LibraryCoverageAnswer; answer_payload?: OkfAnswerPayload; answer_plan?: OkfAnswerPlan; assumptions: string[]; limitations: string[]; warnings: string[]; runtime?: OkfRuntimeMetadata; llm_synthesis?: LlmSynthesisResult };
 
-const flowPattern = /flow|graph|path|trace|map|pathway|requirement\s*(?:->|to|\?)\s*principle\s*(?:->|to|\?)\s*feature|requirement principle feature|connect requirements? to features?/i;
-const paperDiscoveryPattern = /find (?:me )?papers|which papers|papers that discuss|papers that have|papers with|show papers about|identify papers related to|which dsr papers address|where in the library do we have|literature\/papers for/i;
-const paperElementPattern = /show|list|what|which|extract|give me/i;
-const designReusePattern = /what should i reuse|reusable design knowledge|design a system|build a system|i want to build|i want to design|which requirements?|which principles?|which features?|which artifacts?|should i use|decision support|recommend|recommendation|guidance/i;
-const evidencePattern = /evidence|supports?|proof from paper|source for|where does the paper say|citation|evidence for/i;
-const comparisonPattern = /compare|difference|versus|\bvs\b|similarities|distinguish/i;
-const lifecyclePattern = /implementation lifecycle|development lifecycle|from requirements to smart contracts|deploy|deployment|monitoring|maintenance|testing|roles|method fragments|\bisdm\b/i;
-const overviewPattern = /list all papers|all papers in (?:the )?(?:okf )?library|what papers (?:are loaded|are available)|okf library overview|papers currently in (?:the )?(?:okf )?library/i;
-const evaluationPattern = /how should i evaluate|evaluate my|evaluation criteria|which evaluation criteria|demonstration\/evaluation|what kind of demonstration|what kind of evaluation|ex-ante|ex-post|experiment|demonstration/i;
-const statsPattern = /\bhow many\b|\bcount\b|\bcounts\b|\bstatistics\b|\bstats\b|\bnumber of\b/i;
-const greetingPattern = /^(hello|hi|hey|good morning|good afternoon|good evening)\b[!.?\s]*$/i;
-const existencePattern = /\bdoes any\b|\bdo we have\b|\bis there\b|\bare there\b|\bwhich papers? uses?\b|\bwhich papers? use\b|\buses?\b.*\bformal design principle\b/i;
-const negativePattern = /zero[- ]knowledge|\bzkp\b|formal design principle|tokenization as a formal design principle|\bgs1\b/i;
-const vaguePattern = /^(what should i use|which is best|which principles are best|which principle is best|what is best|help|advise me)\??$/i;
 const knownPolicyThemeIds = new Set<PolicyThemeId>(["integrity", "commercial_privacy", "identity_credentials", "trust_reputation", "auditability_status", "consent_control", "token_incentives", "fair_marketplace", "implementation_lifecycle", "iot_sensor_protection", "forecasting_oracle_payment", "scalability_hybrid_storage", "governance_dispute", "evaluation"]);
 
 function isPolicyThemeId(value: string): value is PolicyThemeId {
@@ -37,29 +25,7 @@ function isPolicyThemeId(value: string): value is PolicyThemeId {
 const orderedTypes: OkfConceptType[] = ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
 
 export function routeOkfQuery(query: string, kb: OkfKnowledgeBase = getOkfKnowledgeBase()): OkfChatIntent {
-  const q = normalizeText(query);
-  const trimmed = query.trim();
-  const namedPapers = detectNamedPapers(query, kb);
-  const requestedTypes = inferRequestedTypes(query);
-  const asksReuse = designReusePattern.test(query);
-  const asksFlow = flowPattern.test(query);
-  if (!trimmed || greetingPattern.test(trimmed) || vaguePattern.test(trimmed)) return "CLARIFICATION_QUERY";
-  if (statsPattern.test(query)) return "LIBRARY_STATS_QUERY";
-  if (overviewPattern.test(query)) return "LIBRARY_OVERVIEW_QUERY";
-  if (namedPapers.length && paperElementPattern.test(query) && requestedTypes.length && !asksFlow) return "PAPER_ELEMENT_QUERY";
-  if ((asksReuse || /reuse|which reusable|support each part/i.test(query)) && asksFlow) return "DESIGN_REUSE_FLOW_QUERY";
-  if (paperDiscoveryPattern.test(query) && asksReuse) return asksFlow ? "DESIGN_REUSE_FLOW_QUERY" : "DESIGN_REUSE_QUERY";
-  if (paperDiscoveryPattern.test(query) && !asksReuse && negativePattern.test(query)) return "NEGATIVE_OR_EXISTENCE_QUERY";
-  if (paperDiscoveryPattern.test(query) && !asksReuse) return "PAPER_DISCOVERY_QUERY";
-  if (asksFlow && !namedPapers.length && /marketplace|product|review|reputation|credential|identity|protocol|commercial|cross-market|cross marketplace/i.test(query) && !/sensor|iot|source-to-sink|tamper-resistant sensor/i.test(query)) return "DESIGN_REUSE_FLOW_QUERY";
-  if (asksFlow) return "DSR_FLOW_QUERY";
-  if (evidencePattern.test(query) && !asksReuse) return "EVIDENCE_QUERY";
-  if (comparisonPattern.test(query)) return "COMPARISON_QUERY";
-  if (lifecyclePattern.test(query)) return "IMPLEMENTATION_LIFECYCLE_QUERY";
-  if (evaluationPattern.test(query)) return "EVALUATION_PLANNING_QUERY";
-  if ((negativePattern.test(query) || existencePattern.test(query)) && /which paper|which papers|find|formal|uses?|does|do we have|any paper|is there|are there/i.test(query)) return "NEGATIVE_OR_EXISTENCE_QUERY";
-  if (asksReuse || /design|system|architecture|artifact|marketplace|protocol|trust|privacy|identity/.test(q)) return "DESIGN_REUSE_QUERY";
-  return "CLARIFICATION_QUERY";
+  return detectDeterministicIntent(query, kb);
 }
 export function analyzeOkfQuery(query: string, intent: OkfChatIntent = routeOkfQuery(query), kb: OkfKnowledgeBase = getOkfKnowledgeBase(), queryPlan: QueryPlan = buildDeterministicQueryPlan(query, intent, kb)): OkfQueryPlan {
   const extracted = extractQueryCriteria(query, kb);
@@ -77,7 +43,7 @@ export function analyzeOkfQuery(query: string, intent: OkfChatIntent = routeOkfQ
     optionalTerms: unique([...queryPlan.optional_criteria, ...extracted.optionalTerms]).slice(0, 18)
   };
   const task_type = taskTypeForIntent(intent);
-  return { intent, task_type, output_shape: outputShapeForIntent(intent), targetPaper, requestedTypes, isCrossPaper: queryPlan.requires_cross_paper || (!targetPaper && ["PAPER_DISCOVERY_QUERY", "DESIGN_REUSE_QUERY", "DESIGN_REUSE_FLOW_QUERY", "COMPARISON_QUERY", "EVALUATION_PLANNING_QUERY"].includes(intent)), domainTerms: criteria.mustHaveTerms, criteria, query_plan: queryPlan };
+  return { intent, task_type, output_shape: outputShapeForIntent(intent), targetPaper, requestedTypes, isCrossPaper: queryPlan.requires_cross_paper || (!targetPaper && ["LIBRARY_COVERAGE_QUERY", "PAPER_DISCOVERY_QUERY", "DESIGN_REUSE_QUERY", "DESIGN_REUSE_FLOW_QUERY", "COMPARISON_QUERY", "EVALUATION_PLANNING_QUERY"].includes(intent)), domainTerms: criteria.mustHaveTerms, criteria, query_plan: queryPlan };
 }
 
 export async function answerOkfChat(query: string, kb: OkfKnowledgeBase = getOkfKnowledgeBase()): Promise<OkfChatResponse> {
@@ -93,6 +59,7 @@ export async function answerOkfChat(query: string, kb: OkfKnowledgeBase = getOkf
 
 function buildDeterministicResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
   if (plan.intent === "LIBRARY_STATS_QUERY") return libraryStatsResponse(query, plan, answerPlan, kb);
+  if (plan.intent === "LIBRARY_COVERAGE_QUERY") return libraryCoverageResponse(query, plan, answerPlan, kb);
   if (plan.intent === "LIBRARY_OVERVIEW_QUERY") return libraryOverviewResponse(query, plan, answerPlan, kb);
   if (plan.intent === "PAPER_ELEMENT_QUERY") return paperElementResponse(query, plan, answerPlan, kb);
   if (plan.intent === "PAPER_DISCOVERY_QUERY") return paperDiscoveryResponse(query, plan, answerPlan, kb);
@@ -139,7 +106,7 @@ function buildAnswerPlan(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase
 
 function selectedPaperSupports(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase) {
   if (plan.intent === "LIBRARY_STATS_QUERY") return [];
-  if (plan.intent === "LIBRARY_OVERVIEW_QUERY") return kb.papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paperContribution(paper.paper_id, paper.title), score: 100 }));
+  if (plan.intent === "LIBRARY_OVERVIEW_QUERY" || plan.intent === "LIBRARY_COVERAGE_QUERY") return kb.papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paperContribution(paper.paper_id, paper.title), score: 100 }));
   if (plan.targetPaper) return [{ paper_id: plan.targetPaper.paper_id, title: plan.targetPaper.title, reason: "Named paper hard filter.", score: 1000 }];
   if (plan.intent === "IMPLEMENTATION_LIFECYCLE_QUERY") return forcePapers(["INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"], kb);
   if (plan.intent === "NEGATIVE_OR_EXISTENCE_QUERY") return selectPolicySourcePapers(query, kb, 6, plan.criteria);
@@ -153,7 +120,7 @@ function selectedPaperSupports(query: string, plan: OkfQueryPlan, kb: OkfKnowled
 }
 
 function conceptsForPlan(query: string, plan: OkfQueryPlan, paperIds: string[], kb: OkfKnowledgeBase) {
-  if (plan.intent === "LIBRARY_OVERVIEW_QUERY" || plan.intent === "LIBRARY_STATS_QUERY") return [];
+  if (plan.intent === "LIBRARY_OVERVIEW_QUERY" || plan.intent === "LIBRARY_STATS_QUERY" || plan.intent === "LIBRARY_COVERAGE_QUERY") return [];
   const paperSet = new Set(paperIds);
   if (plan.intent === "PAPER_ELEMENT_QUERY") return orderConcepts(kb.concepts.filter((concept) => paperSet.has(concept.paper_id) && plan.requestedTypes.includes(concept.type)));
   if (plan.intent === "IMPLEMENTATION_LIFECYCLE_QUERY") return orderConcepts(kb.concepts.filter((concept) => paperSet.has(concept.paper_id) && ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "Limitation"].includes(concept.type))).slice(0, 80);
@@ -180,6 +147,60 @@ function designReuseResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfA
   return { ...reuse, intent, task_type: plan.task_type, answer_plan: { ...answerPlan, design_moves: reuse.answer_payload?.design_moves ?? [], flow_rows: reuse.flow_rows ?? [], evidence_pack: reuse.evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, confidence: item.confidence as ConfidenceLabel })) } };
 }
 
+function libraryCoverageResponse(_query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
+  const coverage = buildLibraryCoverageAnswer(kb);
+  const categoryLines = coverage.categories.map((category) => {
+    const paperLines = category.papers.length
+      ? category.papers.map((paper, index) => `${index + 1}. ${paper.title} - ${paper.reason}`).join("\n")
+      : "None in the loaded OKF library.";
+    return `${category.category} (${category.count}):\n${paperLines}`;
+  });
+  const sections = [coverage.direct_answer, "Coverage categories:", ...categoryLines];
+  if (coverage.no_match_note) sections.push(coverage.no_match_note);
+  return baseResponse(plan.intent, sections.join("\n\n"), [], [], emptyFlow("library-coverage"), sourcePapersForIds(kb.papers.map((paper) => paper.paper_id), [], kb), { task_type: plan.task_type, library_coverage: coverage, answer_plan: answerPlan, assumptions: coverage.no_match_note ? [coverage.no_match_note] : [] });
+}
+
+function buildLibraryCoverageAnswer(kb: OkfKnowledgeBase): LibraryCoverageAnswer {
+  const categories = [
+    "blockchain/DLT-specific artifact/design paper",
+    "blockchain/DLT methodological/framework paper",
+    "domain-specific blockchain case paper",
+    "general DSR/methodology/theory paper",
+    "non-blockchain general literature"
+  ].map((category) => ({ category, papers: [] as Array<{ paper_id: string; title: string; reason: string }>, count: 0 }));
+  const byCategory = new Map(categories.map((category) => [category.category, category]));
+  const classifications = kb.papers.map((paper) => classifyPaperCoverage(paper, kb));
+  for (const item of classifications) {
+    const category = byCategory.get(item.category);
+    if (!category) continue;
+    category.papers.push({ paper_id: item.paper.paper_id, title: item.paper.title, reason: item.reason });
+    category.count = category.papers.length;
+  }
+  const blockchainRelated = classifications.filter((item) => item.blockchainRelated).length;
+  const nonBlockchain = byCategory.get("non-blockchain general literature")?.papers ?? [];
+  const methodological = byCategory.get("blockchain/DLT methodological/framework paper")?.papers ?? [];
+  const direct_answer = blockchainRelated === kb.papers.length
+    ? `Based on the loaded OKF titles, metadata, and extracted concepts, all ${kb.papers.length} paper(s) are blockchain/DLT-related. I do not find a clearly non-blockchain general-literature paper in the current library.`
+    : `Based on the loaded OKF titles, metadata, and extracted concepts, ${blockchainRelated} of ${kb.papers.length} paper(s) are blockchain/DLT-related and ${kb.papers.length - blockchainRelated} are not clearly blockchain-specific.`;
+  const notes: string[] = [];
+  if (!nonBlockchain.length) notes.push("No clearly non-blockchain general literature paper is loaded; do not treat blockchain use-case papers as non-blockchain matches.");
+  if (methodological.length) notes.push(`${methodological.map((paper) => paper.title).join("; ")} is methodological/framework-oriented, but it is still blockchain-related rather than non-blockchain literature.`);
+  return { intent: "LIBRARY_COVERAGE_QUERY", direct_answer, categories, no_match_note: notes.join(" ") || undefined };
+}
+
+function classifyPaperCoverage(paper: OkfPaper, kb: OkfKnowledgeBase) {
+  const concepts = kb.concepts.filter((concept) => concept.paper_id === paper.paper_id);
+  const text = normalizeText([paper.paper_id, paper.title, paper.body_text, ...concepts.flatMap((concept) => [concept.title, concept.description, concept.body_text, concept.tags.join(" "), concept.type, concept.dsr_layer])].join(" "));
+  const blockchainRelated = /blockchain|dlt|distributed ledger|smart contract|token|nft|ssi|self sovereign identity|decentralized identity|did/.test(text);
+  const methodological = /framework|methodology|method fragments|isdm|lifecycle|development process|design science|method paper/.test(text);
+  const generalTheory = /kernel theory|theory|methodology|framework|evaluation method/.test(text);
+  const domainSpecific = /iot|sensor|kyc|health|hie|consent|capacity|marketplace|peer review|reviewer|newsvendor|forecast|commercial|machine tool|nil|nft|product|data sharing|identity/.test(text);
+  if (!blockchainRelated && generalTheory) return { paper, category: "general DSR/methodology/theory paper", reason: "General methodological/theory cues without clear blockchain/DLT specificity.", blockchainRelated };
+  if (!blockchainRelated) return { paper, category: "non-blockchain general literature", reason: "No clear blockchain/DLT-specific cue in loaded metadata or concepts.", blockchainRelated };
+  if (methodological) return { paper, category: "blockchain/DLT methodological/framework paper", reason: "Framework, lifecycle, method-fragment, or methodology-oriented blockchain/DLT contribution.", blockchainRelated };
+  if (domainSpecific) return { paper, category: "domain-specific blockchain case paper", reason: "Blockchain/DLT design knowledge tied to a concrete domain or use-case artifact.", blockchainRelated };
+  return { paper, category: "blockchain/DLT-specific artifact/design paper", reason: "Blockchain/DLT artifact or design paper without a broader methodology classification.", blockchainRelated };
+}
 function libraryStatsResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
   const stats = buildLibraryStatsAnswer(query, kb);
   const typeSummary = orderedTypes.map((type) => `${type}: ${stats.counts.by_type[type] ?? 0}`).join("; ");
@@ -607,7 +628,7 @@ function defaultRequestedTypes(intent: OkfChatIntent): OkfConceptType[] {
 }
 
 function taskTypeForIntent(intent: OkfChatIntent): OkfTaskType {
-  const map: Record<OkfChatIntent, OkfTaskType> = { LIBRARY_STATS_QUERY: "library_stats", PAPER_DISCOVERY_QUERY: "paper_discovery", PAPER_ELEMENT_QUERY: "paper_element", DSR_FLOW_QUERY: "dsr_flow", DESIGN_REUSE_QUERY: "design_reuse", DESIGN_REUSE_FLOW_QUERY: "design_reuse_flow", EVIDENCE_QUERY: "evidence", COMPARISON_QUERY: "comparison", IMPLEMENTATION_LIFECYCLE_QUERY: "implementation_lifecycle", EVALUATION_PLANNING_QUERY: "evaluation_planning", LIBRARY_OVERVIEW_QUERY: "library_overview", NEGATIVE_OR_EXISTENCE_QUERY: "existence", CLARIFICATION_QUERY: "clarification" };
+  const map: Record<OkfChatIntent, OkfTaskType> = { LIBRARY_STATS_QUERY: "library_stats", LIBRARY_COVERAGE_QUERY: "library_coverage", PAPER_DISCOVERY_QUERY: "paper_discovery", PAPER_ELEMENT_QUERY: "paper_element", DSR_FLOW_QUERY: "dsr_flow", DESIGN_REUSE_QUERY: "design_reuse", DESIGN_REUSE_FLOW_QUERY: "design_reuse_flow", EVIDENCE_QUERY: "evidence", COMPARISON_QUERY: "comparison", IMPLEMENTATION_LIFECYCLE_QUERY: "implementation_lifecycle", EVALUATION_PLANNING_QUERY: "evaluation_planning", LIBRARY_OVERVIEW_QUERY: "library_overview", NEGATIVE_OR_EXISTENCE_QUERY: "existence", CLARIFICATION_QUERY: "clarification" };
   return map[intent];
 }
 
@@ -615,6 +636,7 @@ function outputShapeForIntent(intent: OkfChatIntent): OkfQueryPlan["output_shape
   if (intent === "DESIGN_REUSE_FLOW_QUERY" || intent === "DSR_FLOW_QUERY") return "Requirement -> Principle -> Feature -> Artifact";
   if (intent === "PAPER_ELEMENT_QUERY") return "element_list";
   if (intent === "LIBRARY_STATS_QUERY") return "stats";
+  if (intent === "LIBRARY_COVERAGE_QUERY") return "library_coverage";
   if (intent === "PAPER_DISCOVERY_QUERY" || intent === "NEGATIVE_OR_EXISTENCE_QUERY") return "paper_list";
   if (intent === "EVIDENCE_QUERY") return "evidence";
   if (intent === "COMPARISON_QUERY") return "comparison";
@@ -625,13 +647,14 @@ function outputShapeForIntent(intent: OkfChatIntent): OkfQueryPlan["output_shape
 }
 
 function requiredSectionsForIntent(intent: OkfChatIntent) {
-  const map: Record<OkfChatIntent, string[]> = { LIBRARY_STATS_QUERY: ["direct_answer", "counts"], PAPER_DISCOVERY_QUERY: ["strong_matches", "partial_matches"], PAPER_ELEMENT_QUERY: ["exact_elements"], DSR_FLOW_QUERY: ["relation_backed_rows"], DESIGN_REUSE_QUERY: ["design_moves", "architecture_direction", "limitations"], DESIGN_REUSE_FLOW_QUERY: ["design_moves", "flow_rows", "evidence"], EVIDENCE_QUERY: ["evidence_by_paper"], COMPARISON_QUERY: ["comparison_rows", "reuse_implications"], IMPLEMENTATION_LIFECYCLE_QUERY: ["lifecycle_stages", "roles_models"], EVALUATION_PLANNING_QUERY: ["evaluation_options", "limitations"], LIBRARY_OVERVIEW_QUERY: ["loaded_papers"], NEGATIVE_OR_EXISTENCE_QUERY: ["strict_result", "related_caveat"], CLARIFICATION_QUERY: ["clarification"] };
+  const map: Record<OkfChatIntent, string[]> = { LIBRARY_STATS_QUERY: ["direct_answer", "counts"], LIBRARY_COVERAGE_QUERY: ["direct_answer", "categories"], PAPER_DISCOVERY_QUERY: ["strong_matches", "partial_matches"], PAPER_ELEMENT_QUERY: ["exact_elements"], DSR_FLOW_QUERY: ["relation_backed_rows"], DESIGN_REUSE_QUERY: ["design_moves", "architecture_direction", "limitations"], DESIGN_REUSE_FLOW_QUERY: ["design_moves", "flow_rows", "evidence"], EVIDENCE_QUERY: ["evidence_by_paper"], COMPARISON_QUERY: ["comparison_rows", "reuse_implications"], IMPLEMENTATION_LIFECYCLE_QUERY: ["lifecycle_stages", "roles_models"], EVALUATION_PLANNING_QUERY: ["evaluation_options", "limitations"], LIBRARY_OVERVIEW_QUERY: ["loaded_papers"], NEGATIVE_OR_EXISTENCE_QUERY: ["strict_result", "related_caveat"], CLARIFICATION_QUERY: ["clarification"] };
   return map[intent];
 }
 
 function constraintsForIntent(intent: OkfChatIntent) {
   const generic = ["Use only loaded OKF papers, concepts, relations, and evidence."];
   if (intent === "LIBRARY_STATS_QUERY") return [...generic, "Return exact counts from the loaded OKF index."];
+  if (intent === "LIBRARY_COVERAGE_QUERY") return [...generic, "Classify only loaded papers and do not invent non-blockchain literature."];
   if (intent === "PAPER_DISCOVERY_QUERY") return [...generic, "Return ranked papers, not a design recommendation."];
   if (intent === "PAPER_ELEMENT_QUERY") return [...generic, "Hard-filter to named paper and requested element types."];
   if (intent === "DSR_FLOW_QUERY") return [...generic, "Use stored relations first; mark only genuine bridge nodes as query-generated."];
@@ -641,6 +664,7 @@ function constraintsForIntent(intent: OkfChatIntent) {
 
 function thingsToAvoidForIntent(intent: OkfChatIntent) {
   if (intent === "LIBRARY_STATS_QUERY") return ["generic estimates", "architecture recommendation"];
+  if (intent === "LIBRARY_COVERAGE_QUERY") return ["generic retrieval ranking", "inventing non-loaded non-blockchain papers", "architecture recommendation"];
   if (intent === "PAPER_DISCOVERY_QUERY") return ["architecture recommendation", "generic blockchain/privacy advice"];
   if (intent === "PAPER_ELEMENT_QUERY") return ["unrelated papers", "recommendation prose"];
   if (intent === "DSR_FLOW_QUERY") return ["raw graph dump", "generic design moves"];

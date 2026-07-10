@@ -163,6 +163,7 @@ export type OkfFlow = Omit<FlowGraph, "nodes" | "edges"> & {
 
 export type OkfChatIntent =
   | "LIBRARY_STATS_QUERY"
+  | "LIBRARY_COVERAGE_QUERY"
   | "PAPER_DISCOVERY_QUERY"
   | "PAPER_ELEMENT_QUERY"
   | "DESIGN_REUSE_FLOW_QUERY"
@@ -178,6 +179,7 @@ export type OkfChatIntent =
 
 export type OkfTaskType =
   | "library_stats"
+  | "library_coverage"
   | "paper_discovery"
   | "paper_element"
   | "dsr_flow"

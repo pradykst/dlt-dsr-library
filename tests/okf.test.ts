@@ -162,6 +162,25 @@ test("paper-specific flow query uses only Blockchain IoT stored relations", asyn
   assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored"));
   assert.equal(response.flow_graph.edges.some((edge) => edge.provenance === "query_generated"), false);
 });
+test("chatbot Blockchain IoT stored flow matches stored OKF relation source", async () => {
+  const kb = parseOkfLibrary();
+  const response = await answerOkfChat("Show the Requirement -> Principle -> Feature flow from Blockchain for the IoT.", kb);
+  const flowPredicates = new Set(["motivates", "requires", "addressed_by", "satisfies", "instantiates", "instantiated_by", "implements", "evaluated_by", "supported_by", "supports", "derived_from", "contributes_to"]);
+  const nodeConceptIds = new Set(response.flow_graph.nodes.map((node) => node.concept_id).filter((id): id is string => Boolean(id)));
+  const expectedRelationIds = kb.relations
+    .filter((relation) => relation.relation_scope !== "query_generated")
+    .filter((relation) => flowPredicates.has(relation.predicate))
+    .filter((relation) => nodeConceptIds.has(relation.source_concept_id) && nodeConceptIds.has(relation.target_concept_id))
+    .map((relation) => relation.relation_id)
+    .sort();
+  const actualRelationIds = response.flow_graph.edges.map((edge) => edge.relation_id).filter((id): id is string => Boolean(id)).sort();
+  assert.deepEqual(actualRelationIds, expectedRelationIds);
+  assert.ok(response.flow_graph.nodes.every((node) => node.provenance === "stored"));
+  assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored" && edge.relation_id));
+
+  const graph = JSON.parse(readFileSync(path.join(process.cwd(), "library", "okf", "papers", "blockchain-iot-sdps-2019", "graph.json"), "utf8")) as { recommended_main_flow: string[] };
+  for (const localId of graph.recommended_main_flow) assert.ok(nodeConceptIds.has(`BLOCKCHAIN_IOT_SDPS_2019:${localId}`), localId);
+});
 const productIdentityQuery = "I want to design a cross-marketplace product identity and review-continuity protocol where the same exact product variant can be listed on multiple marketplaces, sellers can relist products, buyers can leave verified-purchase reviews, and competitors should not expose raw commercial data. Which reusable DSR design requirements, design principles, design features, and artifact patterns should I reuse from the OKF library? Build a concise Requirement -> Principle -> Feature -> Artifact flow, explain which papers support each part, show evidence, and clearly mark any product-identity-specific suggestions as query-generated.";
 
 test("product identity query produces a structured decision-support answer without exact-query hardcoding", async () => {
@@ -634,6 +653,50 @@ test("negative ZKP and library overview queries stay deterministic and honest", 
   for (const paper of kb.papers) assert.ok(overview.answer.includes(paper.title));
 });
 
+test("final query interpreter handles tokenization, product-data reuse, coverage, and greetings", async () => {
+  const kb = parseOkfLibrary();
+
+  const tokenisation = await answerOkfChat("which paper has tokenisation", kb);
+  assert.equal(tokenisation.intent, "PAPER_DISCOVERY_QUERY");
+  assert.notEqual(tokenisation.intent, "CLARIFICATION_QUERY");
+  assert.equal(tokenisation.source_papers[0].paper_id, "PEER_REVIEW_TOKEN_INCENTIVES_2025");
+  assert.equal(tokenisation.source_papers[0].match_strength, "strong");
+
+  const tokens = await answerOkfChat("find me paper which has tokens", kb);
+  assert.equal(tokens.intent, "PAPER_DISCOVERY_QUERY");
+  assert.notEqual(tokens.intent, "CLARIFICATION_QUERY");
+  assert.equal(tokens.source_papers[0].paper_id, "PEER_REVIEW_TOKEN_INCENTIVES_2025");
+  assert.equal(tokens.source_papers[0].match_strength, "strong");
+
+  const formalTokenization = await answerOkfChat("which paper has tokenization as a formal design principle", kb);
+  assert.equal(formalTokenization.intent, "NEGATIVE_OR_EXISTENCE_QUERY");
+  assert.match(formalTokenization.answer, /did not find a formal stored DesignPrinciple/i);
+  assert.equal(/formal stored design principle match\(es\):\n1\./i.test(formalTokenization.answer), false);
+  assert.match(formalTokenization.answer, /DesignFeature|DesignPrinciple|Related stored OKF material/i);
+
+  const fragmentedProductData = await answerOkfChat("i want to create an application which solves the problem of fragmented product data, what principles and things i can reuse from the library, pls guide me", kb);
+  assert.equal(fragmentedProductData.intent, "DESIGN_REUSE_QUERY");
+  assert.notEqual(fragmentedProductData.intent, "CLARIFICATION_QUERY");
+  for (const required of ["BLOCKCHAIN_IOT_SDPS_2019", "SHORT_END_STICK_2025", "SSI_KYC_FRAMEWORK_2022", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024"]) assert.ok(fragmentedProductData.source_papers.some((paper) => paper.paper_id === required), required);
+  assert.ok((fragmentedProductData.answer_payload?.design_moves.length ?? 0) >= 5);
+  assert.match(fragmentedProductData.answer, /Design moves to reuse|canonical product|fragmented|product/i);
+
+  const coverage = await answerOkfChat("are all the papers blockchain related in the library, find papers in the library that are not blockchain specific but are lit in general", kb);
+  assert.equal(coverage.intent, "LIBRARY_COVERAGE_QUERY");
+  assert.match(coverage.answer, /all 9 paper\(s\) are blockchain\/DLT-related/i);
+  assert.match(coverage.answer, /No clearly non-blockchain general literature paper is loaded/i);
+  assert.equal(coverage.library_coverage?.categories.find((category) => category.category === "non-blockchain general literature")?.count, 0);
+  assert.equal(/I found \d+ strong match/i.test(coverage.answer), false);
+
+  const evaluationDiscovery = await answerOkfChat("what papers do we have about evaluation methods", kb);
+  assert.ok(["PAPER_DISCOVERY_QUERY", "EVALUATION_PLANNING_QUERY"].includes(evaluationDiscovery.intent));
+  assert.notEqual(evaluationDiscovery.intent, "NEGATIVE_OR_EXISTENCE_QUERY");
+
+  const hello = await answerOkfChat("hello", kb);
+  assert.equal(hello.intent, "CLARIFICATION_QUERY");
+  assert.equal(hello.source_papers.length, 0);
+  assert.equal(hello.retrieved_concepts.length, 0);
+});
 test("paper discovery variants rank sources without architecture recommendations", async () => {
   const kb = parseOkfLibrary();
   const discoveryQueries = [
