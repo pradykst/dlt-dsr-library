@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import type { OkfChatResponse } from "@/lib/okf/chat.ts";
 import type { OkfConcept } from "@/lib/okf/schema.ts";
+import type { LlmProviderOutcome, LlmProviderStatus } from "@/lib/llm/provider.ts";
 
 const exampleQuestions = [
   "Which papers help with privacy-preserving identity?",
@@ -24,7 +25,8 @@ const conceptGroups = [
   ["Evaluation Criteria / Evidence", "Evaluation"]
 ] as const;
 
-type LlmHealth = { ok: boolean; provider: string; provider_configured?: boolean; provider_connected?: boolean; status?: number; error?: string };
+type ProviderStatusView = Omit<LlmProviderStatus, "provider"> & { provider: string };
+type LlmHealth = Partial<Omit<LlmProviderStatus, "provider">> & { ok: boolean; provider: string; provider_configured?: boolean; provider_connected?: boolean; status?: number; error?: string; provider_error_type?: string; health_cached?: boolean; health_stale?: boolean; health_mode?: "passive" | "live" | "mock" };
 
 export function OkfChatWorkspace() {
   const [query, setQuery] = useState("");
@@ -42,7 +44,7 @@ export function OkfChatWorkspace() {
     fetch("/api/health/llm")
       .then((result) => result.json())
       .then((payload) => { if (!cancelled) setLlmHealth(payload); })
-      .catch(() => { if (!cancelled) setLlmHealth({ ok: false, provider: "groq", provider_configured: false, provider_connected: false }); });
+      .catch(() => { if (!cancelled) setLlmHealth({ ok: false, provider: "none", configured: false, reachable: false, attempted: false, outcome: "not_configured" }); });
     return () => { cancelled = true; };
   }, []);
 
@@ -124,13 +126,10 @@ export function OkfChatWorkspace() {
 }
 
 function LlmStatusBadge({ health, response }: { health: LlmHealth | null; response: OkfChatResponse | null }) {
-  const runtime = response?.runtime;
-  const provider = providerLabel(runtime?.provider ?? health?.provider ?? "groq");
-  const mode = runtime?.synthesis_mode;
-  const configured = runtime?.provider_configured ?? health?.provider_configured ?? false;
-  const connected = runtime?.provider_connected ?? health?.provider_connected ?? false;
-  const label = providerStatusLabel(provider, mode, configured, connected);
-  const tone = providerStatusTone(mode, configured, connected);
+  if (!health && !response) return <div className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-2 text-xs font-medium text-muted" title="LLM provider status is loading"><CheckCircle2 className="h-4 w-4" /><span>LLM status pending</span></div>;
+  const status = response ? providerStatusForResponse(response) : providerStatusForHealth(health);
+  const label = providerStatusLabel(status);
+  const tone = providerStatusTone(status);
   return <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium ${tone}`} title={label}><CheckCircle2 className="h-4 w-4" /><span>{label}</span></div>;
 }
 function AssistantWorkspace({ query, setQuery, response, loading, submit, activeTab, setActiveTab, selectedConceptId, setSelectedConceptId, selectedEvidenceIds, setSelectedEvidenceIds, correctionText, setCorrectionText, submitCorrection, correctionStatus }: { query: string; setQuery: (value: string) => void; response: OkfChatResponse | null; loading: boolean; submit: () => void; activeTab: string; setActiveTab: (value: string) => void; selectedConceptId?: string; setSelectedConceptId: (id: string | undefined) => void; selectedEvidenceIds?: string[]; setSelectedEvidenceIds: (ids: string[] | undefined) => void; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; correctionStatus: string }) {
@@ -190,10 +189,9 @@ function StageProgress({ response, loading }: { response: OkfChatResponse | null
 }
 
 function AnswerTab({ response, correctionText, setCorrectionText, submitCorrection, correctionStatus, selectedConceptId }: { response: OkfChatResponse; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; correctionStatus: string; selectedConceptId?: string }) {
-  const synthesis = response.llm_synthesis;
-  const rawMarkdown = synthesis?.answer_markdown ?? response.answer;
-  const markdown = stripSourcePaperTail(rawMarkdown, response.source_papers.map((paper) => paper.title));
-  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final answer - {response.intent.replace(/_/g, " ").toLowerCase()}</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(markdown)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={markdown} failed={Boolean(synthesis?.synthesis_mode?.startsWith("fallback_"))} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2">{response.source_papers.slice(0, 4).map((paper) => <Badge key={paper.paper_id}>{shortPaperTitle(paper.title)}</Badge>)}</div><p className="mt-3 text-sm text-muted">Evidence details are available in the Evidence tab.</p></div><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
+  const status = providerStatusForResponse(response);
+  const failed = status.outcome === "rate_limited" || status.outcome === "validation_error" || status.outcome === "provider_error";
+  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final answer - {response.intent.replace(/_/g, " ").toLowerCase()}</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(response.answer)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={response.answer} failed={failed} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2">{response.source_papers.slice(0, 4).map((paper) => <Badge key={paper.paper_id}>{shortPaperTitle(paper.title)}</Badge>)}</div><p className="mt-3 text-sm text-muted">Evidence details are available in the Evidence tab.</p></div><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
 }
 
 function MarkdownAnswer({ markdown, failed }: { markdown: string; failed: boolean }) {
@@ -218,11 +216,9 @@ function escapeHtml(value: string) {
 }
 
 function AnswerRuntimeBadge({ response }: { response: OkfChatResponse }) {
-  const runtime = response.runtime;
-  const provider = providerLabel(runtime?.provider);
-  const mode = runtime?.synthesis_mode;
-  const label = providerStatusLabel(provider, mode, runtime?.provider_configured ?? false, runtime?.provider_connected ?? false);
-  const tone = providerStatusTone(mode, runtime?.provider_configured ?? false, runtime?.provider_connected ?? false);
+  const status = providerStatusForResponse(response);
+  const label = providerStatusLabel(status);
+  const tone = providerStatusTone(status);
   return <div className={`rounded-full border px-3 py-2 text-xs font-medium ${tone}`}>{label}</div>;
 }
 type FlowLayerLabel = "Requirement" | "Principle" | "Feature" | "Artifact";
@@ -350,22 +346,22 @@ function readablePredicate(value: string) {
 }
 
 function synthesisStageLabel(response: OkfChatResponse) {
-  const provider = providerLabel(response.runtime?.provider);
-  const mode = response.runtime?.synthesis_mode;
-  if (mode === "groq" || mode === "featherless" || mode === "mock") return `${provider} synthesis used`;
-  if (mode === "fallback_rate_limited") return `${provider} rate limit fallback`;
-  if (mode === "fallback_provider_error") return `${provider} provider fallback; see Debug`;
-  if (mode === "fallback_validation_error") return `${provider} validation fallback; see Debug`;
-  if (mode === "structured_okf_answer") return "Structured OKF answer";
-  if (response.runtime?.provider_connected) return `${provider} synthesis available`;
-  return `${provider} compact fallback`;
+  const status = providerStatusForResponse(response);
+  const provider = providerLabel(status.provider);
+  if (status.outcome === "synthesis_used") return `${provider} synthesis used`;
+  if (status.outcome === "rate_limited") return `${provider} rate limit fallback`;
+  if (status.outcome === "provider_error") return `${provider} provider fallback; see Debug`;
+  if (status.outcome === "validation_error") return `${provider} validation fallback; see Debug`;
+  if (status.outcome === "synthesis_skipped") return `${provider} synthesis skipped`;
+  return "Structured OKF answer";
 }
 function DebugTrace({ query, response }: { query: string; response: OkfChatResponse }) {
   const synthesis = response.llm_synthesis;
+  const providerStatus = providerStatusForResponse(response);
   const evidenceIds = response.evidence.map((item) => item.evidence_id);
   const paperIds = response.source_papers.map((paper) => paper.paper_id);
   const counts = response.retrieved_concepts.reduce<Record<string, number>>((acc, concept) => ({ ...acc, [concept.type]: (acc[concept.type] ?? 0) + 1 }), {});
-  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {response.runtime?.provider ?? "none"}; mode {response.runtime?.synthesis_mode ?? "none"}</p><p><strong className="text-ink">Provider status:</strong> {String(response.runtime?.provider_connected ?? false)}; status {response.runtime?.provider_status_code ?? "none"}; error type {response.runtime?.provider_error_type ?? "none"}; fallback {response.runtime?.fallback_reason ?? "none"}</p><p><strong className="text-ink">DB loaded from:</strong> {response.runtime?.db_loaded_from ?? "unknown"}{response.runtime?.db_error_message ? `; ${response.runtime.db_error_message}` : ""}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details><details><summary className="cursor-pointer font-semibold text-ink">FlowGraph JSON</summary><pre className="mt-2 max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify(response.flow_graph ?? response.flow, null, 2)}</pre></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
+  return <details className="rounded-lg border border-line bg-white p-4" open><summary className="cursor-pointer text-sm font-semibold text-ink">Debug / retrieval trace</summary><button type="button" onClick={() => navigator.clipboard?.writeText(JSON.stringify(response, null, 2))} className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue">Copy JSON debug</button><div className="mt-3 space-y-2 text-sm leading-6 text-muted"><p><strong className="text-ink">Query:</strong> {query}</p><p><strong className="text-ink">Intent:</strong> {response.intent}</p><p><strong className="text-ink">Provider:</strong> {providerStatus.provider}; outcome {providerStatus.outcome}</p><p><strong className="text-ink">Provider status:</strong> configured {String(providerStatus.configured)}; reachable {String(providerStatus.reachable)}; attempted {String(providerStatus.attempted)}; HTTP {providerStatus.http_status ?? "none"}; error type {providerStatus.error_type ?? "none"}; fallback {providerStatus.fallback_reason ?? "none"}</p><p><strong className="text-ink">DB loaded from:</strong> {response.runtime?.db_loaded_from ?? "unknown"}{response.runtime?.db_error_message ? `; ${response.runtime.db_error_message}` : ""}</p><p><strong className="text-ink">Retrieved paper IDs:</strong> {paperIds.join(", ") || "none"}</p><p><strong className="text-ink">Concept counts:</strong> {JSON.stringify(counts)}</p><p><strong className="text-ink">Relations:</strong> {response.flow.edges.length}</p><details><summary className="cursor-pointer font-semibold text-ink">Evidence IDs ({evidenceIds.length})</summary><div className="mt-2 break-all text-xs leading-5">{evidenceIds.join(", ")}</div></details><details><summary className="cursor-pointer font-semibold text-ink">FlowGraph JSON</summary><pre className="mt-2 max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify(response.flow_graph ?? response.flow, null, 2)}</pre></details>{synthesis && <details><summary className="cursor-pointer font-semibold text-ink">Provider metadata and compact context</summary><pre className="mt-2 max-h-[520px] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper p-3 text-xs leading-5 text-muted">{JSON.stringify({ provider_metadata: synthesis.provider_metadata, debug: synthesis.debug }, null, 2)}</pre></details>}{response.warnings.length > 0 && <p><strong className="text-ink">Warnings:</strong> {response.warnings.join("; ")}</p>}</div></details>;
 }
 
 function SourcePapersPanel({ response, onSelectEvidenceIds }: { response: OkfChatResponse | null; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
@@ -426,33 +422,6 @@ function formatMatchStrength(strength: string) {
   return strength.charAt(0).toUpperCase() + strength.slice(1);
 }
 
-function stripSourcePaperTail(markdown: string, paperTitles: string[]) {
-  const lines = markdown.replace(/\s+$/g, "").split(/\r?\n/);
-  let index = lines.length - 1;
-  while (index >= 0 && !lines[index].trim()) index -= 1;
-  const tail: string[] = [];
-  while (index >= 0 && isBarePaperTitleLine(lines[index], paperTitles)) {
-    tail.unshift(lines[index]);
-    index -= 1;
-    while (index >= 0 && !lines[index].trim()) index -= 1;
-  }
-  if (tail.length < 2) return markdown;
-  return lines.slice(0, index + 1).join("\n").trim();
-}
-
-function isBarePaperTitleLine(line: string, paperTitles: string[]) {
-  const normalized = normalizePaperTitle(line.replace(/^\s*(?:[-*]|\d+[.)])\s+/, ""));
-  return paperTitles.some((title) => {
-    const full = normalizePaperTitle(title);
-    const short = normalizePaperTitle(shortPaperTitle(title));
-    return normalized === full || normalized === short;
-  });
-}
-
-function normalizePaperTitle(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
 function shortPaper(paperId: string) {
   return paperId.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -475,32 +444,90 @@ function normalizeKey(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function providerStatusLabel(provider: string, mode: string | undefined, configured: boolean, connected: boolean) {
-  if (mode === "groq" || mode === "featherless" || mode === "mock") return `${provider} connected · synthesis used`;
-  if (mode === "fallback_rate_limited") return `${provider} connected · rate limit fallback`;
-  if (mode === "fallback_provider_error") return `${provider} unavailable · compact fallback`;
-  if (mode === "fallback_validation_error") return `${provider} connected · validation fallback`;
-  if (mode === "structured_okf_answer") return configured ? `${provider} connected · structured OKF answer` : `${provider} not configured · structured OKF answer`;
-  if (connected) return `${provider} connected · synthesis available`;
-  return configured ? `${provider} unavailable · compact fallback` : `${provider} not configured · structured OKF answer`;
+function providerStatusForResponse(response: OkfChatResponse): ProviderStatusView {
+  const runtime = response.runtime;
+  if (runtime?.provider_status) return runtime.provider_status;
+  const provider = runtime?.provider ?? response.llm_synthesis?.provider_metadata.provider ?? "none";
+  const configured = runtime?.provider_configured ?? provider === "mock";
+  const attempted = runtime?.synthesis_attempted ?? false;
+  const httpStatus = runtime?.provider_status_code ?? response.llm_synthesis?.provider_metadata.status;
+  const errorType = runtime?.provider_error_type ?? response.llm_synthesis?.provider_metadata.error_type;
+  const outcome = legacyProviderOutcome(runtime?.synthesis_mode ?? response.llm_synthesis?.synthesis_mode, provider, configured, attempted, httpStatus);
+  return {
+    provider,
+    configured,
+    reachable: runtime?.provider_connected ?? (attempted && httpStatus !== undefined),
+    attempted,
+    http_status: httpStatus,
+    outcome,
+    error_type: errorType,
+    fallback_reason: runtime?.fallback_reason
+  };
 }
 
-function providerStatusTone(mode: string | undefined, configured: boolean, connected: boolean) {
-  if (mode === "groq" || mode === "featherless" || mode === "mock") return "border-green/30 bg-green/5 text-green";
-  if (mode === "fallback_provider_error" || mode === "fallback_validation_error") return "border-red-200 bg-red-50 text-red-700";
-  if (mode === "fallback_rate_limited") return "border-amber-300 bg-amber-50 text-amber-700";
-  if (mode === "structured_okf_answer" && connected) return "border-blue/30 bg-blue/5 text-blue";
-  if (connected) return "border-green/30 bg-green/5 text-green";
-  return configured ? "border-red-200 bg-red-50 text-red-700" : "border-amber-300 bg-amber-50 text-amber-700";
+function providerStatusForHealth(health: LlmHealth | null): ProviderStatusView {
+  if (!health) return { provider: "none", configured: false, reachable: false, attempted: false, outcome: "not_configured" };
+  const configured = health.configured ?? health.provider_configured ?? false;
+  const reachable = health.reachable ?? health.provider_connected ?? false;
+  const attempted = health.attempted ?? (health.health_mode === "live" && configured);
+  const httpStatus = health.http_status ?? health.status;
+  const errorType = health.error_type ?? health.provider_error_type;
+  const outcome = health.outcome ?? legacyHealthOutcome(health.provider, configured, reachable, attempted, httpStatus, errorType);
+  return { provider: health.provider, configured, reachable, attempted, http_status: httpStatus, outcome, error_type: errorType, fallback_reason: health.fallback_reason ?? health.error };
 }
+
+function legacyProviderOutcome(mode: string | undefined, provider: string, configured: boolean, attempted: boolean, status?: number): LlmProviderOutcome {
+  if (mode === "gemini" || mode === "groq" || mode === "mock" || mode === "featherless") return "synthesis_used";
+  if (mode === "fallback_rate_limited") return "rate_limited";
+  if (mode === "fallback_validation_error") return "validation_error";
+  if (mode === "fallback_provider_error") return "provider_error";
+  if (mode === "structured_okf_answer") return configured && provider !== "none" ? "synthesis_skipped" : "not_configured";
+  if (provider === "none" || !configured) return "not_configured";
+  if (!attempted) return "configured";
+  return status !== undefined ? "reachable" : "provider_error";
+}
+
+function legacyHealthOutcome(provider: string, configured: boolean, reachable: boolean, attempted: boolean, status?: number, errorType?: string): LlmProviderOutcome {
+  if (provider === "none" || !configured) return "not_configured";
+  if (!attempted) return "configured";
+  if (status === 429 || /rate.limit|resource.exhausted/i.test(errorType ?? "")) return "rate_limited";
+  return reachable ? "reachable" : "provider_error";
+}
+
+function providerStatusLabel(status: ProviderStatusView) {
+  const separator = "\u00b7";
+  const provider = providerStatusText(status);
+  if (status.outcome === "not_configured") return status.provider === "none" ? `No LLM configured ${separator} structured OKF answer` : `${provider} not configured ${separator} structured OKF answer`;
+  if (status.outcome === "configured") return `${provider} configured ${separator} availability not checked`;
+  if (status.outcome === "reachable") return `${provider} ${separator} reachable`;
+  if (status.outcome === "synthesis_skipped") return `${provider} configured ${separator} synthesis skipped`;
+  if (status.outcome === "synthesis_used") return `${provider} ${separator} synthesis used`;
+  if (status.outcome === "rate_limited") return `${provider} ${separator} rate limit fallback`;
+  if (status.outcome === "validation_error") return `${provider} ${separator} validation fallback`;
+  return `${provider} ${separator} provider fallback`;
+}
+
+function providerStatusText(status: ProviderStatusView) {
+  const provider = providerLabel(status.provider);
+  if (status.http_status && status.error_type) return `${provider} ${status.http_status} ${status.error_type}`;
+  if (status.http_status) return `${provider} ${status.http_status}`;
+  if (status.error_type) return `${provider} ${status.error_type}`;
+  return provider;
+}
+
+function providerStatusTone(status: ProviderStatusView) {
+  if (status.outcome === "synthesis_used" || status.outcome === "reachable") return "border-green/30 bg-green/5 text-green";
+  if (status.outcome === "configured" || status.outcome === "synthesis_skipped") return "border-blue/30 bg-blue/5 text-blue";
+  if (status.outcome === "provider_error" || status.outcome === "validation_error") return "border-red-200 bg-red-50 text-red-700";
+  return "border-amber-300 bg-amber-50 text-amber-700";
+}
+
 function providerLabel(provider?: string) {
+  if (provider === "gemini") return "Gemini";
   if (provider === "groq") return "Groq";
-  if (provider === "openai") return "OpenAI";
-  if (provider === "featherless") return "Featherless";
   if (provider === "mock") return "Mock";
-  return "Groq";
+  if (provider === "none" || !provider) return "No LLM";
+  return "LLM";
 }
-
-
 
 

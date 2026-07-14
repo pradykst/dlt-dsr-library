@@ -1,3 +1,5 @@
+import type { LlmProviderStatus } from "../llm/provider.ts";
+
 export const okfConceptTypes = [
   "Paper",
   "Problem",
@@ -229,19 +231,20 @@ export type DesignMove = {
   id: string;
   title: string;
   what_to_build: string;
-  reused_requirement?: string;
-  reused_principle?: string;
-  candidate_feature?: string;
-  artifact_pattern?: string;
+  reused_requirement: string;
+  reused_principle: string;
+  candidate_feature: string;
+  artifact_pattern: string;
   supporting_paper_ids: string[];
   evidence_ids: string[];
+  evidence_summaries: string[];
   adaptation_status: "stored" | "mixed" | "query_generated";
   adaptation_note: string;
   confidence: ConfidenceLabel;
 };
 
-export type OkfProviderName = "none" | "featherless" | "groq" | "openai" | "mock";
-export type OkfSynthesisMode = "featherless" | "groq" | "mock" | "structured_okf_answer" | "fallback_rate_limited" | "fallback_provider_error" | "fallback_validation_error";
+export type OkfProviderName = "none" | "gemini" | "groq" | "mock" | "featherless" | "openai";
+export type OkfSynthesisMode = "gemini" | "featherless" | "groq" | "mock" | "structured_okf_answer" | "fallback_rate_limited" | "fallback_provider_error" | "fallback_validation_error";
 
 export type DecisionSupportAnswer = {
   synthesis_mode: OkfSynthesisMode;
@@ -283,6 +286,7 @@ export type OkfRuntimeMetadata = {
   fallback_reason?: string;
   provider_status_code?: number;
   provider_error_type?: string;
+  provider_status?: LlmProviderStatus;
   db_loaded_from?: "supabase" | "local_okf_fallback";
   db_error_code?: string;
   db_error_message?: string;

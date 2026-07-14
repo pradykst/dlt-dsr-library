@@ -1,12 +1,9 @@
 import { buildOkfFlow } from "./flow.ts";
 import { selectPolicySourcePapers } from "./policy.ts";
 import type { ConfidenceLabel, DecisionSupportAnswer, DesignMove, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfKnowledgeBase, OkfPaperSupport, OkfReuseFlowRow } from "./schema.ts";
-import type { OkfChatResponse, OkfQueryPlan } from "./chat.ts";
+import type { OkfAnswerPlan, OkfChatResponse, OkfQueryPlan } from "./chat.ts";
 
-const relationExpansionTypes = new Set(["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"]);
 const rowTypes: OkfConceptType[] = ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact"];
-const answerConceptTypes: OkfConceptType[] = ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
-const compactConceptTypes: OkfConceptType[] = ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
 
 type DesignTheme = {
   id: string;
@@ -29,20 +26,79 @@ export function selectSourcePapers(query: string, kb: OkfKnowledgeBase, maxPaper
   return selectPolicySourcePapers(query, kb, maxPapers);
 }
 
-export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase): OkfChatResponse {
-  const paperSupport = selectSourcePapers(query, kb, 8);
-  const concepts = retrieveConcepts(query, kb, paperSupport.map((paper) => paper.paper_id));
-  const evidenceRefs = evidenceForConcepts(concepts, kb);
-  const rows = buildRows(query, paperSupport, concepts, evidenceRefs, kb).slice(0, 8);
-  const flowMode = rows.some((row) => row.adaptation_status === "stored" || row.adaptation_status === "mixed") ? "mixed_reuse_flow" as const : "query_generated_flow" as const;
-  const flow = buildOkfFlow(query, concepts, kb, { includeQueryProblem: true, mode: flowMode, flowRows: rows, title: "Mixed OKF reuse flow" });
-  const sourcePapers = sourceRoles(concepts, kb, paperSupport);
-  const payload = buildFallbackAnswer(query, rows, sourcePapers, evidenceRefs, plan, undefined);
-  const warnings = sourcePapers.length === 0 ? ["No OKF source paper matched the query strongly enough for grounded reuse guidance."] : [];
+export function buildAuthoritativeReuseAnswerPlan(answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfAnswerPlan {
+  if (answerPlan.intent !== "DESIGN_REUSE_QUERY" && answerPlan.intent !== "DESIGN_REUSE_FLOW_QUERY") return answerPlan;
+  const selectedPaperIds = new Set(answerPlan.selected_papers.map((paper) => paper.paper_id));
+  const extractionIds = new Set(answerPlan.extraction_items.map((item) => item.concept_id));
+  const concepts = kb.concepts.filter((concept) => extractionIds.has(concept.concept_id) && selectedPaperIds.has(concept.paper_id));
+  const availableEvidenceIds = new Set(answerPlan.evidence_pack.map((item) => item.evidence_id));
+  const evidenceRefs: OkfEvidenceRef[] = kb.evidence_items
+    .filter((item) => availableEvidenceIds.has(item.evidence_id) && selectedPaperIds.has(item.paper_id))
+    .map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence }));
+  const paperSupport = answerPlan.selected_papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paper.reason_for_selection, score: paper.relevance_score }));
+  const candidateRows = buildRows(answerPlan.user_query, paperSupport, concepts, evidenceRefs, kb);
+  const selectedRows = selectDiverseGroundedRows(candidateRows, answerPlan, evidenceRefs);
+  const rowMoves = selectedRows.map((row, index) => designMoveFromRow(row, index, evidenceRefs));
+  let effectiveConcepts = concepts;
+  let effectiveEvidenceRefs = evidenceRefs;
+  let designMoves = validateDesignMoves(rowMoves, answerPlan, evidenceRefs).slice(0, 7);
+  let backfillApplied = false;
+
+  if (designMoves.length < 5) {
+    const backfill = buildGroundedSamePaperBackfill(answerPlan, kb, designMoves, 5);
+    if (backfill.rows.length) {
+      backfillApplied = true;
+      effectiveConcepts = [...new Map([...concepts, ...backfill.concepts].map((concept) => [concept.concept_id, concept])).values()];
+      effectiveEvidenceRefs = [...new Map([...evidenceRefs, ...backfill.evidence].map((item) => [item.evidence_id, item])).values()];
+      const backfillMoves = backfill.rows.map((row, index) => designMoveFromRow(row, designMoves.length + index, effectiveEvidenceRefs));
+      designMoves = validateDesignMoves([...designMoves, ...backfillMoves], answerPlan, effectiveEvidenceRefs).slice(0, 7);
+    }
+  }
+
+  const flowRows = designMoves.map((move) => rowFromDesignMove(move, effectiveConcepts, effectiveEvidenceRefs));
+  const usedEvidenceIds = new Set(designMoves.flatMap((move) => move.evidence_ids));
+  const usedPaperIds = new Set(designMoves.flatMap((move) => move.supporting_paper_ids));
+  const usedConceptIds = new Set(flowRows.flatMap((row) => row.concept_ids));
+  for (const item of effectiveEvidenceRefs) if (usedEvidenceIds.has(item.evidence_id) && item.concept_id) usedConceptIds.add(item.concept_id);
+
+  const extractionItems = backfillApplied
+    ? effectiveConcepts.map((concept) => ({ concept_id: concept.concept_id, paper_id: concept.paper_id, type: concept.type, title: concept.title }))
+    : answerPlan.extraction_items;
+  const effectiveEvidencePack = backfillApplied
+    ? effectiveEvidenceRefs.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.excerpt, confidence: item.confidence }))
+    : answerPlan.evidence_pack;
 
   return {
-    intent: "DESIGN_REUSE_FLOW_QUERY",
-    task_type: "design_reuse_flow",
+    ...answerPlan,
+    selected_papers: answerPlan.selected_papers.filter((paper) => usedPaperIds.has(paper.paper_id)),
+    paper_matches: answerPlan.paper_matches.filter((paper) => usedPaperIds.has(paper.paper_id)),
+    extraction_items: extractionItems.filter((item) => usedConceptIds.has(item.concept_id) && usedPaperIds.has(item.paper_id)),
+    design_moves: designMoves,
+    flow_rows: flowRows,
+    evidence_pack: effectiveEvidencePack.filter((item) => usedEvidenceIds.has(item.evidence_id) && usedPaperIds.has(item.paper_id))
+  };
+}
+
+export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
+  const selectedConceptIds = new Set(answerPlan.extraction_items.map((item) => item.concept_id));
+  const concepts = kb.concepts.filter((concept) => selectedConceptIds.has(concept.concept_id));
+  const evidenceIds = new Set(answerPlan.evidence_pack.map((item) => item.evidence_id));
+  const evidenceRefs: OkfEvidenceRef[] = kb.evidence_items
+    .filter((item) => evidenceIds.has(item.evidence_id))
+    .map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence }));
+  const paperSupport = answerPlan.selected_papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paper.reason_for_selection, score: paper.relevance_score }));
+  const sourcePapers = sourceRoles(concepts, kb, paperSupport);
+  const rows = answerPlan.flow_rows.slice(0, 7);
+  const moves = answerPlan.design_moves.slice(0, 7);
+  const flowMode = moves.some((move) => move.adaptation_status === "stored" || move.adaptation_status === "mixed") ? "mixed_reuse_flow" as const : "query_generated_flow" as const;
+  const flow = buildOkfFlow(query, concepts, kb, { mode: flowMode, flowRows: rows, designMoves: moves, title: "Mixed OKF reuse flow" });
+  const payload = buildFallbackAnswer(query, rows, sourcePapers, evidenceRefs, plan, undefined, moves);
+  const warnings = sourcePapers.length === 0 ? ["No OKF source paper matched the query strongly enough for grounded reuse guidance."] : [];
+  if (moves.length < 5) warnings.push(`Only ${moves.length} validated design move(s) were available.`);
+
+  return {
+    intent: plan.intent,
+    task_type: plan.task_type,
     answer: renderDecisionSupportMarkdown(payload),
     interpreted_problem: query,
     requirements: dedupeCards(rows.map((row) => card(row.requirement_label, row, "DesignRequirement", concepts))),
@@ -56,18 +112,19 @@ export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, kb: Ok
     flow_graph: flow,
     flow_rows: rows,
     answer_payload: payload,
+    answer_plan: answerPlan,
     assumptions: payload.query_generated_notes,
     limitations: payload.limitations,
     warnings
   };
 }
 
-export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], papers: OkfChatResponse["source_papers"], evidence: OkfEvidenceRef[], plan: OkfQueryPlan | undefined, fallbackReason?: string): DecisionSupportAnswer {
-  const usedEvidenceIds = new Set(rows.flatMap((row) => row.evidence_ids));
-  const evidenceRefs = evidence.filter((item) => usedEvidenceIds.has(item.evidence_id)).slice(0, 30);
-  const source_papers = papers.slice(0, 8).map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paper.reason, score: paper.score ?? 0 }));
-  const thematicMoves = thematicDesignMoves(query, rows, papers);
-  const designMoves = thematicMoves.length >= 5 ? thematicMoves.slice(0, 7) : rows.slice(0, 7).map((row, index) => designMoveFromRow(row, index));
+export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], papers: OkfChatResponse["source_papers"], evidence: OkfEvidenceRef[], plan: OkfQueryPlan | undefined, fallbackReason?: string, authoritativeMoves?: DesignMove[]): DecisionSupportAnswer {
+  const designMoves = (authoritativeMoves?.length ? authoritativeMoves : rows.map((row, index) => designMoveFromRow(row, index, evidence))).slice(0, 7);
+  const usedEvidenceIds = new Set(designMoves.flatMap((move) => move.evidence_ids));
+  const usedPaperIds = new Set(designMoves.flatMap((move) => move.supporting_paper_ids));
+  const evidenceRefs = evidence.filter((item) => usedEvidenceIds.has(item.evidence_id) && usedPaperIds.has(item.paper_id)).slice(0, 21);
+  const source_papers = papers.filter((paper) => usedPaperIds.has(paper.paper_id)).slice(0, 8).map((paper) => ({ paper_id: paper.paper_id, title: paper.title, reason: paper.reason, score: paper.score ?? 0 }));
   const direct = fallbackReason
     ? "I retrieved relevant OKF knowledge, but LLM synthesis failed. Here is a compact evidence-backed summary."
     : plan?.intent === "DESIGN_REUSE_FLOW_QUERY"
@@ -78,12 +135,12 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
     title: fallbackReason ? "Compact OKF fallback summary" : "OKF decision-support summary",
     direct_answer: direct,
     design_moves: designMoves,
-    architecture_direction: thematicMoves.length >= 5 ? thematicArchitectureDirection(query) : architectureDirection(rows),
+    architecture_direction: architectureDirection(rows),
     limitations: compactLimitations(source_papers.length, evidenceRefs.length),
     source_papers,
     evidence_refs: evidenceRefs,
-    query_generated_notes: rows.filter((row) => row.adaptation_status !== "stored").map((row) => `${row.row_id}: ${row.adaptation_text}`).slice(0, 8),
-    debug: { task_type: plan?.task_type, requested_output_shape: plan?.output_shape, fallback_reason: fallbackReason, source_paper_count: papers.length, retrieved_evidence_count: evidence.length }
+    query_generated_notes: designMoves.filter((move) => move.adaptation_status !== "stored").map((move) => `${move.title}: ${move.adaptation_note}`).slice(0, 7),
+    debug: { task_type: plan?.task_type, requested_output_shape: plan?.output_shape, fallback_reason: fallbackReason, source_paper_count: source_papers.length, selected_evidence_count: evidenceRefs.length }
   };
 }
 
@@ -91,14 +148,17 @@ export function renderDecisionSupportMarkdown(payload: DecisionSupportAnswer) {
   const paperTitles = new Map(payload.source_papers.map((paper) => [paper.paper_id, paper.title]));
   const moves = payload.design_moves.map((move, index) => {
     const supportingPapers = move.supporting_paper_ids.map((paperId) => paperTitles.get(paperId)).filter(Boolean).join("; ") || "Retrieved OKF source papers";
+    const evidenceBasis = move.evidence_summaries.slice(0, 2).join(" ") || "No direct evidence excerpt was selected for this query-generated move.";
+    const adaptationStatus = move.adaptation_status.replace("_", "-");
     const reuse = [...new Set([move.reused_requirement, move.reused_principle, move.candidate_feature].filter(Boolean))].join("; ") || "Retrieved OKF design knowledge";
     return [
       `### ${index + 1}. ${move.title}`,
       `- **What to build:** ${move.what_to_build}`,
       `- **Reuse from OKF:** ${reuse}`,
       `- **Supporting papers:** ${supportingPapers}`,
-      `- **Evidence:** ${move.adaptation_note}`,
-      `- **Adaptation status:** ${move.adaptation_status}`
+      `- **Evidence basis:** ${evidenceBasis}`,
+      `- **Adaptation:** ${move.adaptation_note}`,
+      `- **Adaptation status:** ${adaptationStatus}`
     ].join("\n");
   }).join("\n\n");
   return [
@@ -124,35 +184,11 @@ function architectureBullets(direction: string | undefined) {
 function capitalizeFirst(value: string) {
   return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
 }
-function retrieveConcepts(query: string, kb: OkfKnowledgeBase, paperIds: string[]) {
-  const terms = expandQueryTerms(tokenize(query));
-  const themes = inferDesignThemes(query);
-  const paperSet = new Set(paperIds);
-  const scored = kb.concepts
-    .filter((concept) => paperSet.has(concept.paper_id) && relationExpansionTypes.has(concept.type))
-    .map((concept) => ({ concept, score: scoreConceptWithEvidence(concept, terms, kb, themes) }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || confidenceRank(b.concept.confidence) - confidenceRank(a.concept.confidence));
-  const selected: OkfConcept[] = [];
-  for (const paperId of paperIds) {
-    const paperScored = scored.filter((item) => item.concept.paper_id === paperId);
-    for (const type of compactConceptTypes) {
-      const limit = type === "DesignRequirement" || type === "DesignPrinciple" || type === "DesignFeature" ? 3 : 2;
-      selected.push(...paperScored.filter((item) => item.concept.type === type).slice(0, limit).map((item) => item.concept));
-    }
-    if (!paperScored.length) selected.push(...answerConceptTypes.flatMap((type) => kb.concepts.filter((concept) => concept.paper_id === paperId && concept.type === type).slice(0, 1)));
-  }
-  selected.push(...scored.slice(0, 24).map((item) => item.concept));
-  const ids = new Set(unique(selected).map((concept) => concept.concept_id));
-  expandRelationNeighborhood(ids, kb, paperSet, 1, 96);
-  return order(kb.concepts.filter((concept) => ids.has(concept.concept_id))).slice(0, 96);
-}
-
 function buildRows(query: string, papers: OkfPaperSupport[], concepts: OkfConcept[], evidence: OkfEvidenceRef[], kb: OkfKnowledgeBase): OkfReuseFlowRow[] {
   const relationRows = buildRelationRows(concepts, evidence, kb);
   const paperRows = papers.map((paper, index) => buildPaperRow(query, paper, concepts.filter((concept) => concept.paper_id === paper.paper_id), evidence, index)).filter((row): row is OkfReuseFlowRow => Boolean(row));
   const crossPaperRows = buildCrossPaperRows(query, papers, concepts, evidence, kb);
-  return rankRowsForQuery(query, papers, dedupeRows([...paperRows, ...crossPaperRows, ...relationRows])).slice(0, 8);
+  return rankRowsForQuery(query, papers, dedupeRows([...paperRows, ...crossPaperRows, ...relationRows])).slice(0, 24);
 }
 
 function buildRelationRows(concepts: OkfConcept[], evidence: OkfEvidenceRef[], kb: OkfKnowledgeBase): OkfReuseFlowRow[] {
@@ -181,7 +217,7 @@ function buildPaperRow(query: string, paper: OkfPaperSupport, concepts: OkfConce
   const terms = expandQueryTerms(tokenize(query));
   const selected = rowTypes.map((type) => bestConcept(concepts, type, terms)).filter((concept): concept is OkfConcept => Boolean(concept));
   if (!selected.length) return undefined;
-  return rowFromConcepts(`paper-${paper.paper_id}-${index + 1}`, selected, evidence, selected.length >= 3 ? "stored" : "mixed");
+  return rowFromConcepts(`paper-${paper.paper_id}-${index + 1}`, selected, evidence, "mixed");
 }
 
 function buildCrossPaperRows(query: string, papers: OkfPaperSupport[], concepts: OkfConcept[], evidence: OkfEvidenceRef[], kb: OkfKnowledgeBase) {
@@ -225,9 +261,170 @@ function rankRowsForQuery(query: string, papers: OkfPaperSupport[], rows: OkfReu
     seen.add(key);
     counts.set(item.primaryPaper, count + 1);
     selected.push(item.row);
-    if (selected.length >= 8) break;
+    if (selected.length >= 24) break;
   }
   return selected;
+}
+
+function selectDiverseGroundedRows(rows: OkfReuseFlowRow[], answerPlan: OkfAnswerPlan, evidence: OkfEvidenceRef[]) {
+  const evidenceById = new Map(evidence.map((item) => [item.evidence_id, item]));
+  const strengthByPaper = new Map(answerPlan.paper_matches.map((paper) => [paper.paper_id, paper.match_strength]));
+  const requestsBuildGuidance = /\b(build|implement|implementation|application|architecture|lifecycle|process|prototype)\b/i.test(answerPlan.user_query);
+  const rankedPaperIds = answerPlan.selected_papers
+    .filter((paper) => strengthByPaper.get(paper.paper_id) !== "weak" || (requestsBuildGuidance && normalizeText(paper.role_for_query).includes("implementation lifecycle")))
+    .map((paper) => paper.paper_id);
+  const selected: OkfReuseFlowRow[] = [];
+  const seenPaths = new Set<string>();
+  const pathKey = (row: OkfReuseFlowRow) => normalizeText(`${row.requirement_label}|${row.principle_label}|${row.feature_label}`);
+  const add = (row: OkfReuseFlowRow | undefined) => {
+    if (!row || !row.evidence_ids.some((id) => evidenceById.has(id))) return;
+    const key = pathKey(row);
+    if (seenPaths.has(key)) return;
+    seenPaths.add(key);
+    selected.push(row);
+  };
+  for (const paperId of rankedPaperIds) {
+    const candidates = rows.filter((row) => row.supporting_papers.includes(paperId) && row.evidence_ids.some((id) => evidenceById.get(id)?.paper_id === paperId));
+    const directPaperRow = candidates.find((row) => row.row_id.startsWith(`paper-${paperId}-`));
+    add(directPaperRow ?? candidates.find((row) => row.adaptation_status === "stored") ?? candidates[0]);
+    if (selected.length >= 5) return selected;
+  }
+  for (const row of rows) {
+    add(row);
+    if (selected.length >= 5) break;
+  }
+  return selected;
+}
+
+type GroundedBackfill = { rows: OkfReuseFlowRow[]; concepts: OkfConcept[]; evidence: OkfEvidenceRef[] };
+
+function buildGroundedSamePaperBackfill(answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase, existingMoves: DesignMove[], targetMoveCount: number): GroundedBackfill {
+  const needed = Math.max(0, targetMoveCount - existingMoves.length);
+  if (!needed) return { rows: [], concepts: [], evidence: [] };
+
+  const selectedPaperIds = new Set(answerPlan.selected_papers.map((paper) => paper.paper_id));
+  const eligibleConcepts = kb.concepts.filter((concept) => selectedPaperIds.has(concept.paper_id) && rowTypes.includes(concept.type));
+  const conceptById = new Map(eligibleConcepts.map((concept) => [concept.concept_id, concept]));
+  const eligibleEvidence: OkfEvidenceRef[] = kb.evidence_items
+    .filter((item) => item.concept_id && conceptById.get(item.concept_id)?.paper_id === item.paper_id)
+    .map((item) => ({
+      evidence_id: item.evidence_id,
+      paper_id: item.paper_id,
+      concept_id: item.concept_id as string,
+      excerpt: item.quote ?? item.paraphrase,
+      section: item.section,
+      page_number: item.page_number,
+      confidence: item.confidence
+    }));
+  const evidenceByConcept = new Map<string, OkfEvidenceRef[]>();
+  for (const item of eligibleEvidence) evidenceByConcept.set(item.concept_id as string, [...(evidenceByConcept.get(item.concept_id as string) ?? []), item]);
+
+  const usedEvidenceIds = new Set(existingMoves.flatMap((move) => move.evidence_ids));
+  const usedEvidenceText = new Set(existingMoves.flatMap((move) => move.evidence_summaries.map(normalizeText)).filter(Boolean));
+  const usedPaths = new Set(existingMoves.map((move) => normalizeText(`${move.reused_requirement}|${move.reused_principle}|${move.candidate_feature}`)));
+  const usedConceptKeys = new Set<string>();
+  for (const concept of eligibleConcepts) {
+    const matchingLabel = existingMoves.some((move) => {
+      if (!move.supporting_paper_ids.includes(concept.paper_id)) return false;
+      const label = concept.type === "DesignRequirement" ? move.reused_requirement
+        : concept.type === "DesignPrinciple" ? move.reused_principle
+          : concept.type === "DesignFeature" ? move.candidate_feature
+            : move.artifact_pattern;
+      return normalizeText(label) === normalizeText(concept.title);
+    });
+    if (matchingLabel) usedConceptKeys.add(backfillConceptKey(concept));
+  }
+
+  const terms = expandQueryTerms(tokenize(answerPlan.user_query));
+  const typeRank = new Map(rowTypes.map((type, index) => [type, index]));
+  const rows: OkfReuseFlowRow[] = [];
+  const includedConceptIds = new Set<string>();
+  const includedEvidenceIds = new Set<string>();
+
+  for (const paper of answerPlan.selected_papers) {
+    if (rows.length >= needed) break;
+    const paperConcepts = eligibleConcepts.filter((concept) => concept.paper_id === paper.paper_id);
+    const pools = new Map(rowTypes.map((type) => [type, paperConcepts.filter((concept) => concept.type === type)]));
+    if (rowTypes.some((type) => !(pools.get(type)?.length))) continue;
+    const anchors = paperConcepts
+      .filter((concept) => concept.type !== "Artifact" && (evidenceByConcept.get(concept.concept_id)?.length ?? 0) > 0)
+      .sort((a, b) => scoreConcept(b, terms) - scoreConcept(a, terms)
+        || confidenceRank(b.confidence) - confidenceRank(a.confidence)
+        || (typeRank.get(a.type) ?? 99) - (typeRank.get(b.type) ?? 99)
+        || a.concept_id.localeCompare(b.concept_id));
+
+    for (const anchor of anchors) {
+      if (rows.length >= needed) break;
+      if (usedConceptKeys.has(backfillConceptKey(anchor))) continue;
+      const anchorEvidence = (evidenceByConcept.get(anchor.concept_id) ?? []).filter((item) => {
+        const textKey = normalizeText(item.excerpt);
+        return !usedEvidenceIds.has(item.evidence_id) && (!textKey || !usedEvidenceText.has(textKey));
+      });
+      if (!anchorEvidence.length) continue;
+
+      const selected = rowTypes.map((type) => {
+        if (anchor.type === type) return anchor;
+        return chooseBackfillCompanion(pools.get(type) ?? [], anchor, usedConceptKeys, terms, kb);
+      }).filter((concept): concept is OkfConcept => Boolean(concept));
+      if (selected.length !== rowTypes.length) continue;
+
+      const selectedEvidence = uniqueEvidence([
+        ...anchorEvidence,
+        ...selected.flatMap((concept) => evidenceByConcept.get(concept.concept_id) ?? [])
+      ]).filter((item) => {
+        const textKey = normalizeText(item.excerpt);
+        return !usedEvidenceIds.has(item.evidence_id) && (!textKey || !usedEvidenceText.has(textKey));
+      }).slice(0, 3);
+      if (!selectedEvidence.length) continue;
+
+      const adaptationStatus: OkfReuseFlowRow["adaptation_status"] = relationConnected(selected, kb) ? "mixed" : "query_generated";
+      const row = rowFromConcepts(`backfill-${paper.paper_id}-${rows.length + 1}`, selected, selectedEvidence, adaptationStatus);
+      const path = normalizeText(`${row.requirement_label}|${row.principle_label}|${row.feature_label}`);
+      if (usedPaths.has(path) || !row.evidence_ids.length) continue;
+
+      usedPaths.add(path);
+      for (const concept of selected) {
+        usedConceptKeys.add(backfillConceptKey(concept));
+        includedConceptIds.add(concept.concept_id);
+      }
+      for (const item of selectedEvidence) {
+        usedEvidenceIds.add(item.evidence_id);
+        const textKey = normalizeText(item.excerpt);
+        if (textKey) usedEvidenceText.add(textKey);
+        includedEvidenceIds.add(item.evidence_id);
+      }
+      rows.push(row);
+    }
+  }
+
+  return {
+    rows,
+    concepts: eligibleConcepts.filter((concept) => includedConceptIds.has(concept.concept_id)),
+    evidence: eligibleEvidence.filter((item) => includedEvidenceIds.has(item.evidence_id))
+  };
+}
+
+function chooseBackfillCompanion(pool: OkfConcept[], anchor: OkfConcept, usedConceptKeys: Set<string>, terms: string[], kb: OkfKnowledgeBase) {
+  return [...pool].sort((a, b) => {
+    const related = Number(backfillConceptConnected(b, anchor, kb)) - Number(backfillConceptConnected(a, anchor, kb));
+    if (related) return related;
+    const alreadyUsed = Number(usedConceptKeys.has(backfillConceptKey(b))) - Number(usedConceptKeys.has(backfillConceptKey(a)));
+    if (alreadyUsed) return alreadyUsed;
+    return scoreConcept(b, terms) - scoreConcept(a, terms)
+      || confidenceRank(b.confidence) - confidenceRank(a.confidence)
+      || a.concept_id.localeCompare(b.concept_id);
+  })[0];
+}
+
+function backfillConceptConnected(left: OkfConcept, right: OkfConcept, kb: OkfKnowledgeBase) {
+  return kb.relations.some((relation) =>
+    (relation.source_concept_id === left.concept_id && relation.target_concept_id === right.concept_id)
+    || (relation.source_concept_id === right.concept_id && relation.target_concept_id === left.concept_id)
+  );
+}
+
+function backfillConceptKey(concept: OkfConcept) {
+  return `${concept.paper_id}|${concept.type}|${normalizeText(concept.title)}`;
 }
 
 function rowFromConcepts(rowId: string, selected: OkfConcept[], evidence: OkfEvidenceRef[], adaptationStatus: OkfReuseFlowRow["adaptation_status"]): OkfReuseFlowRow {
@@ -239,9 +436,9 @@ function rowFromConcepts(rowId: string, selected: OkfConcept[], evidence: OkfEvi
   return {
     row_id: rowId,
     requirement_label: byType("DesignRequirement")?.title ?? titleFallback,
-    principle_label: byType("DesignPrinciple")?.title ?? "Use the selected source paper's reusable design principle",
-    feature_label: byType("DesignFeature")?.title ?? "Translate the principle into a query-specific feature",
-    artifact_pattern: byType("Artifact")?.title ?? "Query-specific artifact pattern grounded in retrieved OKF concepts",
+    principle_label: byType("DesignPrinciple")?.title ?? byType("DesignRequirement")?.title ?? titleFallback,
+    feature_label: byType("DesignFeature")?.title ?? byType("DesignPrinciple")?.title ?? titleFallback,
+    artifact_pattern: byType("Artifact")?.title ?? byType("DesignFeature")?.title ?? titleFallback,
     supporting_papers: papers,
     evidence_ids: evidenceIds,
     concept_ids: conceptIds,
@@ -251,59 +448,84 @@ function rowFromConcepts(rowId: string, selected: OkfConcept[], evidence: OkfEvi
   };
 }
 
-function thematicDesignMoves(query: string, rows: OkfReuseFlowRow[], papers: OkfChatResponse["source_papers"]): DesignMove[] {
-  const q = normalizeText(query);
-  const themes = new Set(inferDesignThemes(query).map((theme) => theme.id));
-  const has = (terms: string[]) => terms.some((term) => q.includes(normalizeText(term)));
-  const evidenceFor = (paperTerms: string[]) => rows.filter((row) => row.supporting_papers.some((paperId) => paperTerms.some((term) => normalizeText(paperId).includes(term)))).flatMap((row) => row.evidence_ids).slice(0, 6);
-  const paperIdsFor = (paperTerms: string[]) => papers.filter((paper) => paperTerms.some((term) => normalizeText(`${paper.paper_id} ${paper.title} ${paper.role}`).includes(term))).map((paper) => paper.paper_id).slice(0, 3);
-  const moves: DesignMove[] = [];
-  const add = (title: string, what: string, reused: string, terms: string[], status: DesignMove["adaptation_status"], evidenceSummary: string) => {
-    moves.push({
-      id: `theme-${moves.length + 1}-${normalizeText(title).replace(/\s+/g, "-").slice(0, 36)}`,
-      title,
-      what_to_build: what,
-      reused_requirement: reused,
-      reused_principle: reused,
-      candidate_feature: what,
-      artifact_pattern: what,
-      supporting_paper_ids: paperIdsFor(terms),
-      evidence_ids: evidenceFor(terms),
-      adaptation_status: status,
-      adaptation_note: evidenceSummary,
-      confidence: evidenceFor(terms).length >= 2 ? "medium" : "low"
-    });
-  };
-  if (themes.has("identity") && (themes.has("integrity") || themes.has("auditability") || has(["product", "listing", "variant", "relist", "relisting"]))) add(has(["product", "listing", "variant"]) ? "Canonical product identity and listing mapping integrity" : "Canonical entity identity mapping integrity", has(["product", "listing", "variant"]) ? "Build a canonical product and variant registry that maps marketplace listings to the same underlying item, records listing changes, and keeps relisting continuity visible." : "Build a canonical mapping component that links equivalent entities across participating systems and records integrity proofs for changes.", "identity credentials, manipulation-resistant proof of integrity, and independently executed verification logic", ["short end", "ssi", "trust capacity", "iot"], "mixed", "OKF evidence supports combining identity signaling with provider-held records, public integrity proofs, and tamper-resistant status records; the canonical registry/listing map is a target-domain adaptation.");
-  if (themes.has("privacy")) add(has(["commercial", "raw", "sensitive", "competitor"]) ? "Privacy-preserving commercial evidence handling" : "Privacy-preserving evidence handling", "Keep raw sensitive records with the information provider while exposing hashes, attestations, or minimal proofs that allow integrity checks without revealing commercial details.", "store sensitive data only with the provider, create proof of integrity, and use nonreversible reliable independently executed computation", ["short end", "iot", "ssi"], "mixed", "OKF evidence from commercial-data sharing and hybrid storage supports provider-held sensitive data, proof-of-integrity sharing, and off-chain raw data with on-chain or shared verification proofs.");
-  if (themes.has("identity")) add(has(["seller", "buyer", "marketplace", "credential", "verified"]) ? "Persistent seller, marketplace, and buyer credentials" : "Persistent actor credentials and status checks", "Issue reusable credentials for participating actors and verify wallet-held proofs, issuer authority, and revocation/status before accepting identity claims, listings, purchases, or reviews.", "DID/wallet, issuer, verifier, verifiable credential, verifiable presentation, revocation registry, and privacy-preserving proof patterns", ["ssi", "trust capacity"], "mixed", "OKF evidence supports holder-controlled credentials, verifier proof requests, issuer trust anchors, revocation/status checks, and keeping blockchain use to public trust data.");
-  if (themes.has("trust")) add(has(["review", "purchase"]) ? "Verified-purchase review gate and reputation continuity" : "Screening and reputation continuity", "Accept reputation events only when an eligible actor credential and qualifying action can be verified, then bind the event to persistent reputation history without exposing unnecessary raw data.", "signal information relevant to identity, screening functionality, reputation mechanism, authority/fairness, and incentive/deterrence mechanisms", ["trust capacity", "ssi"], has(["review", "purchase"]) ? "query_generated" : "mixed", "OKF evidence supports screening, identity signaling, reputation, authority, and deterrence as trust-building mechanisms; verified-purchase review gates are target-domain adaptations.");
-  if (themes.has("auditability")) add(has(["review", "seller", "relist", "relisting"]) ? "Review and seller-history continuity" : "Status-history continuity and audit trail", "Maintain append-only status history for identity mappings, relisting events, verification decisions, reviews, seller history, and corrections.", "off-chain raw data storage, hash-based integrity records, status history, and tamper-resistant retrieval/certification services", ["iot", "ssi", "short end"], "mixed", "OKF evidence supports hybrid off-chain/on-chain integrity records and auditable status histories; review-continuity ledgers and seller relisting continuity are target-domain adaptations.");
-  if (themes.has("governance")) add("Dispute and correction governance", "Define authority rules, correction workflows, fairness controls, and joint approval for changes to computation or verification mechanisms.", "authority/fairness, joint approval for computation-mechanism changes, and governance over shared rules", ["trust capacity", "short end", "isdm"], "mixed", "OKF evidence supports authority and fairness controls plus joint governance so no party can unilaterally change verification logic or correct contested records without review.");
-  if (themes.has("lifecycle")) add("Implementation and evaluation lifecycle", "Run analysis, actor identification, off-chain/on-chain design, smart-contract skeletoning, testing, deployment, and monitoring before committing to the production architecture.", "analysis, actor identification, off/on-chain design, smart contract skeleton, testing, deployment, and monitoring stages", ["isdm"], "mixed", "OKF evidence supports a lifecycle sequence for blockchain systems, including analysis, actors, off/on-chain design, smart contracts, tests, deployment, and monitoring.");
-  return moves.filter((move) => move.supporting_paper_ids.length || move.evidence_ids.length);
-}
-
-function thematicArchitectureDirection(query: string) {
-  const q = normalizeText(query);
-  if (q.includes("privacy") || q.includes("commercial") || q.includes("raw") || q.includes("fragmented") || q.includes("product data")) return "Use a coherent hybrid protocol architecture: maintain a canonical identity and variant registry; map marketplace listings and seller relistings to that canonical identity; keep raw commercial records off-chain with the data provider; publish integrity hashes, status proofs, and credential trust anchors only; gate reviews through verified purchase proofs; maintain review and seller-history continuity; govern disputes and corrections through explicit authority and joint-change rules.";
-  return "Use a layered architecture that separates private records, shared verification proofs, actor credentials, reputation/status services, governance workflows, and implementation/evaluation activities.";
-}
-
-function designMoveFromRow(row: OkfReuseFlowRow, index: number): DesignMove {
+function designMoveFromRow(row: OkfReuseFlowRow, index: number, evidence: OkfEvidenceRef[] = []): DesignMove {
+  const evidenceById = new Map(evidence.map((item) => [item.evidence_id, item]));
+  const selectedEvidence = uniqueEvidence(row.evidence_ids.map((id) => evidenceById.get(id)).filter((item): item is OkfEvidenceRef => Boolean(item))).slice(0, 3);
+  const supportingPaperIds = selectedEvidence.length ? uniqueStrings(selectedEvidence.map((item) => item.paper_id)) : row.supporting_papers;
   return {
     id: row.row_id || `design-move-${index + 1}`,
     title: cleanMoveTitle(row.principle_label || row.requirement_label || row.feature_label, index),
-    what_to_build: row.artifact_pattern || row.feature_label,
+    what_to_build: `Adapt the stored "${row.artifact_pattern || row.feature_label}" pattern into a target-domain component that implements "${row.principle_label}".`,
     reused_requirement: row.requirement_label,
     reused_principle: row.principle_label,
     candidate_feature: row.feature_label,
-    artifact_pattern: row.artifact_pattern,
-    supporting_paper_ids: row.supporting_papers,
-    evidence_ids: row.evidence_ids,
-    adaptation_status: row.adaptation_status,
+    artifact_pattern: row.artifact_pattern || row.feature_label,
+    supporting_paper_ids: supportingPaperIds,
+    evidence_ids: selectedEvidence.map((item) => item.evidence_id),
+    evidence_summaries: selectedEvidence.map((item) => item.excerpt),
+    adaptation_status: selectedEvidence.length ? row.adaptation_status : "query_generated",
     adaptation_note: row.adaptation_text,
-    confidence: row.confidence
+    confidence: selectedEvidence.length ? row.confidence : "low"
+  };
+}
+
+
+function validateDesignMoves(candidates: DesignMove[], answerPlan: OkfAnswerPlan, evidence: OkfEvidenceRef[]): DesignMove[] {
+  const allowedPaperIds = new Set(answerPlan.selected_papers.map((paper) => paper.paper_id));
+  const evidenceById = new Map(evidence.map((item) => [item.evidence_id, item]));
+  const seen = new Set<string>();
+  const validated: DesignMove[] = [];
+  for (const candidate of candidates) {
+    const requiredText = [candidate.id, candidate.title, candidate.what_to_build, candidate.reused_requirement, candidate.reused_principle, candidate.candidate_feature, candidate.artifact_pattern];
+    if (requiredText.some((value) => !value?.trim())) continue;
+    const key = normalizeText(`${candidate.reused_requirement}|${candidate.reused_principle}|${candidate.candidate_feature}`);
+    if (seen.has(key)) continue;
+    const candidateEvidence = uniqueEvidence(candidate.evidence_ids.map((id) => evidenceById.get(id)).filter((item): item is OkfEvidenceRef => item !== undefined && allowedPaperIds.has(item.paper_id))).slice(0, 3);
+    const supportingPaperIds = uniqueStrings([
+      ...candidate.supporting_paper_ids.filter((paperId) => allowedPaperIds.has(paperId)),
+      ...candidateEvidence.map((item) => item.paper_id)
+    ]);
+    const consistentEvidence = candidateEvidence.filter((item) => supportingPaperIds.includes(item.paper_id));
+    const adaptationStatus = consistentEvidence.length ? candidate.adaptation_status : "query_generated";
+    if (!consistentEvidence.length && adaptationStatus !== "query_generated") continue;
+    seen.add(key);
+    validated.push({
+      ...candidate,
+      supporting_paper_ids: consistentEvidence.length ? supportingPaperIds : [],
+      evidence_ids: consistentEvidence.map((item) => item.evidence_id),
+      evidence_summaries: consistentEvidence.map((item) => item.excerpt),
+      adaptation_status: adaptationStatus,
+      confidence: consistentEvidence.length ? candidate.confidence : candidate.confidence === "high" || candidate.confidence === "medium-high" ? "medium" : candidate.confidence
+    });
+    if (validated.length >= 7) break;
+  }
+  return validated;
+}
+
+function rowFromDesignMove(move: DesignMove, concepts: OkfConcept[], evidence: OkfEvidenceRef[]): OkfReuseFlowRow {
+  const supportingPaperIds = new Set(move.supporting_paper_ids);
+  const findConcept = (type: OkfConceptType, label: string) => concepts.find((concept) => concept.type === type && supportingPaperIds.has(concept.paper_id) && normalizeText(concept.title) === normalizeText(label));
+  const selected = [
+    findConcept("DesignRequirement", move.reused_requirement),
+    findConcept("DesignPrinciple", move.reused_principle),
+    findConcept("DesignFeature", move.candidate_feature),
+    findConcept("Artifact", move.artifact_pattern)
+  ].filter((concept): concept is OkfConcept => Boolean(concept));
+  const evidenceConceptIds = evidence
+    .filter((item) => move.evidence_ids.includes(item.evidence_id) && item.concept_id && supportingPaperIds.has(item.paper_id))
+    .map((item) => item.concept_id as string);
+  return {
+    row_id: move.id,
+    requirement_label: move.reused_requirement,
+    principle_label: move.reused_principle,
+    feature_label: move.candidate_feature,
+    artifact_pattern: move.artifact_pattern,
+    supporting_papers: move.supporting_paper_ids,
+    evidence_ids: move.evidence_ids,
+    concept_ids: uniqueStrings([...selected.map((concept) => concept.concept_id), ...evidenceConceptIds]),
+    adaptation_text: move.adaptation_note,
+    adaptation_status: move.adaptation_status,
+    confidence: move.confidence
   };
 }
 
@@ -343,13 +565,6 @@ function card(title: string, row: OkfReuseFlowRow, type: OkfConceptType, concept
   return { title, evidence_ids: row.evidence_ids, confidence: row.confidence, paper_id: concept?.paper_id ?? row.supporting_papers[0], concept_id: concept?.concept_id };
 }
 
-function evidenceForConcepts(concepts: OkfConcept[], kb: OkfKnowledgeBase): OkfEvidenceRef[] {
-  const conceptIds = new Set(concepts.map((concept) => concept.concept_id));
-  return kb.evidence_items
-    .filter((item) => item.concept_id && conceptIds.has(item.concept_id))
-    .map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, section: item.section, page_number: item.page_number, confidence: item.confidence }));
-}
-
 function bestConcept(concepts: OkfConcept[], type: OkfConceptType, terms: string[]) {
   return concepts
     .filter((concept) => concept.type === type)
@@ -362,50 +577,15 @@ function relationConnected(concepts: OkfConcept[], kb: OkfKnowledgeBase) {
   return kb.relations.some((relation) => ids.has(relation.source_concept_id) && ids.has(relation.target_concept_id));
 }
 
-function scoreConceptWithEvidence(concept: OkfConcept, terms: string[], kb: OkfKnowledgeBase, themes: DesignTheme[]) {
-  const evidenceText = kb.evidence_items.filter((item) => item.concept_id === concept.concept_id).map((item) => [item.paraphrase, item.quote, item.section].join(" ")).join(" ");
-  const withEvidence = { ...concept, body_text: `${concept.body_text} ${evidenceText}` };
-  return scoreConcept(withEvidence, terms) + scoreThemes(normalizeConceptText(withEvidence), themes) * 2;
-}
-
 function scoreConcept(concept: OkfConcept, terms: string[]) {
   const metadata = normalizeText([concept.title, concept.type, concept.dsr_layer, concept.tags.join(" ")].join(" "));
   const body = normalizeText([concept.description, concept.body_text].join(" "));
   return scoreText(metadata, terms) * 3 + scoreText(body, terms);
 }
 
-function normalizeConceptText(concept: OkfConcept) {
-  return normalizeText([concept.title, concept.description, concept.body_text, concept.tags.join(" "), concept.type, concept.dsr_layer].join(" "));
-}
-
 function scoreText(text: string, terms: string[]) {
   if (!terms.length) return 1;
   return terms.reduce((sum, term) => sum + (text.includes(normalizeText(term)) ? 1 : 0), 0);
-}
-
-function expandRelationNeighborhood(ids: Set<string>, kb: OkfKnowledgeBase, paperSet: Set<string>, depth: number, maxIds: number) {
-  const conceptMap = new Map(kb.concepts.map((concept) => [concept.concept_id, concept]));
-  for (let step = 0; step < depth && ids.size < maxIds; step += 1) {
-    let changed = false;
-    for (const relation of kb.relations) {
-      const source = conceptMap.get(relation.source_concept_id);
-      const target = conceptMap.get(relation.target_concept_id);
-      if (!source || !target || (!paperSet.has(source.paper_id) && !paperSet.has(target.paper_id))) continue;
-      if (ids.has(source.concept_id) && isUsefulAdjacentType(source.type, target.type) && !ids.has(target.concept_id)) { ids.add(target.concept_id); changed = true; }
-      if (ids.has(target.concept_id) && isUsefulAdjacentType(target.type, source.type) && !ids.has(source.concept_id)) { ids.add(source.concept_id); changed = true; }
-      if (ids.size >= maxIds) break;
-    }
-    if (!changed) break;
-  }
-}
-
-function isUsefulAdjacentType(from: string, to: string) {
-  if (from === "Problem") return ["DesignRequirement", "DesignPrinciple", "Evidence"].includes(to);
-  if (from === "DesignRequirement") return ["Problem", "DesignPrinciple", "DesignFeature", "Evidence"].includes(to);
-  if (from === "DesignPrinciple") return ["DesignRequirement", "DesignFeature", "KernelTheory", "Evidence"].includes(to);
-  if (from === "DesignFeature") return ["DesignPrinciple", "Artifact", "Evidence"].includes(to);
-  if (from === "Artifact") return ["DesignFeature", "Evaluation", "Evidence"].includes(to);
-  return relationExpansionTypes.has(to);
 }
 
 function roleLabel(type: string) {
@@ -459,18 +639,17 @@ function cleanMoveTitle(title: string, index: number) {
   return trimmed || `Design move ${index + 1}`;
 }
 
-function unique(concepts: OkfConcept[]) {
-  const seen = new Set<string>();
-  return concepts.filter((concept) => {
-    if (seen.has(concept.concept_id)) return false;
-    seen.add(concept.concept_id);
-    return true;
-  });
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
 }
 
-function order(concepts: OkfConcept[]) {
-  const typeOrder = ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
-  return unique(concepts).sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type) || a.concept_id.localeCompare(b.concept_id));
+function uniqueEvidence(items: OkfEvidenceRef[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.evidence_id)) return false;
+    seen.add(item.evidence_id);
+    return true;
+  });
 }
 
 function expandQueryTerms(terms: string[]) {
@@ -512,10 +691,6 @@ export function inferDesignThemes(query: string) {
     .sort((a, b) => b.score - a.score || a.theme.label.localeCompare(b.theme.label))
     .map((item) => item.theme);
   return matched.length ? matched : designThemes.filter((theme) => ["integrity", "privacy", "identity", "lifecycle"].includes(theme.id));
-}
-
-function scoreThemes(text: string, themes: DesignTheme[]) {
-  return themes.reduce((sum, theme) => sum + Math.min(6, theme.matchTerms.reduce((hits, term) => hits + (text.includes(normalizeText(term)) ? 1 : 0), 0)), 0);
 }
 
 function paperDomainRole(paperId: string, title: string) {

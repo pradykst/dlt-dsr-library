@@ -83,21 +83,21 @@ npm run dev
 
 Open `/okf-chat`. The chat API loads indexed `okf_` Supabase tables when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured; otherwise it falls back to local `library/okf` files.
 
-### Run With Featherless
+### Run With Gemini
 
 Set server-side environment variables only:
 
 ```bash
-LLM_PROVIDER=featherless
-FEATHERLESS_API_KEY=...
-FEATHERLESS_BASE_URL=https://api.featherless.ai/v1
-FEATHERLESS_MODEL=...
-FEATHERLESS_TIMEOUT_MS=60000
-FEATHERLESS_MAX_TOKENS=1800
-FEATHERLESS_TEMPERATURE=0.2
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_PLANNER_MODEL=gemini-2.5-flash-lite
+GEMINI_TIMEOUT_MS=60000
+GEMINI_MAX_OUTPUT_TOKENS=2500
+GEMINI_TEMPERATURE=0.2
 ```
 
-Featherless uses the OpenAI-compatible `/chat/completions` API. The prompt receives only retrieved OKF concepts, evidence, relations, and deterministic flow JSON. The JSON response is validated before display; unsupported paper IDs or evidence IDs fall back to deterministic output.
+Use `LLM_PROVIDER=groq` with `GROQ_API_KEY` and `GROQ_MODEL` to use the Groq fallback provider, `LLM_PROVIDER=mock` for offline tests, or `LLM_PROVIDER=none` for deterministic-only answers. Gemini receives only retrieved OKF concepts, evidence, relations, and deterministic answer plans; unsupported provider output falls back to structured OKF output.
 
 ### Health Checks
 
@@ -118,7 +118,7 @@ The script checks the product identity reuse query for multiple source papers, f
 ### Deploy Manually
 
 1. Paste or run the `supabase/migrations/20260626140000_okf_chatbot.sql` migration in Supabase.
-2. Configure Supabase and optional Featherless env vars in the hosting provider.
+2. Configure Supabase and optional Gemini/Groq env vars in the hosting provider.
 3. Run `npm run okf:index` locally or in a trusted server-side job to upsert reviewed OKF bundles.
 4. Deploy the Next.js app with `npm run build`.
 5. Verify `/api/health`, `/api/health/db`, `/api/health/llm`, and `/okf-chat`.

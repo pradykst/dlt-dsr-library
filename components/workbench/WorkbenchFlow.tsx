@@ -4,6 +4,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import ReactFlow, { Background, Controls, MarkerType, ReactFlowProvider, useReactFlow, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { Badge } from "@/components/ui/Badge";
+import { isStoredMainElementType, projectStoredMainFlow } from "@/lib/okf/stored-flow-projection";
 import { includesToken } from "@/lib/workbench/csv";
 import type { WorkbenchElement, WorkbenchEvidence, WorkbenchRelation } from "@/lib/workbench/types";
 import { trackFlowInteraction } from "@/utils/analytics";
@@ -63,21 +64,24 @@ export function WorkbenchFlow({ elements, relations, evidence, onSuggest }: {
    *   return { main, extended, extendedOnly };
    * }, [elementById, relations]);
   */
-  const visibleRelations = useMemo(() => relations.filter((relation) => {
-    if (relation.diagram_include !== true) return false;
-    const view = normalizeDiagramView(relation.diagram_view);
-    if (view === "Hidden") return false;
-    return view === "Main";
-  }), [relations]);
+  const mainProjection = useMemo(() => projectStoredMainFlow({
+    nodes: elements.map((element) => ({ id: element.element_id, type: element.element_type, include: isStoredMainElementType(element.element_type) })),
+    relations: relations.map((relation) => ({
+      id: relation.relation_id,
+      source: relation.source_node_id,
+      target: relation.target_node_id,
+      diagramInclude: relation.diagram_include,
+      diagramView: relation.diagram_view
+    })),
+  }), [elements, relations]);
   /*
    * Old column selection:
    * const visibleColumns = mode === "main" ? columns : extendedColumns;
    */
-  const renderedRelations = useMemo(() => visibleRelations.filter((relation) => {
-    const source = elementById.get(relation.source_node_id);
-    const target = elementById.get(relation.target_node_id);
-    return source && target && isMainElementType(source.element_type) && isMainElementType(target.element_type);
-  }), [elementById, visibleRelations]);
+  const renderedRelations = useMemo(() => {
+    const relationIds = new Set(mainProjection.relationIds);
+    return relations.filter((relation) => relationIds.has(relation.relation_id));
+  }, [mainProjection, relations]);
   const visibleNodeIds = useMemo(() => {
     const ids = new Set<string>();
     for (const relation of renderedRelations) {
@@ -403,14 +407,6 @@ function contextBandStyle(width: number, color: string): CSSProperties {
   };
 }
 
-function normalizeDiagramView(value: string | null | undefined) {
-  if (!value) return "Main";
-  const normalized = value.trim().toLowerCase();
-  if (!normalized || normalized === "main") return "Main";
-  if (normalized === "extended") return "Extended";
-  if (normalized === "hidden") return "Hidden";
-  return value;
-}
 
 function displayElementType(value: string | null | undefined) {
   return value === "Boundary Condition" || value === "Boundary Conditions" ? "Limitations" : value;
@@ -423,9 +419,6 @@ function canonicalMainElementType(value: string | null | undefined) {
   return value ?? "";
 }
 
-function isMainElementType(value: string | null | undefined) {
-  return mainColumns.includes(canonicalMainElementType(value));
-}
 
 
 function splitTokens(value: string | null | undefined) {

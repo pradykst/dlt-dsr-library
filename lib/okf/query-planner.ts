@@ -1,3 +1,4 @@
+import { requestGeminiQueryPlanJson } from "../llm/gemini.ts";
 import { detectNamedPapers, extractQueryCriteria, inferRequestedTypes, normalizeText, unique } from "./policy.ts";
 import { detectDeterministicIntent, hasMeaningfulActionAndTheme, isMessyNaturalLanguageQuery } from "./query-interpreter.ts";
 import { getOkfKnowledgeBase } from "./retrieval.ts";
@@ -52,7 +53,7 @@ const allowedIntents: OkfChatIntent[] = [
 export async function planOkfQuery(query: string, deterministicIntent: OkfChatIntent = detectDeterministicIntent(query, getOkfKnowledgeBase()), kb: OkfKnowledgeBase = getOkfKnowledgeBase()): Promise<QueryPlan> {
   const base = buildDeterministicQueryPlan(query, deterministicIntent, kb);
   if (!shouldUseLlmPlanner(query, base, kb)) return base;
-  const llmPlan = await requestGroqQueryPlan(query, base, kb).catch(() => undefined);
+  const llmPlan = await requestLlmQueryPlan(query, base, kb).catch(() => undefined);
   return validateQueryPlan(llmPlan, base, kb, query);
 }
 
@@ -109,11 +110,42 @@ function outputShapeForIntent(intent: OkfChatIntent): QueryPlanOutputShape {
 function shouldUseLlmPlanner(query: string, base: QueryPlan, kb: OkfKnowledgeBase) {
   if (base.confidence === "high") return false;
   if (String(process.env.OKF_DISABLE_LLM_QUERY_PLANNER ?? "false").toLowerCase() === "true") return false;
-  if (!process.env.GROQ_API_KEY || !process.env.GROQ_MODEL) return false;
+  const provider = queryPlannerProvider();
+  if (!provider) return false;
+  if (isTestRun() && !isLivePlannerTestEnabled(provider)) return false;
   if (!hasMeaningfulActionAndTheme(query, kb)) return false;
   return isMessyNaturalLanguageQuery(query) || base.confidence === "low" || base.confidence === "medium";
 }
 
+async function requestLlmQueryPlan(query: string, base: QueryPlan, kb: OkfKnowledgeBase): Promise<Partial<QueryPlan> | undefined> {
+  const provider = queryPlannerProvider();
+  if (provider === "gemini") return await requestGeminiQueryPlanJson(plannerPromptPayload(query, base, kb)) as Partial<QueryPlan> | undefined;
+  if (provider === "groq") return requestGroqQueryPlan(query, base, kb);
+  return undefined;
+}
+
+function queryPlannerProvider(): "gemini" | "groq" | undefined {
+  const requested = (process.env.LLM_PROVIDER ?? process.env.CHAT_PROVIDER ?? "none").toLowerCase();
+  if (requested === "gemini" && process.env.GEMINI_API_KEY && (process.env.GEMINI_PLANNER_MODEL || process.env.GEMINI_MODEL)) return "gemini";
+  if (requested === "groq" && process.env.GROQ_API_KEY && process.env.GROQ_MODEL) return "groq";
+  return undefined;
+}
+
+function isTestRun() {
+  return process.env.npm_lifecycle_event === "test" || process.argv.some((arg) => /okf\.test\.ts|node:test|--test/.test(arg));
+}
+
+function plannerPromptPayload(query: string, base: QueryPlan, kb: OkfKnowledgeBase) {
+  return {
+    user_query: query,
+    deterministic_base_plan: base,
+    allowed_intents: allowedIntents,
+    query_plan_schema: { intent: "allowed intent", confidence: "high|medium|low", requested_output_shape: "counts|library_coverage|paper_list|exact_elements|flow_graph|design_recommendation|evidence|comparison|lifecycle|evaluation_plan|clarification", named_papers: [], requested_element_types: [], themes: [], must_have_criteria: [], optional_criteria: [], requires_cross_paper: true, requires_graph: false, requires_llm_synthesis: false, clarification_question: "optional" },
+    known_papers: kb.papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title })).slice(0, 50),
+    known_element_types: ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"],
+    rules: ["Do not choose facts, citations, evidence, final sources, or claims.", "If the user asks which paper has a theme, classify as PAPER_DISCOVERY_QUERY.", "If the user asks to create/build/design an application/system and asks what to reuse, classify as DESIGN_REUSE_QUERY unless a graph/flow is requested.", "Clarification should be rare; use it only for greetings or underspecified queries without domain/action."]
+  };
+}
 async function requestGroqQueryPlan(query: string, base: QueryPlan, kb: OkfKnowledgeBase): Promise<Partial<QueryPlan> | undefined> {
   const baseUrl = process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1";
   const controller = new AbortController();
@@ -130,7 +162,7 @@ async function requestGroqQueryPlan(query: string, base: QueryPlan, kb: OkfKnowl
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: "You are a query interpreter for a DSR OKF library assistant. Classify the user's request into one of the allowed intents. Extract requested element types, named papers, themes, criteria, and output shape. Do not answer the question. Return JSON only." },
-          { role: "user", content: JSON.stringify({ user_query: query, deterministic_base_plan: base, allowed_intents: allowedIntents, query_plan_schema: { intent: "allowed intent", confidence: "high|medium|low", requested_output_shape: "counts|library_coverage|paper_list|exact_elements|flow_graph|design_recommendation|evidence|comparison|lifecycle|evaluation_plan|clarification", named_papers: [], requested_element_types: [], themes: [], must_have_criteria: [], optional_criteria: [], requires_cross_paper: true, requires_graph: false, requires_llm_synthesis: false, clarification_question: "optional" }, known_papers: kb.papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title })).slice(0, 50), known_element_types: ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"], rules: ["Do not choose facts, citations, evidence, final sources, or claims.", "If the user asks which paper has a theme, classify as PAPER_DISCOVERY_QUERY.", "If the user asks to create/build/design an application/system and asks what to reuse, classify as DESIGN_REUSE_QUERY unless a graph/flow is requested.", "Clarification should be rare; use it only for greetings or underspecified queries without domain/action."] }) }
+          { role: "user", content: JSON.stringify(plannerPromptPayload(query, base, kb)) }
         ]
       })
     });
@@ -198,5 +230,11 @@ function validateConfidence(value: unknown): QueryPlanConfidence | undefined {
 function validateOutputShape(value: unknown): QueryPlanOutputShape | undefined {
   const allowed: QueryPlanOutputShape[] = ["counts", "library_coverage", "paper_list", "exact_elements", "flow_graph", "design_recommendation", "evidence", "comparison", "lifecycle", "evaluation_plan", "clarification"];
   return typeof value === "string" && allowed.includes(value as QueryPlanOutputShape) ? value as QueryPlanOutputShape : undefined;
+}
+
+function isLivePlannerTestEnabled(provider: "gemini" | "groq") {
+  if (String(process.env.OKF_LLM_QUERY_PLANNER_LIVE_TEST ?? "false").toLowerCase() === "true") return true;
+  const providerFlag = provider === "gemini" ? process.env.GEMINI_LIVE_TEST : process.env.GROQ_LIVE_TEST;
+  return String(providerFlag ?? "false").toLowerCase() === "true";
 }
 

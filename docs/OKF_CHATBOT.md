@@ -1,4 +1,4 @@
-﻿# DSR OKF Chatbot
+# DSR OKF Chatbot
 
 ## What DSR OKF is
 
@@ -85,10 +85,9 @@ Open `/okf-chat`.
 ```text
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-LLM_PROVIDER=none | featherless | groq | openai
-FEATHERLESS_API_KEY=
+LLM_PROVIDER=gemini | groq | mock | none
+GEMINI_API_KEY=
 GROQ_API_KEY=
-OPENAI_API_KEY=
 ```
 
 The app runs without any LLM key. `LLM_PROVIDER=none` is the deterministic baseline.

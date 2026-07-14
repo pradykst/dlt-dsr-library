@@ -2,9 +2,10 @@ import { buildOkfFlow } from "./flow.ts";
 import { getOkfKnowledgeBase } from "./retrieval.ts";
 import type { ConfidenceLabel, DesignMove, OkfAnswerPayload, OkfChatIntent, OkfConcept, OkfConceptType, OkfEvidenceItem, OkfKnowledgeBase, OkfPaper, OkfReuseFlowRow, LlmSynthesisResult, OkfRuntimeMetadata, OkfTaskType } from "./schema.ts";
 import { validateChatResponse } from "./validator.ts";
-import { buildReuseFlowResponse } from "./reuse.ts";
+import { buildAuthoritativeReuseAnswerPlan, buildReuseFlowResponse } from "./reuse.ts";
 import { buildDeterministicQueryPlan, planOkfQuery, type QueryPlan } from "./query-planner.ts";
 import { detectDeterministicIntent } from "./query-interpreter.ts";
+import { validateAuthoritativeReuseAnswerPlan } from "./answer-plan-validator.ts";
 export { selectSourcePapers } from "./reuse.ts";
 import { expandPolicyTerms, extractQueryCriteria, normalizeText, paperContribution, paperRoleLabel, paperRoleReason, selectPolicySourcePapers, tokenizePolicy, unique, type PolicyThemeId, type QueryCriteria } from "./policy.ts";
 
@@ -14,7 +15,7 @@ export type LibraryStatsAnswer = { intent: "LIBRARY_STATS_QUERY"; direct_answer:
 export type LibraryCoverageAnswer = { intent: "LIBRARY_COVERAGE_QUERY"; direct_answer: string; categories: Array<{ category: string; papers: Array<{ paper_id: string; title: string; reason: string }>; count: number }>; no_match_note?: string };
 export type OkfQueryPlan = { intent: OkfChatIntent; task_type: OkfTaskType; output_shape: "Requirement -> Principle -> Feature -> Artifact" | "element_list" | "paper_list" | "evidence" | "comparison" | "lifecycle" | "overview" | "stats" | "library_coverage" | "clarification" | "open"; targetPaper?: OkfPaper; requestedTypes: OkfConceptType[]; isCrossPaper: boolean; domainTerms: string[]; criteria: QueryCriteria; query_plan: QueryPlan };
 export type OkfPaperMatch = { paper_id: string; title: string; match_strength: "strong" | "partial" | "weak"; matched_criteria: string[]; matched_element_types: OkfConceptType[]; top_relevant_concepts: string[]; evidence_count: number; short_reason: string };
-export type OkfAnswerPlan = { intent: OkfChatIntent; user_query: string; query_plan: QueryPlan; answer_shape: OkfQueryPlan["output_shape"]; selected_papers: Array<{ paper_id: string; title: string; role_for_query: string; reason_for_selection: string; relevance_score: number; matched_criteria: string[]; top_concepts: string[]; top_evidence: string[] }>; required_sections: string[]; extraction_items: Array<{ concept_id: string; paper_id: string; type: OkfConceptType; title: string }>; paper_matches: OkfPaperMatch[]; design_moves: DesignMove[]; flow_rows: OkfReuseFlowRow[]; comparison_rows: Array<{ paper_id: string; title: string; element_type: string; summary: string }>; evidence_pack: Array<{ evidence_id: string; paper_id: string; concept_id?: string; excerpt: string; confidence: ConfidenceLabel }>; constraints: string[]; things_to_avoid: string[]; synthesis_policy: "deterministic" | "groq_optional" | "groq_preferred"; criteria: QueryCriteria };
+export type OkfAnswerPlan = { intent: OkfChatIntent; user_query: string; query_plan: QueryPlan; answer_shape: OkfQueryPlan["output_shape"]; selected_papers: Array<{ paper_id: string; title: string; role_for_query: string; reason_for_selection: string; relevance_score: number; matched_criteria: string[]; top_concepts: string[]; top_evidence: string[] }>; required_sections: string[]; extraction_items: Array<{ concept_id: string; paper_id: string; type: OkfConceptType; title: string }>; paper_matches: OkfPaperMatch[]; design_moves: DesignMove[]; flow_rows: OkfReuseFlowRow[]; comparison_rows: Array<{ paper_id: string; title: string; element_type: string; summary: string }>; evidence_pack: Array<{ evidence_id: string; paper_id: string; concept_id?: string; excerpt: string; confidence: ConfidenceLabel }>; constraints: string[]; things_to_avoid: string[]; synthesis_policy: "deterministic" | "llm_optional" | "llm_preferred"; criteria: QueryCriteria };
 export type OkfChatResponse = { intent: OkfChatIntent; task_type?: OkfTaskType; answer: string; interpreted_problem?: string; requirements: OkfRecommendationCard[]; principles: OkfRecommendationCard[]; features: OkfRecommendationCard[]; artifact_direction: OkfRecommendationCard[]; source_papers: OkfSourcePaper[]; retrieved_concepts: OkfConcept[]; evidence: { evidence_id: string; paper_id: string; concept_id?: string; paraphrase: string; quote?: string; confidence: string; section?: string; page_number?: number }[]; flow: ReturnType<typeof buildOkfFlow>; flow_graph: ReturnType<typeof buildOkfFlow>; flow_rows?: OkfReuseFlowRow[]; library_stats?: LibraryStatsAnswer; library_coverage?: LibraryCoverageAnswer; answer_payload?: OkfAnswerPayload; answer_plan?: OkfAnswerPlan; assumptions: string[]; limitations: string[]; warnings: string[]; runtime?: OkfRuntimeMetadata; llm_synthesis?: LlmSynthesisResult };
 
 const knownPolicyThemeIds = new Set<PolicyThemeId>(["integrity", "commercial_privacy", "identity_credentials", "trust_reputation", "auditability_status", "consent_control", "token_incentives", "fair_marketplace", "implementation_lifecycle", "iot_sensor_protection", "forecasting_oracle_payment", "scalability_hybrid_storage", "governance_dispute", "evaluation"]);
@@ -51,10 +52,42 @@ export async function answerOkfChat(query: string, kb: OkfKnowledgeBase = getOkf
   const queryPlan = await planOkfQuery(query, deterministicIntent, kb);
   const plan = analyzeOkfQuery(query, queryPlan.intent, kb, queryPlan);
   const answerPlan = buildAnswerPlan(query, plan, kb);
+  const authoritativeValidation = validateAuthoritativeReuseAnswerPlan(answerPlan);
+  if (!authoritativeValidation.valid) return invalidReuseAnswerPlanResponse(query, plan, answerPlan, authoritativeValidation.errors);
   const response = attachAnswerPlan(buildDeterministicResponse(query, plan, answerPlan, kb), answerPlan, kb);
   const validation = validateChatResponse(response, kb);
   const answerPlanValidation = validateAnswerPlanResponse(response, kb);
   return { ...response, warnings: [...response.warnings, ...validation.warnings, ...answerPlanValidation] };
+}
+
+function invalidReuseAnswerPlanResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, errors: string[]): OkfChatResponse {
+  const safePlan: OkfAnswerPlan = {
+    ...answerPlan,
+    selected_papers: [],
+    paper_matches: [],
+    extraction_items: [],
+    design_moves: [],
+    flow_rows: [],
+    evidence_pack: [],
+    synthesis_policy: "deterministic"
+  };
+  const answer = [
+    "# Recommendation",
+    "I could not construct a valid 5-7-move, evidence-consistent reuse plan from the selected OKF material, so no architecture recommendation was emitted.",
+    "## Design moves to reuse",
+    "No canonical move set passed server-side plan validation.",
+    "## Suggested architecture direction",
+    "- Refine the design scope or add stronger OKF coverage before generating a reuse flow.",
+    "## What not to overclaim",
+    "- Do not treat a partial or internally inconsistent plan as grounded design guidance."
+  ].join("\n\n");
+  return baseResponse(plan.intent, answer, [], [], emptyFlow("invalid-reuse-answer-plan"), [], {
+    task_type: plan.task_type,
+    interpreted_problem: query,
+    answer_plan: safePlan,
+    limitations: ["The server rejected the candidate AnswerPlan before rendering or LLM synthesis."],
+    warnings: [`Authoritative AnswerPlan validation failed with ${errors.length} invariant violation(s).`, ...errors]
+  });
 }
 
 function buildDeterministicResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
@@ -84,7 +117,7 @@ function buildAnswerPlan(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase
     const paperEvidence = evidence.filter((item) => item.paper_id === support.paper_id);
     return { paper_id: support.paper_id, title: support.title, role_for_query: paperRoleLabel(support.paper_id, support.title), reason_for_selection: support.reason, relevance_score: support.score ?? 0, matched_criteria: paperMatches.find((match) => match.paper_id === support.paper_id)?.matched_criteria ?? [], top_concepts: paperConcepts.slice(0, 8).map((concept) => concept.title), top_evidence: paperEvidence.slice(0, 5).map((item) => item.paraphrase) };
   });
-  return {
+  const answerPlan: OkfAnswerPlan = {
     intent: plan.intent,
     user_query: query,
     query_plan: plan.query_plan,
@@ -102,6 +135,7 @@ function buildAnswerPlan(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase
     synthesis_policy: synthesisPolicyForIntent(plan.intent),
     criteria: plan.criteria
   };
+  return buildAuthoritativeReuseAnswerPlan(answerPlan, kb);
 }
 
 function selectedPaperSupports(query: string, plan: OkfQueryPlan, kb: OkfKnowledgeBase) {
@@ -142,9 +176,7 @@ function conceptsForPlan(query: string, plan: OkfQueryPlan, paperIds: string[], 
 }
 
 function designReuseResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
-  const reuse = buildReuseFlowResponse(query, { ...plan, intent: "DESIGN_REUSE_FLOW_QUERY", task_type: "design_reuse_flow", output_shape: "Requirement -> Principle -> Feature -> Artifact", isCrossPaper: true }, kb);
-  const intent = plan.intent === "DESIGN_REUSE_QUERY" ? "DESIGN_REUSE_QUERY" : "DESIGN_REUSE_FLOW_QUERY";
-  return { ...reuse, intent, task_type: plan.task_type, answer_plan: { ...answerPlan, design_moves: reuse.answer_payload?.design_moves ?? [], flow_rows: reuse.flow_rows ?? [], evidence_pack: reuse.evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, confidence: item.confidence as ConfidenceLabel })) } };
+  return buildReuseFlowResponse(query, plan, answerPlan, kb);
 }
 
 function libraryCoverageResponse(_query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
@@ -347,11 +379,13 @@ function negativeResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnsw
 
 function flowResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
   const paperIds = answerPlan.selected_papers.map((paper) => paper.paper_id).slice(0, plan.targetPaper ? 1 : 3);
-  const concepts = flowConcepts(query, paperIds, kb);
+  const candidateConcepts = flowConcepts(query, paperIds, kb);
+  const subject = humanReadableFlowSubject(query);
+  const flow = buildOkfFlow(query, candidateConcepts, kb, { mode: "stored_paper_flow", storedOnly: true, title: "Stored OKF relation flow" });
+  const graphConceptIds = new Set(flow.nodes.map((node) => node.concept_id).filter((id): id is string => Boolean(id)));
+  const concepts = candidateConcepts.filter((concept) => graphConceptIds.has(concept.concept_id));
   const rows = buildStoredFlowRows(concepts, kb).slice(0, 12);
   const evidence = evidenceForConcepts(concepts, kb);
-  const subject = humanReadableFlowSubject(query);
-  const flow = buildOkfFlow(query, concepts, kb, { mode: "stored_paper_flow", storedOnly: true, title: "Stored OKF relation flow" });
   const paperTitleText = paperIds.length === 1 ? ` in ${shortPaperTitle(paperTitle(paperIds[0], kb))}` : "";
   const subjectPhrase = subject.toLowerCase().startsWith("from ") ? subject : `for ${subject}`;
   const layerCounts = countFlowGraphLayers(flow);
@@ -361,7 +395,7 @@ function flowResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPl
     rows.length ? `Short branch summary:\n${flowBranchSummary(rows)}` : "No stored Requirement -> Principle -> Feature path matched the query. I did not infer extra links.",
     `Coverage note: ${flow.edges.length} stored relation edge(s), ${evidence.length} linked evidence item(s).`
   ].join("\n\n");
-  return baseResponse(plan.intent, answer, concepts, evidence.map(toEvidenceDto), flow, sourcePapersForIds(paperIds, concepts, kb, answerPlan), { task_type: plan.task_type, flow_rows: rows, answer_plan: { ...answerPlan, flow_rows: rows, evidence_pack: evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, confidence: item.confidence })) } });
+  return baseResponse(plan.intent, answer, concepts, evidence.map(toEvidenceDto), flow, sourcePapersForIds(paperIds, concepts, kb, answerPlan), { task_type: plan.task_type, flow_rows: rows, answer_plan: { ...answerPlan, extraction_items: concepts.map((concept) => ({ concept_id: concept.concept_id, paper_id: concept.paper_id, type: concept.type, title: concept.title })), flow_rows: rows, evidence_pack: evidence.map((item) => ({ evidence_id: item.evidence_id, paper_id: item.paper_id, concept_id: item.concept_id, excerpt: item.quote ?? item.paraphrase, confidence: item.confidence })) } });
 }
 
 function evidenceResponse(query: string, plan: OkfQueryPlan, answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase): OkfChatResponse {
@@ -615,6 +649,7 @@ function conceptsFromPlan(answerPlan: OkfAnswerPlan, kb: OkfKnowledgeBase) {
 }
 
 function selectedTypesForIntent(intent: OkfChatIntent, requested: OkfConceptType[]) {
+  if (intent === "DESIGN_REUSE_QUERY" || intent === "DESIGN_REUSE_FLOW_QUERY") return ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact"] as OkfConceptType[];
   if (requested.length) return requested;
   if (intent === "EVALUATION_PLANNING_QUERY") return ["Evaluation", "OutputKnowledge", "Limitation", "Artifact"] as OkfConceptType[];
   if (intent === "PAPER_DISCOVERY_QUERY") return ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation"] as OkfConceptType[];
@@ -674,7 +709,7 @@ function thingsToAvoidForIntent(intent: OkfChatIntent) {
 }
 
 function synthesisPolicyForIntent(intent: OkfChatIntent): OkfAnswerPlan["synthesis_policy"] {
-  if (["DESIGN_REUSE_QUERY", "DESIGN_REUSE_FLOW_QUERY", "COMPARISON_QUERY", "EVALUATION_PLANNING_QUERY"].includes(intent)) return "groq_optional";
+  if (["DESIGN_REUSE_QUERY", "DESIGN_REUSE_FLOW_QUERY", "COMPARISON_QUERY", "EVALUATION_PLANNING_QUERY"].includes(intent)) return "llm_optional";
   return "deterministic";
 }
 

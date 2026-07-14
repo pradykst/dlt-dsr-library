@@ -1,4 +1,5 @@
-import type { ConfidenceLabel, FlowGraphLayer, FlowGraphMode, FlowGraphProvenance, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfFlow, OkfFlowEdge, OkfFlowNode, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate, OkfReuseFlowRow } from "./schema.ts";
+import type { ConfidenceLabel, DesignMove, FlowGraphLayer, FlowGraphMode, FlowGraphProvenance, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfFlow, OkfFlowEdge, OkfFlowNode, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate, OkfReuseFlowRow } from "./schema.ts";
+import { projectStoredOkfFlow } from "./stored-flow.ts";
 
 const graphLayers: FlowGraphLayer[] = ["Problem", "Requirement", "Principle", "Feature", "Artifact", "Evaluation", "OutputKnowledge"];
 const preferredTypes = ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
@@ -22,6 +23,7 @@ export type FlowOptions = {
   mode?: FlowGraphMode;
   title?: string;
   flowRows?: OkfReuseFlowRow[];
+  designMoves?: DesignMove[];
   storedOnly?: boolean;
   includeQuerySpecificNodes?: boolean;
   layers?: FlowGraphLayer[];
@@ -29,8 +31,13 @@ export type FlowOptions = {
 
 export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: OkfKnowledgeBase, options: FlowOptions = {}): OkfFlow {
   const mode = options.mode ?? (options.includeQueryProblem || options.flowRows?.some((row) => row.adaptation_status !== "stored") ? "mixed_reuse_flow" : "stored_paper_flow");
-  const selectedIds = new Set(selectedConcepts.map((concept) => concept.concept_id));
-  const candidateRelations = kb.relations.filter((relation) => {
+  if (mode !== "stored_paper_flow" && options.designMoves?.length) {
+    return buildMoveProjectedFlow(query, options.designMoves, selectedConcepts, kb, options, mode);
+  }
+  const storedProjection = mode === "stored_paper_flow" ? projectStoredOkfFlow(selectedConcepts, kb, flowPredicates, true) : undefined;
+  const projectedConcepts = storedProjection?.concepts ?? selectedConcepts;
+  const selectedIds = new Set(projectedConcepts.map((concept) => concept.concept_id));
+  const candidateRelations = storedProjection?.relations ?? kb.relations.filter((relation) => {
     if (!selectedIds.has(relation.source_concept_id) || !selectedIds.has(relation.target_concept_id)) return false;
     if (!flowPredicates.includes(relation.predicate)) return false;
     return !options.storedOnly || relation.relation_scope !== "query_generated";
@@ -42,7 +49,7 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
   }
 
   const nodesById = new Map<string, OkfFlowNode>();
-  const ordered = orderConceptsForFlow(selectedConcepts.filter((concept) => connectedIds.has(concept.concept_id) || selectedConcepts.length <= 8 || hasPrimaryFlowType(concept.type)));
+  const ordered = orderConceptsForFlow(projectedConcepts.filter((concept) => connectedIds.has(concept.concept_id) || projectedConcepts.length <= 8 || hasPrimaryFlowType(concept.type)));
   for (const concept of ordered) addConceptNode(nodesById, concept, kb);
 
   if (options.includeQueryProblem) {
@@ -69,7 +76,6 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
   }
 
   if (options.flowRows?.length) addRowDerivedFlow(query, options.flowRows, selectedConcepts, kb, nodesById, edgesById, mode);
-  if (options.includeQuerySpecificNodes ?? mode !== "stored_paper_flow") addQuerySpecificReuseNodes(query, nodesById, edgesById);
 
   const queryProblem = [...nodesById.values()].find((node) => node.id.startsWith("query_problem:"));
   if (queryProblem) {
@@ -77,10 +83,13 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
     if (firstStored) addGeneratedEdge(edgesById, queryProblem.id, firstStored.id, "motivates", "query_generated", "low", []);
   }
 
-  const limitedNodes = orderNodesForFlow([...nodesById.values()]).slice(0, 56);
+  const orderedNodes = orderNodesForFlow([...nodesById.values()]);
+  const limitedNodes = mode === "stored_paper_flow" ? orderedNodes : orderedNodes.slice(0, 56);
   const limitedNodeIds = new Set(limitedNodes.map((node) => node.id));
-  const limitedEdges = [...edgesById.values()].filter((edge) => limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target)).slice(0, 120);
-  const warnings = limitedEdges.length === 0 && limitedNodes.length > 0 ? ["No stored relation edge connected the selected OKF nodes."] : [];
+  const connectedEdges = [...edgesById.values()].filter((edge) => limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target));
+  const limitedEdges = mode === "stored_paper_flow" ? connectedEdges : connectedEdges.slice(0, 120);
+  const warnings = [...(storedProjection?.warnings ?? [])];
+  if (limitedEdges.length === 0 && limitedNodes.length > 0) warnings.push("No stored relation edge connected the selected OKF nodes.");
   const evidence_refs = evidenceRefsForGraph(limitedNodes, limitedEdges, kb);
   const graph_id = `flow:${stableSlug(query)}:${limitedNodes.length}:${limitedEdges.length}`;
 
@@ -92,6 +101,112 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
     layers: options.layers ?? graphLayers,
     nodes: limitedNodes,
     edges: limitedEdges,
+    evidence_refs,
+    warnings
+  };
+}
+
+function buildMoveProjectedFlow(query: string, designMoves: DesignMove[], selectedConcepts: OkfConcept[], kb: OkfKnowledgeBase, options: FlowOptions, mode: FlowGraphMode): OkfFlow {
+  const moves = designMoves
+    .filter((move) => move.reused_requirement && move.reused_principle && move.candidate_feature && move.artifact_pattern)
+    .slice(0, 7);
+  const conceptByProjectionKey = new Map<string, OkfConcept[]>();
+  for (const concept of selectedConcepts) {
+    const layer = layerForConceptType(concept.type);
+    if (!layer || !["Requirement", "Principle", "Feature", "Artifact"].includes(layer)) continue;
+    const key = `${layer}:${normalizeText(concept.title)}`;
+    conceptByProjectionKey.set(key, [...(conceptByProjectionKey.get(key) ?? []), concept]);
+  }
+
+  const nodesById = new Map<string, OkfFlowNode>();
+  const edgesById = new Map<string, OkfFlowEdge>();
+
+  for (const move of moves) {
+    const supportingPapers = new Set(move.supporting_paper_ids);
+    const pathSpecs: Array<{ layer: FlowGraphLayer; type: OkfConceptType; label: string }> = [
+      { layer: "Requirement", type: "DesignRequirement", label: move.reused_requirement },
+      { layer: "Principle", type: "DesignPrinciple", label: move.reused_principle },
+      { layer: "Feature", type: "DesignFeature", label: move.candidate_feature },
+      { layer: "Artifact", type: "Artifact", label: move.artifact_pattern }
+    ];
+    const path = pathSpecs.map((spec) => {
+      const candidates = conceptByProjectionKey.get(`${spec.layer}:${normalizeText(spec.label)}`) ?? [];
+      const concept = candidates.find((candidate) => supportingPapers.has(candidate.paper_id)) ?? candidates[0];
+      if (concept) {
+        const evidenceIds = evidenceIdsForConcept(concept.concept_id, kb).filter((id) => move.evidence_ids.includes(id));
+        const existing = nodesById.get(concept.concept_id);
+        if (existing) {
+          existing.evidence_ids = uniqueStrings([...existing.evidence_ids, ...evidenceIds]);
+          return existing;
+        }
+        const node: OkfFlowNode = {
+          id: concept.concept_id,
+          label: concept.title,
+          type: concept.type,
+          layer: spec.layer,
+          concept_id: concept.concept_id,
+          paper_id: concept.paper_id,
+          confidence: concept.confidence,
+          evidence_ids: evidenceIds,
+          provenance: "stored",
+          query_generated: false,
+          short_description: concept.description || concept.body_text || undefined
+        };
+        nodesById.set(node.id, node);
+        return node;
+      }
+      const provenance: FlowGraphProvenance = move.adaptation_status === "stored" ? "mixed" : move.adaptation_status;
+      const id = `move_node:${stableSlug(move.id)}:${spec.layer.toLowerCase()}`;
+      const node: OkfFlowNode = {
+        id,
+        label: spec.label,
+        type: spec.type,
+        layer: spec.layer,
+        confidence: move.confidence,
+        evidence_ids: uniqueStrings(move.evidence_ids).slice(0, 3),
+        provenance,
+        query_generated: true,
+        short_description: move.what_to_build
+      };
+      nodesById.set(id, node);
+      return node;
+    });
+
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const source = path[index];
+      const target = path[index + 1];
+      const relation = source.concept_id && target.concept_id ? findStoredRelation(source.concept_id, target.concept_id, kb) : undefined;
+      if (relation) {
+        addRelationEdge(edgesById, relation);
+        const edge = edgesById.get(relation.relation_id);
+        if (edge) edge.evidence_ids = relation.evidence_id && move.evidence_ids.includes(relation.evidence_id) ? [relation.evidence_id] : [];
+      }
+      else {
+        const provenance: FlowGraphProvenance = move.adaptation_status === "query_generated" ? "query_generated" : "mixed";
+        addGeneratedEdge(edgesById, source.id, target.id, "adapted_to", provenance, move.confidence, move.evidence_ids, `${move.id}-${index + 1}`);
+      }
+    }
+  }
+
+  const nodes = orderNodesForFlow([...nodesById.values()]);
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = [...edgesById.values()].filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
+  const layerCounts = new Map<FlowGraphLayer, number>();
+  for (const node of nodes) layerCounts.set(node.layer, (layerCounts.get(node.layer) ?? 0) + 1);
+  const warnings: string[] = [];
+  if (moves.length < 5) warnings.push(`Only ${moves.length} validated design move(s) were available for this query-generated flow.`);
+  if ([...layerCounts.entries()].some(([layer, count]) => layer !== "Problem" && count > 7)) warnings.push("The move projection exceeded the seven-node-per-layer bound.");
+  if (nodes.some((node) => !edges.some((edge) => edge.source === node.id || edge.target === node.id))) warnings.push("The move projection contains an orphan node.");
+  const evidence_refs = evidenceRefsForGraph(nodes, edges, kb);
+  const graph_id = `flow:${stableSlug(query)}:${nodes.length}:${edges.length}`;
+  return {
+    graph_id,
+    flow_id: graph_id,
+    title: options.title ?? "Query-specific DSR reuse flow",
+    mode,
+    layers: options.layers ?? graphLayers,
+    nodes,
+    edges,
     evidence_refs,
     warnings
   };
@@ -176,69 +291,6 @@ function ensureRowNode(query: string, row: OkfReuseFlowRow, type: OkfConceptType
   return nodesById.get(id);
 }
 
-function addQuerySpecificReuseNodes(query: string, nodesById: Map<string, OkfFlowNode>, edgesById: Map<string, OkfFlowEdge>) {
-  const specs = querySpecificNodeSpecs(query);
-  if (!specs.length) return;
-  for (const spec of specs) {
-    const id = `query_node:${spec.layer.toLowerCase()}:${stableSlug(spec.label)}`;
-    if (!nodesById.has(id)) {
-      nodesById.set(id, {
-        id,
-        label: spec.label,
-        type: conceptTypeForLayer(spec.layer),
-        layer: spec.layer,
-        confidence: "low",
-        evidence_ids: [],
-        provenance: "query_generated",
-        query_generated: true,
-        short_description: "Target-domain node generated from the user query and grounded by retrieved OKF context."
-      });
-    }
-  }
-  const generatedNodes = [...nodesById.values()].filter((node) => node.id.startsWith("query_node:"));
-  for (const node of generatedNodes) {
-    const source = bestSourceForGeneratedNode(node, nodesById);
-    if (source) addGeneratedEdge(edgesById, source.id, node.id, "adapted_to", source.provenance === "stored" ? "mixed" : "query_generated", "low", source.evidence_ids.slice(0, 4));
-  }
-}
-
-function querySpecificNodeSpecs(query: string): Array<{ layer: FlowGraphLayer; label: string }> {
-  const q = normalizeText(query);
-  const specs: Array<{ layer: FlowGraphLayer; label: string }> = [];
-  const has = (terms: string[]) => terms.some((term) => q.includes(normalizeText(term)));
-  if (has(["product", "product data", "catalog"]) && has(["fragmented", "fragmentation", "quality", "consistency", "identity"])) {
-    specs.push({ layer: "Requirement", label: "Create consistent product data identity across fragmented sources" });
-    specs.push({ layer: "Feature", label: "Anchor product data changes with verification proofs and status history" });
-    specs.push({ layer: "Artifact", label: "Product data registry with evidence, identity, and governance services" });
-  }
-  if (has(["product", "variant", "listing", "marketplace"]) && has(["identity", "review", "reputation", "relist", "continuity"])) {
-    specs.push({ layer: "Requirement", label: "Maintain cross-marketplace product identity and review continuity" });
-    specs.push({ layer: "Feature", label: "Gate reviews through verified-purchase and relisting-continuity checks" });
-    specs.push({ layer: "Artifact", label: "Cross-marketplace product identity and review-continuity protocol" });
-  }
-  if (has(["raw", "commercial", "sensitive", "competitor", "privacy"])) {
-    specs.push({ layer: "Requirement", label: "Minimize raw data exposure while preserving verifiability" });
-  }
-  if (has(["credential", "credentials", "identity", "revocation", "status"])) {
-    specs.push({ layer: "Feature", label: "Verify actor credentials, issuer trust, and revocation status" });
-  }
-  return dedupeBy(specs, (spec) => `${spec.layer}:${normalizeText(spec.label)}`).slice(0, 5);
-}
-
-function bestSourceForGeneratedNode(node: OkfFlowNode, nodesById: Map<string, OkfFlowNode>) {
-  const sourceLayer: Record<FlowGraphLayer, FlowGraphLayer[]> = {
-    Problem: [],
-    Requirement: ["Principle", "Feature", "Artifact"],
-    Principle: ["Requirement"],
-    Feature: ["Principle", "Requirement"],
-    Artifact: ["Feature", "Principle"],
-    Evaluation: ["Artifact"],
-    OutputKnowledge: ["Evaluation", "Artifact"]
-  };
-  const candidates = [...nodesById.values()].filter((candidate) => !candidate.query_generated && sourceLayer[node.layer]?.includes(candidate.layer));
-  return candidates.sort((a, b) => b.evidence_ids.length - a.evidence_ids.length || confidenceRank(b.confidence) - confidenceRank(a.confidence))[0];
-}
-
 function addGeneratedEdge(edgesById: Map<string, OkfFlowEdge>, source: string, target: string, predicate: string, provenance: FlowGraphProvenance, confidence: ConfidenceLabel, evidenceIds: string[], rowId?: string) {
   const id = `edge:${rowId ? stableSlug(rowId) : stableSlug(`${source}-${target}-${predicate}`)}:${stableSlug(source)}:${stableSlug(target)}`;
   if (edgesById.has(id) || [...edgesById.values()].some((edge) => edge.source === source && edge.target === target && edge.predicate === predicate)) return;
@@ -283,39 +335,11 @@ function layerForConceptType(type: OkfConceptType): FlowGraphLayer | undefined {
   return undefined;
 }
 
-function conceptTypeForLayer(layer: FlowGraphLayer): OkfConceptType {
-  const map: Record<FlowGraphLayer, OkfConceptType> = {
-    Problem: "Problem",
-    Requirement: "DesignRequirement",
-    Principle: "DesignPrinciple",
-    Feature: "DesignFeature",
-    Artifact: "Artifact",
-    Evaluation: "Evaluation",
-    OutputKnowledge: "OutputKnowledge"
-  };
-  return map[layer];
-}
 
 function hasPrimaryFlowType(type: OkfConceptType) {
   return type === "DesignRequirement" || type === "DesignPrinciple" || type === "DesignFeature" || type === "Artifact";
 }
 
-function confidenceRank(value: ConfidenceLabel) {
-  if (value === "high") return 4;
-  if (value === "medium-high") return 3;
-  if (value === "medium") return 2;
-  return 1;
-}
-
-function dedupeBy<T>(items: T[], keyFor: (item: T) => string) {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = keyFor(item);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter(Boolean))];
