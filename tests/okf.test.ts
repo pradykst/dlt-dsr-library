@@ -11,6 +11,8 @@ import { compactPromptSize } from "../lib/llm/structured-synthesis.ts";
 import { buildMarkdownSynthesisContext } from "../lib/llm/groq.ts";
 import { synthesizeWithFeatherless } from "../lib/llm/featherless.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
+import { getOkfDatabaseHealthStatus, getOkfKnowledgeBaseLoadMetadata, loadOkfKnowledgeBaseFromSupabase } from "../lib/okf/retrieval.ts";
+import { resolveSupabaseServerCredential, serviceRoleRestHeaders } from "../lib/supabase/server.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
 import { projectStoredMainFlow, isStoredMainElementType } from "../lib/okf/stored-flow-projection.ts";
 import { loadRecommendedStoredFlowPaths, loadStoredPaperFlowMetadata, projectStoredOkfFlow } from "../lib/okf/stored-flow.ts";
@@ -57,6 +59,118 @@ test("indexing summary is idempotent without Supabase env vars", async () => {
 });
 
 
+
+test("runtime OKF loader prefers the service role and never uses cookie or browser-session auth", async () => {
+  const env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_test",
+    SUPABASE_SERVICE_ROLE_KEY: "sb_secret_test"
+  };
+  const credential = resolveSupabaseServerCredential(env);
+  assert.equal(credential.key_type, "service_role");
+  assert.equal(credential.service_role_key, "sb_secret_test");
+  assert.equal(serviceRoleRestHeaders("sb_secret_test").Authorization, undefined);
+  assert.equal(serviceRoleRestHeaders("header.payload.signature").Authorization, "Bearer header.payload.signature");
+
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const fetchImpl = mockOkfRestFetch(calls);
+  const kb = await loadOkfKnowledgeBaseFromSupabase({ env, fetchImpl });
+  assert.equal(kb?.papers.length, 1);
+  assert.equal(getOkfKnowledgeBaseLoadMetadata().key_type, "service_role");
+  assert.equal(getOkfKnowledgeBaseLoadMetadata().db_loaded_from, "supabase");
+  assert.equal(calls.length, 4);
+  for (const call of calls) {
+    const headers = new Headers(call.init?.headers);
+    assert.equal(headers.get("apikey"), "sb_secret_test");
+    assert.equal(headers.get("authorization"), null);
+    assert.equal(headers.get("cookie"), null);
+    assert.equal(call.init?.credentials, "omit");
+    assert.equal(call.url.includes("sb_secret_test"), false);
+    assert.equal(call.url.includes("sb_publishable_test"), false);
+  }
+});
+
+test("health DB status reports service_role and Supabase row counts", async () => {
+  const env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_test",
+    SUPABASE_SERVICE_ROLE_KEY: "sb_secret_test"
+  };
+  const status = await getOkfDatabaseHealthStatus({ env, fetchImpl: mockOkfRestFetch([]) });
+  assert.equal(status.ok, true);
+  assert.equal(status.connected, true);
+  assert.equal(status.key_type, "service_role");
+  assert.equal(status.db_loaded_from, "supabase");
+  assert.equal(status.row_count, 1);
+  assert.equal(status.papers, 1);
+});
+
+test("anon-only OKF health is explicit and never attempts a server library read", async () => {
+  const env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_test"
+  };
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    throw new Error("Anon key must not be used for server OKF reads.");
+  }) as typeof fetch;
+  const status = await getOkfDatabaseHealthStatus({ env, fetchImpl });
+  assert.equal(calls, 0);
+  assert.equal(status.ok, false);
+  assert.equal(status.key_type, "anon");
+  assert.equal(status.db_loaded_from, "local_okf_fallback");
+  assert.equal(status.row_count, 0);
+  assert.equal(status.db_error_code, "SERVICE_ROLE_REQUIRED");
+  assert.match(status.message ?? "", /anon|RLS|service role/i);
+});
+
+test("service-role PGRST303 keeps the clock-skew diagnostic and key classification", async () => {
+  const env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "header.payload.signature"
+  };
+  const previousWarn = console.warn;
+  console.warn = () => undefined;
+  try {
+    const fetchImpl = (async () => new Response(JSON.stringify({
+      code: "PGRST303",
+      message: "JWT issued at future"
+    }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" }
+    })) as typeof fetch;
+    const status = await getOkfDatabaseHealthStatus({ env, fetchImpl });
+    assert.equal(status.ok, false);
+    assert.equal(status.key_type, "service_role");
+    assert.equal(status.db_error_code, "PGRST303");
+    assert.match(status.message ?? "", /local system clock may be out of sync/i);
+  } finally {
+    console.warn = previousWarn;
+  }
+});
+
+function mockOkfRestFetch(calls: Array<{ url: string; init?: RequestInit }>): typeof fetch {
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    calls.push({ url, init });
+    const table = new URL(url).pathname.split("/").at(-1);
+    const rows = table === "okf_papers"
+      ? [{ paper_id: "TEST_PAPER", title: "Test paper", review_status: "reviewed" }]
+      : [];
+    return new Response(JSON.stringify(rows), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }) as typeof fetch;
+}
+
+test("browser Supabase client remains anon-only", () => {
+  const source = readFileSync(path.join(process.cwd(), "lib", "workbench", "supabase-browser.ts"), "utf8");
+  assert.ok(source.includes("NEXT_PUBLIC_SUPABASE_ANON_KEY"));
+  assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
+  assert.equal(source.includes("getSupabaseServiceRoleClient"), false);
+});
 
 test("OKF index script loads Next env before indexing", () => {
   const script = readFileSync(path.join(process.cwd(), "scripts", "okf-index.ts"), "utf8");
@@ -1322,7 +1436,9 @@ test("DB health and chat debug expose Supabase clock-skew fallback metadata", ()
   const ui = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
   assert.ok(retrieval.includes("PGRST303"));
   assert.ok(retrieval.includes("Supabase rejected JWT: local system clock may be out of sync."));
-  assert.ok(dbHealth.includes("supabaseClockSkewMessage"));
+  assert.ok(dbHealth.includes("getOkfDatabaseHealthStatus"));
+  assert.equal(dbHealth.includes("cookies("), false);
+  assert.equal(dbHealth.includes("auth.get"), false);
   assert.ok(chatRoute.includes("getOkfKnowledgeBaseLoadMetadata"));
   assert.ok(ui.includes("DB loaded from"));
 });

@@ -1,13 +1,25 @@
-﻿import { parseOkfLibrary } from "./parser.ts";
+import { parseOkfLibrary } from "./parser.ts";
 import { buildOkfFlow } from "./flow.ts";
+import { resolveSupabaseServerCredential, serviceRoleRestHeaders, type SupabaseServerCredential } from "../supabase/server.ts";
 import type { ConfidenceLabel, OkfConcept, OkfConceptType, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate } from "./schema.ts";
 
 export type ConceptFilters = { paper_id?: string; tags?: string[]; query?: string; review_status?: string };
+export type OkfSupabaseLoadOptions = { env?: Record<string, string | undefined>; fetchImpl?: typeof fetch };
+export type OkfKnowledgeBaseLoadMetadata = {
+  db_loaded_from: "supabase" | "local_okf_fallback";
+  key_type: "service_role" | "anon" | "unavailable";
+  row_count?: number;
+  warning?: string;
+  db_error_code?: string;
+  db_error_message?: string;
+};
 
 let cachedKb: OkfKnowledgeBase | null = null;
 let cachedDbKb: OkfKnowledgeBase | null = null;
-export type OkfKnowledgeBaseLoadMetadata = { db_loaded_from: "supabase" | "local_okf_fallback"; db_error_code?: string; db_error_message?: string };
-let lastKbLoadMetadata: OkfKnowledgeBaseLoadMetadata = { db_loaded_from: "local_okf_fallback" };
+let lastKbLoadMetadata: OkfKnowledgeBaseLoadMetadata = {
+  db_loaded_from: "local_okf_fallback",
+  key_type: "unavailable"
+};
 
 export function getOkfKnowledgeBaseLoadMetadata(): OkfKnowledgeBaseLoadMetadata {
   return lastKbLoadMetadata;
@@ -19,46 +31,139 @@ export function getOkfKnowledgeBase(force = false) {
 }
 
 export async function getOkfKnowledgeBaseForChat(force = false) {
-  if (!force && cachedDbKb) return cachedDbKb;
+  if (!force && cachedDbKb) {
+    lastKbLoadMetadata = {
+      db_loaded_from: "supabase",
+      key_type: "service_role",
+      row_count: cachedDbKb.papers.length
+    };
+    return cachedDbKb;
+  }
   const dbKb = await loadOkfKnowledgeBaseFromSupabase();
-  cachedDbKb = dbKb ?? getOkfKnowledgeBase(force);
-  return cachedDbKb;
+  if (dbKb) {
+    cachedDbKb = dbKb;
+    return dbKb;
+  }
+  return getOkfKnowledgeBase(force);
 }
 
-export async function loadOkfKnowledgeBaseFromSupabase(): Promise<OkfKnowledgeBase | null> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_message: "Supabase OKF knowledge base is not configured." };
+export async function loadOkfKnowledgeBaseFromSupabase(
+  options: OkfSupabaseLoadOptions = {}
+): Promise<OkfKnowledgeBase | null> {
+  const credential = resolveSupabaseServerCredential(options.env ?? process.env);
+  if (credential.key_type !== "service_role") {
+    const anonOnly = credential.key_type === "anon";
+    lastKbLoadMetadata = {
+      db_loaded_from: "local_okf_fallback",
+      key_type: credential.key_type,
+      row_count: 0,
+      warning: credential.warning,
+      db_error_code: anonOnly ? "SERVICE_ROLE_REQUIRED" : "SUPABASE_UNAVAILABLE",
+      db_error_message: anonOnly
+        ? "Anon Supabase access is not used for server OKF reads and may be hidden by RLS. Configure SUPABASE_SERVICE_ROLE_KEY."
+        : credential.warning
+    };
     return null;
   }
+
+  const fetchImpl = options.fetchImpl ?? fetch;
   try {
-    const { getSupabaseAdmin } = await import("../workbench/supabase-admin.ts");
-    const supabase = getSupabaseAdmin();
-    const [papersResult, conceptsResult, evidenceResult, relationsResult] = await Promise.all([
-      supabase.from("okf_papers").select("paper_id,title,authors,year,source_pdf_path,review_status"),
-      supabase.from("okf_concepts").select("concept_id,paper_id,okf_path,type,dsr_layer,title,description,body_text,tags,confidence,extraction_type,review_status"),
-      supabase.from("okf_evidence_items").select("evidence_id,paper_id,concept_id,page_number,section,quote,paraphrase,source_location,confidence"),
-      supabase.from("okf_relations").select("relation_id,source_concept_id,predicate,target_concept_id,evidence_id,confidence,relation_scope")
-    ]);
-    const firstError = papersResult.error ?? conceptsResult.error ?? evidenceResult.error ?? relationsResult.error;
-    if (firstError) throw firstError;
-    const papers = (papersResult.data ?? []).map((paper) => ({ paper_id: String(paper.paper_id), title: String(paper.title), authors: Array.isArray(paper.authors) ? paper.authors.map(String) : undefined, year: typeof paper.year === "number" ? paper.year : undefined, source_pdf_path: paper.source_pdf_path ? String(paper.source_pdf_path) : undefined, review_status: paper.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_papers" }));
+    const papersResult = await selectOkfRows(credential, fetchImpl, "okf_papers", "paper_id,title,authors,year,source_pdf_path,review_status");
+    const conceptsResult = await selectOkfRows(credential, fetchImpl, "okf_concepts", "concept_id,paper_id,okf_path,type,dsr_layer,title,description,body_text,tags,confidence,extraction_type,review_status");
+    const evidenceResult = await selectOkfRows(credential, fetchImpl, "okf_evidence_items", "evidence_id,paper_id,concept_id,page_number,section,quote,paraphrase,source_location,confidence");
+    const relationsResult = await selectOkfRows(credential, fetchImpl, "okf_relations", "relation_id,source_concept_id,predicate,target_concept_id,evidence_id,confidence,relation_scope");
+    const papers = papersResult.map((paper) => ({ paper_id: String(paper.paper_id), title: String(paper.title), authors: Array.isArray(paper.authors) ? paper.authors.map(String) : undefined, year: typeof paper.year === "number" ? paper.year : undefined, source_pdf_path: paper.source_pdf_path ? String(paper.source_pdf_path) : undefined, review_status: paper.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_papers" }));
     if (!papers.length) {
-      lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_message: "Supabase returned no OKF papers." };
+      lastKbLoadMetadata = {
+        db_loaded_from: "local_okf_fallback",
+        key_type: "service_role",
+        row_count: 0,
+        warning: "The service-role REST read succeeded but returned zero OKF papers.",
+        db_error_code: "NO_ROWS",
+        db_error_message: "Supabase returned no OKF papers for the service-role read."
+      };
       return null;
     }
-    const concepts = (conceptsResult.data ?? []).map((concept) => ({ concept_id: String(concept.concept_id), paper_id: String(concept.paper_id), type: String(concept.type) as OkfConceptType, dsr_layer: String(concept.dsr_layer ?? ""), title: String(concept.title), description: String(concept.description ?? ""), body_text: String(concept.body_text ?? ""), tags: Array.isArray(concept.tags) ? concept.tags.map(String) : [], confidence: confidenceLabel(String(concept.confidence ?? "low")), extraction_type: concept.extraction_type === "explicit-in-artifact" ? "explicit-in-artifact" as const : concept.extraction_type === "explicit" ? "explicit" as const : "inferred" as const, review_status: concept.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_concepts", okf_path: concept.okf_path ? String(concept.okf_path) : undefined }));
-    const evidence_items = (evidenceResult.data ?? []).map((item) => ({ evidence_id: String(item.evidence_id), paper_id: String(item.paper_id), concept_id: item.concept_id ? String(item.concept_id) : undefined, page_number: typeof item.page_number === "number" ? item.page_number : undefined, section: item.section ? String(item.section) : undefined, quote: item.quote ? String(item.quote) : undefined, paraphrase: String(item.paraphrase ?? ""), source_location: item.source_location ? String(item.source_location) : undefined, confidence: confidenceLabel(String(item.confidence ?? "low")), source_file: "supabase:okf_evidence_items" }));
-    const relations = (relationsResult.data ?? []).map((relation) => ({ relation_id: String(relation.relation_id), source_concept_id: String(relation.source_concept_id), predicate: String(relation.predicate) as OkfRelationPredicate, target_concept_id: String(relation.target_concept_id), evidence_id: relation.evidence_id ? String(relation.evidence_id) : undefined, confidence: confidenceLabel(String(relation.confidence ?? "low")), relation_scope: relation.relation_scope === "cross_paper" ? "cross_paper" as const : relation.relation_scope === "query_generated" ? "query_generated" as const : "paper_level" as const, source_file: "supabase:okf_relations" }));
-    lastKbLoadMetadata = { db_loaded_from: "supabase" };
+    const concepts = conceptsResult.map((concept) => ({ concept_id: String(concept.concept_id), paper_id: String(concept.paper_id), type: String(concept.type) as OkfConceptType, dsr_layer: String(concept.dsr_layer ?? ""), title: String(concept.title), description: String(concept.description ?? ""), body_text: String(concept.body_text ?? ""), tags: Array.isArray(concept.tags) ? concept.tags.map(String) : [], confidence: confidenceLabel(String(concept.confidence ?? "low")), extraction_type: concept.extraction_type === "explicit-in-artifact" ? "explicit-in-artifact" as const : concept.extraction_type === "explicit" ? "explicit" as const : "inferred" as const, review_status: concept.review_status === "reviewed" ? "reviewed" as const : "draft" as const, source_file: "supabase:okf_concepts", okf_path: concept.okf_path ? String(concept.okf_path) : undefined }));
+    const evidence_items = evidenceResult.map((item) => ({ evidence_id: String(item.evidence_id), paper_id: String(item.paper_id), concept_id: item.concept_id ? String(item.concept_id) : undefined, page_number: typeof item.page_number === "number" ? item.page_number : undefined, section: item.section ? String(item.section) : undefined, quote: item.quote ? String(item.quote) : undefined, paraphrase: String(item.paraphrase ?? ""), source_location: item.source_location ? String(item.source_location) : undefined, confidence: confidenceLabel(String(item.confidence ?? "low")), source_file: "supabase:okf_evidence_items" }));
+    const relations = relationsResult.map((relation) => ({ relation_id: String(relation.relation_id), source_concept_id: String(relation.source_concept_id), predicate: String(relation.predicate) as OkfRelationPredicate, target_concept_id: String(relation.target_concept_id), evidence_id: relation.evidence_id ? String(relation.evidence_id) : undefined, confidence: confidenceLabel(String(relation.confidence ?? "low")), relation_scope: relation.relation_scope === "cross_paper" ? "cross_paper" as const : relation.relation_scope === "query_generated" ? "query_generated" as const : "paper_level" as const, source_file: "supabase:okf_relations" }));
+    lastKbLoadMetadata = {
+      db_loaded_from: "supabase",
+      key_type: "service_role",
+      row_count: papers.length
+    };
     return { papers, concepts, evidence_items, relations, warnings: [] };
   } catch (error) {
     const db_error_code = supabaseErrorCode(error);
     const db_error_message = db_error_code === "PGRST303" ? supabaseClockSkewMessage() : supabaseErrorMessage(error);
-    lastKbLoadMetadata = { db_loaded_from: "local_okf_fallback", db_error_code, db_error_message };
+    lastKbLoadMetadata = {
+      db_loaded_from: "local_okf_fallback",
+      key_type: "service_role",
+      row_count: 0,
+      db_error_code,
+      db_error_message
+    };
     console.warn("Unable to load OKF knowledge base from Supabase; falling back to local OKF files.", error);
     return null;
   }
 }
+
+export async function getOkfDatabaseHealthStatus(options: OkfSupabaseLoadOptions = {}) {
+  const kb = await loadOkfKnowledgeBaseFromSupabase(options);
+  const metadata = getOkfKnowledgeBaseLoadMetadata();
+  if (!kb) {
+    const message = metadata.db_error_code === "PGRST303"
+      ? supabaseClockSkewMessage()
+      : metadata.db_error_message ?? "Supabase OKF knowledge base unavailable or not configured.";
+    return { ok: false as const, connected: false as const, ...metadata, message };
+  }
+  return {
+    ok: true as const,
+    connected: true as const,
+    ...metadata,
+    db_loaded_from: "supabase" as const,
+    key_type: "service_role" as const,
+    row_count: kb.papers.length,
+    papers: kb.papers.length,
+    concepts: kb.concepts.length,
+    evidence_items: kb.evidence_items.length,
+    relations: kb.relations.length
+  };
+}
+
+async function selectOkfRows(
+  credential: SupabaseServerCredential,
+  fetchImpl: typeof fetch,
+  table: string,
+  select: string
+): Promise<Record<string, unknown>[]> {
+  if (!credential.url || !credential.service_role_key) {
+    throw new Error("Supabase service-role REST configuration is incomplete.");
+  }
+  const endpoint = new URL(`/rest/v1/${table}`, credential.url);
+  endpoint.searchParams.set("select", select);
+  const response = await fetchImpl(endpoint, {
+    method: "GET",
+    credentials: "omit",
+    cache: "no-store",
+    headers: serviceRoleRestHeaders(credential.service_role_key)
+  });
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) throw supabaseRestError(payload, response.status);
+  if (!Array.isArray(payload)) throw new Error(`Supabase ${table} response was not an array.`);
+  return payload as Record<string, unknown>[];
+}
+
+function supabaseRestError(payload: unknown, status: number) {
+  const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const message = String(record.message ?? record.details ?? `Supabase OKF REST request failed with HTTP ${status}.`);
+  const error = new Error(message) as Error & { code?: string; details?: string; status?: number };
+  if (record.code) error.code = String(record.code);
+  if (record.details) error.details = String(record.details);
+  error.status = status;
+  return error;
+}
+
 function supabaseErrorCode(error: unknown) {
   if (!error || typeof error !== "object") return undefined;
   const record = error as { code?: unknown; details?: unknown; message?: unknown };

@@ -295,6 +295,9 @@ export type OkfRuntimeMetadata = {
   provider_error_type?: string;
   provider_status?: LlmProviderStatus;
   db_loaded_from?: "supabase" | "local_okf_fallback";
+  key_type?: "service_role" | "anon" | "unavailable";
+  row_count?: number;
+  warning?: string;
   db_error_code?: string;
   db_error_message?: string;
 };
