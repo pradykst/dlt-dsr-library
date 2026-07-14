@@ -1,10 +1,13 @@
 export type Paper = {
   paper_id: string;
+  slug?: string;
+  canonical_source?: "okf";
   short_title: string | null;
   full_citation: string | null;
   year: number | null;
   authors: string | null;
   doi_or_url: string | null;
+  source_document?: string | null;
   domain: string | null;
   artifact_type: string | null;
   blockchain_dlt_role: string | null;
@@ -25,6 +28,7 @@ export type Paper = {
   notes: string | null;
   created_at?: string;
   updated_at?: string;
+  concept_counts?: Partial<Record<WorkbenchDsrGroupKey, number>>;
 };
 
 export type WorkbenchElement = {
@@ -53,6 +57,12 @@ export type WorkbenchElement = {
   extended_diagram_include: boolean | null;
   created_at?: string;
   updated_at?: string;
+  canonical_type?: WorkbenchDsrGroupKey | "Research Question" | "Kernel Theory" | "Limitation";
+  confidence_label?: string;
+  evidence_count?: number;
+  evidence_ids?: string[];
+  okf_path?: string;
+  canonical_field?: "description" | "body_text";
 };
 
 export type WorkbenchRelation = {
@@ -73,6 +83,8 @@ export type WorkbenchRelation = {
   notes: string | null;
   created_at?: string;
   updated_at?: string;
+  provenance?: "graph_json" | "okf_relation" | "inferred";
+  okf_path?: string;
 };
 
 export type WorkbenchEvidence = {
@@ -92,6 +104,43 @@ export type WorkbenchEvidence = {
   notes: string | null;
   created_at?: string;
   updated_at?: string;
+  concept_id?: string | null;
+  confidence_label?: string;
+  okf_path?: string;
+  canonical_field?: "quote" | "paraphrase";
+};
+
+export type WorkbenchDsrGroupKey =
+  | "Problem"
+  | "Design Requirement"
+  | "Design Principle"
+  | "Design Feature"
+  | "Artifact"
+  | "Evaluation"
+  | "Output Knowledge";
+
+export type WorkbenchDsrGroup = {
+  key: WorkbenchDsrGroupKey;
+  label: string;
+  concepts: WorkbenchElement[];
+};
+
+export type WorkbenchFlowGraph = {
+  stored_flow_source: "graph_json" | "okf_relations_fallback";
+  recommended: {
+    nodes: WorkbenchElement[];
+    relations: WorkbenchRelation[];
+  };
+  focused: {
+    nodes: WorkbenchElement[];
+    relations: WorkbenchRelation[];
+  };
+  full: {
+    nodes: WorkbenchElement[];
+    relations: WorkbenchRelation[];
+  };
+  layer_counts: Partial<Record<WorkbenchDsrGroupKey, number>>;
+  warnings: string[];
 };
 
 export type ChangeRequest = {
@@ -113,14 +162,24 @@ export type ChangeRequest = {
   decided_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  target_okf_path?: string | null;
+  canonical_workflow?: "git_change_required";
 };
 
 export type PaperBundle = {
+  ok?: true;
   paper: Paper;
   elements: WorkbenchElement[];
   relations: WorkbenchRelation[];
   evidence: WorkbenchEvidence[];
+  dsrGrid?: WorkbenchDsrGroup[];
+  flowGraph?: WorkbenchFlowGraph;
   changeRequestsCount: number;
+  runtime?: {
+    db_loaded_from: "supabase" | "local_okf_fallback";
+    key_type: "service_role" | "anon" | "unavailable";
+  };
+  canonical_change_notice?: string;
 };
 
 export type ImportPayload = {

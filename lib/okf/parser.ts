@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import {
   isOkfConceptType,
@@ -199,7 +199,7 @@ function readMarkdown(file: string, warnings: OkfValidationWarning[]) {
     warnings.push({ file, message: "Missing YAML frontmatter." });
     return { frontmatter: {}, body: text };
   }
-  const frontmatter = parseKeyValueBlock(match[1]);
+  const frontmatter = parseFrontmatterBlock(match[1]);
   validateFrontmatter(frontmatter, file, warnings);
   return { frontmatter, body: text.slice(match[0].length) };
 }
@@ -271,6 +271,76 @@ function stripStructuredFieldLines(content: string) {
     .replace(/\n{3,}/g, "\n\n");
 }
 
+function parseFrontmatterBlock(text: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  let currentListKey: string | undefined;
+  let continuedScalarKey: string | undefined;
+  let continuedScalar = "";
+  let continuedPlainScalarKey: string | undefined;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    if (continuedScalarKey) {
+      continuedScalar = (continuedScalar + " " + line).trim();
+      if (hasClosingQuote(continuedScalar)) {
+        result[continuedScalarKey] = parseScalar(continuedScalar);
+        continuedScalarKey = undefined;
+        continuedScalar = "";
+      }
+      continue;
+    }
+
+    if (/^\s+/.test(rawLine) && continuedPlainScalarKey && !line.startsWith("- ")) {
+      result[continuedPlainScalarKey] = (String(result[continuedPlainScalarKey] ?? "") + " " + line).trim();
+      continue;
+    }
+
+    if (line.startsWith("- ") && currentListKey) {
+      const existing = result[currentListKey];
+      const values = Array.isArray(existing) ? existing : [];
+      values.push(parseScalar(line.slice(2)));
+      result[currentListKey] = values;
+      continue;
+    }
+
+    const match = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    if (!match) continue;
+    const key = normalizeFieldKey(match[1]);
+    const rawValue = match[2].trim();
+    currentListKey = undefined;
+    continuedPlainScalarKey = undefined;
+
+    if (!rawValue) {
+      result[key] = [];
+      currentListKey = key;
+      continue;
+    }
+    if (startsUnclosedQuote(rawValue)) {
+      continuedScalarKey = key;
+      continuedScalar = rawValue;
+      continue;
+    }
+    result[key] = parseScalar(rawValue);
+    if (typeof result[key] === "string") continuedPlainScalarKey = key;
+  }
+
+  if (continuedScalarKey) result[continuedScalarKey] = parseScalar(continuedScalar);
+  return result;
+}
+
+function startsUnclosedQuote(value: string) {
+  const quote = value[0];
+  if (quote !== "'" && quote !== '"') return false;
+  return value.length === 1 || value[value.length - 1] !== quote;
+}
+
+function hasClosingQuote(value: string) {
+  const quote = value[0];
+  return (quote === "'" || quote === '"') && value.length > 1 && value[value.length - 1] === quote;
+}
+
 function parseKeyValueBlock(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const rawLine of text.split(/\r?\n/)) {
@@ -282,7 +352,6 @@ function parseKeyValueBlock(text: string): Record<string, unknown> {
   }
   return result;
 }
-
 function parseSimpleYaml(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   let currentList: string | null = null;

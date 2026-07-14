@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { fetchWorkbenchJson } from "@/lib/workbench/client";
 import { trackEvent } from "@/utils/analytics";
 
 type Props = {
@@ -12,12 +13,19 @@ type Props = {
   targetTable: "papers" | "elements" | "relations" | "evidence";
   targetRowKey: string;
   targetField: string;
+  targetOkfPath?: string;
   oldValue: string;
   onClose: () => void;
   onSubmitted?: () => void;
 };
 
-export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField, oldValue, onClose, onSubmitted }: Props) {
+type SubmitResponse = {
+  ok: true;
+  message: string;
+  target_okf_path: string;
+};
+
+export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField, targetOkfPath, oldValue, onClose, onSubmitted }: Props) {
   const [proposedValue, setProposedValue] = useState(oldValue);
   const [reason, setReason] = useState("");
   const [evidenceNote, setEvidenceNote] = useState("");
@@ -30,36 +38,37 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
   async function submit() {
     setSubmitting(true);
     setStatus(undefined);
-    const response = await fetch("/api/workbench/change-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const result = await fetchWorkbenchJson<SubmitResponse>("/api/workbench/change-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paper_id: paperId,
+          target_table: targetTable,
+          target_row_key: targetRowKey,
+          target_field: targetField,
+          target_okf_path: targetOkfPath,
+          old_value: oldValue,
+          proposed_value: proposedValue,
+          reason,
+          evidence_note: evidenceNote,
+          submitted_by_name: name,
+          submitted_by_email: email,
+          submitted_by_role: role
+        })
+      });
+      setStatus(result.message);
+      trackEvent("reviewer_change_requested", {
         paper_id: paperId,
         target_table: targetTable,
-        target_row_key: targetRowKey,
-        target_field: targetField,
-        old_value: oldValue,
-        proposed_value: proposedValue,
-        reason,
-        evidence_note: evidenceNote,
-        submitted_by_name: name,
-        submitted_by_email: email,
-        submitted_by_role: role
-      })
-    });
-    const result = await response.json();
-    setSubmitting(false);
-    if (!response.ok) {
-      setStatus(result.error ?? "Suggestion could not be submitted.");
-      return;
+        target_field: targetField
+      });
+      onSubmitted?.();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Suggestion could not be submitted.");
+    } finally {
+      setSubmitting(false);
     }
-    setStatus("Change request committed.");
-    trackEvent("reviewer_change_requested", {
-      paper_id: paperId,
-      target_table: targetTable,
-      target_field: targetField
-    });
-    onSubmitted?.();
   }
 
   return (
@@ -67,7 +76,7 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
       <div className="ml-auto h-full w-full max-w-xl overflow-y-auto border border-line bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-line p-5">
           <div>
-            <h2 className="font-serif text-2xl text-ink">Request Change</h2>
+            <h2 className="font-serif text-2xl text-ink">Report an OKF Issue</h2>
             <p className="mt-1 text-xs uppercase tracking-[0.12em] text-muted">{targetTable}.{targetField}</p>
           </div>
           <button type="button" aria-label="Close change request form" className="border border-line p-2 text-muted hover:text-ink" onClick={onClose}>
@@ -75,11 +84,15 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
           </button>
         </div>
         <div className="space-y-4 p-5">
-          <Field label="Target row key"><Input value={targetRowKey} readOnly /></Field>
-          <Field label="Old value">
+          <p className="border border-blue/20 bg-blue/5 p-3 text-sm leading-6 text-ink">
+            This submits a review request only. Canonical changes are made by editing OKF files in Git and re-indexing; this form never overwrites OKF facts in Supabase.
+          </p>
+          <Field label="Target ID"><Input value={targetRowKey} readOnly /></Field>
+          {targetOkfPath && <Field label="Target OKF file"><Input value={targetOkfPath} readOnly /></Field>}
+          <Field label="Current value">
             <textarea className="mp-mask min-h-24 w-full border border-line bg-paper px-3 py-2 text-sm text-muted outline-none" data-mp-block value={oldValue} readOnly />
           </Field>
-          <Field label="Proposed value">
+          <Field label="Proposed change">
             <textarea className="mp-mask min-h-32 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block value={proposedValue} onChange={(event) => setProposedValue(event.target.value)} />
           </Field>
           <Field label="Reason">
@@ -102,7 +115,7 @@ export function SuggestionForm({ paperId, targetTable, targetRowKey, targetField
           </Field>
           {status && <p className="border border-line bg-paper p-3 text-sm text-muted">{status}</p>}
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" disabled={submitting || !proposedValue} onClick={submit}>{submitting ? "Committing..." : "Commit change request"}</Button>
+            <Button type="button" disabled={submitting || !proposedValue} onClick={submit}>{submitting ? "Submitting..." : "Submit change request"}</Button>
             <button type="button" className="border border-line px-3 py-2 text-sm text-muted hover:text-ink" onClick={onClose}>Close</button>
           </div>
         </div>

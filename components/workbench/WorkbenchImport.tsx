@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { fetchWorkbenchJson } from "@/lib/workbench/client";
 import { parseCsvFile, validateWorkbenchRows } from "@/lib/workbench/csv";
 import type { CsvKind, WorkbenchValidation } from "@/lib/workbench/csv";
 
@@ -52,30 +53,34 @@ export function WorkbenchImport() {
     if (!rows || !validation || validation.errors.length) return;
     setWorking("importing");
     setResult(undefined);
-    const response = await fetch("/api/workbench/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        adminSecret,
-        papersRows: rows.papers,
-        elementsRows: rows.elements,
-        relationsRows: rows.relations,
-        evidenceRows: rows.evidence
-      })
-    });
-    const json = await response.json();
-    setWorking("idle");
-    if (!response.ok) {
-      setResult({ tone: "error", title: json.error ?? "Import failed.", details: formatImportDetails(json.details) });
-      return;
+    try {
+      const json = await fetchWorkbenchJson<{
+        paper_id: string;
+        rows_elements: number;
+        rows_relations: number;
+        rows_evidence: number;
+      }>("/api/workbench/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminSecret,
+          papersRows: rows.papers,
+          elementsRows: rows.elements,
+          relationsRows: rows.relations,
+          evidenceRows: rows.evidence
+        })
+      });
+      setResult({
+        tone: "success",
+        title: "Legacy import completed",
+        details: json.paper_id + ": " + json.rows_elements + " elements, " + json.rows_relations + " relations, " + json.rows_evidence + " evidence rows. Canonical OKF files were not changed."
+      });
+    } catch (error) {
+      setResult({ tone: "error", title: "Legacy import failed.", details: formatImportDetails(error instanceof Error ? error.message : error) });
+    } finally {
+      setWorking("idle");
     }
-    setResult({
-      tone: "success",
-      title: "Import completed",
-      details: `${json.paper_id}: ${json.rows_elements} elements, ${json.rows_relations} relations, ${json.rows_evidence} evidence rows.`
-    });
   }
-
   const allErrors = [...parseErrors, ...(validation?.errors ?? [])];
   const isWorking = working !== "idle";
 
@@ -83,9 +88,10 @@ export function WorkbenchImport() {
     <div>
       <div className="mb-6">
         <Link href="/workbench" className="text-sm text-muted hover:text-ink">Back to Workbench</Link>
-        <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Import Single Paper DSR Dataset</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">Upload CSVs exported from the Excel extraction template.</p>
+        <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Legacy/Admin CSV Import</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">Legacy support for historical Excel extraction exports. This workflow is not canonical.</p>
       </div>
+      <p className="mb-5 border border-amber/30 bg-amber/5 p-4 text-sm leading-6 text-ink">Canonical changes are made by editing OKF files in Git and re-indexing. This legacy importer writes only historical Workbench tables.</p>
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <Card className="p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -123,7 +129,7 @@ export function WorkbenchImport() {
             </Button>
             <Button type="button" disabled={isWorking || !validation || allErrors.length > 0 || !adminSecret} onClick={importRows}>
               <UploadCloud className="h-4 w-4" />
-              {working === "importing" ? "Importing..." : "Import"}
+              {working === "importing" ? "Importing..." : "Import to legacy tables"}
             </Button>
           </div>
         </Card>
@@ -136,7 +142,7 @@ export function WorkbenchImport() {
           )}
           <MessageList title="Errors" items={allErrors} tone="error" />
           <MessageList title="Warnings" items={validation?.warnings ?? []} tone="warning" />
-          {working === "importing" && <ResultBox tone="pending" title="Importing dataset" details="Writing paper, elements, evidence, relations, and import log to Supabase." />}
+          {working === "importing" && <ResultBox tone="pending" title="Importing dataset" details="Writing historical CSV rows to legacy Workbench tables. Canonical OKF data is not modified." />}
           {result && <ResultBox tone={result.tone} title={result.title} details={result.details} />}
         </Card>
       </div>

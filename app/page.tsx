@@ -8,7 +8,7 @@ import { MiniFlowStrip } from "@/components/visuals/MiniFlowStrip";
 const features = [
   {
     title: "Paper-level design knowledge grids",
-    description: "Upload curated paper data and inspect extracted DSR elements across requirements, principles, features, artifacts, evaluations, and evidence."
+    description: "Inspect canonical OKF paper data across requirements, principles, features, artifacts, evaluations, and evidence."
   },
   {
     title: "Evidence-backed flows",
@@ -16,7 +16,7 @@ const features = [
   },
   {
     title: "Reviewer correction workflow",
-    description: "Request and review changes to improve extraction quality and maintain a trustworthy knowledge base."
+    description: "Report issues for Git-based review so canonical OKF changes remain traceable and are re-indexed deliberately."
   },
   {
     title: "Pattern exploration",

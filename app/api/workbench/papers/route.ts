@@ -1,16 +1,25 @@
-import { NextResponse } from "next/server";
-import { jsonError } from "@/lib/workbench/api";
-import { getSupabaseAdmin } from "@/lib/workbench/supabase-admin";
+import { getWorkbenchPapers } from "../../../../lib/okf/workbench-adapter.ts";
+import { getOkfKnowledgeBaseLoadMetadata } from "../../../../lib/okf/retrieval.ts";
 
 export async function GET() {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from("papers")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return NextResponse.json({ papers: data ?? [] });
+    const papers = await getWorkbenchPapers();
+    const metadata = getOkfKnowledgeBaseLoadMetadata();
+    return Response.json({
+      ok: true,
+      papers,
+      runtime: {
+        db_loaded_from: metadata.db_loaded_from,
+        key_type: metadata.key_type,
+        row_count: metadata.row_count
+      }
+    });
   } catch (error) {
-    return jsonError("Could not load papers.", 500, error instanceof Error ? error.message : String(error));
+    return Response.json({
+      ok: false,
+      error: "WORKBENCH_LOAD_FAILED",
+      message: "Could not load canonical OKF papers.",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

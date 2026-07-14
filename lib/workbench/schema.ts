@@ -103,6 +103,8 @@ export const evidenceHeaders = [
 
 export const editableFields = {
   papers: [
+    "title",
+    "source_pdf_path",
     "short_title",
     "full_citation",
     "year",
@@ -128,6 +130,9 @@ export const editableFields = {
     "notes"
   ],
   elements: [
+    "title",
+    "description",
+    "body_text",
     "element_type",
     "element_name",
     "element_text",
@@ -146,6 +151,9 @@ export const editableFields = {
     "short_label"
   ],
   relations: [
+    "source_concept_id",
+    "predicate",
+    "target_concept_id",
     "source_node_id",
     "source_node_type",
     "relation_type",
@@ -160,6 +168,8 @@ export const editableFields = {
     "notes"
   ],
   evidence: [
+    "quote",
+    "paraphrase",
     "evidence_type",
     "exact_quote_or_description",
     "page",

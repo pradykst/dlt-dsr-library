@@ -1,37 +1,27 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { WorkbenchErrorPanel } from "@/components/workbench/WorkbenchErrorPanel";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs } from "@/components/ui/Tabs";
 import { SuggestionForm } from "@/components/workbench/SuggestionForm";
 import { WorkbenchFlowProvider } from "@/components/workbench/WorkbenchFlow";
+import { fetchWorkbenchJson } from "@/lib/workbench/client";
 import type { Paper, PaperBundle, WorkbenchElement, WorkbenchEvidence, WorkbenchRelation } from "@/lib/workbench/types";
 import { trackGeneratedFlowViewed, trackPaperOpened } from "@/utils/analytics";
 
 const tabs = ["Overview", "DSR Grid", "Flow", "Corrections"];
-const gridCells = [
-  ["Problem", "problem_description"],
-  ["Input Knowledge", "input_knowledge"],
-  ["Research Process", "research_process"],
-  ["Key Concepts", "key_concepts"],
-  ["Solution", "solution_description"],
-  ["Output Knowledge", "output_knowledge"]
-] as const;
-const additionalContextCells = [
-  ["Summary", "evaluation_summary"],
-  ["Limitations", "boundary_conditions"]
-] as const;
-
 type SuggestTarget = {
   table: "papers" | "elements" | "relations" | "evidence";
   rowKey: string;
   field: string;
   oldValue: string;
+  targetOkfPath?: string;
 };
 
 type CorrectionRow = {
@@ -51,27 +41,40 @@ type CorrectionRow = {
 export function WorkbenchPaper({ paperId }: { paperId: string }) {
   const [bundle, setBundle] = useState<PaperBundle>();
   const [tab, setTab] = useState("Overview");
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<unknown>();
   const [suggestTarget, setSuggestTarget] = useState<SuggestTarget>();
   const trackedPaperId = useRef<string>();
   const trackedFlowForPaperId = useRef<string>();
 
-  const load = useCallback(() => {
-    fetch(`/api/workbench/paper/${encodeURIComponent(paperId)}`)
-      .then(async (response) => {
-        const json = await response.json();
-        if (!response.ok) throw new Error([json.error, json.details].filter(Boolean).join(" "));
-        setBundle(json);
-      })
-      .catch((err: Error) => setError(err.message));
+  const requestBundle = useCallback(() => {
+    const route = "/api/workbench/paper/" + encodeURIComponent(paperId);
+    return fetchWorkbenchJson<PaperBundle>(route);
   }, [paperId]);
 
-  useEffect(() => {
-    load();
-    const timer = window.setInterval(load, 15000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+  const load = useCallback(() => {
+    requestBundle()
+      .then((nextBundle) => {
+        setError(undefined);
+        setBundle(nextBundle);
+      })
+      .catch(setError);
+  }, [requestBundle]);
 
+  useEffect(() => {
+    let cancelled = false;
+    requestBundle()
+      .then((nextBundle) => {
+        if (cancelled) return;
+        setBundle(nextBundle);
+      })
+      .catch((nextError) => {
+        if (cancelled) return;
+        setError(nextError);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestBundle]);
   useEffect(() => {
     if (!bundle) return;
     const { paper } = bundle;
@@ -93,7 +96,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
     });
   }, [bundle, tab]);
 
-  if (error) return <Card className="p-5 text-sm text-red-700">{error}</Card>;
+  if (error) return <WorkbenchErrorPanel error={error} />;
   if (!bundle) return <Card className="p-5 text-sm text-muted">Loading paper workbench...</Card>;
   const { paper, elements, relations, evidence } = bundle;
 
@@ -119,7 +122,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
       <div className="mt-5">
         {tab === "Overview" && <Overview bundle={bundle} />}
         {tab === "DSR Grid" && <DsrGrid bundle={bundle} onSuggest={setSuggestTarget} />}
-        {tab === "Flow" && <WorkbenchFlowProvider elements={elements} relations={relations} evidence={evidence} onSuggest={setSuggestTarget} />}
+        {tab === "Flow" && bundle.flowGraph && <WorkbenchFlowProvider flowGraph={bundle.flowGraph} elements={elements} relations={relations} evidence={evidence} onSuggest={setSuggestTarget} />}
         {tab === "Corrections" && <CorrectionsPanel bundle={bundle} onSuggest={setSuggestTarget} />}
       </div>
       {suggestTarget && (
@@ -129,6 +132,7 @@ export function WorkbenchPaper({ paperId }: { paperId: string }) {
           targetRowKey={suggestTarget.rowKey}
           targetField={suggestTarget.field}
           oldValue={suggestTarget.oldValue}
+          targetOkfPath={suggestTarget.targetOkfPath}
           onClose={() => setSuggestTarget(undefined)}
           onSubmitted={load}
         />
@@ -145,7 +149,7 @@ function Overview({ bundle }: { bundle: PaperBundle }) {
         <h2 className="font-serif text-2xl text-ink">Paper Summary</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Summary label="Authors" value={paper.authors} />
-          <Summary label="DOI or URL" value={paper.doi_or_url} />
+          <Summary label="Source document" value={paper.source_document} />
           <Summary label="Artifact Type" value={paper.artifact_type} />
           <Summary label="DLT Role" value={paper.blockchain_dlt_role} />
           <Summary label="Extraction Status" value={paper.overall_extraction_status} />
@@ -158,45 +162,56 @@ function Overview({ bundle }: { bundle: PaperBundle }) {
 }
 
 function DsrGrid({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (target: SuggestTarget) => void }) {
-  const { paper } = bundle;
+  const groups = bundle.dsrGrid ?? [];
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {gridCells.map(([title, field]) => {
-          const value = String(paper[field] ?? "");
-          return (
-            <Card key={field} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="font-serif text-2xl text-ink">{title}</h2>
-                <button className="shrink-0 border border-line bg-paper px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "papers", rowKey: paper.paper_id, field, oldValue: value })}>Suggest edit</button>
-              </div>
-              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
-            </Card>
-          );
-        })}
-      </div>
-
-      <details className="border border-line bg-white shadow-research">
-        <summary className="cursor-pointer px-5 py-4 font-serif text-xl text-ink">Additional extracted context</summary>
-        <div className="grid gap-4 border-t border-line p-5 md:grid-cols-2">
-          {additionalContextCells.map(([title, field]) => {
-            const value = String(paper[field] ?? "");
-            return (
-              <div key={field} className="border border-line bg-paper p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-serif text-2xl text-ink">{title}</h2>
-                  <button className="shrink-0 border border-line bg-white px-2 py-1 text-xs text-muted hover:text-ink" onClick={() => onSuggest({ table: "papers", rowKey: paper.paper_id, field, oldValue: value })}>Suggest edit</button>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No content imported."}</p>
-              </div>
-            );
-          })}
-        </div>
-      </details>
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-2xl text-ink">{group.label}</h2>
+              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-muted">{group.concepts.length} stored OKF concept{group.concepts.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {group.concepts.map((concept) => {
+              const value = concept.normalized_text ?? concept.element_text ?? "";
+              return (
+                <Card key={concept.element_id} className="flex min-h-56 flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{concept.element_id.split(":").at(-1)}</div>
+                      <h3 className="mt-2 break-words font-serif text-xl leading-tight text-ink">{concept.element_name ?? concept.element_id}</h3>
+                    </div>
+                    <button
+                      className="shrink-0 border border-line bg-paper px-2 py-1 text-xs text-muted hover:text-ink"
+                      onClick={() => onSuggest({
+                        table: "elements",
+                        rowKey: concept.element_id,
+                        field: concept.canonical_field ?? "description",
+                        oldValue: value,
+                        targetOkfPath: concept.okf_path
+                      })}
+                    >
+                      Report issue
+                    </button>
+                  </div>
+                  <p className="mt-3 flex-1 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{value || "No description stored."}</p>
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-3 text-xs text-muted">
+                    {concept.confidence_label && <span>Confidence: <strong className="text-ink">{concept.confidence_label}</strong></span>}
+                    {concept.review_status && <span>Status: <strong className="text-ink">{concept.review_status}</strong></span>}
+                    <span>Evidence: <strong className="text-ink">{concept.evidence_count ?? 0}</strong></span>
+                  </div>
+                </Card>
+              );
+            })}
+            {group.concepts.length === 0 && <Card className="p-5 text-sm text-muted">No stored {group.label.toLowerCase()} concepts.</Card>}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
-
 function CorrectionsPanel({ bundle, onSuggest }: { bundle: PaperBundle; onSuggest: (target: SuggestTarget) => void }) {
   const { paper, elements, relations, evidence } = bundle;
   const [query, setQuery] = useState("");
@@ -230,7 +245,7 @@ function CorrectionsPanel({ bundle, onSuggest }: { bundle: PaperBundle; onSugges
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
           <div>
             <h2 className="font-serif text-2xl text-ink">Corrections</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">Review paper fields, extracted elements, relations, and evidence in one place before committing a change request.</p>
+            <p className="mt-1 text-sm leading-6 text-muted">Review canonical OKF fields, concepts, relations, and evidence. Accepted reports require a Git edit and re-index; they never overwrite canonical facts in Supabase.</p>
           </div>
           <Badge>{filtered.length} shown / {rows.length} editable fields</Badge>
         </div>
@@ -313,29 +328,17 @@ function Cell({ children }: { children: React.ReactNode }) {
 
 function buildCorrectionRows(paper: Paper, elements: WorkbenchElement[], relations: WorkbenchRelation[], evidence: WorkbenchEvidence[]) {
   const rows: CorrectionRow[] = [];
-  const paperFields: Array<[keyof Paper, string]> = [
-    ["short_title", "Title"],
-    ["full_citation", "Citation"],
-    ["authors", "Authors"],
-    ["doi_or_url", "DOI or URL"],
-    ["domain", "Domain"],
-    ["artifact_type", "Artifact Type"],
-    ["blockchain_dlt_role", "DLT Role"],
-    ["problem_description", "Problem"],
-    ["input_knowledge", "Input Knowledge"],
-    ["research_process", "Research Process"],
-    ["key_concepts", "Key Concepts"],
-    ["solution_description", "Solution"],
-    ["output_knowledge", "Output Knowledge"],
-    ["evaluation_summary", "Evaluation Summary"],
-    ["boundary_conditions", "Limitations"],
-    ["notes", "Notes"]
+  const paperFields: Array<{ field: string; label: string; value: string | number | null | undefined }> = [
+    { field: "title", label: "Title", value: paper.short_title },
+    { field: "authors", label: "Authors", value: paper.authors },
+    { field: "year", label: "Year", value: paper.year },
+    { field: "source_pdf_path", label: "Source document", value: paper.source_document },
+    { field: "review_status", label: "Review status", value: paper.review_status }
   ];
 
-  paperFields.forEach(([field, label], index) => {
-    const value = paper[field];
+  paperFields.forEach(({ field, label, value }, index) => {
     rows.push({
-      id: `paper:${field}`,
+      id: "paper:" + field,
       category: "Paper",
       itemType: label,
       itemId: paper.paper_id,
@@ -345,12 +348,17 @@ function buildCorrectionRows(paper: Paper, elements: WorkbenchElement[], relatio
       reviewStatus: paper.review_status ?? "",
       confidence: paper.overall_confidence == null ? "" : String(paper.overall_confidence),
       sortOrder: index,
-      target: { table: "papers", rowKey: paper.paper_id, field, oldValue: value == null ? "" : String(value) }
+      target: {
+        table: "papers",
+        rowKey: paper.paper_id,
+        field,
+        oldValue: value == null ? "" : String(value),
+        targetOkfPath: "library/okf/papers/" + (paper.slug ?? paper.paper_id.toLowerCase().replace(/_+/g, "-")) + "/index.md"
+      }
     });
   });
-
   elements.forEach((element, index) => {
-    const field = "normalized_text";
+    const field = element.canonical_field ?? "description";
     rows.push({
       id: `element:${element.element_id}:${field}`,
       category: "Element",
@@ -362,31 +370,37 @@ function buildCorrectionRows(paper: Paper, elements: WorkbenchElement[], relatio
       reviewStatus: element.review_status ?? "",
       confidence: element.confidence == null ? "" : String(element.confidence),
       sortOrder: 1000 + index,
-      target: { table: "elements", rowKey: `${element.paper_id}:${element.element_id}`, field, oldValue: element.normalized_text ?? "" }
+      target: { table: "elements", rowKey: element.element_id, field, oldValue: element.normalized_text ?? "", targetOkfPath: element.okf_path }
     });
   });
 
   relations.forEach((relation, index) => {
-    const field = "notes";
+    const field = "predicate";
     rows.push({
-      id: `relation:${relation.relation_id}:${field}`,
+      id: "relation:" + relation.relation_id + ":" + field,
       category: "Relation",
       itemType: relation.relation_type ?? "Relation",
       itemId: relation.relation_id,
       field,
-      currentValue: relation.notes ?? `${relation.source_node_id} -> ${relation.target_node_id}`,
+      currentValue: relation.relation_type ?? "",
       sourceStatus: relation.source_status ?? "",
       reviewStatus: relation.review_status ?? "",
       confidence: relation.confidence == null ? "" : String(relation.confidence),
       sortOrder: 2000 + index,
-      target: { table: "relations", rowKey: `${relation.paper_id}:${relation.relation_id}`, field, oldValue: relation.notes ?? "" }
+      target: {
+        table: "relations",
+        rowKey: relation.relation_id,
+        field,
+        oldValue: relation.relation_type ?? "",
+        targetOkfPath: relation.okf_path
+      }
     });
   });
 
   evidence.forEach((item, index) => {
-    const field = "exact_quote_or_description";
+    const field = item.canonical_field ?? "paraphrase";
     rows.push({
-      id: `evidence:${item.evidence_id}:${field}`,
+      id: "evidence:" + item.evidence_id + ":" + field,
       category: "Evidence",
       itemType: item.evidence_type ?? "Evidence",
       itemId: item.evidence_id,
@@ -396,10 +410,15 @@ function buildCorrectionRows(paper: Paper, elements: WorkbenchElement[], relatio
       reviewStatus: "",
       confidence: item.evidence_strength == null ? "" : String(item.evidence_strength),
       sortOrder: 3000 + index,
-      target: { table: "evidence", rowKey: `${item.paper_id}:${item.evidence_id}`, field, oldValue: item.exact_quote_or_description ?? "" }
+      target: {
+        table: "evidence",
+        rowKey: item.evidence_id,
+        field,
+        oldValue: item.exact_quote_or_description ?? "",
+        targetOkfPath: item.okf_path
+      }
     });
   });
-
   return rows;
 }
 
@@ -417,21 +436,14 @@ function compareText(a: string, b: string) {
 
 function humanizeField(value: string) {
   const labels: Record<string, string> = {
-    artifact_type: "Artifact Type",
-    blockchain_dlt_role: "DLT Role",
-    boundary_conditions: "Limitations",
-    doi_or_url: "DOI or URL",
-    evaluation_summary: "Evaluation Summary",
-    exact_quote_or_description: "Quote / Description",
-    full_citation: "Citation",
-    input_knowledge: "Input Knowledge",
-    key_concepts: "Key Concepts",
-    normalized_text: "Normalized Text",
-    output_knowledge: "Output Knowledge",
-    problem_description: "Problem",
-    research_process: "Research Process",
-    short_title: "Title",
-    solution_description: "Solution"
+    body_text: "Body text",
+    description: "Description",
+    paraphrase: "Paraphrase",
+    predicate: "Predicate",
+    quote: "Quote",
+    review_status: "Review status",
+    source_pdf_path: "Source document",
+    title: "Title"
   };
   if (labels[value]) return labels[value];
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());

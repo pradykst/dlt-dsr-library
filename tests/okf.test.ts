@@ -14,6 +14,10 @@ import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
 import { getOkfDatabaseHealthStatus, getOkfKnowledgeBaseLoadMetadata, loadOkfKnowledgeBaseFromSupabase } from "../lib/okf/retrieval.ts";
 import { resolveSupabaseServerCredential, serviceRoleRestHeaders } from "../lib/supabase/server.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
+import { getWorkbenchFlowGraph, getWorkbenchPaper, getWorkbenchPapers } from "../lib/okf/workbench-adapter.ts";
+import type { OkfKnowledgeBase } from "../lib/okf/schema.ts";
+import { GET as getWorkbenchPapersRoute } from "../app/api/workbench/papers/route.ts";
+import { GET as getWorkbenchPaperRoute } from "../app/api/workbench/paper/[paperId]/route.ts";
 import { projectStoredMainFlow, isStoredMainElementType } from "../lib/okf/stored-flow-projection.ts";
 import { loadRecommendedStoredFlowPaths, loadStoredPaperFlowMetadata, projectStoredOkfFlow } from "../lib/okf/stored-flow.ts";
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures", "okf");
@@ -41,6 +45,224 @@ test("OKF parser supports curated markdown concepts and local relation ids", () 
   assert.ok(kb.relations.every((relation) => relation.source_concept_id.startsWith("CURATED_2026:")));
   assert.ok(kb.relations.some((relation) => relation.predicate === "instantiated_by"));
 });
+
+test("canonical OKF parser preserves paper authors and multiline titles for Workbench metadata", () => {
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  assert.ok(kb.papers.every((paper) => (paper.authors?.length ?? 0) > 0));
+  assert.equal(
+    kb.papers.find((paper) => paper.paper_id === "PEER_REVIEW_TOKEN_INCENTIVES_2025")?.title,
+    "Blockchain-based token system for incentivizing peer review: A design science approach"
+  );
+  assert.equal(
+    kb.papers.find((paper) => paper.paper_id === "NIL_NFT_MARKETPLACE_2026")?.source_pdf_path,
+    "Designing a fair and inclusive digital asset-based name-image-likeness marketplace.pdf"
+  );
+});
+
+test("OKF Workbench adapter lists all papers and resolves IDs, slugs, and legacy route IDs", async () => {
+  const kb = parseOkfLibrary();
+  const papers = await getWorkbenchPapers({ knowledgeBase: kb });
+  assert.equal(papers.length, 9);
+  assert.ok(papers.every((paper) => paper.canonical_source === "okf" && paper.slug));
+
+  const canonicalId = await getWorkbenchPaper("BLOCKCHAIN_IOT_SDPS_2019", { knowledgeBase: kb });
+  const canonicalSlug = await getWorkbenchPaper("blockchain-iot-sdps-2019", { knowledgeBase: kb });
+  assert.equal(canonicalId?.paper.paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+  assert.equal(canonicalSlug?.paper.paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+
+  const aliases: Record<string, string> = {
+    "paper-iot-sdps": "BLOCKCHAIN_IOT_SDPS_2019",
+    "paper-consent-hie": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023",
+    "paper-nil-marketplace": "NIL_NFT_MARKETPLACE_2026",
+    "paper-peer-review-token": "PEER_REVIEW_TOKEN_INCENTIVES_2025",
+    "paper-opportunism": "SHORT_END_STICK_2025",
+    "paper-ssi-kyc": "SSI_KYC_FRAMEWORK_2022",
+    "paper-trust-capacity": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024"
+  };
+  for (const [alias, expectedPaperId] of Object.entries(aliases)) {
+    assert.equal((await getWorkbenchPaper(alias, { knowledgeBase: kb }))?.paper.paper_id, expectedPaperId);
+  }
+});
+
+test("Workbench DSR grid groups the seven canonical layers with evidence counts", async () => {
+  const kb = parseOkfLibrary();
+  const bundle = await getWorkbenchPaper("blockchain-iot-sdps-2019", { knowledgeBase: kb });
+  assert.ok(bundle);
+  const counts = Object.fromEntries((bundle.dsrGrid ?? []).map((group) => [group.key, group.concepts.length]));
+  assert.deepEqual(counts, {
+    Problem: 1,
+    "Design Requirement": 4,
+    "Design Principle": 4,
+    "Design Feature": 9,
+    Artifact: 2,
+    Evaluation: 2,
+    "Output Knowledge": 2
+  });
+  assert.ok((bundle.dsrGrid ?? []).flatMap((group) => group.concepts).every((concept) => typeof concept.evidence_count === "number"));
+});
+
+test("Workbench stored flows prefer explicit graph recommendations and compact relation fallbacks without invented edges", async () => {
+  const kb = parseOkfLibrary();
+  const canonicalRelationIds = new Set(kb.relations.map((relation) => relation.relation_id));
+  for (const paper of kb.papers) {
+    const flow = await getWorkbenchFlowGraph(paper.paper_id, { knowledgeBase: kb });
+    const metadata = loadStoredPaperFlowMetadata(paper.paper_id);
+    const expectedSource = metadata?.recommendedPaths.length ? "graph_json" : "okf_relations_fallback";
+    assert.ok(flow, paper.paper_id);
+    assert.equal(flow.stored_flow_source, expectedSource, paper.paper_id);
+    assert.ok(flow.recommended.nodes.length <= 14, paper.paper_id + " recommended graph is not compact");
+    assert.ok(flow.focused.nodes.length <= 8, paper.paper_id + " focused graph is not compact");
+
+    for (const graph of [flow.recommended, flow.focused]) {
+      const degree = new Map<string, number>();
+      for (const relation of graph.relations) {
+        assert.ok(canonicalRelationIds.has(relation.relation_id), relation.relation_id);
+        assert.ok(relation.provenance === "graph_json" || relation.provenance === "okf_relation");
+        degree.set(relation.source_node_id, (degree.get(relation.source_node_id) ?? 0) + 1);
+        degree.set(relation.target_node_id, (degree.get(relation.target_node_id) ?? 0) + 1);
+      }
+      for (const node of graph.nodes) assert.ok((degree.get(node.element_id) ?? 0) > 0, node.element_id);
+    }
+
+    assert.ok(flow.focused.nodes.every((node) => (
+      node.canonical_type === "Design Requirement"
+      || node.canonical_type === "Design Principle"
+      || node.canonical_type === "Design Feature"
+    )));
+    const focusedTypeById = new Map(flow.focused.nodes.map((node) => [node.element_id, node.canonical_type]));
+    const hasRpfChain = flow.focused.nodes.some((node) => (
+      node.canonical_type === "Design Principle"
+      && flow.focused.relations.some((relation) => (
+        relation.target_node_id === node.element_id
+        && focusedTypeById.get(relation.source_node_id) === "Design Requirement"
+      ))
+      && flow.focused.relations.some((relation) => (
+        relation.source_node_id === node.element_id
+        && focusedTypeById.get(relation.target_node_id) === "Design Feature"
+      ))
+    ));
+    assert.equal(hasRpfChain, true, paper.paper_id + " focused graph lacks a stored R-P-F path");
+  }
+});
+test("Workbench stored flow falls back to canonical OKF relations when graph metadata is absent", async () => {
+  const kb: OkfKnowledgeBase = {
+    papers: [{
+      paper_id: "WORKBENCH_FALLBACK_2099",
+      title: "Workbench fallback fixture",
+      authors: ["Test Author"],
+      year: 2099,
+      review_status: "reviewed",
+      source_file: "fixture/index.md"
+    }],
+    concepts: [
+      workbenchFixtureConcept("dr", "DesignRequirement", "Requirement"),
+      workbenchFixtureConcept("dp", "DesignPrinciple", "Principle"),
+      workbenchFixtureConcept("df", "DesignFeature", "Feature")
+    ],
+    relations: [
+      {
+        relation_id: "WORKBENCH_FALLBACK_2099:rel_1",
+        source_concept_id: "WORKBENCH_FALLBACK_2099:dr",
+        predicate: "addressed_by",
+        target_concept_id: "WORKBENCH_FALLBACK_2099:dp",
+        confidence: "high",
+        relation_scope: "paper_level",
+        source_file: "fixture/relations.yaml"
+      },
+      {
+        relation_id: "WORKBENCH_FALLBACK_2099:rel_2",
+        source_concept_id: "WORKBENCH_FALLBACK_2099:dp",
+        predicate: "instantiates",
+        target_concept_id: "WORKBENCH_FALLBACK_2099:df",
+        confidence: "high",
+        relation_scope: "paper_level",
+        source_file: "fixture/relations.yaml"
+      }
+    ],
+    evidence_items: [],
+    warnings: []
+  };
+  const flow = await getWorkbenchFlowGraph("workbench-fallback-2099", { knowledgeBase: kb });
+  assert.ok(flow);
+  assert.equal(flow.stored_flow_source, "okf_relations_fallback");
+  assert.equal(flow.recommended.nodes.length, 3);
+  assert.equal(flow.recommended.relations.length, 2);
+  assert.ok(flow.recommended.relations.every((relation) => relation.provenance === "okf_relation"));
+});
+
+test("Workbench paper API returns JSON for valid and invalid identifiers", async () => {
+  await withTemporaryEnv({
+    NEXT_PUBLIC_SUPABASE_URL: undefined,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
+    SUPABASE_SERVICE_ROLE_KEY: undefined
+  }, async () => {
+    const listResponse = await getWorkbenchPapersRoute();
+    assert.equal(listResponse.status, 200);
+    assert.match(listResponse.headers.get("content-type") ?? "", /application\/json/i);
+    assert.equal((await listResponse.json()).papers.length, 9);
+
+    const validResponse = await getWorkbenchPaperRoute(
+      new Request("http://localhost/api/workbench/paper/blockchain-iot-sdps-2019"),
+      { params: Promise.resolve({ paperId: "blockchain-iot-sdps-2019" }) }
+    );
+    assert.equal(validResponse.status, 200);
+    assert.match(validResponse.headers.get("content-type") ?? "", /application\/json/i);
+    assert.equal((await validResponse.json()).paper.paper_id, "BLOCKCHAIN_IOT_SDPS_2019");
+
+    const invalidResponse = await getWorkbenchPaperRoute(
+      new Request("http://localhost/api/workbench/paper/does-not-exist"),
+      { params: Promise.resolve({ paperId: "does-not-exist" }) }
+    );
+    assert.equal(invalidResponse.status, 404);
+    assert.match(invalidResponse.headers.get("content-type") ?? "", /application\/json/i);
+    const invalid = await invalidResponse.json();
+    assert.equal(invalid.error, "PAPER_NOT_FOUND");
+    assert.equal(invalid.paperId, "does-not-exist");
+    assert.equal(invalid.availablePapers.length, 9);
+  });
+});
+
+test("Workbench runtime, navigation, parsing, and correction boundaries stay canonical", () => {
+  const adapter = readFileSync(path.join(process.cwd(), "lib", "okf", "workbench-adapter.ts"), "utf8");
+  const client = readFileSync(path.join(process.cwd(), "lib", "workbench", "client.ts"), "utf8");
+  const landing = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchLanding.tsx"), "utf8");
+  const legacyImport = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchImport.tsx"), "utf8");
+  const home = readFileSync(path.join(process.cwd(), "app", "page.tsx"), "utf8");
+  const decision = readFileSync(path.join(process.cwd(), "app", "api", "workbench", "change-requests", "[id]", "decision", "route.ts"), "utf8");
+
+  assert.ok(adapter.includes("getOkfKnowledgeBaseForChat"));
+  assert.equal(adapter.includes("supabase-browser"), false);
+  assert.equal(adapter.includes("NEXT_PUBLIC_SUPABASE_ANON_KEY"), false);
+  assert.ok(client.includes('includes("application/json")'));
+  assert.ok(client.includes("if (!response.ok)"));
+  assert.equal(landing.includes('href="/workbench/import"'), false);
+  assert.equal(landing.includes("Import CSVs"), false);
+  assert.ok(legacyImport.includes("Legacy/Admin CSV Import"));
+  assert.ok(legacyImport.includes("not canonical"));
+  assert.equal(home.includes("Upload curated paper data"), false);
+  assert.equal(decision.includes("updateTargetField"), false);
+  assert.equal(decision.includes('.from("okf_'), false);
+  assert.ok(decision.includes("canonical_data_modified: false"));
+});
+
+function workbenchFixtureConcept(id: string, type: "DesignRequirement" | "DesignPrinciple" | "DesignFeature", title: string) {
+  return {
+    concept_id: "WORKBENCH_FALLBACK_2099:" + id,
+    paper_id: "WORKBENCH_FALLBACK_2099",
+    type,
+    dsr_layer: type,
+    title,
+    description: title,
+    body_text: title,
+    tags: [],
+    confidence: "high" as const,
+    extraction_type: "explicit" as const,
+    review_status: "reviewed" as const,
+    source_file: "fixture/dsr.md",
+    okf_path: "fixture/dsr.md"
+  };
+}
 
 test("relation validation emits warnings instead of crashing", () => {
   const kb = parseOkfLibrary(fixtureRoot);
@@ -373,9 +595,11 @@ test("Workbench diagram metadata and chatbot stored metadata use the shared proj
   });
   assert.equal(fallback.source, "stored_relations");
   assert.deepEqual(fallback.relationIds, ["stored-1", "stored-2"]);
+  const adapterSource = readFileSync(path.join(process.cwd(), "lib", "okf", "workbench-adapter.ts"), "utf8");
   const workbenchSource = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchFlow.tsx"), "utf8");
-  assert.ok(workbenchSource.includes("projectStoredMainFlow"));
-  assert.equal(workbenchSource.includes("requireDiagramMetadata: true"), false);
+  assert.ok(adapterSource.includes("buildOkfFlow("));
+  assert.ok(workbenchSource.includes("flowGraph"));
+  assert.equal(workbenchSource.includes("projectStoredMainFlow"), false);
 });
 
 test("all nine papers have deterministic graph-metadata stored projections with no invented edges", () => {
@@ -569,7 +793,7 @@ test("authoritative reuse-plan validation is terminal before no-provider renderi
 test("narrow named-paper reuse queries backfill to five grounded moves without inventing OKF labels", async () => {
   const kb = parseOkfLibrary();
   const titles = [
-    "Blockchain-based token system for incentivizing peer review: A design science",
+    "Blockchain-based token system for incentivizing peer review: A design science approach",
     "Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity"
   ];
   for (const title of titles) {
