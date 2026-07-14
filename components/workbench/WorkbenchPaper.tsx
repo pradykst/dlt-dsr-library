@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -209,6 +209,7 @@ function CorrectionsPanel({ bundle, onSuggest }: { bundle: PaperBundle; onSugges
   const itemTypes = unique(rows.map((row) => row.itemType));
   const fields = unique(rows.map((row) => row.field));
   const statuses = unique(rows.flatMap((row) => [row.sourceStatus, row.reviewStatus]));
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return rows
@@ -479,3 +480,4 @@ function splitTrailingPunctuation(value: string) {
   if (!match) return { href: value, trailing: "" };
   return { href: match[1], trailing: match[2] };
 }
+

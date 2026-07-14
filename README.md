@@ -69,3 +69,60 @@ Core objects:
 - Graph layout uses a simple type-column layout rather than a full academic ontology layout engine.
 - No backend, authentication, database, import workflow, or citation manager integration is included.
 - Evidence labels are synthesized from papers and should be reviewed before scholarly publication.
+
+## OKF Chatbot Evaluation Build
+
+### Run Locally
+
+```bash
+npm install
+npm run okf:validate
+npm run okf:index
+npm run dev
+```
+
+Open `/okf-chat`. The chat API loads indexed `okf_` Supabase tables when `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured; otherwise it falls back to local `library/okf` files.
+
+### Run With Gemini
+
+Set server-side environment variables only:
+
+```bash
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_PLANNER_MODEL=gemini-2.5-flash-lite
+GEMINI_TIMEOUT_MS=60000
+GEMINI_MAX_OUTPUT_TOKENS=2500
+GEMINI_TEMPERATURE=0.2
+```
+
+Use `LLM_PROVIDER=groq` with `GROQ_API_KEY` and `GROQ_MODEL` to use the Groq fallback provider, `LLM_PROVIDER=mock` for offline tests, or `LLM_PROVIDER=none` for deterministic-only answers. Gemini receives only retrieved OKF concepts, evidence, relations, and deterministic answer plans; unsupported provider output falls back to structured OKF output.
+
+### Health Checks
+
+- `GET /api/health`
+- `GET /api/health/llm`
+- `GET /api/health/db`
+
+### Smoke Query
+
+With the app running:
+
+```bash
+APP_URL=http://localhost:3000 node --experimental-strip-types scripts/smoke-okf-query.ts
+```
+
+The script checks the product identity reuse query for multiple source papers, flow rows, evidence refs, query-generated markings, and key source-paper coverage.
+
+### Deploy Manually
+
+1. Paste or run the `supabase/migrations/20260626140000_okf_chatbot.sql` migration in Supabase.
+2. Configure Supabase and optional Gemini/Groq env vars in the hosting provider.
+3. Run `npm run okf:index` locally or in a trusted server-side job to upsert reviewed OKF bundles.
+4. Deploy the Next.js app with `npm run build`.
+5. Verify `/api/health`, `/api/health/db`, `/api/health/llm`, and `/okf-chat`.
+
+### Known OKF Chatbot Limitations
+
+The assistant does not fabricate missing OKF paper bundles. If the database contains only two OKF papers, cross-paper queries will return a warning and cite only those loaded papers. Product-identity-specific protocol details are marked as query-generated adaptations unless they are present as stored OKF nodes.

@@ -1,0 +1,467 @@
+type: ConceptAliases
+paper_id: SSI_KYC_FRAMEWORK_2022
+title: Search aliases for SSI-based eKYC framework paper
+review_status: reviewed
+confidence: high
+aliases:
+  SSI_KYC_FRAMEWORK_2022:prob_001_costly_inefficient_privacy_sensitive_kyc:
+  - KYC
+  - banking
+  - costly, inefficient, repetitive, privacy-sensitive kyc processes
+  - customer-onboarding
+  - digital KYC
+  - eKYC
+  - know your customer
+  - privacy
+  - regtech
+  SSI_KYC_FRAMEWORK_2022:prob_002_centralized_ekyc_data_silos_and_market_power:
+  - Aadhaar
+  - centralized ekyc utilities create data-silo, surveillance, and market-power risks
+  - centralized-identity
+  - data-silo
+  - digital KYC
+  - eKYC
+  - know your customer
+  - market-power
+  - surveillance
+  SSI_KYC_FRAMEWORK_2022:prob_003_blockchain_transparency_vs_personal_data_privacy:
+  - GDPR
+  - blockchain
+  - blockchain registry
+  - blockchain transparency conflicts with personal-data privacy in ekyc
+  - digital KYC
+  - distributed ledger
+  - eKYC
+  - know your customer
+  - on-chain public data
+  - personal-data
+  - privacy
+  - right-to-erasure
+  SSI_KYC_FRAMEWORK_2022:rq_001_design_ssi_based_ekyc_framework:
+  - KYC-framework
+  - SSI
+  - blockchain
+  - blockchain registry
+  - decentralized identity
+  - digital KYC
+  - distributed ledger
+  - eKYC
+  - how can blockchain-based ssi support the complete digital kyc process?
+  - know your customer
+  - on-chain public data
+  - research-question
+  - self-sovereign identity
+  SSI_KYC_FRAMEWORK_2022:rq_002_derive_design_principles_for_blockchain_based_ssi:
+  - SSI
+  - blockchain registry
+  - decentralized identity
+  - design-principles
+  - distributed ledger
+  - generalization
+  - on-chain public data
+  - research-question
+  - self-sovereign identity
+  - what generic design principles guide blockchain-based ssi systems?
+  SSI_KYC_FRAMEWORK_2022:dr_001_efficiency:
+  - automation
+  - digital KYC
+  - digital-processing
+  - eKYC
+  - efficiency
+  - improve ekyc process efficiency
+  - know your customer
+  - standardized-exchange
+  SSI_KYC_FRAMEWORK_2022:dr_002_regulatory_compliance:
+  - AML
+  - GDPR
+  - MLA
+  - eIDAS
+  - maintain regulatory compliance
+  - regulatory-compliance
+  SSI_KYC_FRAMEWORK_2022:dr_003_decentralization:
+  - avoid central customer-data storage and lock-in
+  - decentralization
+  - lock-in
+  - market-power
+  - no-data-silo
+  SSI_KYC_FRAMEWORK_2022:dr_004_trust_in_reusable_kyc_documents:
+  - authenticity
+  - credential-validation
+  - digital KYC
+  - eKYC
+  - establish trust in reusable kyc documents
+  - know your customer
+  - reusable-KYC
+  - trust
+  SSI_KYC_FRAMEWORK_2022:dr_005_privacy:
+  - data-minimization
+  - need-to-know
+  - preserve privacy and data minimization
+  - privacy
+  - selective-disclosure
+  SSI_KYC_FRAMEWORK_2022:dr_006_user_experience:
+  - backup
+  - provide usable customer experience and recovery support
+  - recovery
+  - support
+  - user-experience
+  - wallet-usability
+  SSI_KYC_FRAMEWORK_2022:dp_001_use_blockchain_only_for_public_data:
+  - GDPR
+  - SSI
+  - blockchain registry
+  - design-principle
+  - distributed ledger
+  - minimal-blockchain
+  - on-chain public data
+  - public-data-only
+  - utilize blockchain only for public data
+  SSI_KYC_FRAMEWORK_2022:dp_002_anticipate_ecosystem_of_various_ledgers:
+  - anticipate an ecosystem of various ledgers
+  - blockchain registry
+  - design-principle
+  - distributed ledger
+  - interoperability
+  - multi-ledger
+  - on-chain public data
+  - standards
+  - universal-resolver
+  SSI_KYC_FRAMEWORK_2022:dp_003_enable_decentralization_at_the_edge:
+  - cloud-agent
+  - design-principle
+  - edge-decentralization
+  - enable decentralization at the edge
+  - user-control
+  - wallets
+  SSI_KYC_FRAMEWORK_2022:dp_004_customer_centered_ssi_control:
+  - SSI
+  - customer-control
+  - decentralized identity
+  - holder-centric
+  - place the customer at the center of identity data control
+  - self-sovereign identity
+  - verifiable-presentation
+  SSI_KYC_FRAMEWORK_2022:dp_005_reuse_verifiable_kyc_credentials:
+  - VC
+  - VP
+  - credential-reuse
+  - digital KYC
+  - eKYC
+  - enable reuse of verifiable kyc results
+  - fast-onboarding
+  - interbank-collaboration
+  - know your customer
+  - verifiable credential
+  - verifiable presentation
+  SSI_KYC_FRAMEWORK_2022:dp_006_bilateral_secure_disclosure:
+  - bilateral-communication
+  - privacy
+  - secure-channel
+  - selective-disclosure
+  - use bilateral secure disclosure rather than shared raw-data repositories
+  SSI_KYC_FRAMEWORK_2022:df_001_dids_and_did_documents:
+  - DID
+  - DID-document
+  - decentralized identifier
+  - dids and did documents
+  - pairwise DID
+  - public-key
+  - service-endpoint
+  SSI_KYC_FRAMEWORK_2022:df_002_user_agents_and_digital_wallets:
+  - cloud-agent
+  - credential-storage
+  - edge-agent
+  - key-management
+  - user agents and digital wallets
+  - wallet
+  SSI_KYC_FRAMEWORK_2022:df_003_verifiable_credentials_and_presentations:
+  - KYC-document
+  - VC
+  - VP
+  - attestation
+  - selective-disclosure
+  - verifiable credential
+  - verifiable credentials and verifiable presentations
+  - verifiable presentation
+  SSI_KYC_FRAMEWORK_2022:df_004_pairwise_dids_for_customer_bank_relationships:
+  - DID
+  - bilateral-relationship
+  - decentralized identifier
+  - pairwise DID
+  - pairwise dids for customer-bank relationships
+  - pairwise-DID
+  - privacy
+  - pseudonymity
+  SSI_KYC_FRAMEWORK_2022:df_005_revocation_registries:
+  - credential-status
+  - non-revocation-proof
+  - privacy-preserving revocation registries
+  - revocation-registry
+  SSI_KYC_FRAMEWORK_2022:df_006_credential_schemas_and_definitions:
+  - KYC-claims
+  - VC
+  - VP
+  - credential schemas and definitions
+  - credential-definition
+  - credential-schema
+  - standardization
+  - verifiable credential
+  - verifiable presentation
+  SSI_KYC_FRAMEWORK_2022:df_007_qualified_electronic_certificates_and_eidas_bridge:
+  - eIDAS
+  - legal-identity
+  - qualified electronic certificates and eidas bridge
+  - qualified-electronic-certificate
+  - trust
+  SSI_KYC_FRAMEWORK_2022:df_008_public_data_registry_on_ledger:
+  - blockchain registry
+  - distributed ledger
+  - issuer-keys
+  - ledger
+  - on-chain public data
+  - public ssi registry on distributed ledger
+  - public-registry
+  - revocation
+  - schemas
+  SSI_KYC_FRAMEWORK_2022:df_009_secure_connection_protocol:
+  - agent-protocol
+  - encrypted-messaging
+  - pairwise-channel
+  - secure pairwise connection protocol
+  - secure-connection
+  SSI_KYC_FRAMEWORK_2022:df_010_proof_request_and_non_revocation_proof:
+  - non-revocation
+  - nonce
+  - proof requests with non-revocation checks
+  - proof-request
+  - verifiable-presentation
+  SSI_KYC_FRAMEWORK_2022:df_011_kyc_interface_name_screening_risk_engine:
+  - KYC-interface
+  - digital KYC
+  - eKYC
+  - enhanced-due-diligence
+  - know your customer
+  - kyc interface, name screening, and risk engine integration
+  - name-screening
+  - risk-engine
+  SSI_KYC_FRAMEWORK_2022:df_012_ongoing_monitoring_via_secure_channel:
+  - ongoing monitoring through secure proof refresh
+  - ongoing-monitoring
+  - proof-refresh
+  - risk-monitoring
+  - secure-channel
+  SSI_KYC_FRAMEWORK_2022:df_013_local_bank_records_with_privacy_options:
+  - ZKP
+  - auditability
+  - local bank records with privacy-preserving documentation options
+  - local-storage
+  - privacy
+  - record-keeping
+  SSI_KYC_FRAMEWORK_2022:df_014_backup_recovery_and_support:
+  - backup
+  - backup, recovery, and support for ssi wallets
+  - recovery
+  - support
+  - wallet-usability
+  SSI_KYC_FRAMEWORK_2022:df_015_universal_resolvers_and_cross_ledger_interoperability:
+  - DID-method
+  - blockchain registry
+  - cross-ledger
+  - distributed ledger
+  - interoperability
+  - on-chain public data
+  - universal resolvers and cross-ledger interoperability
+  - universal-resolver
+  SSI_KYC_FRAMEWORK_2022:art_001_ssi_based_ekyc_framework:
+  - SSI
+  - artifact
+  - decentralized identity
+  - digital KYC
+  - eKYC
+  - framework
+  - know your customer
+  - self-sovereign identity
+  - ssi-based ekyc framework
+  SSI_KYC_FRAMEWORK_2022:art_002_completely_new_onboarding_process:
+  - UML
+  - artifact
+  - completely new onboarding process
+  - new-onboarding
+  - process
+  SSI_KYC_FRAMEWORK_2022:art_003_fast_onboarding_process:
+  - UML
+  - artifact
+  - credential-reuse
+  - fast onboarding process
+  - fast-onboarding
+  - process
+  SSI_KYC_FRAMEWORK_2022:art_004_new_to_kyc_hybrid_onboarding_process:
+  - artifact
+  - digital KYC
+  - eKYC
+  - hybrid-onboarding
+  - know your customer
+  - new-to-KYC
+  - new-to-kyc hybrid onboarding process
+  - process
+  SSI_KYC_FRAMEWORK_2022:art_005_ssi_kyc_architecture_model:
+  - KYC
+  - SSI
+  - architecture
+  - decentralized identity
+  - digital KYC
+  - eKYC
+  - know your customer
+  - ledger
+  - model
+  - self-sovereign identity
+  - ssi-based kyc architecture model
+  SSI_KYC_FRAMEWORK_2022:eval_001_design_objectives_formative_interviews:
+  - evaluation
+  - expert-interviews
+  - formative
+  - formative expert evaluation of design objectives
+  - objectives
+  SSI_KYC_FRAMEWORK_2022:eval_002_framework_criteria_based_evaluation:
+  - criteria-based
+  - criteria-based expert evaluation of the ssi-based ekyc framework
+  - digital KYC
+  - eKYC
+  - evaluation
+  - expert-interviews
+  - framework
+  - know your customer
+  SSI_KYC_FRAMEWORK_2022:eval_003_regulatory_privacy_fit_assessment:
+  - GDPR
+  - eIDAS
+  - evaluation
+  - privacy
+  - regulatory
+  - regulatory and privacy fit assessment
+  SSI_KYC_FRAMEWORK_2022:eval_004_practical_feasibility_and_utility_assessment:
+  - evaluation
+  - expert-feedback
+  - feasibility
+  - practical feasibility and utility assessment
+  - utility
+  SSI_KYC_FRAMEWORK_2022:ok_001_blockchain_role_in_ssi_should_be_restrictive:
+  - SSI
+  - blockchain registry
+  - blockchain’s role in ssi should be restrictive and public-data-oriented
+  - decentralized identity
+  - distributed ledger
+  - minimal-blockchain
+  - on-chain public data
+  - output-knowledge
+  - public-registry
+  - self-sovereign identity
+  SSI_KYC_FRAMEWORK_2022:ok_002_ssi_can_decouple_identity_reuse_from_centralized_identity_providers:
+  - SSI
+  - decentralization
+  - decentralized identity
+  - identity-reuse
+  - output-knowledge
+  - reusable-KYC
+  - self-sovereign identity
+  - ssi enables reusable identity without centralized identity providers
+  SSI_KYC_FRAMEWORK_2022:ok_003_fast_onboarding_pattern_for_reusable_credentials:
+  - VC
+  - VP
+  - fast onboarding pattern for reusable kyc credentials
+  - fast-onboarding
+  - output-knowledge
+  - process-pattern
+  - verifiable credential
+  - verifiable presentation
+  - verifiable-presentation
+  SSI_KYC_FRAMEWORK_2022:ok_004_bilateral_vp_exchange_as_privacy_pattern:
+  - VC
+  - VP
+  - bilateral verifiable presentation exchange as a privacy pattern
+  - bilateral-exchange
+  - output-knowledge
+  - privacy-pattern
+  - selective-disclosure
+  - verifiable credential
+  - verifiable presentation
+  SSI_KYC_FRAMEWORK_2022:ok_005_multi_ledger_ssi_interoperability_challenge:
+  - SSI
+  - blockchain registry
+  - decentralized identity
+  - distributed ledger
+  - governance
+  - interoperability
+  - multi-ledger
+  - on-chain public data
+  - output-knowledge
+  - self-sovereign identity
+  - ssi interoperability requires standards and cross-ledger governance
+  SSI_KYC_FRAMEWORK_2022:kt_001_peffers_dsrm:
+  - DSRM
+  - Peffers
+  - kernel-theory
+  - peffers et al. design science research methodology
+  SSI_KYC_FRAMEWORK_2022:kt_002_self_sovereign_identity:
+  - SSI
+  - decentralized identity
+  - decentralized-identity
+  - kernel-theory
+  - self-sovereign identity
+  SSI_KYC_FRAMEWORK_2022:kt_003_verifiable_credentials_and_dids_standards:
+  - DID
+  - VC
+  - VP
+  - W3C
+  - decentralized identifier
+  - did and verifiable credential standards
+  - kernel-theory
+  - pairwise DID
+  - standards
+  - verifiable credential
+  - verifiable presentation
+  SSI_KYC_FRAMEWORK_2022:kt_004_gdpr_and_eidas_regulatory_context:
+  - AML
+  - GDPR
+  - eIDAS
+  - gdpr, aml/kyc, and eidas regulatory context
+  - kernel-theory
+  - regulation
+  SSI_KYC_FRAMEWORK_2022:kt_005_blockchain_as_neutral_cross_organizational_infrastructure:
+  - blockchain
+  - blockchain as neutral cross-organizational infrastructure
+  - blockchain registry
+  - cross-organizational
+  - distributed ledger
+  - kernel-theory
+  - neutral-platform
+  - on-chain public data
+  SSI_KYC_FRAMEWORK_2022:lim_001_governance_and_adoption_challenges:
+  - adoption
+  - governance
+  - governance and adoption challenges remain unresolved
+  - limitation
+  - network-effects
+  SSI_KYC_FRAMEWORK_2022:lim_002_no_real_world_deployment_yet:
+  - deployment
+  - limitation
+  - no real-world deployment evaluation yet
+  - real-world-evaluation
+  SSI_KYC_FRAMEWORK_2022:lim_003_regulatory_interpretation_uncertainty:
+  - GDPR
+  - legal-analysis
+  - limitation
+  - regulatory interpretation uncertainty
+  - regulatory-uncertainty
+  SSI_KYC_FRAMEWORK_2022:lim_004_wallet_usability_and_recovery_risk:
+  - key-management
+  - limitation
+  - recovery
+  - usability
+  - wallet
+  - wallet usability and recovery risk
+  SSI_KYC_FRAMEWORK_2022:lim_005_interbank_trust_and_standard_acceptance:
+  - credential-acceptance
+  - governance
+  - interbank trust and credential acceptance require governance
+  - interbank-trust
+  - limitation

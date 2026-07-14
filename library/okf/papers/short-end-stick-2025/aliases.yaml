@@ -1,0 +1,73 @@
+paper_id: SHORT_END_STICK_2025
+aliases:
+  paper:
+    - short end of the stick
+    - two-sided opportunism paper
+    - bossler buchwald spohrer 2025
+    - interorganizational information sharing blockchain
+    - machine tool leasing blockchain
+  problem_two_sided_opportunism:
+    - two-sided opportunism
+    - opportunism in information sharing
+    - manipulation and poaching
+    - information poaching and manipulation
+    - one party gets short end of the stick
+  dr_001_prevent_information_manipulation:
+    - prevent manipulation
+    - prevent data manipulation
+    - prevent information manipulation
+    - reliable information
+    - verifiable truthfulness
+    - manipulation-resistant information sharing
+  dr_002_prevent_information_poaching:
+    - prevent poaching
+    - prevent information misuse
+    - prevent unauthorized data usage
+    - protect sensitive data
+    - confidential information sharing
+  dp_001_manipulation_resistant_private_storage_with_integrity_proof:
+    - proof of integrity
+    - hash proof
+    - private storage with proof
+    - manipulation-resistant storage
+    - store data with provider only
+  dp_002_nonreversible_reliable_independent_computation:
+    - nonreversible function
+    - one-way function
+    - reliable computation
+    - independent execution
+    - stress factor computation
+    - smart contract aggregation
+  dp_003_joint_approval_for_computation_mechanism_changes:
+    - joint governance
+    - joint approval
+    - shared governance
+    - governance policy
+    - no unilateral changes
+  df_001_private_data_collection_as_provider_only_sensitive_data_store:
+    - private data collection
+    - Hyperledger Fabric private collection
+    - confidential sensor data storage
+  df_003_smart_contract_stress_factor_computation:
+    - smart contract
+    - chaincode
+    - stress factor
+    - lease rate calculation
+  artifact_001_hyperledger_fabric_two_sided_opportunism_solution:
+    - Hyperledger Fabric artifact
+    - wear-based leasing artifact
+    - confidential StressChannel
+    - private data collections plus smart contracts
+query_expansion:
+  product_identity_marketplace:
+    - prevent product information manipulation
+    - prevent poaching of sensitive seller or marketplace data
+    - proof of integrity for privately stored data
+    - nonreversible computation of shared product quality indicators
+    - joint approval for update or computation logic
+  dlt_product_registry:
+    - confidential source data
+    - shared derived information
+    - proof of integrity
+    - joint governance
+    - verifiable claim without raw data disclosure

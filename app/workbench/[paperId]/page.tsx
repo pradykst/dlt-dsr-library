@@ -1,7 +1,7 @@
-import { PageShell } from "@/components/layout/PageShell";
+﻿import { PageShell } from "@/components/layout/PageShell";
 import { WorkbenchPaper } from "@/components/workbench/WorkbenchPaper";
 
-export default async function WorkbenchPaperPage({ params }: any) {
+export default async function WorkbenchPaperPage({ params }: { params: Promise<{ paperId: string }> }) {
   const { paperId } = await params;
   return (
     <PageShell>
@@ -9,3 +9,4 @@ export default async function WorkbenchPaperPage({ params }: any) {
     </PageShell>
   );
 }
+

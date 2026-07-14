@@ -1,0 +1,1032 @@
+{
+  "paper_id": "PEER_REVIEW_TOKEN_INCENTIVES_2025",
+  "title": "Blockchain-based token system for incentivizing peer review: A design science approach",
+  "nodes": [
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "label": "Reviewer recruitment and incentive shortage in academic peer review",
+      "type": "Problem",
+      "dsr_layer": "Problem",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rq_001_design_peer_review_incentive_systems",
+      "label": "How can peer review systems be effectively designed to better incentivize reviewers?",
+      "type": "ResearchQuestion",
+      "dsr_layer": "Problem",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "label": "Attract and retain enough willing peer reviewers",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "medium-high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types",
+      "label": "Support multiple reviewer motivation types",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_003_enable_journal_specific_reward_flexibility",
+      "label": "Enable journal-specific reward-policy flexibility",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "label": "Preserve reviewer trust, anonymity, and fair incentive allocation",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_005_integrate_with_existing_peer_review_workflows",
+      "label": "Integrate with existing journal workflows with limited disruption",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "medium-high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility",
+      "label": "Ensure economic and technical feasibility of token rewards",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_007_mitigate_review_quality_gaming",
+      "label": "Mitigate reward gaming and review-quality degradation",
+      "type": "DesignRequirement",
+      "dsr_layer": "Requirement",
+      "confidence": "medium-high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "label": "Provide incentives that appeal to reviewers’ specific motivations",
+      "type": "DesignPrinciple",
+      "dsr_layer": "Principle",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "label": "Allow editors and journals to customize incentive schemes",
+      "type": "DesignPrinciple",
+      "dsr_layer": "Principle",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "label": "Enhance trust in reviewer anonymity and reward allocation",
+      "type": "DesignPrinciple",
+      "dsr_layer": "Principle",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "label": "Tokenization of reviewer incentives",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability",
+      "label": "Immutable reward records",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization",
+      "label": "Decentralized reward-data storage",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_004_public_blockchain_reward_infrastructure",
+      "label": "Public blockchain infrastructure for reward tokens",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_005_polygon_smart_contracts_for_token_issuance",
+      "label": "Polygon smart contracts for token issuance and administration",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage",
+      "label": "Off-chain storage for confidential peer-review process data",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "label": "Soulbound reputation tokens for review recognition",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "label": "Fungible reward tokens for reviewer compensation and credits",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_009_wallet_based_reviewer_identifier",
+      "label": "Wallet-based reviewer identifier",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_010_batch_reward_processing",
+      "label": "Batch processing of reward allocation",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui",
+      "label": "Editor reward-settings interface",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_012_reviewer_reputation_page",
+      "label": "Reviewer reputation and accolade page",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_013_smart_contract_security_analysis",
+      "label": "Smart contract security analysis with Mythril and Slither",
+      "type": "DesignFeature",
+      "dsr_layer": "Feature",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "label": "Token-based peer review incentive system",
+      "type": "Artifact",
+      "dsr_layer": "Artifact",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "label": "Open-source peer review platform prototype",
+      "type": "Artifact",
+      "dsr_layer": "Artifact",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "label": "Polygon token smart-contract suite",
+      "type": "Artifact",
+      "dsr_layer": "Artifact",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "label": "Hybrid off-chain review / on-chain reward architecture",
+      "type": "Artifact",
+      "dsr_layer": "Artifact",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_001_dsrm_based_design_process",
+      "label": "DSRM-based design and demonstration process",
+      "type": "Evaluation",
+      "dsr_layer": "Evaluation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_002_design_feature_mapping_evaluation",
+      "label": "Design-principle to feature mapping evaluation",
+      "type": "Evaluation",
+      "dsr_layer": "Evaluation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis",
+      "label": "Polygon transaction-cost and compensation-cost analysis",
+      "type": "Evaluation",
+      "dsr_layer": "Evaluation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users",
+      "label": "Field survey of potential system users",
+      "type": "Evaluation",
+      "dsr_layer": "Evaluation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "label": "Qualitative evaluation with editors and reviewers",
+      "type": "Evaluation",
+      "dsr_layer": "Evaluation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_001_linked_dp_df_theory_for_reviewer_incentives",
+      "label": "Linked DSR design knowledge for reviewer incentive systems",
+      "type": "OutputKnowledge",
+      "dsr_layer": "OutputKnowledge",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_002_tokenization_as_incentive_design_mechanism",
+      "label": "Tokenization as a flexible reviewer-incentive mechanism",
+      "type": "OutputKnowledge",
+      "dsr_layer": "OutputKnowledge",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_003_blockchain_as_reward_log_not_review_backbone",
+      "label": "Blockchain should log reward data, not the full confidential review process",
+      "type": "OutputKnowledge",
+      "dsr_layer": "OutputKnowledge",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_004_formal_design_theory_for_peer_review_incentives",
+      "label": "Formal design theory for tokenized peer-review incentives",
+      "type": "OutputKnowledge",
+      "dsr_layer": "OutputKnowledge",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_001_organismic_integration_theory",
+      "label": "Organismic Integration Theory for reviewer motivation",
+      "type": "KernelTheory",
+      "dsr_layer": "KernelTheory",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_002_expectancy_theory",
+      "label": "Expectancy theory for flexible reward preferences",
+      "type": "KernelTheory",
+      "dsr_layer": "KernelTheory",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_003_information_systems_success_model",
+      "label": "Information Systems Success Model for adoption evaluation",
+      "type": "KernelTheory",
+      "dsr_layer": "KernelTheory",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_004_gregor_jones_design_theory",
+      "label": "Gregor and Jones design theory anatomy",
+      "type": "KernelTheory",
+      "dsr_layer": "KernelTheory",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_005_blockchain_adoption_decision_model",
+      "label": "Blockchain adoption decision model",
+      "type": "KernelTheory",
+      "dsr_layer": "KernelTheory",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_001_adoption_and_usability_resistance",
+      "label": "Adoption and usability resistance from nontechnical stakeholders",
+      "type": "Limitation",
+      "dsr_layer": "Limitation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_002_funding_model_uncertainty",
+      "label": "Uncertain funding model for reviewer compensation",
+      "type": "Limitation",
+      "dsr_layer": "Limitation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_003_review_quality_gaming_risk",
+      "label": "Risk of quantity-over-quality review behavior",
+      "type": "Limitation",
+      "dsr_layer": "Limitation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_004_token_volatility_and_revocation_challenges",
+      "label": "Token volatility and soulbound-token revocation challenges",
+      "type": "Limitation",
+      "dsr_layer": "Limitation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_005_no_live_peer_review_deployment_yet",
+      "label": "Lack of live peer-review deployment validation",
+      "type": "Limitation",
+      "dsr_layer": "Limitation",
+      "confidence": "high",
+      "review_status": "reviewed"
+    }
+  ],
+  "edges": [
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_001",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rq_001_design_peer_review_incentive_systems",
+      "predicate": "motivates",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_002",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_003",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_004",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_003_enable_journal_specific_reward_flexibility",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_005",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_006",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_005_integrate_with_existing_peer_review_workflows",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_007",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_008",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:prob_001_peer_review_incentive_shortage_problem",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_007_mitigate_review_quality_gaming",
+      "predicate": "requires",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_009",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_001_organismic_integration_theory",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "predicate": "derived_from",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_010",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_002_expectancy_theory",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "predicate": "derived_from",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_011",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_003_information_systems_success_model",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users",
+      "predicate": "derived_from",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_012",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_004_gregor_jones_design_theory",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_004_formal_design_theory_for_peer_review_incentives",
+      "predicate": "derived_from",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_013",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:kt_005_blockchain_adoption_decision_model",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_004_public_blockchain_reward_infrastructure",
+      "predicate": "derived_from",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_014",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_015",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_016",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_017",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_001_attract_and_retain_reviewers",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_018",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_019",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_020",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_002_support_multiple_motivation_types",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_021",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_003_enable_journal_specific_reward_flexibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_022",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_003_enable_journal_specific_reward_flexibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_023",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_024",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_025",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_026",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_027",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_004_preserve_reviewer_trust_anonymity_and_fairness",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_010_batch_reward_processing",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_028",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_005_integrate_with_existing_peer_review_workflows",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_029",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_005_integrate_with_existing_peer_review_workflows",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_030",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_004_public_blockchain_reward_infrastructure",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_031",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_005_polygon_smart_contracts_for_token_issuance",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_032",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_006_ensure_economic_and_technical_feasibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_033",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_007_mitigate_review_quality_gaming",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_003_review_quality_gaming_risk",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_034",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dr_007_mitigate_review_quality_gaming",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui",
+      "predicate": "addressed_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_035",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_036",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_037",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_038",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_039",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_040",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_041",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_042",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_043",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_010_batch_reward_processing",
+      "predicate": "instantiated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_044",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_045",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_046",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_047",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_048",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_004_public_blockchain_reward_infrastructure",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_049",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_005_polygon_smart_contracts_for_token_issuance",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_050",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_006_off_chain_review_process_storage",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_051",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_052",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_053",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_054",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_055",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_009_wallet_based_reviewer_identifier",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_056",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_010_batch_reward_processing",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_057",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_011_editor_reward_settings_ui",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_058",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_012_reviewer_reputation_page",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_059",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_013_smart_contract_security_analysis",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "predicate": "implements",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_060",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_061",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_062",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_063",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_064",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_065",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_066",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "predicate": "evaluated_by",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_067",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_001_dsrm_based_design_process",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_001_linked_dp_df_theory_for_reviewer_incentives",
+      "predicate": "supports",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_068",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_002_design_feature_mapping_evaluation",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_001_linked_dp_df_theory_for_reviewer_incentives",
+      "predicate": "supports",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_069",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_003_cost_analysis",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_002_tokenization_as_incentive_design_mechanism",
+      "predicate": "supports",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_070",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_004_field_survey_system_users",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_002_tokenization_as_incentive_design_mechanism",
+      "predicate": "supports",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_071",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_004_formal_design_theory_for_peer_review_incentives",
+      "predicate": "supports",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_072",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_001_linked_dp_df_theory_for_reviewer_incentives",
+      "predicate": "contributes_to",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_073",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_002_tokenization_as_incentive_design_mechanism",
+      "predicate": "contributes_to",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_074",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_004_hybrid_off_chain_review_on_chain_reward_architecture",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_003_blockchain_as_reward_log_not_review_backbone",
+      "predicate": "contributes_to",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_075",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_002_open_source_peer_review_platform",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:ok_004_formal_design_theory_for_peer_review_incentives",
+      "predicate": "contributes_to",
+      "confidence": "high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_076",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_001_adoption_and_usability_resistance",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system",
+      "predicate": "contrasts_with",
+      "confidence": "medium-high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_077",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_002_funding_model_uncertainty",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "predicate": "contrasts_with",
+      "confidence": "medium-high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_078",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_003_review_quality_gaming_risk",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_008_fungible_reward_tokens",
+      "predicate": "contrasts_with",
+      "confidence": "medium-high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_079",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_004_token_volatility_and_revocation_challenges",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_007_soulbound_reputation_tokens",
+      "predicate": "contrasts_with",
+      "confidence": "medium-high",
+      "relation_scope": "paper_level"
+    },
+    {
+      "id": "PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_080",
+      "source": "PEER_REVIEW_TOKEN_INCENTIVES_2025:lim_005_no_live_peer_review_deployment_yet",
+      "target": "PEER_REVIEW_TOKEN_INCENTIVES_2025:eval_005_qualitative_editor_reviewer_evaluation",
+      "predicate": "contrasts_with",
+      "confidence": "medium-high",
+      "relation_scope": "paper_level"
+    }
+  ]
+}

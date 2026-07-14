@@ -1,0 +1,67 @@
+type: ConceptAliases
+paper_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021
+title: Search aliases for newsvendor-forecaster blockchain smart contract paper
+review_status: reviewed
+confidence: high
+aliases:
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem:
+  - forecast payment trust problem
+  - newsvendor expert trust
+  - outcome contingent payment manipulation
+  - forecast acquisition problem
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit:
+  - align incentives
+  - expert effort
+  - newsvendor profit
+  - incentive alignment
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_002_induce_truthful_forecast_reporting:
+  - truthful forecast
+  - proper scoring rule
+  - forecast elicitation
+  - honest reporting
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable:
+  - enforceable payment
+  - outcome contingent contract
+  - forecast payment
+  - payment settlement
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments:
+  - decentralized escrow
+  - escrow account
+  - payment held in smart contract
+  - no individual entity
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms:
+  - immutable algorithm
+  - automated enforcement
+  - smart contract logic
+  - algorithmic contract
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle:
+  - oracle
+  - realized outcome source
+  - outcome API
+  - data feed
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule:
+  - tailored scoring rule
+  - proper scoring rule
+  - payment function
+  - score based on profit
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function:
+  - reportForecast
+  - forecast submission
+  - forecast validation
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function:
+  - retrieveRealizedOutcome
+  - outcome retrieval
+  - oracle call
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function:
+  - issuePayment
+  - automated settlement
+  - pay expert
+  - surplus returned
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract:
+  - forecasting smart contract
+  - blockchain-based forecasting
+  - smart contract escrow
+  NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_002_blockchain_based_forecasting_dapp:
+  - DApp
+  - Blockchain-Based Forecasting app
+  - web3 forecast interface

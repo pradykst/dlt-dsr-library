@@ -1,0 +1,27 @@
+﻿paper_id: FIXTURE_2026
+relations:
+  - relation_id: rel_001
+    source_concept_id: prob_001
+    predicate: motivates
+    target_concept_id: req_001
+    evidence_id: ev_001
+    confidence: high
+    relation_scope: paper_level
+  - relation_id: rel_002
+    source_concept_id: req_001
+    predicate: addressed_by
+    target_concept_id: prin_001
+    confidence: medium
+    relation_scope: paper_level
+  - relation_id: rel_003
+    source_concept_id: prin_001
+    predicate: instantiates
+    target_concept_id: feat_001
+    confidence: medium
+    relation_scope: paper_level
+  - relation_id: rel_004
+    source_concept_id: feat_001
+    predicate: contributes_to
+    target_concept_id: art_001
+    confidence: medium
+    relation_scope: paper_level

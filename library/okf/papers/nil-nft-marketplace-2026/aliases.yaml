@@ -1,0 +1,588 @@
+type: AliasCollection
+paper_id: NIL_NFT_MARKETPLACE_2026
+review_status: reviewed
+aliases:
+- concept_id: NIL_NFT_MARKETPLACE_2026:prob_001_nil_fairness_inclusiveness_problem
+  terms:
+  - NIL
+  - NIL marketplace
+  - Uneven and exclusionary NIL monetization for student-athletes
+  - fairness
+  - inclusiveness
+  - name image likeness
+  - resource allocation
+  - resource-allocation
+  - student athlete NIL
+  - student athletes
+  - student-athletes
+- concept_id: NIL_NFT_MARKETPLACE_2026:rq_001_design_fair_inclusive_nil_marketplace
+  terms:
+  - How can a digital-asset marketplace allocate NIL resources fairly and inclusively?
+  - NIL
+  - NIL marketplace
+  - digital assets
+  - digital-assets
+  - market design
+  - market-design
+  - name image likeness
+  - research question
+  - research-question
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dr_001_inclusiveness
+  terms:
+  - Inclusiveness
+  - NIL marketplace
+  - access
+  - all athletes
+  - all-athletes
+  - inclusiveness
+  - name image likeness
+  - requirement
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dr_002_meritocratic_allocation
+  terms:
+  - Aristotle
+  - Meritocratic allocation
+  - NIL marketplace
+  - fairness
+  - meritocracy
+  - name image likeness
+  - requirement
+  - resource allocation
+  - resource-allocation
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dr_003_market_thickness
+  terms:
+  - Market thickness
+  - NIL marketplace
+  - liquidity
+  - market design
+  - market thickness
+  - market-design
+  - market-thickness
+  - name image likeness
+  - requirement
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dr_004_no_congestion
+  terms:
+  - NIL marketplace
+  - No congestion
+  - congestion
+  - market design
+  - market-design
+  - name image likeness
+  - requirement
+  - student athlete NIL
+  - transaction speed
+  - transaction-speed
+- concept_id: NIL_NFT_MARKETPLACE_2026:dr_005_market_safety
+  terms:
+  - Market safety
+  - NIL marketplace
+  - fraud prevention
+  - fraud-prevention
+  - market design
+  - market royalties
+  - market-design
+  - name image likeness
+  - requirement
+  - royalty payments
+  - royalty safety
+  - royalty-safety
+  - safety
+  - secondary market royalties
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dp_001_plausible_events
+  terms:
+  - NFT collectibles
+  - NIL marketplace
+  - Plausible events
+  - design principle
+  - design-principle
+  - digital collectibles
+  - inclusion
+  - market royalties
+  - name image likeness
+  - plausible events
+  - plausible-events
+  - primary market
+  - primary market packs
+  - primary-market
+  - random packs
+  - randomization
+  - randomized minting
+  - royalty payments
+  - secondary market royalties
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:dp_002_market_royalties
+  terms:
+  - Market royalties
+  - NFT collectibles
+  - design principle
+  - design-principle
+  - digital collectibles
+  - market forces
+  - market royalties
+  - market-forces
+  - meritocracy
+  - royalties
+  - royalty payments
+  - secondary market
+  - secondary market royalties
+  - secondary-market
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:dp_003_blockchain_based_marketplace
+  terms:
+  - Blockchain-based marketplace
+  - NIL marketplace
+  - blockchain marketplace
+  - blockchain-marketplace
+  - design principle
+  - design-principle
+  - market design
+  - market royalties
+  - market-design
+  - name image likeness
+  - royalty payments
+  - secondary market royalties
+  - smart contract
+  - smart-contract
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_001_random_minting
+  terms:
+  - NFT
+  - NFT collectibles
+  - Random minting
+  - design feature
+  - design-feature
+  - digital collectibles
+  - market royalties
+  - primary market
+  - primary market packs
+  - primary-market
+  - random minting
+  - random packs
+  - random-minting
+  - randomized minting
+  - royalty
+  - royalty payments
+  - secondary market royalties
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_002_market_exchanges
+  terms:
+  - Market exchanges
+  - NFT collectibles
+  - NFT trading
+  - NFT-trading
+  - design feature
+  - design-feature
+  - digital collectibles
+  - market exchange
+  - market royalties
+  - market-exchange
+  - royalty
+  - royalty payments
+  - secondary market
+  - secondary market royalties
+  - secondary-market
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_003_nft_collectibles
+  terms:
+  - NFT
+  - NFT collectibles
+  - NFT collectibles representing student-athlete NIL
+  - NIL
+  - NIL marketplace
+  - collectible
+  - digital asset
+  - digital collectibles
+  - digital-asset
+  - market royalties
+  - name image likeness
+  - royalty payments
+  - secondary market royalties
+  - student athlete
+  - student athlete NIL
+  - student-athlete
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_004_smart_contract_royalty_distribution
+  terms:
+  - NFT collectibles
+  - Smart-contract royalty distribution
+  - automation
+  - digital collectibles
+  - market royalties
+  - payment
+  - royalty
+  - royalty payments
+  - secondary market royalties
+  - smart contract
+  - smart-contract
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_005_wallet_based_fan_transactions
+  terms:
+  - NFT collectibles
+  - Wallet-based fan transactions
+  - digital collectibles
+  - fan transaction
+  - fan-transaction
+  - ownership
+  - signature
+  - tokenized collectibles
+  - wallet
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_006_public_blockchain_nft_marketplace
+  terms:
+  - Ethereum
+  - NFT collectibles
+  - Public blockchain NFT marketplace infrastructure
+  - digital collectibles
+  - marketplace
+  - ownership
+  - public blockchain
+  - public-blockchain
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_007_dapp_marketplace_ui
+  terms:
+  - DApp
+  - NFT collectibles
+  - Student-athletes collectibles DApp interface
+  - collectibles
+  - digital collectibles
+  - marketplace ui
+  - marketplace-ui
+  - tokenized collectibles
+  - wallet connect
+  - wallet-connect
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_008_exchange_transaction_protocol
+  terms:
+  - NFT collectibles
+  - NFT trade
+  - NFT-trade
+  - Two-party exchange transaction protocol
+  - digital collectibles
+  - exchange protocol
+  - exchange-protocol
+  - secondary market
+  - secondary-market
+  - tokenized collectibles
+  - transaction id
+  - transaction-id
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_009_mutable_minting_probabilities_and_royalty_rates
+  terms:
+  - Mutable minting probabilities and royalty rates
+  - artifact mutability
+  - artifact-mutability
+  - market royalties
+  - probability
+  - royalty payments
+  - royalty rate
+  - royalty-rate
+  - secondary market royalties
+  - smart contract
+  - smart-contract
+- concept_id: NIL_NFT_MARKETPLACE_2026:df_010_anti_side_payment_and_wash_trade_controls
+  terms:
+  - Anti-side-payment and wash-trade controls
+  - anti gaming
+  - anti-gaming
+  - artifact mutability
+  - artifact-mutability
+  - floor price
+  - floor-price
+  - wash trade filter
+  - wash-trade-filter
+- concept_id: NIL_NFT_MARKETPLACE_2026:art_001_fair_inclusive_nil_nft_marketplace
+  terms:
+  - Fair and inclusive NIL NFT marketplace
+  - NFT collectibles
+  - NFT marketplace
+  - NFT-marketplace
+  - NIL marketplace
+  - NIL-marketplace
+  - artifact
+  - digital collectibles
+  - market royalties
+  - name image likeness
+  - primary market packs
+  - random packs
+  - randomized minting
+  - royalties
+  - royalty payments
+  - secondary market royalties
+  - student athlete NIL
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:art_002_student_athlete_collectibles_dapp
+  terms:
+  - DApp
+  - NFT collectibles
+  - Student-Athletes Collectibles DApp
+  - artifact
+  - digital collectibles
+  - prototype
+  - student athlete collectibles
+  - student-athlete-collectibles
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:art_003_primary_random_pack_market
+  terms:
+  - NFT collectibles
+  - Primary random-pack market
+  - artifact pattern
+  - artifact-pattern
+  - digital collectibles
+  - market royalties
+  - minting
+  - primary market
+  - primary market packs
+  - primary-market
+  - random pack
+  - random packs
+  - random-pack
+  - randomized minting
+  - royalty payments
+  - secondary market royalties
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:art_004_secondary_exchange_market
+  terms:
+  - NFT collectibles
+  - Secondary collectible exchange market
+  - artifact pattern
+  - artifact-pattern
+  - digital collectibles
+  - exchange
+  - market royalties
+  - royalties
+  - royalty payments
+  - secondary market
+  - secondary market royalties
+  - secondary-market
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:eval_001_problem_validation_interviews
+  terms:
+  - NIL marketplace
+  - Problem-validation interviews with student-athletes
+  - evaluation
+  - interviews
+  - name image likeness
+  - problem validation
+  - problem-validation
+  - student athlete NIL
+  - student athletes
+  - student-athletes
+- concept_id: NIL_NFT_MARKETPLACE_2026:eval_002_artifact_functionality_against_requirements
+  terms:
+  - Artifact functionality evaluation against design requirements
+  - evaluation
+  - informed argument
+  - informed-argument
+  - requirements fit
+  - requirements-fit
+- concept_id: NIL_NFT_MARKETPLACE_2026:eval_003_student_athlete_interview_evaluation
+  terms:
+  - NIL marketplace
+  - Student-athlete evaluation of artifact inclusiveness and meritocracy
+  - artifact evaluation
+  - artifact-evaluation
+  - evaluation
+  - market royalties
+  - name image likeness
+  - primary market packs
+  - qualitative
+  - random packs
+  - randomized minting
+  - royalty payments
+  - secondary market royalties
+  - student athlete NIL
+  - student athletes
+  - student-athletes
+- concept_id: NIL_NFT_MARKETPLACE_2026:eval_004_informed_argument_market_conditions
+  terms:
+  - Informed-argument evaluation of market thickness, congestion, and safety
+  - Roth
+  - evaluation
+  - informed argument
+  - informed-argument
+  - market design
+  - market-design
+  - primary market packs
+  - random packs
+  - randomized minting
+- concept_id: NIL_NFT_MARKETPLACE_2026:ok_001_inclusive_meritocratic_fairness_criterion
+  terms:
+  - Inclusive-meritocratic fairness criterion
+  - NIL marketplace
+  - fairness
+  - inclusiveness
+  - meritocracy
+  - name image likeness
+  - output knowledge
+  - output-knowledge
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:ok_002_nil_design_theory
+  terms:
+  - Design theory for fair and inclusive market-based NIL systems
+  - NIL
+  - NIL marketplace
+  - design theory
+  - design-theory
+  - market based IS
+  - market-based-IS
+  - name image likeness
+  - output knowledge
+  - output-knowledge
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:ok_003_random_primary_and_deterministic_secondary_market_pattern
+  terms:
+  - Random-primary plus deterministic-secondary royalty pattern
+  - design pattern
+  - design-pattern
+  - market royalties
+  - output knowledge
+  - output-knowledge
+  - primary market packs
+  - random minting
+  - random packs
+  - random-minting
+  - randomized minting
+  - royalty payments
+  - secondary market royalties
+  - secondary-market-royalties
+- concept_id: NIL_NFT_MARKETPLACE_2026:ok_004_blockchain_marketplace_for_fair_inclusive_resource_distribution
+  terms:
+  - Blockchain marketplace for fair and inclusive resource distribution
+  - NFT collectibles
+  - blockchain marketplace
+  - blockchain-marketplace
+  - digital collectibles
+  - output knowledge
+  - output-knowledge
+  - resource distribution
+  - resource-distribution
+  - social good
+  - social-good
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:kt_001_aristotle_equality_principle
+  terms:
+  - Aristotle
+  - Aristotle’s proportional equality principle
+  - NIL marketplace
+  - fairness
+  - kernel theory
+  - kernel-theory
+  - name image likeness
+  - proportional equality
+  - proportional-equality
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:kt_002_roth_market_design
+  terms:
+  - NIL marketplace
+  - Roth
+  - Roth’s market-design conditions
+  - congestion
+  - kernel theory
+  - kernel-theory
+  - market design
+  - market-design
+  - name image likeness
+  - safety
+  - student athlete NIL
+  - thickness
+- concept_id: NIL_NFT_MARKETPLACE_2026:kt_003_distributive_justice_and_fair_division
+  terms:
+  - Distributive justice and fair-division concepts
+  - cake cutting
+  - cake-cutting
+  - distributive justice
+  - distributive-justice
+  - fair division
+  - fair-division
+  - kernel theory
+  - kernel-theory
+- concept_id: NIL_NFT_MARKETPLACE_2026:kt_004_possibility_effect
+  terms:
+  - NFT collectibles
+  - Possibility effect under uncertainty
+  - behavioral economics
+  - behavioral-economics
+  - digital collectibles
+  - kernel theory
+  - kernel-theory
+  - possibility effect
+  - possibility-effect
+  - primary market packs
+  - random packs
+  - randomization
+  - randomized minting
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:kt_005_design_science_methodology
+  terms:
+  - DSR
+  - NIL marketplace
+  - Peffers
+  - Peffers et al. design science research methodology
+  - design science
+  - design-science
+  - kernel theory
+  - kernel-theory
+  - name image likeness
+  - student athlete NIL
+- concept_id: NIL_NFT_MARKETPLACE_2026:lim_001_requires_players_and_fan_demand
+  terms:
+  - 'Boundary condition: requires players and fan demand'
+  - NFT collectibles
+  - boundary condition
+  - boundary-condition
+  - digital collectibles
+  - fan demand
+  - fan-demand
+  - limitation
+  - players
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:lim_002_technology_adoption_trust_and_usability
+  terms:
+  - Blockchain/NFT adoption, trust, and usability barriers
+  - NFT collectibles
+  - NFT literacy
+  - NFT-literacy
+  - NIL marketplace
+  - adoption
+  - digital collectibles
+  - limitation
+  - name image likeness
+  - student athlete NIL
+  - tokenized collectibles
+  - trust
+  - usability
+- concept_id: NIL_NFT_MARKETPLACE_2026:lim_003_community_and_stakeholder_participation_needed
+  terms:
+  - NFT collectibles
+  - Need for fan community and institutional stakeholder participation
+  - authenticity
+  - community
+  - digital collectibles
+  - fan engagement
+  - fan-engagement
+  - limitation
+  - stakeholders
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:lim_004_privacy_regulatory_and_speculation_risks
+  terms:
+  - NFT collectibles
+  - NIL marketplace
+  - Privacy, regulatory, speculation, and exploitation risks
+  - digital collectibles
+  - governance
+  - limitation
+  - name image likeness
+  - privacy
+  - regulation
+  - speculation
+  - student athlete NIL
+  - tokenized collectibles
+- concept_id: NIL_NFT_MARKETPLACE_2026:lim_005_qualitative_evaluation_only
+  terms:
+  - Need for quantitative and behavioral validation
+  - evaluation
+  - limitation
+  - quantitative validation
+  - quantitative-validation
+  - simulation

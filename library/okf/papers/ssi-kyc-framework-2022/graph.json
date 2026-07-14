@@ -1,0 +1,892 @@
+{
+  "paper_id": "SSI_KYC_FRAMEWORK_2022",
+  "title": "Core DSR flow: SSI-based eKYC framework",
+  "recommended_main_flow": [
+    "prob_001_costly_inefficient_privacy_sensitive_kyc",
+    "dr_004_trust_in_reusable_kyc_documents",
+    "dp_005_reuse_verifiable_kyc_credentials",
+    "df_003_verifiable_credentials_and_presentations",
+    "art_003_fast_onboarding_process",
+    "eval_002_framework_criteria_based_evaluation",
+    "ok_003_fast_onboarding_pattern_for_reusable_credentials"
+  ],
+  "nodes": [
+    {
+      "id": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "label": "Costly, inefficient, repetitive, privacy-sensitive KYC processes",
+      "type": "Problem"
+    },
+    {
+      "id": "prob_002_centralized_ekyc_data_silos_and_market_power",
+      "label": "Centralized eKYC utilities create data-silo, surveillance, and market-power risks",
+      "type": "Problem"
+    },
+    {
+      "id": "prob_003_blockchain_transparency_vs_personal_data_privacy",
+      "label": "Blockchain transparency conflicts with personal-data privacy in eKYC",
+      "type": "Problem"
+    },
+    {
+      "id": "rq_001_design_ssi_based_ekyc_framework",
+      "label": "How can blockchain-based SSI support the complete digital KYC process?",
+      "type": "ResearchQuestion"
+    },
+    {
+      "id": "rq_002_derive_design_principles_for_blockchain_based_ssi",
+      "label": "What generic design principles guide blockchain-based SSI systems?",
+      "type": "ResearchQuestion"
+    },
+    {
+      "id": "dr_001_efficiency",
+      "label": "Improve eKYC process efficiency",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dr_002_regulatory_compliance",
+      "label": "Maintain regulatory compliance",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dr_003_decentralization",
+      "label": "Avoid central customer-data storage and lock-in",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dr_004_trust_in_reusable_kyc_documents",
+      "label": "Establish trust in reusable KYC documents",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dr_005_privacy",
+      "label": "Preserve privacy and data minimization",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dr_006_user_experience",
+      "label": "Provide usable customer experience and recovery support",
+      "type": "DesignRequirement"
+    },
+    {
+      "id": "dp_001_use_blockchain_only_for_public_data",
+      "label": "Utilize blockchain only for public data",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "dp_002_anticipate_ecosystem_of_various_ledgers",
+      "label": "Anticipate an ecosystem of various ledgers",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "dp_003_enable_decentralization_at_the_edge",
+      "label": "Enable decentralization at the edge",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "dp_004_customer_centered_ssi_control",
+      "label": "Place the customer at the center of identity data control",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "dp_005_reuse_verifiable_kyc_credentials",
+      "label": "Enable reuse of verifiable KYC results",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "dp_006_bilateral_secure_disclosure",
+      "label": "Use bilateral secure disclosure rather than shared raw-data repositories",
+      "type": "DesignPrinciple"
+    },
+    {
+      "id": "df_001_dids_and_did_documents",
+      "label": "DIDs and DID documents",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_002_user_agents_and_digital_wallets",
+      "label": "User agents and digital wallets",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_003_verifiable_credentials_and_presentations",
+      "label": "Verifiable credentials and verifiable presentations",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_004_pairwise_dids_for_customer_bank_relationships",
+      "label": "Pairwise DIDs for customer-bank relationships",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_005_revocation_registries",
+      "label": "Privacy-preserving revocation registries",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_006_credential_schemas_and_definitions",
+      "label": "Credential schemas and definitions",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_007_qualified_electronic_certificates_and_eidas_bridge",
+      "label": "Qualified electronic certificates and eIDAS bridge",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_008_public_data_registry_on_ledger",
+      "label": "Public SSI registry on distributed ledger",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_009_secure_connection_protocol",
+      "label": "Secure pairwise connection protocol",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_010_proof_request_and_non_revocation_proof",
+      "label": "Proof requests with non-revocation checks",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_011_kyc_interface_name_screening_risk_engine",
+      "label": "KYC interface, name screening, and risk engine integration",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_012_ongoing_monitoring_via_secure_channel",
+      "label": "Ongoing monitoring through secure proof refresh",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_013_local_bank_records_with_privacy_options",
+      "label": "Local bank records with privacy-preserving documentation options",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_014_backup_recovery_and_support",
+      "label": "Backup, recovery, and support for SSI wallets",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "df_015_universal_resolvers_and_cross_ledger_interoperability",
+      "label": "Universal resolvers and cross-ledger interoperability",
+      "type": "DesignFeature"
+    },
+    {
+      "id": "art_001_ssi_based_ekyc_framework",
+      "label": "SSI-based eKYC framework",
+      "type": "Artifact"
+    },
+    {
+      "id": "art_002_completely_new_onboarding_process",
+      "label": "Completely new onboarding process",
+      "type": "Artifact"
+    },
+    {
+      "id": "art_003_fast_onboarding_process",
+      "label": "Fast onboarding process",
+      "type": "Artifact"
+    },
+    {
+      "id": "art_004_new_to_kyc_hybrid_onboarding_process",
+      "label": "New-to-KYC hybrid onboarding process",
+      "type": "Artifact"
+    },
+    {
+      "id": "art_005_ssi_kyc_architecture_model",
+      "label": "SSI-based KYC architecture model",
+      "type": "Artifact"
+    },
+    {
+      "id": "eval_001_design_objectives_formative_interviews",
+      "label": "Formative expert evaluation of design objectives",
+      "type": "Evaluation"
+    },
+    {
+      "id": "eval_002_framework_criteria_based_evaluation",
+      "label": "Criteria-based expert evaluation of the SSI-based eKYC framework",
+      "type": "Evaluation"
+    },
+    {
+      "id": "eval_003_regulatory_privacy_fit_assessment",
+      "label": "Regulatory and privacy fit assessment",
+      "type": "Evaluation"
+    },
+    {
+      "id": "eval_004_practical_feasibility_and_utility_assessment",
+      "label": "Practical feasibility and utility assessment",
+      "type": "Evaluation"
+    },
+    {
+      "id": "ok_001_blockchain_role_in_ssi_should_be_restrictive",
+      "label": "Blockchain\u2019s role in SSI should be restrictive and public-data-oriented",
+      "type": "OutputKnowledge"
+    },
+    {
+      "id": "ok_002_ssi_can_decouple_identity_reuse_from_centralized_identity_providers",
+      "label": "SSI enables reusable identity without centralized identity providers",
+      "type": "OutputKnowledge"
+    },
+    {
+      "id": "ok_003_fast_onboarding_pattern_for_reusable_credentials",
+      "label": "Fast onboarding pattern for reusable KYC credentials",
+      "type": "OutputKnowledge"
+    },
+    {
+      "id": "ok_004_bilateral_vp_exchange_as_privacy_pattern",
+      "label": "Bilateral verifiable presentation exchange as a privacy pattern",
+      "type": "OutputKnowledge"
+    },
+    {
+      "id": "ok_005_multi_ledger_ssi_interoperability_challenge",
+      "label": "SSI interoperability requires standards and cross-ledger governance",
+      "type": "OutputKnowledge"
+    },
+    {
+      "id": "kt_001_peffers_dsrm",
+      "label": "Peffers et al. design science research methodology",
+      "type": "KernelTheory"
+    },
+    {
+      "id": "kt_002_self_sovereign_identity",
+      "label": "Self-sovereign identity",
+      "type": "KernelTheory"
+    },
+    {
+      "id": "kt_003_verifiable_credentials_and_dids_standards",
+      "label": "DID and verifiable credential standards",
+      "type": "KernelTheory"
+    },
+    {
+      "id": "kt_004_gdpr_and_eidas_regulatory_context",
+      "label": "GDPR, AML/KYC, and eIDAS regulatory context",
+      "type": "KernelTheory"
+    },
+    {
+      "id": "kt_005_blockchain_as_neutral_cross_organizational_infrastructure",
+      "label": "Blockchain as neutral cross-organizational infrastructure",
+      "type": "KernelTheory"
+    },
+    {
+      "id": "lim_001_governance_and_adoption_challenges",
+      "label": "Governance and adoption challenges remain unresolved",
+      "type": "Limitation"
+    },
+    {
+      "id": "lim_002_no_real_world_deployment_yet",
+      "label": "No real-world deployment evaluation yet",
+      "type": "Limitation"
+    },
+    {
+      "id": "lim_003_regulatory_interpretation_uncertainty",
+      "label": "Regulatory interpretation uncertainty",
+      "type": "Limitation"
+    },
+    {
+      "id": "lim_004_wallet_usability_and_recovery_risk",
+      "label": "Wallet usability and recovery risk",
+      "type": "Limitation"
+    },
+    {
+      "id": "lim_005_interbank_trust_and_standard_acceptance",
+      "label": "Interbank trust and credential acceptance require governance",
+      "type": "Limitation"
+    }
+  ],
+  "edges": [
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "motivates",
+      "target": "rq_001_design_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "motivates",
+      "target": "rq_002_derive_design_principles_for_blockchain_based_ssi"
+    },
+    {
+      "source": "prob_002_centralized_ekyc_data_silos_and_market_power",
+      "predicate": "motivates",
+      "target": "rq_001_design_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "prob_003_blockchain_transparency_vs_personal_data_privacy",
+      "predicate": "motivates",
+      "target": "rq_002_derive_design_principles_for_blockchain_based_ssi"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_001_efficiency"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_001_efficiency"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_002_regulatory_compliance"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_002_regulatory_compliance"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_003_decentralization"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_003_decentralization"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_004_trust_in_reusable_kyc_documents"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_004_trust_in_reusable_kyc_documents"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_005_privacy"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_005_privacy"
+    },
+    {
+      "source": "prob_001_costly_inefficient_privacy_sensitive_kyc",
+      "predicate": "requires",
+      "target": "dr_006_user_experience"
+    },
+    {
+      "source": "rq_001_design_ssi_based_ekyc_framework",
+      "predicate": "requires",
+      "target": "dr_006_user_experience"
+    },
+    {
+      "source": "prob_002_centralized_ekyc_data_silos_and_market_power",
+      "predicate": "requires",
+      "target": "dr_003_decentralization"
+    },
+    {
+      "source": "prob_002_centralized_ekyc_data_silos_and_market_power",
+      "predicate": "requires",
+      "target": "dr_005_privacy"
+    },
+    {
+      "source": "prob_003_blockchain_transparency_vs_personal_data_privacy",
+      "predicate": "requires",
+      "target": "dr_002_regulatory_compliance"
+    },
+    {
+      "source": "prob_003_blockchain_transparency_vs_personal_data_privacy",
+      "predicate": "requires",
+      "target": "dr_005_privacy"
+    },
+    {
+      "source": "dr_002_regulatory_compliance",
+      "predicate": "addressed_by",
+      "target": "dp_001_use_blockchain_only_for_public_data"
+    },
+    {
+      "source": "dr_003_decentralization",
+      "predicate": "addressed_by",
+      "target": "dp_001_use_blockchain_only_for_public_data"
+    },
+    {
+      "source": "dr_005_privacy",
+      "predicate": "addressed_by",
+      "target": "dp_001_use_blockchain_only_for_public_data"
+    },
+    {
+      "source": "dr_001_efficiency",
+      "predicate": "addressed_by",
+      "target": "dp_005_reuse_verifiable_kyc_credentials"
+    },
+    {
+      "source": "dr_004_trust_in_reusable_kyc_documents",
+      "predicate": "addressed_by",
+      "target": "dp_005_reuse_verifiable_kyc_credentials"
+    },
+    {
+      "source": "dr_003_decentralization",
+      "predicate": "addressed_by",
+      "target": "dp_003_enable_decentralization_at_the_edge"
+    },
+    {
+      "source": "dr_006_user_experience",
+      "predicate": "addressed_by",
+      "target": "dp_003_enable_decentralization_at_the_edge"
+    },
+    {
+      "source": "dr_001_efficiency",
+      "predicate": "addressed_by",
+      "target": "dp_002_anticipate_ecosystem_of_various_ledgers"
+    },
+    {
+      "source": "dr_004_trust_in_reusable_kyc_documents",
+      "predicate": "addressed_by",
+      "target": "dp_002_anticipate_ecosystem_of_various_ledgers"
+    },
+    {
+      "source": "dr_004_trust_in_reusable_kyc_documents",
+      "predicate": "addressed_by",
+      "target": "dp_006_bilateral_secure_disclosure"
+    },
+    {
+      "source": "dr_005_privacy",
+      "predicate": "addressed_by",
+      "target": "dp_006_bilateral_secure_disclosure"
+    },
+    {
+      "source": "dr_003_decentralization",
+      "predicate": "addressed_by",
+      "target": "dp_004_customer_centered_ssi_control"
+    },
+    {
+      "source": "dr_005_privacy",
+      "predicate": "addressed_by",
+      "target": "dp_004_customer_centered_ssi_control"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "instantiated_by",
+      "target": "df_008_public_data_registry_on_ledger"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "instantiated_by",
+      "target": "df_005_revocation_registries"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "instantiated_by",
+      "target": "df_006_credential_schemas_and_definitions"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "instantiated_by",
+      "target": "df_001_dids_and_did_documents"
+    },
+    {
+      "source": "dp_002_anticipate_ecosystem_of_various_ledgers",
+      "predicate": "instantiated_by",
+      "target": "df_015_universal_resolvers_and_cross_ledger_interoperability"
+    },
+    {
+      "source": "dp_002_anticipate_ecosystem_of_various_ledgers",
+      "predicate": "instantiated_by",
+      "target": "df_001_dids_and_did_documents"
+    },
+    {
+      "source": "dp_002_anticipate_ecosystem_of_various_ledgers",
+      "predicate": "instantiated_by",
+      "target": "df_006_credential_schemas_and_definitions"
+    },
+    {
+      "source": "dp_003_enable_decentralization_at_the_edge",
+      "predicate": "instantiated_by",
+      "target": "df_002_user_agents_and_digital_wallets"
+    },
+    {
+      "source": "dp_003_enable_decentralization_at_the_edge",
+      "predicate": "instantiated_by",
+      "target": "df_014_backup_recovery_and_support"
+    },
+    {
+      "source": "dp_003_enable_decentralization_at_the_edge",
+      "predicate": "instantiated_by",
+      "target": "df_004_pairwise_dids_for_customer_bank_relationships"
+    },
+    {
+      "source": "dp_004_customer_centered_ssi_control",
+      "predicate": "instantiated_by",
+      "target": "df_002_user_agents_and_digital_wallets"
+    },
+    {
+      "source": "dp_004_customer_centered_ssi_control",
+      "predicate": "instantiated_by",
+      "target": "df_003_verifiable_credentials_and_presentations"
+    },
+    {
+      "source": "dp_004_customer_centered_ssi_control",
+      "predicate": "instantiated_by",
+      "target": "df_004_pairwise_dids_for_customer_bank_relationships"
+    },
+    {
+      "source": "dp_005_reuse_verifiable_kyc_credentials",
+      "predicate": "instantiated_by",
+      "target": "df_003_verifiable_credentials_and_presentations"
+    },
+    {
+      "source": "dp_005_reuse_verifiable_kyc_credentials",
+      "predicate": "instantiated_by",
+      "target": "df_005_revocation_registries"
+    },
+    {
+      "source": "dp_005_reuse_verifiable_kyc_credentials",
+      "predicate": "instantiated_by",
+      "target": "df_010_proof_request_and_non_revocation_proof"
+    },
+    {
+      "source": "dp_005_reuse_verifiable_kyc_credentials",
+      "predicate": "instantiated_by",
+      "target": "df_006_credential_schemas_and_definitions"
+    },
+    {
+      "source": "dp_006_bilateral_secure_disclosure",
+      "predicate": "instantiated_by",
+      "target": "df_004_pairwise_dids_for_customer_bank_relationships"
+    },
+    {
+      "source": "dp_006_bilateral_secure_disclosure",
+      "predicate": "instantiated_by",
+      "target": "df_009_secure_connection_protocol"
+    },
+    {
+      "source": "dp_006_bilateral_secure_disclosure",
+      "predicate": "instantiated_by",
+      "target": "df_010_proof_request_and_non_revocation_proof"
+    },
+    {
+      "source": "dp_006_bilateral_secure_disclosure",
+      "predicate": "instantiated_by",
+      "target": "df_003_verifiable_credentials_and_presentations"
+    },
+    {
+      "source": "df_001_dids_and_did_documents",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_002_user_agents_and_digital_wallets",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_005_revocation_registries",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_006_credential_schemas_and_definitions",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_008_public_data_registry_on_ledger",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_011_kyc_interface_name_screening_risk_engine",
+      "predicate": "implements",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "df_001_dids_and_did_documents",
+      "predicate": "implements",
+      "target": "art_002_completely_new_onboarding_process"
+    },
+    {
+      "source": "df_002_user_agents_and_digital_wallets",
+      "predicate": "implements",
+      "target": "art_002_completely_new_onboarding_process"
+    },
+    {
+      "source": "df_007_qualified_electronic_certificates_and_eidas_bridge",
+      "predicate": "implements",
+      "target": "art_002_completely_new_onboarding_process"
+    },
+    {
+      "source": "df_009_secure_connection_protocol",
+      "predicate": "implements",
+      "target": "art_002_completely_new_onboarding_process"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "implements",
+      "target": "art_002_completely_new_onboarding_process"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "implements",
+      "target": "art_003_fast_onboarding_process"
+    },
+    {
+      "source": "df_004_pairwise_dids_for_customer_bank_relationships",
+      "predicate": "implements",
+      "target": "art_003_fast_onboarding_process"
+    },
+    {
+      "source": "df_005_revocation_registries",
+      "predicate": "implements",
+      "target": "art_003_fast_onboarding_process"
+    },
+    {
+      "source": "df_010_proof_request_and_non_revocation_proof",
+      "predicate": "implements",
+      "target": "art_003_fast_onboarding_process"
+    },
+    {
+      "source": "df_011_kyc_interface_name_screening_risk_engine",
+      "predicate": "implements",
+      "target": "art_003_fast_onboarding_process"
+    },
+    {
+      "source": "df_001_dids_and_did_documents",
+      "predicate": "implements",
+      "target": "art_005_ssi_kyc_architecture_model"
+    },
+    {
+      "source": "df_002_user_agents_and_digital_wallets",
+      "predicate": "implements",
+      "target": "art_005_ssi_kyc_architecture_model"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "implements",
+      "target": "art_005_ssi_kyc_architecture_model"
+    },
+    {
+      "source": "df_008_public_data_registry_on_ledger",
+      "predicate": "implements",
+      "target": "art_005_ssi_kyc_architecture_model"
+    },
+    {
+      "source": "df_011_kyc_interface_name_screening_risk_engine",
+      "predicate": "implements",
+      "target": "art_005_ssi_kyc_architecture_model"
+    },
+    {
+      "source": "art_002_completely_new_onboarding_process",
+      "predicate": "contributes_to",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "art_003_fast_onboarding_process",
+      "predicate": "contributes_to",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "art_004_new_to_kyc_hybrid_onboarding_process",
+      "predicate": "contributes_to",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "art_005_ssi_kyc_architecture_model",
+      "predicate": "contributes_to",
+      "target": "art_001_ssi_based_ekyc_framework"
+    },
+    {
+      "source": "art_001_ssi_based_ekyc_framework",
+      "predicate": "evaluated_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "art_002_completely_new_onboarding_process",
+      "predicate": "evaluated_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "art_003_fast_onboarding_process",
+      "predicate": "evaluated_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "art_005_ssi_kyc_architecture_model",
+      "predicate": "evaluated_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "dr_001_efficiency",
+      "predicate": "supported_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "dr_002_regulatory_compliance",
+      "predicate": "supported_by",
+      "target": "eval_003_regulatory_privacy_fit_assessment"
+    },
+    {
+      "source": "dr_003_decentralization",
+      "predicate": "supported_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "dr_004_trust_in_reusable_kyc_documents",
+      "predicate": "supported_by",
+      "target": "eval_002_framework_criteria_based_evaluation"
+    },
+    {
+      "source": "dr_005_privacy",
+      "predicate": "supported_by",
+      "target": "eval_003_regulatory_privacy_fit_assessment"
+    },
+    {
+      "source": "dr_006_user_experience",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    },
+    {
+      "source": "eval_002_framework_criteria_based_evaluation",
+      "predicate": "contributes_to",
+      "target": "ok_002_ssi_can_decouple_identity_reuse_from_centralized_identity_providers"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "contributes_to",
+      "target": "ok_001_blockchain_role_in_ssi_should_be_restrictive"
+    },
+    {
+      "source": "art_003_fast_onboarding_process",
+      "predicate": "contributes_to",
+      "target": "ok_003_fast_onboarding_pattern_for_reusable_credentials"
+    },
+    {
+      "source": "dp_006_bilateral_secure_disclosure",
+      "predicate": "contributes_to",
+      "target": "ok_004_bilateral_vp_exchange_as_privacy_pattern"
+    },
+    {
+      "source": "dp_002_anticipate_ecosystem_of_various_ledgers",
+      "predicate": "contributes_to",
+      "target": "ok_005_multi_ledger_ssi_interoperability_challenge"
+    },
+    {
+      "source": "dr_001_efficiency",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dr_002_regulatory_compliance",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dr_003_decentralization",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dr_004_trust_in_reusable_kyc_documents",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dr_005_privacy",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dr_006_user_experience",
+      "predicate": "derived_from",
+      "target": "kt_001_peffers_dsrm"
+    },
+    {
+      "source": "dp_004_customer_centered_ssi_control",
+      "predicate": "derived_from",
+      "target": "kt_002_self_sovereign_identity"
+    },
+    {
+      "source": "df_001_dids_and_did_documents",
+      "predicate": "derived_from",
+      "target": "kt_002_self_sovereign_identity"
+    },
+    {
+      "source": "df_002_user_agents_and_digital_wallets",
+      "predicate": "derived_from",
+      "target": "kt_002_self_sovereign_identity"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "derived_from",
+      "target": "kt_002_self_sovereign_identity"
+    },
+    {
+      "source": "df_001_dids_and_did_documents",
+      "predicate": "derived_from",
+      "target": "kt_003_verifiable_credentials_and_dids_standards"
+    },
+    {
+      "source": "df_003_verifiable_credentials_and_presentations",
+      "predicate": "derived_from",
+      "target": "kt_003_verifiable_credentials_and_dids_standards"
+    },
+    {
+      "source": "df_006_credential_schemas_and_definitions",
+      "predicate": "derived_from",
+      "target": "kt_003_verifiable_credentials_and_dids_standards"
+    },
+    {
+      "source": "dr_002_regulatory_compliance",
+      "predicate": "derived_from",
+      "target": "kt_004_gdpr_and_eidas_regulatory_context"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "derived_from",
+      "target": "kt_004_gdpr_and_eidas_regulatory_context"
+    },
+    {
+      "source": "eval_003_regulatory_privacy_fit_assessment",
+      "predicate": "derived_from",
+      "target": "kt_004_gdpr_and_eidas_regulatory_context"
+    },
+    {
+      "source": "dp_001_use_blockchain_only_for_public_data",
+      "predicate": "derived_from",
+      "target": "kt_005_blockchain_as_neutral_cross_organizational_infrastructure"
+    },
+    {
+      "source": "df_008_public_data_registry_on_ledger",
+      "predicate": "derived_from",
+      "target": "kt_005_blockchain_as_neutral_cross_organizational_infrastructure"
+    },
+    {
+      "source": "art_001_ssi_based_ekyc_framework",
+      "predicate": "derived_from",
+      "target": "kt_005_blockchain_as_neutral_cross_organizational_infrastructure"
+    },
+    {
+      "source": "lim_001_governance_and_adoption_challenges",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    },
+    {
+      "source": "lim_002_no_real_world_deployment_yet",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    },
+    {
+      "source": "lim_003_regulatory_interpretation_uncertainty",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    },
+    {
+      "source": "lim_004_wallet_usability_and_recovery_risk",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    },
+    {
+      "source": "lim_005_interbank_trust_and_standard_acceptance",
+      "predicate": "supported_by",
+      "target": "eval_004_practical_feasibility_and_utility_assessment"
+    }
+  ]
+}
