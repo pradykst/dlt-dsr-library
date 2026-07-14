@@ -6,6 +6,8 @@ import { answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/cha
 import { validateAuthoritativeReuseAnswerPlan } from "../lib/okf/answer-plan-validator.ts";
 import { synthesizeWithOptionalLlm } from "../lib/okf/llm.ts";
 import { isProviderResponseReachable } from "../lib/llm/provider.ts";
+import { clearSuccessfulSynthesisCache } from "../lib/llm/runtime-policy.ts";
+import { compactPromptSize } from "../lib/llm/structured-synthesis.ts";
 import { buildMarkdownSynthesisContext } from "../lib/llm/groq.ts";
 import { synthesizeWithFeatherless } from "../lib/llm/featherless.ts";
 import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
@@ -168,6 +170,7 @@ test("paper-specific flow query uses only Blockchain IoT stored relations", asyn
   assert.equal(response.intent, "DSR_FLOW_QUERY");
   assert.deepEqual([...new Set(response.source_papers.map((paper) => paper.paper_id))], ["BLOCKCHAIN_IOT_SDPS_2019"]);
   assert.equal(response.flow_graph.mode, "stored_paper_flow");
+  assert.equal(response.flow_graph.stored_flow_source, "graph_json");
   assert.ok(response.flow_graph.edges.length > 0);
   assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored"));
   assert.equal(response.flow_graph.edges.some((edge) => edge.provenance === "query_generated"), false);
@@ -177,6 +180,16 @@ test("paper-specific flow query uses only Blockchain IoT stored relations", asyn
   assert.equal(response.answer.includes("Sensor data collection"), false);
   assert.equal(response.answer.includes("Blockchain transaction and data transmission"), false);
 });
+test("stored paper flow reports OKF-relations fallback when graph metadata is absent", async () => {
+  const kb = parseOkfLibrary(fixtureRoot);
+  const response = await answerOkfChat("Show the Requirement -> Principle -> Feature flow from Fixture Paper.", kb);
+  assert.equal(response.intent, "DSR_FLOW_QUERY");
+  assert.equal(response.flow_graph.mode, "stored_paper_flow");
+  assert.equal(response.flow_graph.stored_flow_source, "okf_relations_fallback");
+  assert.ok(response.flow_graph.edges.length > 0);
+  assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored" && edge.relation_id));
+});
+
 test("chatbot stored flow exactly matches the shared recommended-path projection", async () => {
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Show the Requirement -> Principle -> Feature flow from Blockchain for the IoT.", kb);
@@ -532,7 +545,12 @@ test("provider-neutral compact context contains only selected moves, source role
   assert.ok(context.selected_moves.every((move) => move.target_domain_adaptation.title === undefined));
   assert.ok(context.evidence_by_move.every((entry) => entry.evidence.every((evidence) => !Object.prototype.hasOwnProperty.call(evidence, "paper_title"))));
   const serialized = JSON.stringify(context);
-  assert.ok(serialized.length <= 24_000, `compact context was ${serialized.length} characters`);
+  const retainedEvidence = context.evidence_by_move.flatMap((entry) => entry.evidence);
+  assert.ok(compactPromptSize(context) <= 12_000, `compact prompt was ${compactPromptSize(context)} characters`);
+  assert.ok(retainedEvidence.length <= 15, `compact context retained ${retainedEvidence.length} evidence records`);
+  assert.ok(context.evidence_by_move.every((entry) => entry.evidence.length <= 3));
+  assert.ok(serialized.length < compactPromptSize(context));
+  assert.ok(serialized.length <= 12_000, `compact context was ${serialized.length} characters`);
   assert.equal(serialized.includes('"answer_plan"'), false);
   assert.equal(serialized.includes('"evidence_pack"'), false);
   assert.equal(serialized.includes('"flow_graph"'), false);
@@ -596,7 +614,7 @@ test("semantic rewording retrieves similar source papers without an exact query 
   assert.ok(overlap.length >= 3, `expected overlapping sources, got ${first.join(", ")} vs ${second.join(", ")}`);
 });
 
-test("fallback answer markdown is compact and does not expose raw evidence ids", async () => {
+test("design-reuse fallback is readable, grounded, complete, and has no source-title tail", async () => {
   const kb = parseOkfLibrary();
   const response = await synthesizeWithNoProvider(productIdentityQuery, kb);
   assert.equal(response.runtime?.synthesis_mode, "structured_okf_answer");
@@ -611,6 +629,21 @@ test("fallback answer markdown is compact and does not expose raw evidence ids",
   assert.match(response.answer, /compact|found|retrieved/i);
   assert.equal(/Requirement -> Principle -> Feature -> Artifact flow:\n\d+\. Requirement:/i.test(response.answer), false);
   for (const evidence of response.evidence.slice(0, 20)) assert.equal(response.answer.includes(evidence.evidence_id), false);
+  assertNoNakedPaperTitleTail(response);
+  assert.equal(/\bCombine\b/i.test(response.answer), false);
+  const evidenceLines = response.answer.split(/\r?\n/).filter((line) => line.startsWith("- **Evidence basis:**"));
+  assert.equal(evidenceLines.length, response.answer_payload?.design_moves.length);
+  for (const line of evidenceLines) {
+    assert.match(line, /[.!?]$/);
+    assert.equal(/\.\.\.|\u2026/.test(line), false);
+  }
+  const architecture = response.answer.match(/## Suggested architecture direction\s*\n([\s\S]*?)\n## What not to overclaim/)?.[1] ?? "";
+  const architectureBullets = architecture.split(/\r?\n/).filter((line) => line.startsWith("- "));
+  assert.ok(architectureBullets.length >= 4 && architectureBullets.length <= 6);
+  assert.ok(architectureBullets.every((line) => !/^-\s+(?:Combine|[^ ]+\.?$)/i.test(line)));
+  assert.equal(response.answer.includes("Source papers:"), false);
+  const finalAnswerLine = response.answer.trim().split(/\r?\n/).at(-1) ?? "";
+  assert.equal(isBarePaperTitleLine(finalAnswerLine, response.source_papers.map((paper) => paper.title)), false);
 });
 
 
@@ -630,11 +663,28 @@ test("OKF chat UI renders Markdown only in the default answer tab", () => {
   assert.ok(source.includes("response.llm_synthesis"));
   assert.ok(source.includes("MarkdownAnswer"));
   assert.ok(source.includes("Evidence details are available in the Evidence tab."));
+  assert.equal(source.includes("response.source_papers.slice(0, 4)"), false);
   assert.ok(source.includes("Copy answer"));
   assert.equal(source.includes("payload.direct_answer"), false);
   assert.equal(source.includes("DesignMoveCards"), false);
   assert.equal(source.includes("GuidanceCards response"), false);
   assert.equal(source.includes("<MiniFlow response"), false);
+});
+
+test("invalid provider schema has a clean main label while exact diagnostics remain in Debug", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "okf-chat", "OkfChatWorkspace.tsx"), "utf8");
+  const contract = readFileSync(path.join(process.cwd(), "lib", "llm", "structured-synthesis.ts"), "utf8");
+  const labelBlock = source.slice(source.indexOf("function providerStatusLabel"), source.indexOf("function providerStatusTone"));
+  const debugBlock = source.slice(source.indexOf("function DebugTrace"), source.indexOf("function SourcePapersPanel"));
+  assert.ok(labelBlock.includes('return "LLM validation fallback"'));
+  assert.ok(labelBlock.includes('return "LLM rate-limit fallback"'));
+  assert.ok(labelBlock.includes('return "LLM unavailable \\u00b7 structured OKF answer"'));
+  for (const rawDetail of ["http_status", "error_type", "schema_validation_failed", "fallback_reason"]) assert.equal(labelBlock.includes(rawDetail), false, rawDetail);
+  for (const diagnostic of ["providerStatus.provider", "providerStatus.http_status", "providerStatus.error_type", "providerStatus.fallback_reason", "provider_metadata: synthesis.provider_metadata", "debug: synthesis.debug"]) assert.ok(debugBlock.includes(diagnostic), diagnostic);
+  assert.ok(contract.includes('"schema_validation_failed"'));
+  assert.equal(source.includes("providerStatusText"), false);
+  assert.equal(source.includes("Groq 200 schema_validation_failed"), false);
+  assert.equal(source.includes("Gemini 200 schema_validation_failed"), false);
 });
 
 test("OKF chat initial UI is clean and hides tabs/context before the first answer", () => {
@@ -945,32 +995,194 @@ test("Gemini 503 UNAVAILABLE high demand is treated as transient fallback", asyn
   });
 });
 
-test("Gemini unavailable falls back to Groq when secondary provider is configured", async () => {
-  const kb = parseOkfLibrary();
-  const deterministic = await answerOkfChat(productIdentityQuery, kb);
-  const groqMarkdown = `# Recommendation
-Use Groq secondary synthesis after Gemini high demand, while keeping all claims grounded in the retrieved OKF context.
-
-## Design moves to reuse
-1. **What to build:** Secondary-provider grounded product data flow. **Reuse from OKF:** evidence-backed product identity and integrity controls. **Supporting papers:** And No One Gets the Short End of the Stick. **Evidence:** retrieved evidence supports privacy-preserving proof-of-integrity sharing. **Adaptation status:** mixed.
-
-## Suggested architecture direction
-Use the deterministic OKF plan and let Groq only rewrite it into concise Markdown.
-
-## What not to overclaim
-- Do not add new papers or mechanisms outside the retrieved OKF context.`;
-  void groqMarkdown;
+test("Gemini unavailable keeps the structured rate-limit fallback and does not retry a secondary provider", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
   await withMockedGeminiErrorThenGroq(503, { error: { message: "This model is currently experiencing high demand. Please try again later.", status: "UNAVAILABLE" } }, structuredSynthesisJson(deterministic, "Groq secondary synthesis passed validation after the primary provider was unavailable."), async (calls) => {
     const response = await synthesizeWithOptionalLlm(deterministic);
-    assert.equal(calls(), 2);
-    assert.equal(response.llm_synthesis?.synthesis_mode, "groq");
-    assert.equal(response.runtime?.provider, "groq");
+    assert.equal(calls(), 1);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_rate_limited");
+    assert.equal(response.runtime?.synthesis_mode, "fallback_rate_limited");
+    assert.equal(response.runtime?.provider, "gemini");
     assert.equal(response.runtime?.provider_connected, true);
-    assert.match(response.answer, /Groq secondary synthesis passed validation/i);
-    assert.match(response.warnings.join(" "), /Gemini primary provider failed; Groq secondary provider used/i);
-    assert.equal((response.llm_synthesis?.debug?.primary_provider_failure as { status?: number } | undefined)?.status, 503);
+    assert.equal(response.runtime?.provider_status?.outcome, "rate_limited");
+    assert.equal(response.answer, deterministic.answer);
   });
 });
+const plannerEligibleReuseQuery = "Need guidance for fragmented product identity, verification, and governance across marketplaces.";
+
+test("optional planner 429 and 503 consume the one-call budget and propagate rate-limit fallback", async () => {
+  for (const providerFailure of [
+    { status: 429, type: "RESOURCE_EXHAUSTED", message: "Quota exceeded" },
+    { status: 503, type: "UNAVAILABLE", message: "Model capacity unavailable" }
+  ]) {
+    await withGeminiEnv(async () => {
+      await withTemporaryEnv({ OKF_LLM_QUERY_PLANNER_LIVE_TEST: "true" }, async () => {
+        const previousFetch = globalThis.fetch;
+        let calls = 0;
+        globalThis.fetch = (async () => {
+          calls += 1;
+          if (calls > 1) throw new Error("planner failure must not trigger a synthesis request");
+          return new Response(JSON.stringify({
+            error: { message: providerFailure.message, status: providerFailure.type }
+          }), { status: providerFailure.status, headers: { "Content-Type": "application/json" } });
+        }) as typeof fetch;
+        try {
+          const deterministic = await answerOkfChat(plannerEligibleReuseQuery, parseOkfLibrary());
+          const plannerStatus = deterministic.answer_plan?.query_plan.planner_status;
+          assert.equal(plannerStatus?.outcome, "rate_limited");
+          assert.equal(plannerStatus?.http_status, providerFailure.status);
+          assert.equal(plannerStatus?.error_type, providerFailure.type);
+          assert.ok((plannerStatus?.prompt_tokens ?? 0) > 0);
+
+          const canonicalAnswer = deterministic.answer;
+          const response = await synthesizeWithOptionalLlm(deterministic);
+          assert.equal(calls, 1);
+          assert.equal(response.answer, canonicalAnswer);
+          assert.equal(response.runtime?.synthesis_mode, "fallback_rate_limited");
+          assert.equal(response.runtime?.synthesis_attempted, false);
+          assert.equal(response.runtime?.provider_status?.attempted, true);
+          assert.equal(response.runtime?.provider_status?.reachable, true);
+          assert.equal(response.runtime?.provider_status?.outcome, "rate_limited");
+          const debugPlanner = response.llm_synthesis?.debug?.planner_status as { outcome?: string } | undefined;
+          assert.equal(debugPlanner?.outcome, "rate_limited");
+          assert.equal(response.answer.includes(providerFailure.type), false);
+        } finally {
+          globalThis.fetch = previousFetch;
+        }
+      });
+    });
+  }
+});
+
+test("successful optional planner records usage and skips a second live synthesis call", async () => {
+  await withGeminiEnv(async () => {
+    await withTemporaryEnv({
+      OKF_LLM_QUERY_PLANNER_LIVE_TEST: "true",
+      LLM_INPUT_COST_PER_MILLION: "1",
+      LLM_OUTPUT_COST_PER_MILLION: "2"
+    }, async () => {
+      const previousFetch = globalThis.fetch;
+      let calls = 0;
+      globalThis.fetch = (async () => {
+        calls += 1;
+        if (calls > 1) throw new Error("successful planner must not trigger a synthesis request");
+        const candidate = { intent: "DESIGN_REUSE_QUERY", confidence: "medium", requested_output_shape: "design_recommendation" };
+        return new Response(JSON.stringify({
+          candidates: [{ content: { parts: [{ text: JSON.stringify(candidate) }] }, finishReason: "STOP" }],
+          usageMetadata: { promptTokenCount: 20, candidatesTokenCount: 10, totalTokenCount: 30 }
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }) as typeof fetch;
+      try {
+        const deterministic = await answerOkfChat(plannerEligibleReuseQuery, parseOkfLibrary());
+        const plannerStatus = deterministic.answer_plan?.query_plan.planner_status;
+        assert.equal(plannerStatus?.outcome, "success");
+        assert.equal(plannerStatus?.total_tokens, 30);
+        assert.equal(plannerStatus?.prompt_tokens_estimated, false);
+        assert.ok((plannerStatus?.estimated_cost_usd ?? 0) > 0);
+        const response = await synthesizeWithOptionalLlm(deterministic);
+        assert.equal(calls, 1);
+        assert.equal(response.answer, deterministic.answer);
+        assert.equal(response.runtime?.synthesis_mode, "structured_okf_answer");
+        assert.equal(response.runtime?.synthesis_attempted, false);
+        assert.equal(response.runtime?.provider_status?.outcome, "synthesis_skipped");
+        assert.equal(response.runtime?.provider_status?.attempted, true);
+        assert.equal(response.runtime?.provider_status?.reachable, true);
+      } finally {
+        globalThis.fetch = previousFetch;
+      }
+    });
+  });
+});
+
+test("prompt budget skips live synthesis before calling the provider", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  await withGroqEnv(async () => {
+    const previousFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => { calls += 1; throw new Error("provider must not be called"); }) as typeof fetch;
+    try {
+      await withTemporaryEnv({ LLM_MAX_PROMPT_CHARS: "1000" }, async () => {
+        const response = await synthesizeWithOptionalLlm(deterministic);
+        assert.equal(calls, 0);
+        assert.equal(response.runtime?.synthesis_mode, "structured_okf_answer");
+        assert.equal(response.runtime?.synthesis_attempted, false);
+        assert.match(response.runtime?.fallback_reason ?? "", /context_too_large|context policy/i);
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
+test("LLM_DISABLE_LIVE_SYNTHESIS skips a configured provider", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  await withGroqEnv(async () => {
+    const previousFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => { calls += 1; throw new Error("provider must not be called"); }) as typeof fetch;
+    try {
+      await withTemporaryEnv({ LLM_DISABLE_LIVE_SYNTHESIS: "true" }, async () => {
+        const response = await synthesizeWithOptionalLlm(deterministic);
+        assert.equal(calls, 0);
+        assert.equal(response.runtime?.synthesis_attempted, false);
+        assert.match(response.runtime?.fallback_reason ?? "", /LLM_DISABLE_LIVE_SYNTHESIS=true/);
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
+test("test runs skip live synthesis unless the explicit live-test flag is enabled", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  await withGroqEnv(async () => {
+    const previousFetch = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => { calls += 1; throw new Error("provider must not be called"); }) as typeof fetch;
+    try {
+      await withTemporaryEnv({ OKF_LLM_SYNTHESIS_LIVE_TEST: undefined, GROQ_LIVE_TEST: "false" }, async () => {
+        const response = await synthesizeWithOptionalLlm(deterministic);
+        assert.equal(calls, 0);
+        assert.equal(response.runtime?.synthesis_attempted, false);
+        assert.match(response.runtime?.fallback_reason ?? "", /disabled during tests unless explicitly enabled/i);
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
+test("successful synthesis cache prevents a duplicate provider request for the same canonical plan", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  await withMockedGroq(structuredSynthesisJson(deterministic), async (calls) => {
+    await withTemporaryEnv({ LLM_REQUEST_CACHE_TTL_MS: "86400000" }, async () => {
+      clearSuccessfulSynthesisCache();
+      const first = await synthesizeWithOptionalLlm(deterministic);
+      const second = await synthesizeWithOptionalLlm(deterministic);
+      assert.equal(calls(), 1);
+      assert.equal(first.llm_synthesis?.debug?.cache_hit, false);
+      assert.equal(second.llm_synthesis?.debug?.cache_hit, true);
+      assert.equal(second.llm_synthesis?.provider_metadata.cache_hit, true);
+      assert.equal(second.runtime?.synthesis_attempted, false);
+    });
+  });
+});
+
+test("schema-invalid provider output retains structured validation diagnostics only in Debug metadata", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  await withMockedGroq(JSON.stringify({ opening_recommendation: "Incomplete response" }), async (calls) => {
+    const response = await synthesizeWithOptionalLlm(deterministic);
+    assert.equal(calls(), 1);
+    assert.equal(response.llm_synthesis?.synthesis_mode, "fallback_validation_error");
+    assert.equal(response.runtime?.provider_error_type, "schema_validation_failed");
+    assert.equal(response.llm_synthesis?.provider_metadata.error_type, "schema_validation_failed");
+    const validationErrors = response.llm_synthesis?.debug?.validation_errors as Array<{ code: string; path: string; message: string }> | undefined;
+    assert.ok(validationErrors && validationErrors.length > 0);
+    assert.ok(validationErrors.every((error) => error.code && error.path && error.message));
+    assert.equal(response.answer, deterministic.answer);
+  });
+});
+
 test("deterministic stats query reports structured OKF answer with configured Groq and no live call", async () => {
   const kb = parseOkfLibrary();
   const deterministic = await answerOkfChat("How many papers are in the OKF library?", kb);
@@ -1093,6 +1305,15 @@ test("Flow tab renders a layered graph instead of row cards", () => {
   assert.ok(source.includes("FlowGraph JSON"));
   assert.equal(source.includes("Compact design move paths"), false);
   assert.equal(source.includes("slice(0, 7)"), false);
+  assert.ok(source.includes('data-layout-mode={flowWide ? "flow-wide" : "standard"}'));
+  assert.ok(source.includes("okf-chat-layout--flow-wide"));
+  assert.ok(source.includes("{response && !flowWide && ("));
+  assert.ok(source.includes("h-[650px]"));
+  assert.ok(source.includes("min-[1050px]:h-[720px]"));
+  assert.ok(source.includes('className="h-full w-full"'));
+  assert.ok(source.includes("fitViewOptions={{ padding: 0.16 }}"));
+  assert.ok(source.includes("w-full min-w-0"));
+  assert.equal(source.includes("h-[620px]"), false);
 });
 test("DB health and chat debug expose Supabase clock-skew fallback metadata", () => {
   const retrieval = readFileSync(path.join(process.cwd(), "lib", "okf", "retrieval.ts"), "utf8");
@@ -1131,7 +1352,8 @@ test("Gemini provider enforces compact structured synthesis and server rendering
   assert.ok(provider.includes("buildCompactSynthesisContext"));
   assert.ok(provider.includes("guardStructuredSynthesis"));
   assert.ok(provider.includes('responseMimeType: "application/json"'));
-  assert.ok(provider.includes("responseSchema: structuredSynthesisJsonSchema"));
+  assert.ok(provider.includes("responseSchema: geminiStructuredSynthesisResponseSchema"));
+  assert.ok(provider.includes("projectGeminiResponseSchema(structuredSynthesisJsonSchema)"));
   assert.equal(provider.includes("soovereign"), false);
   assert.ok(provider.includes("RESOURCE_EXHAUSTED"));
   assert.ok(contract.includes("structuredLlmSynthesisSchema"));
@@ -1140,9 +1362,55 @@ test("Gemini provider enforces compact structured synthesis and server rendering
   assert.ok(router.includes('configuredProvider === "gemini"'));
   assert.ok(selector.includes('"gemini"'));
   assert.equal(selector.includes('"featherless"'), false);
-  assert.ok(ui.includes("Gemini"));
+  assert.ok(ui.includes('return "LLM synthesis used"'));
+  assert.ok(ui.includes('return "LLM validation fallback"'));
+  assert.ok(ui.includes("provider_metadata: synthesis.provider_metadata"));
   assert.ok(ui.includes("response.answer"));
-  assert.ok(ui.includes("providerStatusText"));
+  assert.equal(ui.includes("providerStatusText"), false);
+});
+
+test("Gemini request schema projection removes unsupported additionalProperties recursively", async () => {
+  const deterministic = await answerOkfChat(productIdentityQuery, parseOkfLibrary());
+  const previousFetch = globalThis.fetch;
+  let requestBody: unknown;
+
+  await withGeminiEnv(async () => {
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      requestBody = JSON.parse(String(init?.body ?? "{}"));
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: structuredSynthesisJson(deterministic) }] }, finishReason: "STOP" }],
+        usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 8, totalTokenCount: 20 }
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const response = await synthesizeWithOptionalLlm(deterministic);
+      assert.equal(response.runtime?.synthesis_mode, "gemini");
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
+  assert.ok(requestBody && typeof requestBody === "object");
+  const generationConfig = (requestBody as {
+    generationConfig?: { responseSchema?: Record<string, unknown> };
+  }).generationConfig;
+  const schema = generationConfig?.responseSchema;
+  assert.ok(schema);
+  assert.equal(JSON.stringify(schema).includes('"additionalProperties"'), false);
+  assert.deepEqual(schema.required, [
+    "opening_recommendation",
+    "move_explanations",
+    "architecture_direction",
+    "limitations"
+  ]);
+
+  const properties = schema.properties as Record<string, Record<string, unknown>>;
+  const moveExplanations = properties.move_explanations;
+  assert.equal(moveExplanations.minItems, 1);
+  assert.equal(moveExplanations.maxItems, 7);
+  const moveItem = moveExplanations.items as Record<string, unknown>;
+  assert.deepEqual(moveItem.required, ["move_id", "what_to_build", "reuse_logic", "adaptation_boundary"]);
+  assert.ok(moveItem.properties && typeof moveItem.properties === "object");
 });
 
 
@@ -1462,6 +1730,9 @@ async function withGeminiEnv(fn: () => Promise<void>) {
   const previousGroqKey = process.env.GROQ_API_KEY;
   const previousGroqModel = process.env.GROQ_MODEL;
   const previousGroqDisable = process.env.GROQ_DISABLE_LIVE_SYNTHESIS;
+  const previousExplicitLiveTest = process.env.OKF_LLM_SYNTHESIS_LIVE_TEST;
+  const previousGlobalDisable = process.env.LLM_DISABLE_LIVE_SYNTHESIS;
+  const previousCacheTtl = process.env.LLM_REQUEST_CACHE_TTL_MS;
   process.env.LLM_PROVIDER = "gemini";
   process.env.CHAT_PROVIDER = "gemini";
   process.env.GEMINI_API_KEY = "test-gemini-key";
@@ -1472,6 +1743,10 @@ async function withGeminiEnv(fn: () => Promise<void>) {
   delete process.env.GROQ_API_KEY;
   delete process.env.GROQ_MODEL;
   process.env.GROQ_DISABLE_LIVE_SYNTHESIS = "false";
+  process.env.OKF_LLM_SYNTHESIS_LIVE_TEST = "true";
+  process.env.LLM_DISABLE_LIVE_SYNTHESIS = "false";
+  process.env.LLM_REQUEST_CACHE_TTL_MS = "0";
+  clearSuccessfulSynthesisCache();
   try {
     await fn();
   } finally {
@@ -1485,6 +1760,10 @@ async function withGeminiEnv(fn: () => Promise<void>) {
     if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousGroqKey;
     if (previousGroqModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousGroqModel;
     if (previousGroqDisable === undefined) delete process.env.GROQ_DISABLE_LIVE_SYNTHESIS; else process.env.GROQ_DISABLE_LIVE_SYNTHESIS = previousGroqDisable;
+    if (previousExplicitLiveTest === undefined) delete process.env.OKF_LLM_SYNTHESIS_LIVE_TEST; else process.env.OKF_LLM_SYNTHESIS_LIVE_TEST = previousExplicitLiveTest;
+    if (previousGlobalDisable === undefined) delete process.env.LLM_DISABLE_LIVE_SYNTHESIS; else process.env.LLM_DISABLE_LIVE_SYNTHESIS = previousGlobalDisable;
+    if (previousCacheTtl === undefined) delete process.env.LLM_REQUEST_CACHE_TTL_MS; else process.env.LLM_REQUEST_CACHE_TTL_MS = previousCacheTtl;
+    clearSuccessfulSynthesisCache();
   }
 }
 
@@ -1543,12 +1822,21 @@ async function withGroqEnv(fn: () => Promise<void>) {
   const previousModel = process.env.GROQ_MODEL;
   const previousSafeMode = process.env.GROQ_DAILY_SAFE_MODE;
   const previousDisable = process.env.GROQ_DISABLE_LIVE_SYNTHESIS;
+  const previousBaseUrl = process.env.GROQ_BASE_URL;
+  const previousExplicitLiveTest = process.env.OKF_LLM_SYNTHESIS_LIVE_TEST;
+  const previousGlobalDisable = process.env.LLM_DISABLE_LIVE_SYNTHESIS;
+  const previousCacheTtl = process.env.LLM_REQUEST_CACHE_TTL_MS;
   process.env.LLM_PROVIDER = "groq";
   process.env.CHAT_PROVIDER = "groq";
   process.env.GROQ_API_KEY = "test-key";
   process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
+  process.env.GROQ_BASE_URL = "https://api.groq.com/openai/v1";
   process.env.GROQ_DAILY_SAFE_MODE = "false";
   process.env.GROQ_DISABLE_LIVE_SYNTHESIS = "false";
+  process.env.OKF_LLM_SYNTHESIS_LIVE_TEST = "true";
+  process.env.LLM_DISABLE_LIVE_SYNTHESIS = "false";
+  process.env.LLM_REQUEST_CACHE_TTL_MS = "0";
+  clearSuccessfulSynthesisCache();
   try {
     await fn();
   } finally {
@@ -1556,8 +1844,13 @@ async function withGroqEnv(fn: () => Promise<void>) {
     if (previousChatProvider === undefined) delete process.env.CHAT_PROVIDER; else process.env.CHAT_PROVIDER = previousChatProvider;
     if (previousKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousKey;
     if (previousModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousModel;
+    if (previousBaseUrl === undefined) delete process.env.GROQ_BASE_URL; else process.env.GROQ_BASE_URL = previousBaseUrl;
     if (previousSafeMode === undefined) delete process.env.GROQ_DAILY_SAFE_MODE; else process.env.GROQ_DAILY_SAFE_MODE = previousSafeMode;
     if (previousDisable === undefined) delete process.env.GROQ_DISABLE_LIVE_SYNTHESIS; else process.env.GROQ_DISABLE_LIVE_SYNTHESIS = previousDisable;
+    if (previousExplicitLiveTest === undefined) delete process.env.OKF_LLM_SYNTHESIS_LIVE_TEST; else process.env.OKF_LLM_SYNTHESIS_LIVE_TEST = previousExplicitLiveTest;
+    if (previousGlobalDisable === undefined) delete process.env.LLM_DISABLE_LIVE_SYNTHESIS; else process.env.LLM_DISABLE_LIVE_SYNTHESIS = previousGlobalDisable;
+    if (previousCacheTtl === undefined) delete process.env.LLM_REQUEST_CACHE_TTL_MS; else process.env.LLM_REQUEST_CACHE_TTL_MS = previousCacheTtl;
+    clearSuccessfulSynthesisCache();
   }
 }
 async function withMockedGroqError(status: number, body: unknown, fn: () => Promise<void>) {
@@ -1572,39 +1865,34 @@ async function withMockedGroqError(status: number, body: unknown, fn: () => Prom
   });
 }
 
-async function withMockedGroq(content: string | undefined, fn: () => Promise<void>, error?: Error, finishReason = "stop") {
-  const previousProvider = process.env.LLM_PROVIDER;
-  const previousChatProvider = process.env.CHAT_PROVIDER;
-  const previousKey = process.env.GROQ_API_KEY;
-  const previousModel = process.env.GROQ_MODEL;
-  const previousBaseUrl = process.env.GROQ_BASE_URL;
-  const previousSafeMode = process.env.GROQ_DAILY_SAFE_MODE;
-  const previousDisable = process.env.GROQ_DISABLE_LIVE_SYNTHESIS;
+async function withMockedGroq(content: string | undefined, fn: (calls: () => number) => Promise<void>, error?: Error, finishReason = "stop") {
   const previousFetch = globalThis.fetch;
-  process.env.LLM_PROVIDER = "groq";
-  process.env.CHAT_PROVIDER = "groq";
-  process.env.GROQ_API_KEY = "test-key";
-  process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
-  process.env.GROQ_BASE_URL = "https://api.groq.com/openai/v1";
-  process.env.GROQ_DAILY_SAFE_MODE = "false";
-  process.env.GROQ_DISABLE_LIVE_SYNTHESIS = "false";
-  globalThis.fetch = (async () => {
-    if (error) throw error;
-    return new Response(JSON.stringify({ choices: [{ message: { content }, finish_reason: finishReason }] }), { status: 200, headers: { "Content-Type": "application/json" } });
-  }) as typeof fetch;
+  let callCount = 0;
+  await withGroqEnv(async () => {
+    globalThis.fetch = (async () => {
+      callCount += 1;
+      if (error) throw error;
+      return new Response(JSON.stringify({ choices: [{ message: { content }, finish_reason: finishReason }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      await fn(() => callCount);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+}
+async function withTemporaryEnv(overrides: Record<string, string | undefined>, fn: () => Promise<void>) {
+  const previous = new Map(Object.keys(overrides).map((name) => [name, process.env[name]]));
+  for (const [name, value] of Object.entries(overrides)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
   try {
     await fn();
   } finally {
-    globalThis.fetch = previousFetch;
-    if (previousProvider === undefined) delete process.env.LLM_PROVIDER; else process.env.LLM_PROVIDER = previousProvider;
-    if (previousChatProvider === undefined) delete process.env.CHAT_PROVIDER; else process.env.CHAT_PROVIDER = previousChatProvider;
-    if (previousKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = previousKey;
-    if (previousModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = previousModel;
-    if (previousBaseUrl === undefined) delete process.env.GROQ_BASE_URL; else process.env.GROQ_BASE_URL = previousBaseUrl;
-    if (previousSafeMode === undefined) delete process.env.GROQ_DAILY_SAFE_MODE; else process.env.GROQ_DAILY_SAFE_MODE = previousSafeMode;
-    if (previousDisable === undefined) delete process.env.GROQ_DISABLE_LIVE_SYNTHESIS; else process.env.GROQ_DISABLE_LIVE_SYNTHESIS = previousDisable;
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   }
 }
-
-
-

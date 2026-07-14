@@ -135,7 +135,7 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
     title: fallbackReason ? "Compact OKF fallback summary" : "OKF decision-support summary",
     direct_answer: direct,
     design_moves: designMoves,
-    architecture_direction: architectureDirection(rows),
+    architecture_direction: architectureDirection(designMoves),
     limitations: compactLimitations(source_papers.length, evidenceRefs.length),
     source_papers,
     evidence_refs: evidenceRefs,
@@ -146,18 +146,18 @@ export function buildFallbackAnswer(query: string, rows: OkfReuseFlowRow[], pape
 
 export function renderDecisionSupportMarkdown(payload: DecisionSupportAnswer) {
   const paperTitles = new Map(payload.source_papers.map((paper) => [paper.paper_id, paper.title]));
-  const moves = payload.design_moves.map((move, index) => {
+  const moves = payload.design_moves.map((move) => {
     const supportingPapers = move.supporting_paper_ids.map((paperId) => paperTitles.get(paperId)).filter(Boolean).join("; ") || "Retrieved OKF source papers";
-    const evidenceBasis = move.evidence_summaries.slice(0, 2).join(" ") || "No direct evidence excerpt was selected for this query-generated move.";
+    const completeEvidence = completeEvidenceSentences(move.evidence_summaries, 2);
+    const evidenceBasis = completeEvidence.join(" ") || "No complete evidence sentence was available in the selected evidence; inspect the Evidence tab.";
     const adaptationStatus = move.adaptation_status.replace("_", "-");
-    const reuse = [...new Set([move.reused_requirement, move.reused_principle, move.candidate_feature].filter(Boolean))].join("; ") || "Retrieved OKF design knowledge";
+    const reuse = readableReuseSentence(move);
     return [
-      `### ${index + 1}. ${move.title}`,
+      `### ${move.title}`,
       `- **What to build:** ${move.what_to_build}`,
       `- **Reuse from OKF:** ${reuse}`,
-      `- **Supporting papers:** ${supportingPapers}`,
+      `- **Supported by:** ${supportingPapers}`,
       `- **Evidence basis:** ${evidenceBasis}`,
-      `- **Adaptation:** ${move.adaptation_note}`,
       `- **Adaptation status:** ${adaptationStatus}`
     ].join("\n");
   }).join("\n\n");
@@ -176,6 +176,8 @@ export function renderDecisionSupportMarkdown(payload: DecisionSupportAnswer) {
 function architectureBullets(direction: string | undefined) {
   if (!direction) return "- Use the retrieved OKF concepts to separate private records, shared proofs, actor credentials, governance rules, and evaluation activities.";
   const normalized = direction.replace(/^Use\s+/i, "").replace(/\.$/, "");
+  const lines = direction.split(/\r?\n/).map((item) => item.trim().replace(/^[-*]\s+/, "")).filter(Boolean);
+  if (lines.length >= 2) return lines.slice(0, 6).map((item) => `- ${ensureSentence(item)}`).join("\n");
   const parts = normalized.split(/;\s+|,\s+(?=publish|verify|govern|keep|maintain|model|test|deploy|monitor)/i).map((item) => item.trim()).filter(Boolean);
   if (parts.length >= 3) return parts.slice(0, 6).map((item) => `- ${capitalizeFirst(item.replace(/^and\s+/i, ""))}.`).join("\n");
   return `- ${capitalizeFirst(normalized)}.`;
@@ -183,6 +185,38 @@ function architectureBullets(direction: string | undefined) {
 
 function capitalizeFirst(value: string) {
   return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
+}
+
+function readableReuseSentence(move: DesignMove) {
+  const requirement = cleanInlineLabel(move.reused_requirement);
+  const principle = cleanInlineLabel(move.reused_principle);
+  const feature = cleanInlineLabel(move.candidate_feature);
+  return `Use ${requirement} as the requirement, apply ${principle} as the guiding principle, and implement ${feature} as the candidate feature.`;
+}
+
+function cleanInlineLabel(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function completeEvidenceSentences(summaries: string[], limit: number) {
+  const sentences: string[] = [];
+  for (const summary of summaries) {
+    const normalized = summary.replace(/\s+/g, " ").trim();
+    if (!normalized) continue;
+    const matches = normalized.match(/[^.!?]+[.!?]+(?:[\"')\]]+)?/g) ?? [];
+    for (const match of matches) {
+      const sentence = match.trim();
+      if (sentence.split(/\s+/).length < 6 || /(?:\be\.g|\bi\.e|\bfig|\bno|\bdr)\.$/i.test(sentence)) continue;
+      sentences.push(sentence);
+      if (sentences.length >= limit) return sentences;
+    }
+  }
+  return sentences;
+}
+
+function ensureSentence(value: string) {
+  const normalized = capitalizeFirst(value.replace(/\s+/g, " ").trim());
+  return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
 }
 function buildRows(query: string, papers: OkfPaperSupport[], concepts: OkfConcept[], evidence: OkfEvidenceRef[], kb: OkfKnowledgeBase): OkfReuseFlowRow[] {
   const relationRows = buildRelationRows(concepts, evidence, kb);
@@ -538,9 +572,39 @@ function compactDirectAnswer(_query: string, paperCount: number, moveCount: numb
   return `Use the retrieved OKF knowledge as decision support for a domain-adapted architecture, not as a paper summary. I found ${paperCount} relevant OKF source paper(s), ${moveCount} reusable design move(s), and ${evidenceCount} selected evidence snippet(s); reuse stored requirements, principles, and features where they match, and treat target-domain constructs as mixed or query-generated adaptations.`;
 }
 
-function architectureDirection(rows: OkfReuseFlowRow[]) {
-  const artifacts = rows.map((row) => row.artifact_pattern).filter(Boolean).slice(0, 3);
-  return artifacts.length ? `Combine ${artifacts.join("; ")} into a relation-backed DSR architecture, keeping query-specific pieces explicitly marked.` : undefined;
+function architectureDirection(moves: DesignMove[]) {
+  if (!moves.length) return undefined;
+  const corpus = normalizeText(moves.flatMap((move) => [
+    move.title,
+    move.what_to_build,
+    move.reused_requirement,
+    move.reused_principle,
+    move.candidate_feature,
+    move.artifact_pattern,
+    move.adaptation_note,
+    ...move.evidence_summaries,
+  ]).join(" "));
+  const bullets: string[] = [];
+  const addWhen = (pattern: RegExp, text: string) => { if (pattern.test(corpus)) bullets.push(text); };
+
+  addWhen(/off chain|off-chain|data stor|database|raw data|sensitive data|information provider|cloud|repository/, "Keep operational and sensitive records in an off-chain data and evidence store, exposing only the proofs required by other actors.");
+  addWhen(/on chain|on-chain|blockchain|hash|commitment|registry|ledger|smart contract|tamper|proof of integrity/, "Use an on-chain commitment, registry, and indexing layer for tamper-evident references and verifiable lookup rather than duplicating raw records.");
+  addWhen(/identity|credential|issuer|holder|verifier|did|authentication|onboarding/, "Add an identity and credential layer that separates issuer, holder, and verifier responsibilities and supports status checks.");
+  addWhen(/verif|review|reputation|screen|dispute|certif|validation|proof request/, "Define a verification lifecycle covering evidence submission, review, challenge or dispute handling, and resolution.");
+  addWhen(/govern|audit|status|revocation|authority|compliance|history|monitor/, "Make governance, status changes, and audit history explicit so participating organizations can apply shared rules and trace decisions.");
+  addWhen(/\bisdm\b|development process|implementation lifecycle|modeling|stakeholder role|evaluation|testing|maintenance/, "Use an implementation lifecycle that assigns roles, models the selected mechanisms, evaluates the artifact, and plans maintenance.");
+
+  const generic = [
+    "Translate the selected OKF requirements into acceptance criteria before choosing implementation components.",
+    "Keep stored OKF mechanisms distinct from mixed and query-generated adaptations in the implementation backlog.",
+    "Maintain traceability from each deployed control to its requirement, principle, feature, and supporting evidence.",
+    "Validate the combined design with domain stakeholders and project-specific tests before operational use."
+  ];
+  for (const item of generic) {
+    if (bullets.length >= 4) break;
+    bullets.push(item);
+  }
+  return [...new Set(bullets)].slice(0, 6).join("\n");
 }
 
 function compactLimitations(paperCount: number, evidenceCount: number) {

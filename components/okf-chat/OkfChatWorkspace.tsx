@@ -38,6 +38,7 @@ export function OkfChatWorkspace() {
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[] | undefined>();
   const [activeTab, setActiveTab] = useState("Answer");
   const [llmHealth, setLlmHealth] = useState<LlmHealth | null>(null);
+  const flowWide = Boolean(response && activeTab === "Flow");
 
   useEffect(() => {
     let cancelled = false;
@@ -94,8 +95,11 @@ export function OkfChatWorkspace() {
         </div>
       </section>
 
-      <div className={`grid min-w-0 gap-6 ${response ? "min-[1050px]:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]" : "mx-auto max-w-4xl"}`}>
-        <div className="min-w-0 space-y-6">
+      <div
+        data-layout-mode={flowWide ? "flow-wide" : "standard"}
+        className={`okf-chat-layout grid min-w-0 gap-6 ${flowWide ? "okf-chat-layout--flow-wide grid-cols-1" : response ? "min-[1050px]:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]" : "mx-auto max-w-4xl"}`}
+      >
+        <div className={`min-w-0 space-y-6 ${flowWide ? "w-full min-[1050px]:col-span-full" : ""}`}>
           <AssistantWorkspace
             query={query}
             setQuery={setQuery}
@@ -114,7 +118,7 @@ export function OkfChatWorkspace() {
             correctionStatus={correctionStatus}
           />
         </div>
-        {response && (
+        {response && !flowWide && (
           <aside className="min-w-0 space-y-4 min-[1050px]:sticky min-[1050px]:top-24 min-[1050px]:max-h-[calc(100vh-96px)] min-[1050px]:overflow-auto">
             <SourcePapersPanel response={response} onSelectEvidenceIds={(ids) => { setSelectedEvidenceIds(ids); setSelectedConceptId(undefined); setActiveTab("Evidence"); }} />
             <EvidenceDrawer response={response} selectedConceptId={selectedConceptId} selectedEvidenceIds={selectedEvidenceIds} compact />
@@ -191,7 +195,7 @@ function StageProgress({ response, loading }: { response: OkfChatResponse | null
 function AnswerTab({ response, correctionText, setCorrectionText, submitCorrection, correctionStatus, selectedConceptId }: { response: OkfChatResponse; correctionText: string; setCorrectionText: (value: string) => void; submitCorrection: (targetId: string) => void; correctionStatus: string; selectedConceptId?: string }) {
   const status = providerStatusForResponse(response);
   const failed = status.outcome === "rate_limited" || status.outcome === "validation_error" || status.outcome === "provider_error";
-  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final answer - {response.intent.replace(/_/g, " ").toLowerCase()}</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(response.answer)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={response.answer} failed={failed} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap gap-2">{response.source_papers.slice(0, 4).map((paper) => <Badge key={paper.paper_id}>{shortPaperTitle(paper.title)}</Badge>)}</div><p className="mt-3 text-sm text-muted">Evidence details are available in the Evidence tab.</p></div><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
+  return <div className="min-w-0 space-y-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-medium text-muted">Final answer - {response.intent.replace(/_/g, " ").toLowerCase()}</div><h2 className="mt-1 font-serif text-2xl text-ink">Evidence-grounded DSR guidance</h2></div><div className="flex flex-wrap gap-2"><AnswerRuntimeBadge response={response} /><button type="button" onClick={() => navigator.clipboard?.writeText(response.answer)} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-blue"><Clipboard className="h-4 w-4" /> Copy answer</button></div></div><MarkdownAnswer markdown={response.answer} failed={failed} /><div className="flex flex-col gap-3 rounded-lg border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-between"><p className="min-w-0 text-sm text-muted">Evidence details are available in the Evidence tab.</p><ReportIssueDrawer response={response} correctionText={correctionText} setCorrectionText={setCorrectionText} submitCorrection={submitCorrection} status={correctionStatus} selectedConceptId={selectedConceptId} /></div></div>;
 }
 
 function MarkdownAnswer({ markdown, failed }: { markdown: string; failed: boolean }) {
@@ -303,7 +307,7 @@ function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { resp
   const selectedNode = selection?.kind === "node" ? graph.nodes.find((node) => node.id === selection.id) : undefined;
   const selectedEdge = selection?.kind === "edge" ? graph.edges.find((edge) => edge.id === selection.id) : undefined;
 
-  return <section className="rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="mt-2 text-xs leading-5 text-muted">{flowModeNotice(graph.mode)}</p></div><FlowLegend /></div><div className="grid min-w-0 gap-0 xl:grid-cols-[minmax(0,1fr)_310px]"><div className="h-[620px] min-w-0 border border-line bg-paper/50"><ReactFlow nodes={reactNodes} edges={reactEdges} fitView minZoom={0.28} nodesDraggable={false} onNodeClick={(_, node) => { const graphNode = graph.nodes.find((item) => item.id === node.id); setSelection({ kind: "node", id: node.id }); onSelectEvidenceIds(graphNode?.evidence_ids.length ? graphNode.evidence_ids : undefined); }} onEdgeClick={(_, edge) => { const graphEdge = graph.edges.find((item) => item.id === edge.id); setSelection({ kind: "edge", id: edge.id }); onSelectEvidenceIds(graphEdge?.evidence_ids.length ? graphEdge.evidence_ids : undefined); }} onPaneClick={() => { setSelection(null); onSelectEvidenceIds(undefined); }}><Background color="#d8d6cc" gap={28} /><Controls /></ReactFlow></div><FlowGraphInspector node={selectedNode} edge={selectedEdge} graph={graph} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /></div></section>;
+  return <section className="w-full min-w-0 rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="mt-2 text-xs leading-5 text-muted">{flowModeNotice(graph.mode)}</p></div><FlowLegend /></div><div className="grid w-full min-w-0 gap-0 min-[1050px]:grid-cols-[minmax(0,1fr)_310px]"><div className="h-[650px] w-full min-w-0 border border-line bg-paper/50 min-[1050px]:h-[720px]"><ReactFlow className="h-full w-full" nodes={reactNodes} edges={reactEdges} fitView fitViewOptions={{ padding: 0.16 }} minZoom={0.28} nodesDraggable={false} onNodeClick={(_, node) => { const graphNode = graph.nodes.find((item) => item.id === node.id); setSelection({ kind: "node", id: node.id }); onSelectEvidenceIds(graphNode?.evidence_ids.length ? graphNode.evidence_ids : undefined); }} onEdgeClick={(_, edge) => { const graphEdge = graph.edges.find((item) => item.id === edge.id); setSelection({ kind: "edge", id: edge.id }); onSelectEvidenceIds(graphEdge?.evidence_ids.length ? graphEdge.evidence_ids : undefined); }} onPaneClick={() => { setSelection(null); onSelectEvidenceIds(undefined); }}><Background color="#d8d6cc" gap={28} /><Controls /></ReactFlow></div><FlowGraphInspector node={selectedNode} edge={selectedEdge} graph={graph} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /></div></section>;
 }
 
 function FlowGraphNodeLabel({ node }: { node: GraphNode }) {
@@ -312,11 +316,11 @@ function FlowGraphNodeLabel({ node }: { node: GraphNode }) {
 
 function FlowGraphInspector({ node, edge, graph, setActiveTab, onSelectEvidenceIds }: { node?: GraphNode; edge?: GraphEdge; graph: OkfChatResponse["flow_graph"]; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
   const selected = node ?? edge;
-  if (!selected) return <aside className="min-h-[220px] border border-line bg-white p-4 text-sm leading-6 text-muted xl:border-l-0">Click a graph node or edge to filter the evidence panel.</aside>;
+  if (!selected) return <aside className="min-h-[220px] border border-line bg-white p-4 text-sm leading-6 text-muted min-[1050px]:border-l-0">Click a graph node or edge to filter the evidence panel.</aside>;
   const evidenceIds = selected.evidence_ids ?? [];
   const source = edge ? graph.nodes.find((item) => item.id === edge.source) : undefined;
   const target = edge ? graph.nodes.find((item) => item.id === edge.target) : undefined;
-  return <aside className="max-h-[620px] min-h-[220px] overflow-y-auto border border-line bg-white p-4 xl:border-l-0"><Badge>{selected.provenance}</Badge><h3 className="mt-3 [overflow-wrap:anywhere] text-base font-semibold leading-6 text-ink">{node ? node.label : `${source?.label ?? "Source"} -> ${target?.label ?? "Target"}`}</h3><div className="mt-3 space-y-2 text-xs leading-5 text-muted"><p><strong className="text-ink">Confidence:</strong> {selected.confidence}</p>{edge && <p><strong className="text-ink">Relation:</strong> {readablePredicate(edge.predicate)}</p>}{node?.short_description && <p>{node.short_description}</p>}<p><strong className="text-ink">Evidence refs:</strong> {evidenceIds.length}</p></div>{evidenceIds.length > 0 && <button type="button" onClick={() => { onSelectEvidenceIds(evidenceIds); setActiveTab("Evidence"); }} className="mt-4 rounded-md border border-line bg-paper px-3 py-2 text-xs font-medium text-ink hover:border-blue">Open evidence</button>}</aside>;
+  return <aside className="max-h-[650px] min-h-[220px] overflow-y-auto border border-line bg-white p-4 min-[1050px]:max-h-[720px] min-[1050px]:border-l-0"><Badge>{selected.provenance}</Badge><h3 className="mt-3 [overflow-wrap:anywhere] text-base font-semibold leading-6 text-ink">{node ? node.label : `${source?.label ?? "Source"} -> ${target?.label ?? "Target"}`}</h3><div className="mt-3 space-y-2 text-xs leading-5 text-muted"><p><strong className="text-ink">Confidence:</strong> {selected.confidence}</p>{edge && <p><strong className="text-ink">Relation:</strong> {readablePredicate(edge.predicate)}</p>}{node?.short_description && <p>{node.short_description}</p>}<p><strong className="text-ink">Evidence refs:</strong> {evidenceIds.length}</p></div>{evidenceIds.length > 0 && <button type="button" onClick={() => { onSelectEvidenceIds(evidenceIds); setActiveTab("Evidence"); }} className="mt-4 rounded-md border border-line bg-paper px-3 py-2 text-xs font-medium text-ink hover:border-blue">Open evidence</button>}</aside>;
 }
 
 function FlowLegend() {
@@ -346,14 +350,7 @@ function readablePredicate(value: string) {
 }
 
 function synthesisStageLabel(response: OkfChatResponse) {
-  const status = providerStatusForResponse(response);
-  const provider = providerLabel(status.provider);
-  if (status.outcome === "synthesis_used") return `${provider} synthesis used`;
-  if (status.outcome === "rate_limited") return `${provider} rate limit fallback`;
-  if (status.outcome === "provider_error") return `${provider} provider fallback; see Debug`;
-  if (status.outcome === "validation_error") return `${provider} validation fallback; see Debug`;
-  if (status.outcome === "synthesis_skipped") return `${provider} synthesis skipped`;
-  return "Structured OKF answer";
+  return providerStatusLabel(providerStatusForResponse(response));
 }
 function DebugTrace({ query, response }: { query: string; response: OkfChatResponse }) {
   const synthesis = response.llm_synthesis;
@@ -495,24 +492,14 @@ function legacyHealthOutcome(provider: string, configured: boolean, reachable: b
 }
 
 function providerStatusLabel(status: ProviderStatusView) {
-  const separator = "\u00b7";
-  const provider = providerStatusText(status);
-  if (status.outcome === "not_configured") return status.provider === "none" ? `No LLM configured ${separator} structured OKF answer` : `${provider} not configured ${separator} structured OKF answer`;
-  if (status.outcome === "configured") return `${provider} configured ${separator} availability not checked`;
-  if (status.outcome === "reachable") return `${provider} ${separator} reachable`;
-  if (status.outcome === "synthesis_skipped") return `${provider} configured ${separator} synthesis skipped`;
-  if (status.outcome === "synthesis_used") return `${provider} ${separator} synthesis used`;
-  if (status.outcome === "rate_limited") return `${provider} ${separator} rate limit fallback`;
-  if (status.outcome === "validation_error") return `${provider} ${separator} validation fallback`;
-  return `${provider} ${separator} provider fallback`;
-}
-
-function providerStatusText(status: ProviderStatusView) {
-  const provider = providerLabel(status.provider);
-  if (status.http_status && status.error_type) return `${provider} ${status.http_status} ${status.error_type}`;
-  if (status.http_status) return `${provider} ${status.http_status}`;
-  if (status.error_type) return `${provider} ${status.error_type}`;
-  return provider;
+  if (status.outcome === "synthesis_used") return "LLM synthesis used";
+  if (status.outcome === "validation_error") return "LLM validation fallback";
+  if (status.outcome === "rate_limited") return "LLM rate-limit fallback";
+  if (status.outcome === "provider_error" || status.outcome === "not_configured") return "LLM unavailable \u00b7 structured OKF answer";
+  if (status.outcome === "synthesis_skipped") return "Structured OKF answer";
+  if (status.outcome === "reachable") return "LLM ready";
+  if (status.outcome === "configured") return "LLM readiness not checked";
+  return "Structured OKF answer";
 }
 
 function providerStatusTone(status: ProviderStatusView) {
@@ -521,13 +508,3 @@ function providerStatusTone(status: ProviderStatusView) {
   if (status.outcome === "provider_error" || status.outcome === "validation_error") return "border-red-200 bg-red-50 text-red-700";
   return "border-amber-300 bg-amber-50 text-amber-700";
 }
-
-function providerLabel(provider?: string) {
-  if (provider === "gemini") return "Gemini";
-  if (provider === "groq") return "Groq";
-  if (provider === "mock") return "Mock";
-  if (provider === "none" || !provider) return "No LLM";
-  return "LLM";
-}
-
-

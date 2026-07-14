@@ -1,13 +1,11 @@
 import type { OkfChatResponse } from "../okf/chat.ts";
-import type { LlmSynthesisResult } from "../okf/schema.ts";
 import { providerErrorStillConnected, safeBaseUrl } from "./groq.ts";
+import { logLlmUsage, readSuccessfulSynthesisCache, summarizeLlmUsage, synthesisCacheKey, writeSuccessfulSynthesisCache } from "./runtime-policy.ts";
+import { applyAcceptedStructuredSynthesis } from "./synthesis-result.ts";
 import {
   applySynthesisFallback,
   buildCompactSynthesisContext,
   guardStructuredSynthesis,
-  mergeSynthesisIntoAnswerPayload,
-  redactAndTruncate,
-  renderStructuredSynthesisMarkdown,
   structuredSynthesisJsonSchema,
   structuredSynthesisSystemPrompt,
   structuredSynthesisUserPrompt,
@@ -21,7 +19,24 @@ type GeminiGenerateResponse = {
   usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
 };
 
-export async function synthesizeWithGemini(deterministic: OkfChatResponse): Promise<OkfChatResponse> {
+/**
+ * Gemini accepts a useful subset of JSON Schema for responseSchema but rejects
+ * `additionalProperties`. Keep the provider-neutral schema authoritative and
+ * derive this transport-only projection without mutating the canonical object.
+ */
+export function projectGeminiResponseSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(projectGeminiResponseSchema);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "additionalProperties")
+      .map(([key, nested]) => [key, projectGeminiResponseSchema(nested)])
+  );
+}
+
+export const geminiStructuredSynthesisResponseSchema = projectGeminiResponseSchema(structuredSynthesisJsonSchema);
+export async function synthesizeWithGemini(deterministic: OkfChatResponse, preparedContext?: CompactSynthesisContext): Promise<OkfChatResponse> {
+
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL;
   const configured = Boolean(apiKey && model);
@@ -51,9 +66,28 @@ export async function synthesizeWithGemini(deterministic: OkfChatResponse): Prom
   let rawProviderError: string | undefined;
   let rawProviderErrorType: string | undefined;
   let rawProviderOutput: string | undefined;
+  let providerPromptTokens: number | undefined;
+  let providerOutputTokens: number | undefined;
+  let providerTotalTokens: number | undefined;
 
   try {
-    context = buildCompactSynthesisContext(deterministic);
+    context = preparedContext ?? buildCompactSynthesisContext(deterministic);
+    const cacheKey = synthesisCacheKey("gemini", model, deterministic);
+    const cached = readSuccessfulSynthesisCache<unknown>(cacheKey);
+    if (cached !== undefined) {
+      const cachedStructured = guardStructuredSynthesis(JSON.stringify(cached), {
+        provider: "gemini",
+        finishReason: "STOP",
+        context,
+        response: deterministic
+      });
+      return applyAcceptedStructuredSynthesis(deterministic, cachedStructured, context, {
+        provider: "gemini",
+        model,
+        baseUrl: safeBaseUrl(baseUrl),
+        cacheHit: true
+      });
+    }
     attempted = true;
     const response = await fetch(geminiGenerateContentUrl(baseUrl, model!, apiKey!), {
       method: "POST",
@@ -66,12 +100,16 @@ export async function synthesizeWithGemini(deterministic: OkfChatResponse): Prom
           temperature,
           maxOutputTokens,
           responseMimeType: "application/json",
-          responseSchema: structuredSynthesisJsonSchema
+          responseSchema: geminiStructuredSynthesisResponseSchema
         }
       })
     });
     status = response.status;
     const data = await readGeminiJson(response);
+    const usage = (data as GeminiGenerateResponse).usageMetadata;
+    providerPromptTokens = usage?.promptTokenCount;
+    providerOutputTokens = usage?.candidatesTokenCount;
+    providerTotalTokens = usage?.totalTokenCount;
     if (!response.ok) {
       const errorInfo = geminiErrorInfo(data);
       rawProviderError = errorInfo.message ?? `Gemini request failed: ${response.status}`;
@@ -88,51 +126,33 @@ export async function synthesizeWithGemini(deterministic: OkfChatResponse): Prom
       context,
       response: deterministic
     });
-    const answerMarkdown = renderStructuredSynthesisMarkdown(structured, context);
-    const answerPayload = mergeSynthesisIntoAnswerPayload(deterministic, structured, "gemini");
-    const usage = (data as GeminiGenerateResponse).usageMetadata;
-    const synthesis: LlmSynthesisResult = {
-      synthesis_mode: "gemini",
-      answer_markdown: answerMarkdown,
-      provider_metadata: {
-        provider: "gemini",
-        model,
-        status,
-        base_url: safeBaseUrl(baseUrl),
-        prompt_tokens: usage?.promptTokenCount,
-        completion_tokens: usage?.candidatesTokenCount,
-        total_tokens: usage?.totalTokenCount
-      },
-      debug: {
-        guard_outcome: "accepted",
-        finish_reason: finishReason,
-        structured_output: structured,
-        raw_provider_output: redactAndTruncate(rawProviderOutput),
-        compact_context: context,
-        compact_context_chars: JSON.stringify(context).length
-      }
-    };
-    return {
-      ...deterministic,
-      answer: answerMarkdown,
-      answer_payload: answerPayload,
-      llm_synthesis: synthesis,
-      runtime: {
-        ...deterministic.runtime,
-        provider_configured: true,
-        provider_connected: true,
-        synthesis_attempted: true,
-        synthesis_mode: "gemini",
-        provider: "gemini",
-        provider_status_code: status,
-        provider_status: { provider: "gemini", configured: true, reachable: true, attempted: true, http_status: status, outcome: "synthesis_used" }
-      },
-      warnings: [...deterministic.warnings, "Gemini structured synthesis passed AnswerGuard and was rendered by the server."]
-    };
+    const accepted = applyAcceptedStructuredSynthesis(deterministic, structured, context, {
+      provider: "gemini",
+      model,
+      status,
+      baseUrl: safeBaseUrl(baseUrl),
+      finishReason,
+      rawProviderOutput,
+      promptTokens: providerPromptTokens,
+      completionTokens: providerOutputTokens,
+      totalTokens: providerTotalTokens,
+      cacheHit: false
+    });
+    writeSuccessfulSynthesisCache(cacheKey, structured);
+    return accepted;
   } catch (error) {
     const validationError = error instanceof SynthesisValidationError;
     const reason = error instanceof Error ? error.message : "Unknown Gemini synthesis error";
     const connected = attempted && (validationError || geminiErrorStillConnected(reason, status, rawProviderErrorType));
+    if (attempted && context) {
+      const usage = summarizeLlmUsage({
+        promptChars: structuredSynthesisSystemPrompt.length + structuredSynthesisUserPrompt(context).length,
+        outputChars: rawProviderOutput?.length ?? 0,
+        promptTokens: providerPromptTokens,
+        outputTokens: providerOutputTokens
+      });
+      logLlmUsage("gemini", model, usage, false);
+    }
     return applySynthesisFallback(deterministic, {
       provider: "gemini",
       reason,
@@ -147,6 +167,7 @@ export async function synthesizeWithGemini(deterministic: OkfChatResponse): Prom
       rawProviderError,
       rawProviderOutput,
       finishReason,
+      validationErrors: error instanceof SynthesisValidationError ? error.validationErrors : undefined,
       compactContext: context
     });
   } finally {
@@ -154,10 +175,29 @@ export async function synthesizeWithGemini(deterministic: OkfChatResponse): Prom
   }
 }
 
-export async function requestGeminiQueryPlanJson(prompt: unknown): Promise<unknown | undefined> {
+export const queryPlannerSystemPrompt = "You are a query interpreter for a DSR OKF library assistant. Classify the user's request into one of the allowed intents. Extract requested element types, named papers, themes, criteria, and output shape. Do not answer the question. Return JSON only.";
+
+export type GeminiQueryPlanRequestResult = {
+  attempted: boolean;
+  status?: number;
+  candidate?: unknown;
+  finishReason?: string;
+  errorType?: string;
+  errorMessage?: string;
+  outputChars: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+};
+
+/**
+ * Transport result for the optional planner. The caller owns policy and
+ * request-scoped status, so failures are not silently collapsed to undefined.
+ */
+export async function requestGeminiQueryPlanJson(prompt: unknown): Promise<GeminiQueryPlanRequestResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_PLANNER_MODEL ?? process.env.GEMINI_MODEL;
-  if (!apiKey || !model) return undefined;
+  if (!apiKey || !model) return { attempted: false, errorType: "not_configured", errorMessage: "Gemini query planner is not configured.", outputChars: 0 };
   const baseUrl = process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Number(process.env.GEMINI_QUERY_PLANNER_TIMEOUT_MS ?? 4_000));
@@ -167,16 +207,86 @@ export async function requestGeminiQueryPlanJson(prompt: unknown): Promise<unkno
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: "You are a query interpreter for a DSR OKF library assistant. Classify the user's request into one of the allowed intents. Extract requested element types, named papers, themes, criteria, and output shape. Do not answer the question. Return JSON only." }] },
+        systemInstruction: { parts: [{ text: queryPlannerSystemPrompt }] },
         contents: [{ role: "user", parts: [{ text: JSON.stringify(prompt) }] }],
         generationConfig: { temperature: 0, maxOutputTokens: 700, responseMimeType: "application/json" }
       })
     });
-    if (!response.ok) return undefined;
     const data = await readGeminiJson(response);
-    if (geminiFinishReason(data)?.toUpperCase() !== "STOP") return undefined;
+    const usage = (data as GeminiGenerateResponse).usageMetadata;
+    const finishReason = geminiFinishReason(data);
+    if (!response.ok) {
+      const error = geminiErrorInfo(data);
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: error.type,
+        errorMessage: error.message ?? `Gemini query planner request failed: ${response.status}`,
+        outputChars: error.message?.length ?? 0,
+        promptTokens: usage?.promptTokenCount,
+        completionTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount
+      };
+    }
     const content = geminiText(data);
-    return content.trim() ? JSON.parse(stripJsonFence(content)) : undefined;
+    if (finishReason?.toUpperCase() !== "STOP") {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "incomplete_finish_reason",
+        errorMessage: `Gemini query planner returned finish reason ${finishReason ?? "missing"}.`,
+        outputChars: content.length,
+        promptTokens: usage?.promptTokenCount,
+        completionTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount
+      };
+    }
+    if (!content.trim()) {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "empty_planner_output",
+        errorMessage: "Gemini query planner returned an empty response.",
+        outputChars: 0,
+        promptTokens: usage?.promptTokenCount,
+        completionTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount
+      };
+    }
+    try {
+      return {
+        attempted: true,
+        status: response.status,
+        candidate: JSON.parse(stripJsonFence(content)),
+        finishReason,
+        outputChars: content.length,
+        promptTokens: usage?.promptTokenCount,
+        completionTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount
+      };
+    } catch {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "planner_json_parse_failed",
+        errorMessage: "Gemini query planner returned malformed JSON.",
+        outputChars: content.length,
+        promptTokens: usage?.promptTokenCount,
+        completionTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount
+      };
+    }
+  } catch (error) {
+    return {
+      attempted: true,
+      errorType: error instanceof DOMException && error.name === "AbortError" ? "planner_timeout" : "planner_request_error",
+      errorMessage: error instanceof Error ? error.message : "Unknown Gemini query planner error.",
+      outputChars: 0
+    };
   } finally {
     clearTimeout(timer);
   }

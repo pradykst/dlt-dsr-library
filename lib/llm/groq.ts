@@ -1,19 +1,17 @@
 import type { OkfChatResponse } from "../okf/chat.ts";
-import type { LlmSynthesisResult } from "../okf/schema.ts";
+import { logLlmUsage, readSuccessfulSynthesisCache, summarizeLlmUsage, synthesisCacheKey, writeSuccessfulSynthesisCache } from "./runtime-policy.ts";
+import { applyAcceptedStructuredSynthesis } from "./synthesis-result.ts";
 import {
   applySynthesisFallback,
   buildCompactSynthesisContext,
   guardStructuredSynthesis,
-  mergeSynthesisIntoAnswerPayload,
-  redactAndTruncate,
-  renderStructuredSynthesisMarkdown,
   structuredSynthesisSystemPrompt,
   structuredSynthesisUserPrompt,
   SynthesisValidationError,
   type CompactSynthesisContext
 } from "./structured-synthesis.ts";
 
-export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promise<OkfChatResponse> {
+export async function synthesizeWithGroq(deterministic: OkfChatResponse, preparedContext?: CompactSynthesisContext): Promise<OkfChatResponse> {
   const apiKey = process.env.GROQ_API_KEY;
   const model = process.env.GROQ_MODEL;
   const configured = Boolean(apiKey && model);
@@ -43,9 +41,28 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
   let rawProviderError: string | undefined;
   let rawProviderErrorType: string | undefined;
   let rawProviderOutput: string | undefined;
+  let providerPromptTokens: number | undefined;
+  let providerOutputTokens: number | undefined;
+  let providerTotalTokens: number | undefined;
 
   try {
-    context = buildCompactSynthesisContext(deterministic);
+    context = preparedContext ?? buildCompactSynthesisContext(deterministic);
+    const cacheKey = synthesisCacheKey("groq", model, deterministic);
+    const cached = readSuccessfulSynthesisCache<unknown>(cacheKey);
+    if (cached !== undefined) {
+      const cachedStructured = guardStructuredSynthesis(JSON.stringify(cached), {
+        provider: "groq",
+        finishReason: "stop",
+        context,
+        response: deterministic
+      });
+      return applyAcceptedStructuredSynthesis(deterministic, cachedStructured, context, {
+        provider: "groq",
+        model,
+        baseUrl: safeBaseUrl(baseUrl),
+        cacheHit: true
+      });
+    }
     attempted = true;
     const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
@@ -64,6 +81,9 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
     });
     status = response.status;
     const data = await response.json().catch(async () => ({ raw: await response.text().catch(() => "") }));
+    providerPromptTokens = data?.usage?.prompt_tokens;
+    providerOutputTokens = data?.usage?.completion_tokens;
+    providerTotalTokens = data?.usage?.total_tokens;
     if (!response.ok) {
       const errorInfo = providerErrorInfo(data);
       rawProviderError = errorInfo.message ?? `Groq request failed: ${response.status}`;
@@ -80,50 +100,33 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
       context,
       response: deterministic
     });
-    const answerMarkdown = renderStructuredSynthesisMarkdown(structured, context);
-    const answerPayload = mergeSynthesisIntoAnswerPayload(deterministic, structured, "groq");
-    const synthesis: LlmSynthesisResult = {
-      synthesis_mode: "groq",
-      answer_markdown: answerMarkdown,
-      provider_metadata: {
-        provider: "groq",
-        model,
-        status,
-        base_url: safeBaseUrl(baseUrl),
-        prompt_tokens: data?.usage?.prompt_tokens,
-        completion_tokens: data?.usage?.completion_tokens,
-        total_tokens: data?.usage?.total_tokens
-      },
-      debug: {
-        guard_outcome: "accepted",
-        finish_reason: finishReason,
-        structured_output: structured,
-        raw_provider_output: redactAndTruncate(rawProviderOutput),
-        compact_context: context,
-        compact_context_chars: JSON.stringify(context).length
-      }
-    };
-    return {
-      ...deterministic,
-      answer: answerMarkdown,
-      answer_payload: answerPayload,
-      llm_synthesis: synthesis,
-      runtime: {
-        ...deterministic.runtime,
-        provider_configured: true,
-        provider_connected: true,
-        synthesis_attempted: true,
-        synthesis_mode: "groq",
-        provider: "groq",
-        provider_status_code: status,
-        provider_status: { provider: "groq", configured: true, reachable: true, attempted: true, http_status: status, outcome: "synthesis_used" }
-      },
-      warnings: [...deterministic.warnings, "Groq structured synthesis passed AnswerGuard and was rendered by the server."]
-    };
+    const accepted = applyAcceptedStructuredSynthesis(deterministic, structured, context, {
+      provider: "groq",
+      model,
+      status,
+      baseUrl: safeBaseUrl(baseUrl),
+      finishReason,
+      rawProviderOutput,
+      promptTokens: providerPromptTokens,
+      completionTokens: providerOutputTokens,
+      totalTokens: providerTotalTokens,
+      cacheHit: false
+    });
+    writeSuccessfulSynthesisCache(cacheKey, structured);
+    return accepted;
   } catch (error) {
     const validationError = error instanceof SynthesisValidationError;
     const reason = error instanceof Error ? error.message : "Unknown Groq synthesis error";
     const connected = attempted && (validationError || providerErrorStillConnected(reason, status, rawProviderErrorType));
+    if (attempted && context) {
+      const usage = summarizeLlmUsage({
+        promptChars: structuredSynthesisSystemPrompt.length + structuredSynthesisUserPrompt(context).length,
+        outputChars: rawProviderOutput?.length ?? 0,
+        promptTokens: providerPromptTokens,
+        outputTokens: providerOutputTokens
+      });
+      logLlmUsage("groq", model, usage, false);
+    }
     return applySynthesisFallback(deterministic, {
       provider: "groq",
       reason,
@@ -138,6 +141,7 @@ export async function synthesizeWithGroq(deterministic: OkfChatResponse): Promis
       rawProviderError,
       rawProviderOutput,
       finishReason,
+      validationErrors: error instanceof SynthesisValidationError ? error.validationErrors : undefined,
       compactContext: context
     });
   } finally {

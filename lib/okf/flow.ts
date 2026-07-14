@@ -92,6 +92,11 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
   if (limitedEdges.length === 0 && limitedNodes.length > 0) warnings.push("No stored relation edge connected the selected OKF nodes.");
   const evidence_refs = evidenceRefsForGraph(limitedNodes, limitedEdges, kb);
   const graph_id = `flow:${stableSlug(query)}:${limitedNodes.length}:${limitedEdges.length}`;
+  const stored_flow_source = storedProjection
+    ? Object.values(storedProjection.sources).some((source) => source !== "stored_relations")
+      ? "graph_json" as const
+      : "okf_relations_fallback" as const
+    : undefined;
 
   return {
     graph_id,
@@ -101,6 +106,7 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
     layers: options.layers ?? graphLayers,
     nodes: limitedNodes,
     edges: limitedEdges,
+    stored_flow_source,
     evidence_refs,
     warnings
   };

@@ -4,6 +4,11 @@ import type { OkfChatResponse } from "../okf/chat.ts";
 import { getOkfKnowledgeBase } from "../okf/retrieval.ts";
 import type { DesignMove, OkfAnswerPayload, OkfProviderName } from "../okf/schema.ts";
 import { isProviderResponseReachable, type LlmProviderStatus } from "./provider.ts";
+import {
+  DEFAULT_LLM_MAX_EVIDENCE_PER_MOVE,
+  DEFAULT_LLM_MAX_PROMPT_CHARS,
+  getLlmRuntimePolicy
+} from "./runtime-policy.ts";
 
 const synthesisTextSchema = z.string().trim().min(1).max(2_400);
 
@@ -71,8 +76,8 @@ export type CompactSynthesisContext = {
   };
 };
 
-export const MAX_SYNTHESIS_CONTEXT_CHARS = 24_000;
-export const MAX_EVIDENCE_PER_MOVE = 3;
+export const MAX_SYNTHESIS_CONTEXT_CHARS = DEFAULT_LLM_MAX_PROMPT_CHARS;
+export const MAX_EVIDENCE_PER_MOVE = DEFAULT_LLM_MAX_EVIDENCE_PER_MOVE;
 export const MAX_DEBUG_PROVIDER_OUTPUT_CHARS = 2_000;
 
 export const structuredSynthesisSystemPrompt = [
@@ -116,11 +121,13 @@ export const structuredSynthesisJsonSchema = {
 
 export class SynthesisValidationError extends Error {
   readonly code: string;
+  readonly validationErrors?: Array<{ code: string; path: string; message: string }>;
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, validationErrors?: Array<{ code: string; path: string; message: string }>) {
     super(message);
     this.name = "SynthesisValidationError";
     this.code = code;
+    this.validationErrors = validationErrors;
   }
 }
 
@@ -132,21 +139,27 @@ export function buildCompactSynthesisContext(response: OkfChatResponse): Compact
   const moves = (response.answer_plan?.design_moves ?? response.answer_payload?.design_moves ?? []) as CanonicalDesignMove[];
   validateCanonicalMoves(moves, response);
 
-  const context = makeCompactContext(response, moves, MAX_EVIDENCE_PER_MOVE);
-  if (compactContextSize(context) <= MAX_SYNTHESIS_CONTEXT_CHARS) return context;
+  const policy = getLlmRuntimePolicy();
+  if (moves.length > policy.maxMoves) {
+    throw new SynthesisValidationError("context_move_limit", `Compact synthesis context has ${moves.length} moves; configured maximum is ${policy.maxMoves}.`);
+  }
 
-  // Reducing evidence count is safe: it removes whole evidence records and never truncates or rewrites OKF text.
-  const reduced = makeCompactContext(response, moves, 2);
-  const reducedSize = compactContextSize(reduced);
-  if (reducedSize <= MAX_SYNTHESIS_CONTEXT_CHARS) return reduced;
+  // Reduce only by removing whole evidence records. Stored OKF text is never
+  // clipped or rewritten to satisfy a runtime budget.
+  let lastPromptSize = 0;
+  for (let evidenceLimit = policy.maxEvidencePerMove; evidenceLimit >= 1; evidenceLimit -= 1) {
+    const context = makeCompactContext(response, moves, evidenceLimit, policy.maxContextEvidence);
+    lastPromptSize = compactPromptSize(context);
+    if (lastPromptSize <= policy.maxPromptChars) return context;
+  }
 
   throw new SynthesisValidationError(
     "context_too_large",
-    `Compact synthesis context is ${reducedSize} characters; maximum is ${MAX_SYNTHESIS_CONTEXT_CHARS}.`
+    `Structured synthesis prompt is ${lastPromptSize} characters after safe compression; configured maximum is ${policy.maxPromptChars}.`
   );
 }
 
-function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMove[], evidenceLimit: number): CompactSynthesisContext {
+function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMove[], evidenceLimit: number, totalEvidenceLimit: number): CompactSynthesisContext {
   const answerPlanEvidence = response.answer_plan?.evidence_pack ?? [];
   const evidenceById = new Map(answerPlanEvidence.map((item) => [item.evidence_id, item]));
   const responseEvidenceById = new Map(response.evidence.map((item) => [item.evidence_id, {
@@ -172,11 +185,12 @@ function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMov
 
   const seenEvidenceIds = new Set<string>();
   const seenEvidenceSnippets = new Set<string>();
+  let retainedEvidenceCount = 0;
   // Canonical move order is already ranked; assign each evidence record to its first eligible move.
   const compactEvidenceByMove: CompactSynthesisContext["evidence_by_move"] = moves.map((move) => {
     const retained: CompactSynthesisContext["evidence_by_move"][number]["evidence"] = [];
     for (const [evidenceIndex, evidenceId] of move.evidence_ids.entries()) {
-      if (retained.length >= evidenceLimit) break;
+      if (retained.length >= evidenceLimit || retainedEvidenceCount >= totalEvidenceLimit) break;
       const evidence = evidenceById.get(evidenceId) ?? responseEvidenceById.get(evidenceId);
       if (!evidence) throw new SynthesisValidationError("unknown_evidence", `Move ${move.id} references unknown evidence ${evidenceId}.`);
       if (!move.supporting_paper_ids.includes(evidence.paper_id)) {
@@ -192,6 +206,7 @@ function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMov
       seenEvidenceIds.add(evidenceKey);
       seenEvidenceSnippets.add(snippetKey);
       retained.push({ evidence_id: evidence.evidence_id, paper_id: evidence.paper_id, snippet });
+      retainedEvidenceCount += 1;
     }
     return { move_id: move.id, evidence: retained };
   });
@@ -288,6 +303,10 @@ export function structuredSynthesisUserPrompt(context: CompactSynthesisContext) 
   return JSON.stringify(context);
 }
 
+export function compactPromptSize(context: CompactSynthesisContext) {
+  return structuredSynthesisSystemPrompt.length + structuredSynthesisUserPrompt(context).length;
+}
+
 
 function compactMoveHeading(move: CompactSelectedMove) {
   return move.target_domain_adaptation.title
@@ -372,9 +391,13 @@ export function parseStructuredSynthesisJson(content: string): StructuredLlmSynt
   }
   const result = structuredLlmSynthesisSchema.safeParse(candidate);
   if (!result.success) {
-    const issue = result.error.issues[0];
-    const location = issue?.path.length ? issue.path.join(".") : "response";
-    throw new SynthesisValidationError("schema_validation_failed", `Structured synthesis is invalid at ${location}: ${issue?.message ?? "schema mismatch"}.`);
+    const validationErrors = result.error.issues.map((issue) => ({
+      code: issue.code,
+      path: issue.path.length ? issue.path.join(".") : "response",
+      message: issue.message
+    }));
+    const first = validationErrors[0];
+    throw new SynthesisValidationError("schema_validation_failed", `Structured synthesis is invalid at ${first?.path ?? "response"}: ${first?.message ?? "schema mismatch"}.`, validationErrors);
   }
   return result.data;
 }
@@ -640,7 +663,7 @@ export function renderStructuredSynthesisMarkdown(synthesis: StructuredLlmSynthe
       storedBasis ? `- **Stored OKF basis:** ${cleanInline(storedBasis)}` : undefined,
       `- **Reuse logic:** ${cleanInline(explanation.reuse_logic)}`,
       `- **Adaptation boundary:** ${cleanInline(explanation.adaptation_boundary)}`,
-      papers.length ? `- **Supporting papers:** ${papers.map(cleanInline).join("; ")}` : undefined,
+      papers.length ? `- **Supported by:** ${papers.map(cleanInline).join("; ")}` : undefined,
       `- **Adaptation status:** ${humanizeAdaptationStatus(move.adaptation_status)}; confidence ${move.confidence}.`
     ].filter(Boolean).join("\n");
   });
@@ -704,7 +727,10 @@ export type SynthesisFallbackOptions = {
   rawProviderError?: string;
   rawProviderOutput?: string;
   finishReason?: string;
+  synthesisAttempted?: boolean;
+  plannerStatus?: unknown;
   compactContext?: CompactSynthesisContext;
+  validationErrors?: Array<{ code: string; path: string; message: string }>;
 };
 
 export function applySynthesisFallback(response: OkfChatResponse, options: SynthesisFallbackOptions): OkfChatResponse {
@@ -743,9 +769,11 @@ export function applySynthesisFallback(response: OkfChatResponse, options: Synth
       debug: {
         fallback_reason: options.reason,
         guard_outcome: options.validationError ? "rejected" : "not_validated",
+        planner_status: options.plannerStatus,
         provider_response_status: options.status,
         provider_error_type: options.errorType,
         finish_reason: options.finishReason,
+        validation_errors: options.validationErrors,
         raw_provider_error: redactAndTruncate(options.rawProviderError),
         raw_provider_output: redactAndTruncate(options.rawProviderOutput),
         compact_context: options.compactContext,
@@ -756,7 +784,7 @@ export function applySynthesisFallback(response: OkfChatResponse, options: Synth
       ...response.runtime,
       provider_configured: options.configured,
       provider_connected: options.connected,
-      synthesis_attempted: options.attempted,
+      synthesis_attempted: options.synthesisAttempted ?? options.attempted,
       synthesis_mode: synthesisMode,
       provider: options.provider,
       fallback_reason: options.reason,

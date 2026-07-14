@@ -1,4 +1,6 @@
-import { requestGeminiQueryPlanJson } from "../llm/gemini.ts";
+import { isGeminiRateLimit, queryPlannerSystemPrompt, requestGeminiQueryPlanJson, type GeminiQueryPlanRequestResult } from "../llm/gemini.ts";
+import { isProviderResponseReachable } from "../llm/provider.ts";
+import { getLlmRuntimePolicy, isLiveLlmWorkAllowed, logLlmUsage, summarizeLlmUsage } from "../llm/runtime-policy.ts";
 import { detectNamedPapers, extractQueryCriteria, inferRequestedTypes, normalizeText, unique } from "./policy.ts";
 import { detectDeterministicIntent, hasMeaningfulActionAndTheme, isMessyNaturalLanguageQuery } from "./query-interpreter.ts";
 import { getOkfKnowledgeBase } from "./retrieval.ts";
@@ -18,7 +20,29 @@ export type QueryPlanOutputShape =
   | "evaluation_plan"
   | "clarification";
 
+export type QueryPlannerStatus = {
+  provider: "gemini" | "groq";
+  configured: boolean;
+  reachable: boolean;
+  attempted: boolean;
+  http_status?: number;
+  outcome: "success" | "rate_limited" | "validation_error" | "provider_error";
+  error_type?: string;
+  fallback_reason?: string;
+  model?: string;
+  finish_reason?: string;
+  prompt_chars: number;
+  completion_chars: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  prompt_tokens_estimated: boolean;
+  completion_tokens_estimated: boolean;
+  estimated_cost_usd?: number;
+};
+
 export type QueryPlan = {
+
   intent: OkfChatIntent;
   confidence: QueryPlanConfidence;
   requested_output_shape: QueryPlanOutputShape;
@@ -31,6 +55,7 @@ export type QueryPlan = {
   requires_graph: boolean;
   requires_llm_synthesis: boolean;
   clarification_question?: string;
+  planner_status?: QueryPlannerStatus;
 };
 
 const allowedIntents: OkfChatIntent[] = [
@@ -53,8 +78,10 @@ const allowedIntents: OkfChatIntent[] = [
 export async function planOkfQuery(query: string, deterministicIntent: OkfChatIntent = detectDeterministicIntent(query, getOkfKnowledgeBase()), kb: OkfKnowledgeBase = getOkfKnowledgeBase()): Promise<QueryPlan> {
   const base = buildDeterministicQueryPlan(query, deterministicIntent, kb);
   if (!shouldUseLlmPlanner(query, base, kb)) return base;
-  const llmPlan = await requestLlmQueryPlan(query, base, kb).catch(() => undefined);
-  return validateQueryPlan(llmPlan, base, kb, query);
+  const plannerResult = await requestLlmQueryPlan(query, base, kb);
+  if (!plannerResult) return base;
+  const validated = validateQueryPlan(plannerResult.candidate, base, kb, query);
+  return { ...validated, planner_status: plannerResult.plannerStatus };
 }
 
 export function buildDeterministicQueryPlan(query: string, intent: OkfChatIntent = detectDeterministicIntent(query, getOkfKnowledgeBase()), kb: OkfKnowledgeBase = getOkfKnowledgeBase()): QueryPlan {
@@ -109,6 +136,7 @@ function outputShapeForIntent(intent: OkfChatIntent): QueryPlanOutputShape {
 
 function shouldUseLlmPlanner(query: string, base: QueryPlan, kb: OkfKnowledgeBase) {
   if (base.confidence === "high") return false;
+  if (!isLiveLlmWorkAllowed("planning", base.intent)) return false;
   if (String(process.env.OKF_DISABLE_LLM_QUERY_PLANNER ?? "false").toLowerCase() === "true") return false;
   const provider = queryPlannerProvider();
   if (!provider) return false;
@@ -117,11 +145,44 @@ function shouldUseLlmPlanner(query: string, base: QueryPlan, kb: OkfKnowledgeBas
   return isMessyNaturalLanguageQuery(query) || base.confidence === "low" || base.confidence === "medium";
 }
 
-async function requestLlmQueryPlan(query: string, base: QueryPlan, kb: OkfKnowledgeBase): Promise<Partial<QueryPlan> | undefined> {
+type PlannerTransportResult = GeminiQueryPlanRequestResult;
+type PlannerRequestResult = { candidate?: Partial<QueryPlan>; plannerStatus: QueryPlannerStatus };
+
+async function requestLlmQueryPlan(query: string, base: QueryPlan, kb: OkfKnowledgeBase): Promise<PlannerRequestResult | undefined> {
   const provider = queryPlannerProvider();
-  if (provider === "gemini") return await requestGeminiQueryPlanJson(plannerPromptPayload(query, base, kb)) as Partial<QueryPlan> | undefined;
-  if (provider === "groq") return requestGroqQueryPlan(query, base, kb);
-  return undefined;
+  if (!provider) return undefined;
+  const payload = plannerPromptPayload(query, base, kb);
+  const promptChars = queryPlannerSystemPrompt.length + JSON.stringify(payload).length;
+  if (promptChars > getLlmRuntimePolicy().maxPromptChars) return undefined;
+  const model = provider === "gemini"
+    ? process.env.GEMINI_PLANNER_MODEL ?? process.env.GEMINI_MODEL
+    : process.env.GROQ_MODEL;
+  let transport: PlannerTransportResult;
+  try {
+    transport = provider === "gemini"
+      ? await requestGeminiQueryPlanJson(payload)
+      : await requestGroqQueryPlan(payload);
+  } catch (error) {
+    transport = {
+      attempted: true,
+      errorType: "planner_request_error",
+      errorMessage: error instanceof Error ? error.message : "Unknown query planner request error.",
+      outputChars: 0
+    };
+  }
+  if (!transport.attempted) return undefined;
+  const candidate = isQueryPlanCandidate(transport.candidate)
+    ? transport.candidate as Partial<QueryPlan>
+    : undefined;
+  const plannerStatus = buildPlannerStatus(provider, model, promptChars, transport, Boolean(candidate));
+  return {
+    candidate: plannerStatus.outcome === "success" ? candidate : undefined,
+    plannerStatus
+  };
+}
+
+function isQueryPlanCandidate(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function queryPlannerProvider(): "gemini" | "groq" | undefined {
@@ -146,7 +207,7 @@ function plannerPromptPayload(query: string, base: QueryPlan, kb: OkfKnowledgeBa
     rules: ["Do not choose facts, citations, evidence, final sources, or claims.", "If the user asks which paper has a theme, classify as PAPER_DISCOVERY_QUERY.", "If the user asks to create/build/design an application/system and asks what to reuse, classify as DESIGN_REUSE_QUERY unless a graph/flow is requested.", "Clarification should be rare; use it only for greetings or underspecified queries without domain/action."]
   };
 }
-async function requestGroqQueryPlan(query: string, base: QueryPlan, kb: OkfKnowledgeBase): Promise<Partial<QueryPlan> | undefined> {
+async function requestGroqQueryPlan(payload: ReturnType<typeof plannerPromptPayload>): Promise<PlannerTransportResult> {
   const baseUrl = process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Number(process.env.GROQ_QUERY_PLANNER_TIMEOUT_MS ?? 4000));
@@ -161,19 +222,167 @@ async function requestGroqQueryPlan(query: string, base: QueryPlan, kb: OkfKnowl
         max_tokens: 700,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You are a query interpreter for a DSR OKF library assistant. Classify the user's request into one of the allowed intents. Extract requested element types, named papers, themes, criteria, and output shape. Do not answer the question. Return JSON only." },
-          { role: "user", content: JSON.stringify(plannerPromptPayload(query, base, kb)) }
+          { role: "system", content: queryPlannerSystemPrompt },
+          { role: "user", content: JSON.stringify(payload) }
         ]
       })
     });
-    if (!response.ok) return undefined;
     const data = await response.json().catch(() => undefined);
+    const usage = data?.usage;
+    const finishReason = data?.choices?.[0]?.finish_reason;
+    if (!response.ok) {
+      const error = plannerProviderErrorInfo(data);
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: error.type,
+        errorMessage: error.message ?? "Groq query planner request failed: " + response.status,
+        outputChars: error.message?.length ?? 0,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens
+      };
+    }
     const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") return undefined;
-    return JSON.parse(content) as Partial<QueryPlan>;
+    if (typeof finishReason !== "string" || finishReason.toLowerCase() !== "stop") {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "incomplete_finish_reason",
+        errorMessage: "Groq query planner returned finish reason " + (finishReason ?? "missing") + ".",
+        outputChars: typeof content === "string" ? content.length : 0,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens
+      };
+    }
+    if (typeof content !== "string" || !content.trim()) {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "empty_planner_output",
+        errorMessage: "Groq query planner returned an empty response.",
+        outputChars: 0,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens
+      };
+    }
+    try {
+      return {
+        attempted: true,
+        status: response.status,
+        candidate: JSON.parse(content),
+        finishReason,
+        outputChars: content.length,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens
+      };
+    } catch {
+      return {
+        attempted: true,
+        status: response.status,
+        finishReason,
+        errorType: "planner_json_parse_failed",
+        errorMessage: "Groq query planner returned malformed JSON.",
+        outputChars: content.length,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens
+      };
+    }
+  } catch (error) {
+    return {
+      attempted: true,
+      errorType: error instanceof DOMException && error.name === "AbortError" ? "planner_timeout" : "planner_request_error",
+      errorMessage: error instanceof Error ? error.message : "Unknown Groq query planner error.",
+      outputChars: 0
+    };
   } finally {
     clearTimeout(timer);
   }
+}
+
+function buildPlannerStatus(
+  provider: "gemini" | "groq",
+  model: string | undefined,
+  promptChars: number,
+  transport: PlannerTransportResult,
+  hasCandidate: boolean
+): QueryPlannerStatus {
+  const errorType = transport.errorType ?? (hasCandidate ? undefined : "planner_schema_validation_failed");
+  const rateLimited = isPlannerRateLimit(provider, transport.errorMessage ?? "", transport.status, errorType);
+  const outcome: QueryPlannerStatus["outcome"] = rateLimited
+    ? "rate_limited"
+    : errorType
+      ? transport.status !== undefined && transport.status >= 200 && transport.status < 300
+        ? "validation_error"
+        : "provider_error"
+      : hasCandidate
+        ? "success"
+        : "validation_error";
+  const usage = summarizeLlmUsage({
+    promptChars,
+    outputChars: transport.outputChars,
+    promptTokens: transport.promptTokens,
+    outputTokens: transport.completionTokens
+  });
+  logLlmUsage(provider, model, usage, false);
+  return {
+    provider,
+    configured: true,
+    reachable: isProviderResponseReachable(transport.status, errorType),
+    attempted: true,
+    http_status: transport.status,
+    outcome,
+    error_type: errorType,
+    fallback_reason: outcome === "success" ? undefined : plannerFailureReason(provider, outcome, transport.status, errorType),
+    model,
+    finish_reason: transport.finishReason,
+    prompt_chars: usage.prompt_chars,
+    completion_chars: usage.output_chars,
+    prompt_tokens: usage.input_tokens,
+    completion_tokens: usage.output_tokens,
+    total_tokens: transport.totalTokens ?? usage.total_tokens,
+    prompt_tokens_estimated: usage.input_tokens_estimated,
+    completion_tokens_estimated: usage.output_tokens_estimated,
+    estimated_cost_usd: usage.estimated_cost_usd
+  };
+}
+
+function isPlannerRateLimit(provider: "gemini" | "groq", reason: string, status?: number, errorType?: string) {
+  if (provider === "gemini") return isGeminiRateLimit(reason, status, errorType);
+  return status === 429 || status === 503 || /rate.?limit|quota|429|503|unavailable|high demand|overload/i.test((errorType ?? "") + " " + reason);
+}
+
+function plannerFailureReason(provider: "gemini" | "groq", outcome: QueryPlannerStatus["outcome"], status?: number, errorType?: string) {
+  const label = provider === "gemini" ? "Gemini" : "Groq";
+  const detail = [status ? "HTTP " + status : undefined, errorType].filter(Boolean).join(", ");
+  const suffix = detail ? " (" + detail + ")" : "";
+  if (outcome === "rate_limited") return label + " query planner was rate-limited" + suffix + "; live synthesis skipped to enforce one provider call per request.";
+  if (outcome === "validation_error") return label + " query planner response was rejected" + suffix + "; live synthesis skipped to enforce one provider call per request.";
+  return label + " query planner request failed" + suffix + "; live synthesis skipped to enforce one provider call per request.";
+}
+
+function plannerProviderErrorInfo(data: unknown): { message?: string; type?: string } {
+  if (!data || typeof data !== "object") return {};
+  const record = data as Record<string, unknown>;
+  const error = record.error;
+  if (error && typeof error === "object") {
+    const typed = error as { message?: unknown; type?: unknown; code?: unknown };
+    return {
+      message: typed.message ? String(typed.message) : undefined,
+      type: typed.type ? String(typed.type) : typed.code ? String(typed.code) : undefined
+    };
+  }
+  return {
+    message: typeof record.message === "string" ? record.message : undefined,
+    type: typeof record.type === "string" ? record.type : undefined
+  };
 }
 
 function validateQueryPlan(candidate: Partial<QueryPlan> | undefined, base: QueryPlan, kb: OkfKnowledgeBase, query: string): QueryPlan {

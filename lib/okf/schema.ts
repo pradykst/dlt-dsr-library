@@ -143,6 +143,7 @@ export type FlowGraph = {
   title: string;
   mode: FlowGraphMode;
   layers: FlowGraphLayer[];
+  stored_flow_source?: "graph_json" | "okf_relations_fallback";
   nodes: FlowGraphNode[];
   edges: FlowGraphEdge[];
   evidence_refs: OkfEvidenceRef[];
@@ -274,6 +275,12 @@ export type LlmSynthesisResult = {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    prompt_chars?: number;
+    completion_chars?: number;
+    prompt_tokens_estimated?: boolean;
+    completion_tokens_estimated?: boolean;
+    estimated_cost_usd?: number;
+    cache_hit?: boolean;
   };
   debug?: Record<string, unknown>;
 };
