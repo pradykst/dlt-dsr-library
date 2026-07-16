@@ -1,19 +1,37 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import {
+  OKF_PRESENTATION_VERSION,
+  OKF_SCHEMA_VERSION,
   isOkfConceptType,
   isOkfRelationPredicate,
   normalizeConfidence,
+  okfAuthorCheckStatuses,
+  okfEvidenceTypes,
+  okfExtractionStatuses,
+  okfExtractionTypes,
+  okfGraphSourceReferenceTypes,
+  okfGraphValidationStatuses,
+  okfReviewStatuses,
+  type OkfAuthorCheckStatus,
   type OkfConcept,
   type OkfEvidenceItem,
+  type OkfEvidenceType,
+  type OkfExtractionStatus,
+  type OkfExtractionType,
+  type OkfGraphSourceReference,
   type OkfKnowledgeBase,
   type OkfPaper,
+  type OkfPresentation,
   type OkfRelation,
   type OkfReviewStatus,
   type OkfValidationWarning
 } from "./schema.ts";
+import { readOkfSourceViews } from "./source-view.ts";
 
-const requiredFrontmatter = ["type", "paper_id", "title", "review_status"];
+const require = createRequire(import.meta.url);
+const yaml = require("js-yaml") as { load: (text: string) => unknown };
 
 export function parseOkfLibrary(rootDir = path.join(process.cwd(), "library", "okf")): OkfKnowledgeBase {
   const warnings: OkfValidationWarning[] = [];
@@ -28,56 +46,67 @@ export function parseOkfLibrary(rootDir = path.join(process.cwd(), "library", "o
   }
 
   for (const paperDir of listImmediateDirectories(papersDir)) {
+    let paper: OkfPaper | undefined;
     const indexFile = path.join(paperDir, "index.md");
     if (fs.existsSync(indexFile)) {
       const parsed = readMarkdown(indexFile, warnings);
-      papers.push(normalizePaper(parsed.frontmatter, indexFile, parsed.body, warnings));
-    } else {
-      warnings.push({ file: paperDir, message: "Missing paper index.md." });
+      paper = normalizePaper(parsed.frontmatter, indexFile, parsed.body, warnings);
+      papers.push(paper);
+    } else warnings.push({ file: paperDir, message: "Missing paper index.md." });
+
+    const presentationFile = path.join(paperDir, "presentation.yaml");
+    if (fs.existsSync(presentationFile)) {
+      const presentation = parseOkfPresentationFile(presentationFile, warnings);
+      if (paper && presentation) {
+        if (presentation.paper_id !== paper.paper_id) warnings.push({ file: presentationFile, message: `Presentation paper_id ${presentation.paper_id} does not match ${paper.paper_id}.` });
+        else paper.presentation = presentation;
+      }
+    } else warnings.push({ file: paperDir, message: "Missing presentation.yaml." });
+
+    const graphFile = path.join(paperDir, "graph.json");
+    if (paper && fs.existsSync(graphFile)) {
+      paper.graph_source_reference = parseOkfGraphSourceReference(graphFile, warnings);
+      const sourceViews = readOkfSourceViews(graphFile, warnings);
+      if (sourceViews.length) paper.source_views = sourceViews;
     }
 
     const dsrFile = path.join(paperDir, "dsr.md");
-    if (fs.existsSync(dsrFile)) {
-      concepts.push(...parseConceptsFile(dsrFile, warnings));
-    } else {
-      warnings.push({ file: paperDir, message: "Missing dsr.md." });
-    }
+    if (fs.existsSync(dsrFile)) concepts.push(...parseConceptsFile(dsrFile, warnings));
+    else warnings.push({ file: paperDir, message: "Missing dsr.md." });
 
     const evidenceFile = path.join(paperDir, "evidence.md");
-    if (fs.existsSync(evidenceFile)) {
-      evidence_items.push(...parseEvidenceFile(evidenceFile, warnings));
-    } else {
-      warnings.push({ file: paperDir, message: "Missing evidence.md." });
-    }
+    if (fs.existsSync(evidenceFile)) evidence_items.push(...parseEvidenceFile(evidenceFile, warnings));
+    else warnings.push({ file: paperDir, message: "Missing evidence.md." });
 
     const relationsFile = path.join(paperDir, "relations.yaml");
-    if (fs.existsSync(relationsFile)) {
-      relations.push(...parseRelationsFile(relationsFile, warnings));
-    } else {
-      warnings.push({ file: paperDir, message: "Missing relations.yaml." });
-    }
+    if (fs.existsSync(relationsFile)) relations.push(...parseRelationsFile(relationsFile, warnings));
+    else warnings.push({ file: paperDir, message: "Missing relations.yaml." });
   }
 
-  validateKnowledgeBase({ papers, concepts, evidence_items, relations, warnings });
-  return { papers, concepts, evidence_items, relations, warnings };
+  const kb = { papers, concepts, evidence_items, relations, warnings };
+  validateKnowledgeBase(kb);
+  return kb;
 }
 
 export function validateKnowledgeBase(kb: OkfKnowledgeBase) {
   const paperIds = new Set(kb.papers.map((paper) => paper.paper_id));
   const conceptIds = new Set(kb.concepts.map((concept) => concept.concept_id));
   const evidenceIds = new Set(kb.evidence_items.map((item) => item.evidence_id));
+  addDuplicateWarnings(kb.papers.map((paper) => paper.paper_id), "paper", kb.warnings);
+  addDuplicateWarnings(kb.concepts.map((concept) => concept.concept_id), "concept", kb.warnings);
+  addDuplicateWarnings(kb.evidence_items.map((item) => item.evidence_id), "evidence", kb.warnings);
+  addDuplicateWarnings(kb.relations.map((relation) => relation.relation_id), "relation", kb.warnings);
 
   for (const concept of kb.concepts) {
     if (!paperIds.has(concept.paper_id)) kb.warnings.push({ file: concept.source_file, message: `Concept ${concept.concept_id} references unknown paper ${concept.paper_id}.` });
-    for (const field of ["concept_id", "paper_id", "type", "title", "review_status"] as const) {
-      if (!concept[field]) kb.warnings.push({ file: concept.source_file, message: `Concept is missing ${field}.` });
-    }
+    for (const evidenceId of concept.evidence_ids) if (!evidenceIds.has(evidenceId)) kb.warnings.push({ file: concept.source_file, message: `Concept ${concept.concept_id} references unknown evidence ${evidenceId}.` });
   }
 
   for (const item of kb.evidence_items) {
     if (!paperIds.has(item.paper_id)) kb.warnings.push({ file: item.source_file, message: `Evidence ${item.evidence_id} references unknown paper ${item.paper_id}.` });
-    if (item.concept_id && !conceptIds.has(item.concept_id)) kb.warnings.push({ file: item.source_file, message: `Evidence ${item.evidence_id} references unknown concept ${item.concept_id}.` });
-    if (!item.paraphrase && !item.quote) kb.warnings.push({ file: item.source_file, message: `Evidence ${item.evidence_id} needs a quote or paraphrase.` });
+    for (const target of item.supports) {
+      if (target !== item.paper_id && !conceptIds.has(target)) kb.warnings.push({ file: item.source_file, message: `Evidence ${item.evidence_id} supports unknown target ${target}.` });
+    }
   }
 
   for (const relation of kb.relations) {
@@ -88,108 +117,249 @@ export function validateKnowledgeBase(kb: OkfKnowledgeBase) {
   }
 }
 
+export function readOkfFrontmatter(file: string) {
+  return readMarkdown(file, []).frontmatter;
+}
+
+export function parseOkfJsonBlocks(file: string) {
+  const parsed = readMarkdown(file, []);
+  return splitMarkdownSections(parsed.body).flatMap((section) => {
+    const block = section.content.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/i);
+    if (!block) return [];
+    try {
+      return [{ heading: section.heading, level: section.level, value: asRecord(JSON.parse(block[1])), body: section.content.replace(block[0], "").trim() }];
+    } catch {
+      return [];
+    }
+  });
+}
+
 function parseConceptsFile(file: string, warnings: OkfValidationWarning[]): OkfConcept[] {
   const parsed = readMarkdown(file, warnings);
-  validateFrontmatter(parsed.frontmatter, file, warnings);
   const paperId = String(parsed.frontmatter.paper_id ?? inferPaperIdFromPath(file));
-  const sections = splitMarkdownSections(parsed.body).filter((section) => section.level === 2);
-  return sections.flatMap((section) => {
-    const heading = parseConceptHeading(section.heading);
-    const fields = parseStructuredMarkdownFields(section.content);
-    const typeValue = String(fields.type ?? heading.type ?? "");
-    if (!typeValue) return [];
-    if (!isOkfConceptType(typeValue)) {
-      warnings.push({ file, message: `Unsupported concept type ${typeValue} in ${section.heading}.` });
+  return splitMarkdownSections(parsed.body).filter((section) => section.level === 2 && /^Concept:/i.test(section.heading)).flatMap((section) => {
+    const block = section.content.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/i);
+    if (!block) {
+      warnings.push({ file, message: `Concept section ${section.heading} is missing a JSON data block.` });
       return [];
     }
-    const rawConceptId = String(fields.concept_id ?? heading.id);
-    if (!rawConceptId) {
-      warnings.push({ file, message: `Concept heading ${section.heading} has a Type field but no concept id.` });
+    let row: Record<string, unknown>;
+    try { row = asRecord(JSON.parse(block[1])); }
+    catch (error) {
+      warnings.push({ file, message: `Concept section ${section.heading} has invalid JSON: ${errorMessage(error)}.` });
       return [];
     }
-    const conceptId = normalizeScopedId(paperId, rawConceptId);
+    const id = String(row.id ?? "");
+    const type = String(row.type ?? "");
+    if (!id || !isOkfConceptType(type)) {
+      warnings.push({ file, message: `Concept section ${section.heading} has invalid id or type ${type}.` });
+      return [];
+    }
     return [{
-      concept_id: conceptId,
-      paper_id: String(fields.paper_id ?? paperId),
-      type: typeValue,
-      dsr_layer: String(fields.dsr_layer ?? fields["dsr layer"] ?? typeValue),
-      title: String(fields.title ?? titleFromId(unscopedId(conceptId))),
-      description: String(fields.description ?? ""),
-      body_text: stripStructuredFieldLines(section.content).trim(),
-      tags: normalizeList(fields.tags),
-      confidence: normalizeConfidence(fields.confidence),
-      extraction_type: normalizeExtractionType(fields.extraction_type ?? fields["extraction type"]),
-      review_status: normalizeReviewStatus(fields.review_status ?? parsed.frontmatter.review_status),
+      concept_id: id,
+      paper_id: paperId,
+      type,
+      dsr_layer: type,
+      title: String(row.title ?? ""),
+      description: String(row.description ?? ""),
+      body_text: section.content.replace(block[0], "").trim(),
+      evidence_ids: stringArray(row.evidence),
+      tags: [],
+      confidence: normalizeConfidence(row.confidence),
+      extraction_type: extractionType(row.extraction_type),
+      review_status: reviewStatus(row.review_status),
       source_file: file,
       okf_path: path.relative(process.cwd(), file)
-    } satisfies OkfConcept];
+    }];
   });
 }
 
 function parseEvidenceFile(file: string, warnings: OkfValidationWarning[]): OkfEvidenceItem[] {
   const parsed = readMarkdown(file, warnings);
-  validateFrontmatter(parsed.frontmatter, file, warnings);
   const paperId = String(parsed.frontmatter.paper_id ?? inferPaperIdFromPath(file));
-  const sections = splitMarkdownSections(parsed.body).filter((section) => section.level === 2);
-  return sections.flatMap((section) => {
-    const headingId = parseEvidenceHeading(section.heading);
-    if (!headingId) return [];
-    const fields = parseStructuredMarkdownFields(section.content);
-    const evidenceId = normalizeScopedId(paperId, String(fields.evidence_id ?? headingId));
-    const supportIds = normalizeList(fields.supports ?? fields["supports"]);
-    const conceptId = fields.concept_id
-      ? normalizeScopedId(paperId, String(fields.concept_id))
-      : supportIds[0]
-        ? normalizeScopedId(paperId, supportIds[0])
-        : undefined;
+  return splitMarkdownSections(parsed.body).filter((section) => section.level === 2 && /^Evidence:/i.test(section.heading)).flatMap((section) => {
+    const block = section.content.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/i);
+    if (!block) {
+      warnings.push({ file, message: `Evidence section ${section.heading} is missing a JSON data block.` });
+      return [];
+    }
+    let row: Record<string, unknown>;
+    try { row = asRecord(JSON.parse(block[1])); }
+    catch (error) {
+      warnings.push({ file, message: `Evidence section ${section.heading} has invalid JSON: ${errorMessage(error)}.` });
+      return [];
+    }
+    const supports = stringArray(row.supports);
+    const location = optionalString(row.source_location);
+    const evidenceType = normalizeEvidenceType(row.evidence_type);
+    const text = String(row.quote_or_summary ?? "");
     return [{
-      evidence_id: evidenceId,
-      paper_id: String(fields.paper_id ?? paperId),
-      concept_id: conceptId,
-      page_number: firstNumber(fields.page_number ?? fields.pdf_page ?? fields["pdf page"] ?? fields["pdf pages"]),
-      section: fields.section ? String(fields.section) : fields.source ? String(fields.source) : undefined,
-      quote: fields.quote && String(fields.quote).toLowerCase() !== "null" ? String(fields.quote) : undefined,
-      paraphrase: String(fields.paraphrase ?? stripStructuredFieldLines(section.content).trim()),
-      confidence: normalizeConfidence(fields.confidence),
-      source_location: fields.source_location ? String(fields.source_location) : undefined,
+      evidence_id: String(row.id ?? ""),
+      paper_id: paperId,
+      concept_id: supports.find((target) => target !== paperId),
+      supports,
+      page_number: firstNumber(location),
+      section: location,
+      quote: evidenceType === "quote" ? text : undefined,
+      paraphrase: text,
+      evidence_type: evidenceType,
+      confidence: "medium",
+      source_location: location,
       source_file: file
-    } satisfies OkfEvidenceItem];
+    }];
   });
 }
 
 function parseRelationsFile(file: string, warnings: OkfValidationWarning[]): OkfRelation[] {
-  const text = fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "");
-  const doc = parseSimpleYaml(text);
-  const paperId = String(doc.paper_id ?? inferPaperIdFromPath(file));
-  const rows = Array.isArray(doc.relations) ? doc.relations as Record<string, unknown>[] : [];
-  if (!Array.isArray(doc.relations)) warnings.push({ file, message: "relations.yaml should contain a relations list." });
-  return rows.flatMap((row, index) => {
-    const id = String(row.relation_id ?? `rel_${String(index + 1).padStart(3, "0")}`);
-    const relationId = normalizeScopedId(paperId, id);
-    const predicate = String(row.predicate ?? "supported_by");
-    const relationScope = String(row.relation_scope ?? "paper_level");
-    const source = row.source_concept_id ?? row.source;
-    const target = row.target_concept_id ?? row.target;
-    const evidence = row.evidence_id ?? row.evidence;
-    if (!source || !target) {
-      warnings.push({
-        file,
-        message: `Malformed relation ${relationId}: missing ${!source ? "source" : "target"} concept id.`
-      });
+  let document: Record<string, unknown>;
+  try { document = readOkfYamlDocument(file); }
+  catch (error) {
+    warnings.push({ file, message: `relations.yaml must contain valid canonical YAML: ${errorMessage(error)}.` });
+    return [];
+  }
+  const rows = Array.isArray(document.relations) ? document.relations.map(asRecord) : [];
+  if (!Array.isArray(document.relations)) warnings.push({ file, message: "relations.yaml should contain a relations list." });
+  return rows.flatMap((row) => {
+    const predicate = String(row.predicate ?? "");
+    if (!isOkfRelationPredicate(predicate)) {
+      warnings.push({ file, message: `Unsupported relation predicate ${predicate} in ${String(row.id ?? "unknown")}.` });
       return [];
     }
-    if (!isOkfRelationPredicate(predicate)) warnings.push({ file, message: `Unsupported relation predicate ${predicate} in ${relationId}.` });
     return [{
-      relation_id: relationId,
-      source_concept_id: normalizeScopedId(paperId, String(source)),
-      predicate: isOkfRelationPredicate(predicate) ? predicate : "supported_by",
-      target_concept_id: normalizeScopedId(paperId, String(target)),
-      evidence_id: evidence ? normalizeScopedId(paperId, String(evidence)) : undefined,
+      relation_id: String(row.id ?? ""),
+      source_concept_id: String(row.source ?? ""),
+      predicate,
+      target_concept_id: String(row.target ?? ""),
+      evidence_id: optionalString(row.evidence),
       confidence: normalizeConfidence(row.confidence),
-      relation_scope: relationScope === "cross_paper" || relationScope === "query_generated" ? relationScope : "paper_level",
+      extraction_type: extractionType(row.extraction_type),
+      relation_scope: "paper_level",
       source_file: file
-    } satisfies OkfRelation];
+    }];
   });
+}
+
+export function readOkfYamlDocument(file: string): Record<string, unknown> {
+  const value = yaml.load(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected a YAML mapping at the document root.");
+  return value as Record<string, unknown>;
+}
+
+export function parseOkfPresentationFile(file: string, warnings: OkfValidationWarning[] = []): OkfPresentation | undefined {
+  let document: Record<string, unknown>;
+  try { document = readOkfYamlDocument(file); }
+  catch (error) {
+    warnings.push({ file, message: `presentation.yaml must contain valid canonical YAML: ${errorMessage(error)}.` });
+    return undefined;
+  }
+  if (document.presentation_version !== OKF_PRESENTATION_VERSION) {
+    warnings.push({ file, message: `Expected presentation_version ${OKF_PRESENTATION_VERSION}.` });
+    return undefined;
+  }
+  const card = asRecord(document.card);
+  const overview = asRecord(document.overview);
+  const grid = asRecord(document.dsr_summary_grid);
+  const context = asRecord(document.additional_context);
+  const provenance = asRecord(document.provenance);
+  const sourceFields = asRecord(provenance.source_fields);
+  return {
+    presentation_version: OKF_PRESENTATION_VERSION,
+    paper_id: String(document.paper_id ?? ""),
+    card: {
+      domain_label: String(card.domain_label ?? ""),
+      artifact_summary: nullableString(card.artifact_summary),
+      dlt_role: nullableString(card.dlt_role)
+    },
+    overview: {
+      abstract_summary: nullableString(overview.abstract_summary),
+      research_problem: String(overview.research_problem ?? ""),
+      research_objective: nullableString(overview.research_objective),
+      methodology: nullableString(overview.methodology),
+      evaluation_method: stringArray(overview.evaluation_method),
+      key_contributions: stringArray(overview.key_contributions),
+      design_knowledge_output: stringArray(overview.design_knowledge_output)
+    },
+    dsr_summary_grid: {
+      problem: String(grid.problem ?? ""),
+      input_knowledge: String(grid.input_knowledge ?? ""),
+      research_process: String(grid.research_process ?? ""),
+      key_concepts: stringArray(grid.key_concepts),
+      solution: String(grid.solution ?? ""),
+      output_knowledge: String(grid.output_knowledge ?? "")
+    },
+    additional_context: {
+      summary: String(context.summary ?? ""),
+      limitations: stringArray(context.limitations)
+    },
+    provenance: {
+      migrated_from_legacy_csv: provenance.migrated_from_legacy_csv === true,
+      source_fields: Object.fromEntries(Object.entries(sourceFields).map(([key, value]) => [key, String(value)])),
+      migration_notes: stringArray(provenance.migration_notes)
+    }
+  };
+}
+
+export function parseOkfGraphSourceReference(file: string, warnings: OkfValidationWarning[] = []): OkfGraphSourceReference | undefined {
+  let graph: Record<string, unknown>;
+  try { graph = asRecord(JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""))); }
+  catch (error) {
+    warnings.push({ file, message: `graph.json is invalid JSON: ${errorMessage(error)}.` });
+    return undefined;
+  }
+  if (graph.source_reference == null) return undefined;
+  const source = asRecord(graph.source_reference);
+  if (!(okfGraphSourceReferenceTypes as readonly unknown[]).includes(source.type) || !(okfGraphValidationStatuses as readonly unknown[]).includes(source.validation_status)) {
+    warnings.push({ file, message: "graph.json source_reference has an invalid type or validation_status." });
+    return undefined;
+  }
+  return {
+    type: source.type as OkfGraphSourceReference["type"],
+    label: nullableString(source.label),
+    page: typeof source.page === "number" && Number.isInteger(source.page) && source.page > 0 ? source.page : null,
+    caption: nullableString(source.caption),
+    validation_status: source.validation_status as OkfGraphSourceReference["validation_status"],
+    validation_notes: nullableString(source.validation_notes)
+  };
+}
+
+function normalizePaper(frontmatter: Record<string, unknown>, file: string, body: string, warnings: OkfValidationWarning[]): OkfPaper {
+  if (frontmatter.schema_version !== OKF_SCHEMA_VERSION) warnings.push({ file, message: `Expected schema_version ${OKF_SCHEMA_VERSION}.` });
+  const sourcePdf = optionalString(frontmatter.source_pdf_filename);
+  return {
+    schema_version: OKF_SCHEMA_VERSION,
+    paper_id: String(frontmatter.paper_id ?? inferPaperIdFromPath(file)),
+    slug: String(frontmatter.slug ?? path.basename(path.dirname(file))),
+    title: String(frontmatter.title ?? "Untitled OKF paper"),
+    short_title: optionalString(frontmatter.short_title),
+    authors: stringArray(frontmatter.authors),
+    year: optionalNumber(frontmatter.year),
+    venue: optionalString(frontmatter.venue),
+    doi: optionalString(frontmatter.doi),
+    doi_url: optionalString(frontmatter.doi_url),
+    source_url: optionalString(frontmatter.source_url),
+    source_pdf_path: sourcePdf ?? undefined,
+    domain_context: optionalString(frontmatter.domain_context),
+    abstract: optionalString(frontmatter.abstract),
+    research_problem: stringArray(frontmatter.research_problem),
+    research_objective: stringArray(frontmatter.research_objective),
+    research_questions: stringArray(frontmatter.research_questions),
+    artifact_type: optionalString(frontmatter.artifact_type),
+    blockchain_dlt_role: optionalString(frontmatter.blockchain_dlt_role),
+    methodology: optionalString(frontmatter.methodology),
+    theoretical_foundations: stringArray(frontmatter.theoretical_foundations),
+    evaluation_method: stringArray(frontmatter.evaluation_method),
+    key_contributions: stringArray(frontmatter.key_contributions),
+    design_knowledge_output: stringArray(frontmatter.design_knowledge_output),
+    limitations: stringArray(frontmatter.limitations),
+    notes: optionalString(frontmatter.notes),
+    extraction_status: extractionStatus(frontmatter.extraction_status),
+    review_status: reviewStatus(frontmatter.review_status),
+    author_check_status: authorCheckStatus(frontmatter.author_check_status),
+    reviewed_by: optionalString(frontmatter.reviewed_by),
+    reviewed_at: optionalString(frontmatter.reviewed_at),
+    source_file: file,
+    body_text: body.trim()
+  };
 }
 
 function readMarkdown(file: string, warnings: OkfValidationWarning[]) {
@@ -199,34 +369,31 @@ function readMarkdown(file: string, warnings: OkfValidationWarning[]) {
     warnings.push({ file, message: "Missing YAML frontmatter." });
     return { frontmatter: {}, body: text };
   }
-  const frontmatter = parseFrontmatterBlock(match[1]);
-  validateFrontmatter(frontmatter, file, warnings);
-  return { frontmatter, body: text.slice(match[0].length) };
+  return { frontmatter: parseFrontmatterBlock(match[1], file, warnings), body: text.slice(match[0].length) };
 }
 
-function validateFrontmatter(frontmatter: Record<string, unknown>, file: string, warnings: OkfValidationWarning[]) {
-  for (const field of requiredFrontmatter) {
-    if (!frontmatter[field]) warnings.push({ file, message: `Frontmatter missing ${field}.` });
+function parseFrontmatterBlock(text: string, file: string, warnings: OkfValidationWarning[]) {
+  const result: Record<string, unknown> = {};
+  for (const rawLine of text.split(/\r?\n/)) {
+    if (!rawLine.trim() || rawLine.trimStart().startsWith("#")) continue;
+    const match = rawLine.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    if (!match) {
+      warnings.push({ file, message: `Unsupported multiline or malformed frontmatter line: ${rawLine.trim()}.` });
+      continue;
+    }
+    result[match[1]] = parseCanonicalScalar(match[2]);
   }
+  return result;
 }
 
-function normalizePaper(frontmatter: Record<string, unknown>, file: string, body: string, warnings: OkfValidationWarning[]): OkfPaper {
-  validateFrontmatter(frontmatter, file, warnings);
-  return {
-    paper_id: String(frontmatter.paper_id ?? inferPaperIdFromPath(file)),
-    title: String(frontmatter.title ?? "Untitled OKF paper"),
-    authors: normalizeList(frontmatter.authors),
-    year: frontmatter.year ? Number(frontmatter.year) : undefined,
-    source_pdf_path: frontmatter.source_pdf_path ? String(frontmatter.source_pdf_path) : undefined,
-    review_status: normalizeReviewStatus(frontmatter.review_status),
-    source_file: file,
-    body_text: body.trim()
-  };
+function parseCanonicalScalar(value: string): unknown {
+  const trimmed = value.trim();
+  try { return JSON.parse(trimmed); }
+  catch { return trimmed.replace(/^['"]|['"]$/g, ""); }
 }
 
 function splitMarkdownSections(body: string) {
-  const heading = /^(#{1,2})\s+(.+?)\s*$/gm;
-  const matches = Array.from(body.matchAll(heading));
+  const matches = Array.from(body.matchAll(/^(#{1,2})\s+(.+?)\s*$/gm));
   return matches.map((match, index) => ({
     level: match[1].length,
     heading: match[2].trim(),
@@ -234,225 +401,70 @@ function splitMarkdownSections(body: string) {
   }));
 }
 
-function parseConceptHeading(heading: string) {
-  const conceptMatch = heading.match(/^Concept:\s*(.+)$/i);
-  if (conceptMatch) return { id: conceptMatch[1].trim() };
-  const typedMatch = heading.match(/^([A-Za-z]+):([A-Za-z0-9_.:-]+)$/);
-  if (typedMatch) return { type: typedMatch[1], id: typedMatch[2] };
-  return { id: heading.trim() };
+function extractionType(value: unknown): OkfExtractionType {
+  return (okfExtractionTypes as readonly unknown[]).includes(value) ? value as OkfExtractionType : "inferred";
 }
 
-function parseEvidenceHeading(heading: string) {
-  const evidenceMatch = heading.match(/^Evidence:\s*(.+)$/i);
-  return (evidenceMatch ? evidenceMatch[1] : heading).trim();
+function extractionStatus(value: unknown): OkfExtractionStatus {
+  return (okfExtractionStatuses as readonly unknown[]).includes(value) ? value as OkfExtractionStatus : "okf_draft";
 }
 
-function parseStructuredMarkdownFields(content: string): Record<string, unknown> {
-  const fields: Record<string, unknown> = {};
-  for (const fence of content.matchAll(/```ya?ml\s*\r?\n([\s\S]*?)\r?\n```/gi)) {
-    Object.assign(fields, parseKeyValueBlock(fence[1]));
-  }
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    const bold = line.match(/^\*\*([^*]+?):\*\*\s*(.*?)\s*$/);
-    if (bold) fields[normalizeFieldKey(bold[1])] = parseScalar(bold[2]);
-  }
-  Object.assign(fields, parseKeyValueBlock(content.replace(/```[\s\S]*?```/g, "")));
-  return fields;
+function reviewStatus(value: unknown): OkfReviewStatus {
+  return (okfReviewStatuses as readonly unknown[]).includes(value) ? value as OkfReviewStatus : "unreviewed";
 }
 
-function stripStructuredFieldLines(content: string) {
-  return content
-    .replace(/```ya?ml\s*\r?\n[\s\S]*?\r?\n```/gi, "")
-    .split(/\r?\n/)
-    .filter((line) => !/^\s*\*\*[^*]+?:\*\*/.test(line))
-    .filter((line) => !/^\s*[A-Za-z0-9_]+:\s*/.test(line))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n");
+function authorCheckStatus(value: unknown): OkfAuthorCheckStatus {
+  return (okfAuthorCheckStatuses as readonly unknown[]).includes(value) ? value as OkfAuthorCheckStatus : "not_requested";
 }
 
-function parseFrontmatterBlock(text: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  let currentListKey: string | undefined;
-  let continuedScalarKey: string | undefined;
-  let continuedScalar = "";
-  let continuedPlainScalarKey: string | undefined;
-
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-
-    if (continuedScalarKey) {
-      continuedScalar = (continuedScalar + " " + line).trim();
-      if (hasClosingQuote(continuedScalar)) {
-        result[continuedScalarKey] = parseScalar(continuedScalar);
-        continuedScalarKey = undefined;
-        continuedScalar = "";
-      }
-      continue;
-    }
-
-    if (/^\s+/.test(rawLine) && continuedPlainScalarKey && !line.startsWith("- ")) {
-      result[continuedPlainScalarKey] = (String(result[continuedPlainScalarKey] ?? "") + " " + line).trim();
-      continue;
-    }
-
-    if (line.startsWith("- ") && currentListKey) {
-      const existing = result[currentListKey];
-      const values = Array.isArray(existing) ? existing : [];
-      values.push(parseScalar(line.slice(2)));
-      result[currentListKey] = values;
-      continue;
-    }
-
-    const match = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-    if (!match) continue;
-    const key = normalizeFieldKey(match[1]);
-    const rawValue = match[2].trim();
-    currentListKey = undefined;
-    continuedPlainScalarKey = undefined;
-
-    if (!rawValue) {
-      result[key] = [];
-      currentListKey = key;
-      continue;
-    }
-    if (startsUnclosedQuote(rawValue)) {
-      continuedScalarKey = key;
-      continuedScalar = rawValue;
-      continue;
-    }
-    result[key] = parseScalar(rawValue);
-    if (typeof result[key] === "string") continuedPlainScalarKey = key;
-  }
-
-  if (continuedScalarKey) result[continuedScalarKey] = parseScalar(continuedScalar);
-  return result;
+function normalizeEvidenceType(value: unknown): OkfEvidenceType {
+  return (okfEvidenceTypes as readonly unknown[]).includes(value) ? value as OkfEvidenceType : "summary";
 }
 
-function startsUnclosedQuote(value: string) {
-  const quote = value[0];
-  if (quote !== "'" && quote !== '"') return false;
-  return value.length === 1 || value[value.length - 1] !== quote;
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function hasClosingQuote(value: string) {
-  const quote = value[0];
-  return (quote === "'" || quote === '"') && value.length > 1 && value[value.length - 1] === quote;
+function stringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (value == null || value === "") return [];
+  return [String(value)];
 }
 
-function parseKeyValueBlock(text: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#") || line.startsWith("- ")) continue;
-    const match = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-    if (!match) continue;
-    result[normalizeFieldKey(match[1])] = parseScalar(match[2]);
-  }
-  return result;
-}
-function parseSimpleYaml(text: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  let currentList: string | null = null;
-  let currentItem: Record<string, unknown> | null = null;
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const listMatch = line.match(/^([A-Za-z0-9_]+):\s*$/);
-    if (listMatch) {
-      currentList = normalizeFieldKey(listMatch[1]);
-      result[currentList] = [];
-      continue;
-    }
-    if (line.startsWith("- ") && currentList) {
-      currentItem = {};
-      const list = result[currentList];
-      if (Array.isArray(list)) list.push(currentItem);
-      const rest = line.slice(2).trim();
-      if (rest) assignYamlPair(currentItem, rest);
-      continue;
-    }
-    if (currentItem && /^([A-Za-z0-9_]+):/.test(line)) {
-      assignYamlPair(currentItem, line);
-      continue;
-    }
-    const pair = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-    if (pair) result[normalizeFieldKey(pair[1])] = parseScalar(pair[2]);
-  }
-  return result;
+function optionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function assignYamlPair(target: Record<string, unknown>, text: string) {
-  const pair = text.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
-  if (pair) target[normalizeFieldKey(pair[1])] = parseScalar(pair[2]);
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function normalizeFieldKey(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "_");
-}
-
-function normalizeExtractionType(value: unknown) {
-  const normalized = String(value ?? "explicit").toLowerCase();
-  if (normalized === "inferred") return "inferred";
-  if (normalized === "explicit-in-artifact") return "explicit-in-artifact";
-  return "explicit";
+function optionalNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function firstNumber(value: unknown) {
-  if (value === undefined || value === null) return undefined;
-  const match = String(value).match(/\d+/);
-  return match ? Number(match[0]) : undefined;
+  if (value == null) return undefined;
+  const match = String(value).match(/\bpage\s+(\d+)/i);
+  return match ? Number(match[1]) : undefined;
 }
 
-function parseScalar(value: string): unknown {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) return trimmed.slice(1, -1).split(",").map((item) => unquote(item.trim())).filter(Boolean);
-  if (/^\d+$/.test(trimmed)) return Number(trimmed);
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (trimmed === "null") return undefined;
-  return unquote(trimmed);
-}
-
-function normalizeList(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
-  if (!value) return [];
-  return String(value).split(",").map((item) => item.trim()).filter(Boolean);
-}
-
-function normalizeReviewStatus(value: unknown): OkfReviewStatus {
-  return String(value ?? "draft").toLowerCase() === "reviewed" ? "reviewed" : "draft";
-}
-
-function normalizeScopedId(paperId: string, id: string) {
-  const cleanId = id.trim();
-  if (cleanId.includes(":")) return cleanId;
-  return `${paperId}:${cleanId}`;
-}
-
-function unscopedId(id: string) {
-  return id.includes(":") ? id.split(":").slice(1).join(":") : id;
-}
-
-function titleFromId(id: string) {
-  return id.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+function addDuplicateWarnings(ids: string[], kind: string, warnings: OkfValidationWarning[]) {
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) warnings.push({ file: kind, message: `Duplicate ${kind} id ${id}.` });
+    seen.add(id);
+  }
 }
 
 function inferPaperIdFromPath(file: string) {
   return path.basename(path.dirname(file)).replace(/-/g, "_").toUpperCase();
 }
 
-function unquote(value: string) {
-  return value.replace(/^['"]|['"]$/g, "");
-}
-
 function listImmediateDirectories(dir: string) {
   return fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => path.join(dir, entry.name)).sort();
 }
 
-
-
-
-
-
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { BookOpen, CheckCircle2, ChevronDown, Clipboard, Filter, GitBranch, Loader2, MessageSquareWarning, Network, Send } from "lucide-react";
-import ReactFlow, { Background, Controls, MarkerType, type Edge, type Node } from "reactflow";
+import ReactFlow, { Background, Controls, MarkerType, Position, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -13,14 +13,14 @@ import type { LlmProviderOutcome, LlmProviderStatus } from "@/lib/llm/provider.t
 
 const exampleQuestions = [
   "Which papers help with privacy-preserving identity?",
-  "Build a Requirement \u2192 Principle \u2192 Feature flow for Blockchain for the IoT.",
+  "Show a recommended stored pathway for an integrity-focused design.",
   "What design knowledge should I reuse for marketplace trust?"
 ];
 
 const conceptGroups = [
-  ["Requirements", "DesignRequirement"],
-  ["Design Principles", "DesignPrinciple"],
-  ["Design Features", "DesignFeature"],
+  ["Requirements", "Design Requirement"],
+  ["Design Principles", "Design Principle"],
+  ["Design Features", "Design Feature"],
   ["Artifact Patterns", "Artifact"],
   ["Evaluation Criteria / Evidence", "Evaluation"]
 ] as const;
@@ -225,19 +225,22 @@ function AnswerRuntimeBadge({ response }: { response: OkfChatResponse }) {
   const tone = providerStatusTone(status);
   return <div className={`rounded-full border px-3 py-2 text-xs font-medium ${tone}`}>{label}</div>;
 }
-type FlowLayerLabel = "Requirement" | "Principle" | "Feature" | "Artifact";
+type FlowLayerLabel = "Problem" | "Requirement" | "Principle" | "Feature" | "Artifact" | "Evaluation" | "OutputKnowledge";
 type FlowGraphSelection = { kind: "node"; id: string } | { kind: "edge"; id: string } | null;
 
 type GraphNode = OkfChatResponse["flow_graph"]["nodes"][number];
 type GraphEdge = OkfChatResponse["flow_graph"]["edges"][number];
 
-const visibleFlowLayers: FlowLayerLabel[] = ["Requirement", "Principle", "Feature", "Artifact"];
+const visibleFlowLayers: FlowLayerLabel[] = ["Problem", "Requirement", "Principle", "Feature", "Artifact", "Evaluation", "OutputKnowledge"];
 const flowEdgeClassNames = { stored: "flow-edge--stored", mixed: "flow-edge--mixed", query_generated: "flow-edge--query-generated" } as const;
 const flowLayerStyles: Record<FlowLayerLabel, { className: string; background: string; border: string }> = {
+  Problem: { className: "flow-node--problem", background: "#F7E1E1", border: "#e8bbbb" },
   Requirement: { className: "flow-node--requirement", background: "#E9DDF7", border: "#cdb8ec" },
   Principle: { className: "flow-node--principle", background: "#DFF3E5", border: "#b7dfc2" },
   Feature: { className: "flow-node--feature", background: "#F4E2BF", border: "#e3c98f" },
-  Artifact: { className: "flow-node--artifact", background: "#E4EEF9", border: "#bed0e8" }
+  Artifact: { className: "flow-node--artifact", background: "#E4EEF9", border: "#bed0e8" },
+  Evaluation: { className: "flow-node--evaluation", background: "#E5F2F2", border: "#b7dada" },
+  OutputKnowledge: { className: "flow-node--output-knowledge", background: "#EFE9DA", border: "#d9cba5" }
 };
 
 function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { response: OkfChatResponse; setActiveTab: (tab: string) => void; onSelectEvidenceIds: (ids: string[] | undefined) => void }) {
@@ -257,6 +260,8 @@ function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { resp
       return {
         id: node.id,
         position: { x: column * 275, y: row * 118 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
         data: { label: <FlowGraphNodeLabel node={node} /> },
         className: `flow-node ${style.className} flow-node--${node.provenance.replace("_", "-")}`,
         style: {
@@ -284,14 +289,14 @@ function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { resp
         id: edge.id,
         source: edge.source,
         target: edge.target,
-        type: "smoothstep",
+        type: "straight",
         label: focused ? readablePredicate(edge.predicate) : undefined,
-        className: `flow-edge ${flowEdgeClassNames[edge.provenance]}`,
-        markerEnd: { type: MarkerType.ArrowClosed, color: focused ? "#20242a" : edgeColor(edge.provenance) },
+        className: `flow-edge ${flowEdgeClassNames[edge.provenance]}${edge.stored_provenance ? ` flow-edge--${edge.stored_provenance.replaceAll("_", "-")}` : ""}`,
+        markerEnd: { type: MarkerType.ArrowClosed, color: focused ? "#20242a" : edgeColor(edge) },
         style: {
-          stroke: focused ? "#20242a" : edgeColor(edge.provenance),
+          stroke: focused ? "#20242a" : edgeColor(edge),
           strokeWidth: focused ? 3 : edge.provenance === "stored" ? 2.2 : 2,
-          strokeDasharray: edgeDash(edge.provenance),
+          strokeDasharray: edgeDash(edge),
           opacity: focused ? 0.95 : 0.72
         },
         labelStyle: { fill: "#20242a", fontSize: 10, fontWeight: 700 },
@@ -307,7 +312,7 @@ function DesignMovesFlow({ response, setActiveTab, onSelectEvidenceIds }: { resp
   const selectedNode = selection?.kind === "node" ? graph.nodes.find((node) => node.id === selection.id) : undefined;
   const selectedEdge = selection?.kind === "edge" ? graph.edges.find((edge) => edge.id === selection.id) : undefined;
 
-  return <section className="w-full min-w-0 rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="mt-2 text-xs leading-5 text-muted">{flowModeNotice(graph.mode)}</p></div><FlowLegend /></div><div className="grid w-full min-w-0 gap-0 min-[1050px]:grid-cols-[minmax(0,1fr)_310px]"><div className="h-[650px] w-full min-w-0 border border-line bg-paper/50 min-[1050px]:h-[720px]"><ReactFlow className="h-full w-full" nodes={reactNodes} edges={reactEdges} fitView fitViewOptions={{ padding: 0.16 }} minZoom={0.28} nodesDraggable={false} onNodeClick={(_, node) => { const graphNode = graph.nodes.find((item) => item.id === node.id); setSelection({ kind: "node", id: node.id }); onSelectEvidenceIds(graphNode?.evidence_ids.length ? graphNode.evidence_ids : undefined); }} onEdgeClick={(_, edge) => { const graphEdge = graph.edges.find((item) => item.id === edge.id); setSelection({ kind: "edge", id: edge.id }); onSelectEvidenceIds(graphEdge?.evidence_ids.length ? graphEdge.evidence_ids : undefined); }} onPaneClick={() => { setSelection(null); onSelectEvidenceIds(undefined); }}><Background color="#d8d6cc" gap={28} /><Controls /></ReactFlow></div><FlowGraphInspector node={selectedNode} edge={selectedEdge} graph={graph} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /></div></section>;
+  return <section className="w-full min-w-0 rounded-lg border border-line bg-white p-5 shadow-research"><div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2 text-sm font-semibold text-ink"><GitBranch className="h-4 w-4 text-blue" /> DSR flow graph</div><p className="mt-2 text-xs leading-5 text-muted">{flowModeNotice(graph.mode)}</p></div><FlowLegend /></div><div className={selection ? "grid w-full min-w-0 gap-0 min-[1050px]:grid-cols-[minmax(0,1fr)_310px]" : "w-full min-w-0"}><div className="h-[650px] w-full min-w-0 border border-line bg-paper/50 min-[1050px]:h-[720px]"><ReactFlow className="h-full w-full" nodes={reactNodes} edges={reactEdges} fitView fitViewOptions={{ padding: 0.16 }} minZoom={0.28} nodesDraggable={false} onNodeClick={(_, node) => { const graphNode = graph.nodes.find((item) => item.id === node.id); setSelection({ kind: "node", id: node.id }); onSelectEvidenceIds(graphNode?.evidence_ids.length ? graphNode.evidence_ids : undefined); }} onEdgeClick={(_, edge) => { const graphEdge = graph.edges.find((item) => item.id === edge.id); setSelection({ kind: "edge", id: edge.id }); onSelectEvidenceIds(graphEdge?.evidence_ids.length ? graphEdge.evidence_ids : undefined); }} onPaneClick={() => { setSelection(null); onSelectEvidenceIds(undefined); }}><Background color="#d8d6cc" gap={28} /><Controls /></ReactFlow></div>{selection ? <FlowGraphInspector node={selectedNode} edge={selectedEdge} graph={graph} setActiveTab={setActiveTab} onSelectEvidenceIds={onSelectEvidenceIds} /> : null}</div></section>;
 }
 
 function FlowGraphNodeLabel({ node }: { node: GraphNode }) {
@@ -320,7 +325,8 @@ function FlowGraphInspector({ node, edge, graph, setActiveTab, onSelectEvidenceI
   const evidenceIds = selected.evidence_ids ?? [];
   const source = edge ? graph.nodes.find((item) => item.id === edge.source) : undefined;
   const target = edge ? graph.nodes.find((item) => item.id === edge.target) : undefined;
-  return <aside className="max-h-[650px] min-h-[220px] overflow-y-auto border border-line bg-white p-4 min-[1050px]:max-h-[720px] min-[1050px]:border-l-0"><Badge>{selected.provenance}</Badge><h3 className="mt-3 [overflow-wrap:anywhere] text-base font-semibold leading-6 text-ink">{node ? node.label : `${source?.label ?? "Source"} -> ${target?.label ?? "Target"}`}</h3><div className="mt-3 space-y-2 text-xs leading-5 text-muted"><p><strong className="text-ink">Confidence:</strong> {selected.confidence}</p>{edge && <p><strong className="text-ink">Relation:</strong> {readablePredicate(edge.predicate)}</p>}{node?.short_description && <p>{node.short_description}</p>}<p><strong className="text-ink">Evidence refs:</strong> {evidenceIds.length}</p></div>{evidenceIds.length > 0 && <button type="button" onClick={() => { onSelectEvidenceIds(evidenceIds); setActiveTab("Evidence"); }} className="mt-4 rounded-md border border-line bg-paper px-3 py-2 text-xs font-medium text-ink hover:border-blue">Open evidence</button>}</aside>;
+  const provenance = edge?.stored_provenance ?? selected.provenance;
+  return <aside className="max-h-[650px] min-h-[220px] overflow-y-auto border border-line bg-white p-4 min-[1050px]:max-h-[720px] min-[1050px]:border-l-0"><Badge>{provenance}</Badge><h3 className="mt-3 [overflow-wrap:anywhere] text-base font-semibold leading-6 text-ink">{node ? node.label : `${source?.label ?? "Source"} -> ${target?.label ?? "Target"}`}</h3><div className="mt-3 space-y-2 text-xs leading-5 text-muted"><p><strong className="text-ink">Confidence:</strong> {selected.confidence}</p>{edge && <p><strong className="text-ink">Relation:</strong> {readablePredicate(edge.predicate)}</p>}{edge?.source_view_ids?.length ? <p><strong className="text-ink">Source-view membership:</strong> {edge.source_view_ids.join(", ")}</p> : null}{node?.short_description && <p>{node.short_description}</p>}<p><strong className="text-ink">Evidence refs:</strong> {evidenceIds.length}</p></div>{evidenceIds.length > 0 && <button type="button" onClick={() => { onSelectEvidenceIds(evidenceIds); setActiveTab("Evidence"); }} className="mt-4 rounded-md border border-line bg-paper px-3 py-2 text-xs font-medium text-ink hover:border-blue">Open evidence</button>}</aside>;
 }
 
 function FlowLegend() {
@@ -333,15 +339,19 @@ function flowModeNotice(mode: string) {
   return "This flow is query-generated from retrieved OKF design knowledge and should be treated as a design hypothesis.";
 }
 
-function edgeColor(provenance: string) {
-  if (provenance === "stored") return "#4f6f91";
-  if (provenance === "mixed") return "#7a6f58";
-  return "#8a6f35";
+function edgeColor(edge: GraphEdge) {
+  if (edge.provenance === "mixed") return "#7a6f58";
+  if (edge.provenance === "query_generated") return "#8a6f35";
+  if (edge.stored_provenance === "source_view_explicit") return "#2f4b66";
+  if (edge.stored_provenance === "explicit_in_artifact") return "#718aa3";
+  if (edge.stored_provenance === "inferred") return "#68717b";
+  return "#4f6f91";
 }
 
-function edgeDash(provenance: string) {
-  if (provenance === "query_generated") return "6 5";
-  if (provenance === "mixed") return "2 4";
+function edgeDash(edge: GraphEdge) {
+  if (edge.provenance === "query_generated") return "6 5";
+  if (edge.provenance === "mixed") return "2 4";
+  if (edge.stored_provenance === "inferred") return "7 5";
   return undefined;
 }
 

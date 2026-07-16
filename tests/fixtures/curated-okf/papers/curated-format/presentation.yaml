@@ -1,0 +1,7 @@
+presentation_version: workbench-v1
+paper_id: CURATED_2026
+card: {domain_label: "Testing", artifact_summary: "Hash anchor", dlt_role: "Integrity commitment"}
+overview: {abstract_summary: null, research_problem: "Opportunistic manipulation of shared information", research_objective: "Exercise canonical concepts and local source records", methodology: "Fixture method", evaluation_method: ["Fixture evaluation"], key_contributions: ["Canonical curated-format fixture"], design_knowledge_output: ["Requirement-principle-feature chain"]}
+dsr_summary_grid: {problem: "Shared information is vulnerable to manipulation.", input_knowledge: "Auditability provides the fixture input knowledge.", research_process: "The fixture follows a canonical design process.", key_concepts: ["Auditability", "Integrity commitment"], solution: "A hash anchor records an integrity commitment.", output_knowledge: "A requirement-principle-feature chain."}
+additional_context: {summary: "A curated canonical fixture presentation.", limitations: ["Fixture limitation."]}
+provenance: {migrated_from_legacy_csv: false, source_fields: {}, migration_notes: []}

@@ -2,7 +2,7 @@
 
 DSR-OKF bundle for the NIL NFT marketplace paper.
 
-This reviewed draft extraction captures the paper's fairness and inclusiveness problem, inclusive-meritocratic fairness criterion, NIL marketplace design requirements, design principles, NFT marketplace design features, DApp prototype, evaluation, design theory, and limitations.
+This unreviewed OKF draft extraction captures the paper's fairness and inclusiveness problem, inclusive-meritocratic fairness criterion, NIL marketplace design requirements, design principles, NFT marketplace design features, DApp prototype, evaluation, design theory, and limitations.
 
 ## Files
 

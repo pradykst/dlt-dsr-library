@@ -1,0 +1,10 @@
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "TEMPLATE_PAPER",
+  "aliases": [
+    {
+      "target_id": "TEMPLATE_PAPER:dr_001",
+      "terms": ["replace with a source term or legacy label"]
+    }
+  ]
+}

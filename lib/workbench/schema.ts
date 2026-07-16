@@ -1,3 +1,38 @@
+export const workbenchChangeTargetTypes = ["paper", "presentation", "concept", "relation", "evidence", "graph"] as const;
+export const workbenchChangeStatuses = ["open", "accepted_for_git_change", "rejected", "resolved_after_reindex"] as const;
+
+export const workbenchChangeFields = {
+  paper: ["title", "short_title", "authors", "year", "venue", "doi", "doi_url", "source_url", "source_pdf_filename", "domain_context", "abstract", "research_problem", "research_objective", "artifact_type", "blockchain_dlt_role", "methodology", "evaluation_method", "key_contributions", "design_knowledge_output", "limitations", "notes", "extraction_status", "review_status", "author_check_status"],
+  concept: ["id", "type", "title", "description", "evidence", "confidence", "extraction_type", "review_status"],
+  presentation: [
+    "card.domain_label",
+    "card.artifact_summary",
+    "card.dlt_role",
+    "overview.abstract_summary",
+    "overview.research_problem",
+    "overview.research_objective",
+    "overview.methodology",
+    "overview.evaluation_method",
+    "overview.key_contributions",
+    "overview.design_knowledge_output",
+    "dsr_summary_grid.problem",
+    "dsr_summary_grid.input_knowledge",
+    "dsr_summary_grid.research_process",
+    "dsr_summary_grid.key_concepts",
+    "dsr_summary_grid.solution",
+    "dsr_summary_grid.output_knowledge",
+    "additional_context.summary",
+    "additional_context.limitations"
+  ],
+  relation: ["id", "source", "target", "predicate", "evidence", "confidence", "extraction_type"],
+  evidence: ["id", "supports", "source_location", "quote_or_summary", "evidence_type"],
+  graph: ["nodes", "edges", "recommended_paths", "source_reference"]
+} as const;
+
+export function isWorkbenchChangeTarget(type: string, field: string) {
+  if (!(type in workbenchChangeFields)) return false;
+  return (workbenchChangeFields[type as keyof typeof workbenchChangeFields] as readonly string[]).includes(field);
+}
 export const allowedSourceStatuses = ["AS", "PAR", "INF", "NR", "NA", "UNC"];
 export const allowedRelationTypes = [
   "motivates",

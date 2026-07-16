@@ -1,335 +1,263 @@
 {
+  "schema_version": "okf-dsr-v1",
   "paper_id": "SHORT_END_STICK_2025",
-  "slug": "short-end-stick-2025",
   "title": "And No One Gets the Short End of the Stick",
+  "source_reference": {
+    "type": "paper_figure",
+    "label": "Figures 1 and 2",
+    "page": 9,
+    "caption": "Summary of the Design Principles; System Architecture with Design Principles.",
+    "validation_status": "unreviewed",
+    "validation_notes": "Source figures identified from the paper; semantic mapping remains subject to manual review."
+  },
   "nodes": [
     {
-      "id": "problem_two_sided_opportunism",
-      "type": "Problem",
-      "label": "Two-sided opportunism in information sharing",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "dr_001_prevent_information_manipulation",
-      "type": "Requirement",
-      "label": "Prevent information manipulation",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "dr_002_prevent_information_poaching",
-      "type": "Requirement",
-      "label": "Prevent information poaching",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "type": "Design Principle",
-      "label": "Private storage + proof of integrity",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "dp_002_nonreversible_reliable_independent_computation",
-      "type": "Design Principle",
-      "label": "Nonreversible reliable computation",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "dp_003_joint_approval_for_computation_mechanism_changes",
-      "type": "Design Principle",
-      "label": "Joint approval for computation changes",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_001_private_data_collection_as_provider_only_sensitive_data_store",
-      "type": "Design Feature",
-      "label": "Private data collection",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_002_public_hash_integrity_proof",
-      "type": "Design Feature",
-      "label": "Hash-based proof of integrity",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_003_smart_contract_stress_factor_computation",
-      "type": "Design Feature",
-      "label": "Smart contract stress factor",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_004_nonreversible_aggregation_function",
-      "type": "Design Feature",
-      "label": "Nonreversible aggregation function",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_005_joint_governance_policy",
-      "type": "Design Feature",
-      "label": "Joint governance policy",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "df_006_confidential_stress_channel",
-      "type": "Design Feature",
-      "label": "Confidential StressChannel",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
-    },
-    {
-      "id": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "id": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
       "type": "Artifact",
-      "label": "Hyperledger Fabric two-sided opportunism solution",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
+      "title": "Hyperledger Fabric system for confidential and verifiable information sharing"
     },
     {
-      "id": "eval_001_demonstration_interviews",
+      "id": "SHORT_END_STICK_2025:df_001_private_data_collection_as_provider_only_sensitive_data_store",
+      "type": "Design Feature",
+      "title": "Private data collection as provider-only sensitive data store"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+      "type": "Design Feature",
+      "title": "Public hash-based proof of integrity"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:df_003_smart_contract_stress_factor_computation",
+      "type": "Design Feature",
+      "title": "Smart contract for stress-factor computation"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+      "type": "Design Feature",
+      "title": "Nonreversible aggregation function"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:df_005_joint_governance_policy",
+      "type": "Design Feature",
+      "title": "Joint governance policy for changes"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:df_006_confidential_stress_channel",
+      "type": "Design Feature",
+      "title": "Confidential StressChannel for interorganizational exchange"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "type": "Design Principle",
+      "title": "Store sensitive data only with the information provider and create a proof of integrity for the recipient"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "type": "Design Principle",
+      "title": "Compute shared information through nonreversible, reliable, independently executed functions"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes",
+      "type": "Design Principle",
+      "title": "Require joint approval for changes to computation mechanisms"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "type": "Design Requirement",
+      "title": "Prevent information manipulation"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "type": "Design Requirement",
+      "title": "Prevent information poaching"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:eval_001_demonstration_interviews",
       "type": "Evaluation",
-      "label": "Expert interview demonstration",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
+      "title": "Proof-of-concept demonstration through expert interviews"
     },
     {
-      "id": "eval_002_vignette_survey",
+      "id": "SHORT_END_STICK_2025:eval_002_vignette_survey",
       "type": "Evaluation",
-      "label": "Vignette survey evaluation",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
+      "title": "Proof-of-value vignette survey with machine tool users and lessors"
     },
     {
-      "id": "ok_001_two_sided_opportunism_problem",
+      "id": "SHORT_END_STICK_2025:ok_001_two_sided_opportunism_problem",
       "type": "Output Knowledge",
-      "label": "Two-sided opportunism problem",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
+      "title": "Information poaching and manipulation as two sides of one problem"
     },
     {
-      "id": "ok_003_blockchain_recombination_contribution",
+      "id": "SHORT_END_STICK_2025:ok_003_blockchain_recombination_contribution",
       "type": "Output Knowledge",
-      "label": "Blockchain component recombination",
-      "paper_id": "SHORT_END_STICK_2025",
-      "confidence": "high"
+      "title": "Recombination of private data collections, smart contracts, and joint governance"
+    },
+    {
+      "id": "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "type": "Problem",
+      "title": "Two-sided opportunism in interorganizational information sharing"
     }
   ],
   "edges": [
     {
-      "id": "rel_001",
-      "source": "problem_two_sided_opportunism",
-      "target": "dr_001_prevent_information_manipulation",
-      "predicate": "motivates",
-      "evidence_id": "ev_001_paper_problem_two_sided_opportunism",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_001",
+      "source": "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "target": "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "predicate": "motivates"
     },
     {
-      "id": "rel_002",
-      "source": "problem_two_sided_opportunism",
-      "target": "dr_002_prevent_information_poaching",
-      "predicate": "motivates",
-      "evidence_id": "ev_001_paper_problem_two_sided_opportunism",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_002",
+      "source": "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "target": "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "predicate": "motivates"
     },
     {
-      "id": "rel_003",
-      "source": "dr_001_prevent_information_manipulation",
-      "target": "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_005_dp1_storage_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_003",
+      "source": "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "target": "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_004",
-      "source": "dr_002_prevent_information_poaching",
-      "target": "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_005_dp1_storage_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_004",
+      "source": "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "target": "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_005",
-      "source": "dr_001_prevent_information_manipulation",
-      "target": "dp_002_nonreversible_reliable_independent_computation",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_006_dp2_processing_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_005",
+      "source": "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "target": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_006",
-      "source": "dr_002_prevent_information_poaching",
-      "target": "dp_002_nonreversible_reliable_independent_computation",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_006_dp2_processing_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_006",
+      "source": "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "target": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_007",
-      "source": "dr_001_prevent_information_manipulation",
-      "target": "dp_003_joint_approval_for_computation_mechanism_changes",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_007_dp3_governance_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_007",
+      "source": "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "target": "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_008",
-      "source": "dr_002_prevent_information_poaching",
-      "target": "dp_003_joint_approval_for_computation_mechanism_changes",
-      "predicate": "addressed_by",
-      "evidence_id": "ev_007_dp3_governance_principle",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_008",
+      "source": "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "target": "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes",
+      "predicate": "addressed_by"
     },
     {
-      "id": "rel_009",
-      "source": "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "target": "df_001_private_data_collection_as_provider_only_sensitive_data_store",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_012_private_data_collection_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_009",
+      "source": "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "target": "SHORT_END_STICK_2025:df_001_private_data_collection_as_provider_only_sensitive_data_store",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_010",
-      "source": "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "target": "df_002_public_hash_integrity_proof",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_012_private_data_collection_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_010",
+      "source": "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "target": "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_011",
-      "source": "dp_002_nonreversible_reliable_independent_computation",
-      "target": "df_003_smart_contract_stress_factor_computation",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_013_smart_contract_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_011",
+      "source": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "target": "SHORT_END_STICK_2025:df_003_smart_contract_stress_factor_computation",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_012",
-      "source": "dp_002_nonreversible_reliable_independent_computation",
-      "target": "df_004_nonreversible_aggregation_function",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_013_smart_contract_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_012",
+      "source": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "target": "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_013",
-      "source": "dp_003_joint_approval_for_computation_mechanism_changes",
-      "target": "df_005_joint_governance_policy",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_014_joint_governance_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_013",
+      "source": "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes",
+      "target": "SHORT_END_STICK_2025:df_005_joint_governance_policy",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_014",
-      "source": "dp_002_nonreversible_reliable_independent_computation",
-      "target": "df_006_confidential_stress_channel",
-      "predicate": "instantiated_by",
-      "evidence_id": "ev_011_hyperledger_fabric_selection",
-      "confidence": "medium-high"
+      "id": "SHORT_END_STICK_2025:rel_014",
+      "source": "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "target": "SHORT_END_STICK_2025:df_006_confidential_stress_channel",
+      "predicate": "instantiated_by"
     },
     {
-      "id": "rel_017",
-      "source": "df_001_private_data_collection_as_provider_only_sensitive_data_store",
-      "target": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "predicate": "implements",
-      "evidence_id": "ev_015_figure3_artifact",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_017",
+      "source": "SHORT_END_STICK_2025:df_001_private_data_collection_as_provider_only_sensitive_data_store",
+      "target": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "predicate": "implements"
     },
     {
-      "id": "rel_018",
-      "source": "df_002_public_hash_integrity_proof",
-      "target": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "predicate": "implements",
-      "evidence_id": "ev_015_figure3_artifact",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_018",
+      "source": "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+      "target": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "predicate": "implements"
     },
     {
-      "id": "rel_019",
-      "source": "df_003_smart_contract_stress_factor_computation",
-      "target": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "predicate": "implements",
-      "evidence_id": "ev_015_figure3_artifact",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_019",
+      "source": "SHORT_END_STICK_2025:df_003_smart_contract_stress_factor_computation",
+      "target": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "predicate": "implements"
     },
     {
-      "id": "rel_020",
-      "source": "df_004_nonreversible_aggregation_function",
-      "target": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "predicate": "implements",
-      "evidence_id": "ev_013_smart_contract_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_020",
+      "source": "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+      "target": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "predicate": "implements"
     },
     {
-      "id": "rel_021",
-      "source": "df_005_joint_governance_policy",
-      "target": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "predicate": "implements",
-      "evidence_id": "ev_014_joint_governance_implementation",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_021",
+      "source": "SHORT_END_STICK_2025:df_005_joint_governance_policy",
+      "target": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "predicate": "implements"
     },
     {
-      "id": "rel_022",
-      "source": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "target": "eval_001_demonstration_interviews",
-      "predicate": "evaluated_by",
-      "evidence_id": "ev_016_demonstration_interviews",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_022",
+      "source": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "target": "SHORT_END_STICK_2025:eval_001_demonstration_interviews",
+      "predicate": "evaluated_by"
     },
     {
-      "id": "rel_023",
-      "source": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "target": "eval_002_vignette_survey",
-      "predicate": "evaluated_by",
-      "evidence_id": "ev_020_survey_evaluation_design",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_023",
+      "source": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "target": "SHORT_END_STICK_2025:eval_002_vignette_survey",
+      "predicate": "evaluated_by"
     },
     {
-      "id": "rel_025",
-      "source": "eval_002_vignette_survey",
-      "target": "ok_001_two_sided_opportunism_problem",
-      "predicate": "supports",
-      "evidence_id": "ev_021_survey_results",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_025",
+      "source": "SHORT_END_STICK_2025:eval_002_vignette_survey",
+      "target": "SHORT_END_STICK_2025:ok_001_two_sided_opportunism_problem",
+      "predicate": "supports"
     },
     {
-      "id": "rel_026",
-      "source": "artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
-      "target": "ok_003_blockchain_recombination_contribution",
-      "predicate": "generalizes_to",
-      "evidence_id": "ev_023_contribution_blockchain_recombination",
-      "confidence": "high"
+      "id": "SHORT_END_STICK_2025:rel_026",
+      "source": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",
+      "target": "SHORT_END_STICK_2025:ok_003_blockchain_recombination_contribution",
+      "predicate": "generalizes_to"
     }
   ],
-  "recommended_main_paths": [
+  "recommended_paths": [
     [
-      "problem_two_sided_opportunism",
-      "dr_001_prevent_information_manipulation",
-      "dp_001_manipulation_resistant_private_storage_with_integrity_proof",
-      "df_002_public_hash_integrity_proof",
-      "artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
+      "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+      "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+      "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
     ],
     [
-      "problem_two_sided_opportunism",
-      "dr_002_prevent_information_poaching",
-      "dp_002_nonreversible_reliable_independent_computation",
-      "df_004_nonreversible_aggregation_function",
-      "artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
+      "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "SHORT_END_STICK_2025:dr_002_prevent_information_poaching",
+      "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+      "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+      "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
     ],
     [
-      "problem_two_sided_opportunism",
-      "dr_001_prevent_information_manipulation",
-      "dp_003_joint_approval_for_computation_mechanism_changes",
-      "df_005_joint_governance_policy",
-      "artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
+      "SHORT_END_STICK_2025:problem_two_sided_opportunism",
+      "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+      "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes",
+      "SHORT_END_STICK_2025:df_005_joint_governance_policy",
+      "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution"
     ]
   ]
 }

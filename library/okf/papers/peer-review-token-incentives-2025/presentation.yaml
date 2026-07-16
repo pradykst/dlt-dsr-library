@@ -1,0 +1,88 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "PEER_REVIEW_TOKEN_INCENTIVES_2025",
+  "card": {
+    "domain_label": "Academic peer review; scholarly publishing; reviewer incentives; blockchain tokens",
+    "artifact_summary": "Design principles; Polygon token prototype; open-source peer review platform; field survey and interview evaluation",
+    "dlt_role": "Public Polygon blockchain is used as an immutable, decentralized reward ledger for minting and transferring reviewer incentive tokens, while confidential manuscript and reviewer-assignment data remain off-chain."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "Academic peer review faces a growing reviewer recruitment problem: editors struggle to secure timely, qualified reviewers because reviewing is costly, often unrewarded, and increasingly devalued relative to publication output. Existing recognition and compensation mechanisms are inconsistent, not easily tailored to journal policies, and can suffer from trust, transparency, and vendor lock-in concerns.",
+    "research_objective": null,
+    "methodology": null,
+    "evaluation_method": [
+      "Evaluation includes a Polygon cost analysis showing very low smart-contract operation costs, an annual compensation scenario for Decision Support Systems, a field survey of 49 academicians showing interest in NFTs and fungible tokens and significant IS-success predictors of use intention, and follow-up interviews with editors/reviewers that generally support the artifact while identifying adoption and quality-risk concerns."
+    ],
+    "key_contributions": [
+      "Linked DSR design knowledge for reviewer incentive systems",
+      "Tokenization as a flexible reviewer-incentive mechanism",
+      "Blockchain should log reward data, not the full confidential review process",
+      "Formal design theory for tokenized peer-review incentives"
+    ],
+    "design_knowledge_output": [
+      "Linked DSR design knowledge for reviewer incentive systems",
+      "Tokenization as a flexible reviewer-incentive mechanism",
+      "Blockchain should log reward data, not the full confidential review process",
+      "Formal design theory for tokenized peer-review incentives"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "Academic peer review faces a growing reviewer recruitment problem: editors struggle to secure timely, qualified reviewers because reviewing is costly, often unrewarded, and increasingly devalued relative to publication output. Existing recognition and compensation mechanisms are inconsistent, not easily tailored to journal policies, and can suffer from trust, transparency, and vendor lock-in concerns.",
+    "input_knowledge": "Academic peer review literature; incentive and motivation theory; Organismic Integration Theory; expectancy theory; IS trust literature; blockchain tokenization and smart contract literature; blockchain adoption decision models; soulbound and fungible token standards; IS Success Model; Gregor/Jones design theory.",
+    "research_process": "The paper follows design science research: it identifies reviewer incentive problems through literature review and ten exploratory interviews, formulates three design principles, derives three design features, builds a blockchain-based token prototype integrated with a peer review platform, demonstrates reward-setting and reviewer reputation pages, evaluates costs, surveys 49 potential academic users, conducts follow-up expert interviews, and formalizes a design theory.",
+    "key_concepts": [
+      "Peer review",
+      "reviewer incentives",
+      "reviewer shortage",
+      "blockchain",
+      "public blockchain",
+      "Polygon",
+      "tokenization",
+      "soulbound tokens",
+      "fungible tokens",
+      "smart contracts",
+      "immutability",
+      "decentralization",
+      "off-chain storage",
+      "reviewer anonymity",
+      "journal reward policy",
+      "design theory."
+    ],
+    "solution": "The proposed solution is a blockchain-based token incentive system for peer review. Journals configure reward policies and issue either non-transferable recognition tokens or fungible reward tokens to reviewers. Polygon smart contracts mint, transfer, and track tokens, while confidential peer-review workflow data remain off-chain and batch reward allocation helps avoid linking public reward timing to private review assignments.",
+    "output_knowledge": "The paper contributes reusable design knowledge for peer-review incentive systems: reviewer incentives should combine incentives, flexibility, and trust; blockchain tokenization can instantiate recognition and monetary incentives; immutability and decentralization can protect reward integrity and reduce vendor lock-in; and hybrid on-chain/off-chain architecture can preserve blind-review confidentiality while enabling verifiable reviewer rewards."
+  },
+  "additional_context": {
+    "summary": "Evaluation includes a Polygon cost analysis showing very low smart-contract operation costs, an annual compensation scenario for Decision Support Systems, a field survey of 49 academicians showing interest in NFTs and fungible tokens and significant IS-success predictors of use intention, and follow-up interviews with editors/reviewers that generally support the artifact while identifying adoption and quality-risk concerns.",
+    "limitations": [
+      "The artifact is designed to complement rather than replace existing peer-review infrastructure. Adoption may be constrained by blockchain wallet usability, stakeholder resistance, compensation funding, token volatility, potential quality risks from fungible incentives, SBT revocation/error governance, and the absence of live deployment validation in an actual journal workflow."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "card.domain_label": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:peer_review_token_dsr_csvs/peer_review_token_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "The canonical index contains no dedicated methodology value; overview.methodology remains null rather than inferring one from research-process prose.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps formal DP-DF chain plus core artifact/evaluation/output path. Extended flow includes DSRM, token standards, blockchain decision path, implementation details, survey/regression evidence, design theory, and boundary conditions."
+    ]
+  }
+}

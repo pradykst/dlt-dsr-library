@@ -1,61 +1,34 @@
-﻿---
-type: dsr
-paper_id: FIXTURE_2026
-title: Fixture DSR
-review_status: reviewed
+---
+schema_version: "okf-dsr-v1"
+type: "ConceptCollection"
+paper_id: "FIXTURE_2026"
+extraction_status: "okf_draft"
+review_status: "unreviewed"
 ---
 
-## Problem:prob_001
-title: Fixture problem
-dsr_layer: Problem
-description: A fixture problem.
-tags: [fixture]
-confidence: high
-extraction_type: explicit
-review_status: reviewed
+# Canonical DSR Concepts
 
-Problem body.
+## Concept: FIXTURE_2026:prob_001
+```json
+{"id":"FIXTURE_2026:prob_001","type":"Problem","title":"Fixture problem","description":"A fixture problem.","evidence":[],"confidence":"high","extraction_type":"explicit","review_status":"unreviewed"}
+```
 
-## DesignRequirement:req_001
-title: Fixture requirement
-dsr_layer: Requirement
-description: A fixture requirement.
-tags: [fixture]
-confidence: high
-extraction_type: explicit
-review_status: reviewed
+## Concept: FIXTURE_2026:req_001
+```json
+{"id":"FIXTURE_2026:req_001","type":"Design Requirement","title":"Fixture requirement","description":"A fixture requirement.","evidence":["FIXTURE_2026:ev_001"],"confidence":"high","extraction_type":"explicit","review_status":"unreviewed"}
+```
 
-Requirement body.
+## Concept: FIXTURE_2026:prin_001
+```json
+{"id":"FIXTURE_2026:prin_001","type":"Design Principle","title":"Fixture principle","description":"A fixture principle.","evidence":[],"confidence":"medium","extraction_type":"explicit","review_status":"unreviewed"}
+```
 
-## DesignPrinciple:prin_001
-title: Fixture principle
-dsr_layer: Principle
-description: A fixture principle.
-tags: [fixture]
-confidence: medium
-extraction_type: explicit
-review_status: reviewed
+## Concept: FIXTURE_2026:feat_001
+```json
+{"id":"FIXTURE_2026:feat_001","type":"Design Feature","title":"Fixture feature","description":"A fixture feature.","evidence":[],"confidence":"medium","extraction_type":"explicit","review_status":"unreviewed"}
+```
 
-Principle body.
-
-## DesignFeature:feat_001
-title: Fixture feature
-dsr_layer: Feature
-description: A fixture feature.
-tags: [fixture]
-confidence: medium
-extraction_type: explicit
-review_status: reviewed
-
-Feature body.
-
-## Artifact:art_001
-title: Fixture artifact
-dsr_layer: Artifact
-description: A fixture artifact.
-tags: [fixture]
-confidence: medium
-extraction_type: explicit
-review_status: reviewed
-
-Artifact body.
+## Concept: FIXTURE_2026:art_001
+```json
+{"id":"FIXTURE_2026:art_001","type":"Artifact","title":"Fixture artifact","description":"A fixture artifact.","evidence":[],"confidence":"medium","extraction_type":"explicit","review_status":"unreviewed"}
+```

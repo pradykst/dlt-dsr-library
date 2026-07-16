@@ -1,17 +1,22 @@
 import type { LlmProviderStatus } from "../llm/provider.ts";
 
+export const OKF_SCHEMA_VERSION = "okf-dsr-v1" as const;
+export const OKF_PRESENTATION_VERSION = "workbench-v1" as const;
+
+export const okfGraphSourceReferenceTypes = ["paper_figure", "paper_table", "okf_relations_projection"] as const;
+export const okfGraphValidationStatuses = ["unreviewed", "internally_validated", "author_verified"] as const;
+export const okfSourceViewTypes = ["paper_figure", "paper_table"] as const;
+export const okfSourceViewDirections = ["LEFT_TO_RIGHT", "RIGHT_TO_LEFT", "TOP_TO_BOTTOM", "BOTTOM_TO_TOP"] as const;
+export const okfSourceViewVisualParityValues = ["automatic_approximation", "manually_validated"] as const;
+
 export const okfConceptTypes = [
-  "Paper",
   "Problem",
-  "ResearchQuestion",
-  "DesignRequirement",
-  "DesignPrinciple",
-  "DesignFeature",
+  "Design Requirement",
+  "Design Principle",
+  "Design Feature",
   "Artifact",
   "Evaluation",
-  "OutputKnowledge",
-  "KernelTheory",
-  "Limitation"
+  "Output Knowledge"
 ] as const;
 
 export const okfRelationPredicates = [
@@ -31,20 +36,144 @@ export const okfRelationPredicates = [
   "supports"
 ] as const;
 
+export const okfReviewStatuses = ["unreviewed", "internally_reviewed", "author_verified"] as const;
+export const okfAuthorCheckStatuses = ["not_requested", "requested", "verified", "disputed"] as const;
+export const okfExtractionStatuses = ["indexed_from_canonical_okf", "okf_draft"] as const;
+export const okfExtractionTypes = ["explicit", "inferred", "explicit-in-artifact"] as const;
+export const okfConfidenceLabels = ["high", "medium-high", "medium", "low"] as const;
+export const okfEvidenceTypes = ["quote", "paraphrase", "summary"] as const;
+
 export type OkfConceptType = (typeof okfConceptTypes)[number];
 export type OkfRelationPredicate = (typeof okfRelationPredicates)[number];
-export type OkfReviewStatus = "draft" | "reviewed";
-export type OkfExtractionType = "explicit" | "inferred" | "explicit-in-artifact";
+export type OkfReviewStatus = (typeof okfReviewStatuses)[number];
+export type OkfAuthorCheckStatus = (typeof okfAuthorCheckStatuses)[number];
+export type OkfExtractionStatus = (typeof okfExtractionStatuses)[number];
+export type OkfExtractionType = (typeof okfExtractionTypes)[number];
+export type OkfEvidenceType = (typeof okfEvidenceTypes)[number];
 export type OkfRelationScope = "paper_level" | "cross_paper" | "query_generated";
-export type ConfidenceLabel = "high" | "medium-high" | "medium" | "low";
+export type ConfidenceLabel = (typeof okfConfidenceLabels)[number];
+
+export type OkfPresentation = {
+  presentation_version: typeof OKF_PRESENTATION_VERSION;
+  paper_id: string;
+  card: {
+    domain_label: string;
+    artifact_summary: string | null;
+    dlt_role: string | null;
+  };
+  overview: {
+    abstract_summary: string | null;
+    research_problem: string;
+    research_objective: string | null;
+    methodology: string | null;
+    evaluation_method: string[];
+    key_contributions: string[];
+    design_knowledge_output: string[];
+  };
+  dsr_summary_grid: {
+    problem: string;
+    input_knowledge: string;
+    research_process: string;
+    key_concepts: string[];
+    solution: string;
+    output_knowledge: string;
+  };
+  additional_context: {
+    summary: string;
+    limitations: string[];
+  };
+  provenance: {
+    migrated_from_legacy_csv: boolean;
+    source_fields: Record<string, string>;
+    migration_notes: string[];
+  };
+};
+
+export type OkfGraphSourceReference = {
+  type: (typeof okfGraphSourceReferenceTypes)[number];
+  label: string | null;
+  page: number | null;
+  caption: string | null;
+  validation_status: (typeof okfGraphValidationStatuses)[number];
+  validation_notes: string | null;
+};
+
+export type OkfSourceViewReference = {
+  type: (typeof okfSourceViewTypes)[number];
+  label: string;
+  page: number;
+  caption: string;
+  validation_status: (typeof okfGraphValidationStatuses)[number];
+  validation_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  author_verification: {
+    author_name: string;
+    verification_record: string;
+  } | null;
+};
+
+export type OkfSourceViewLayer = {
+  concept_type: OkfConceptType;
+  node_ids: string[];
+};
+
+export type OkfSourceView = {
+  source_view_id: string;
+  title: string;
+  view_type: (typeof okfSourceViewTypes)[number];
+  source_reference: OkfSourceViewReference;
+  layers: OkfSourceViewLayer[];
+  edge_ids: string[];
+  ordering: {
+    layer_order: OkfConceptType[];
+    node_order: Partial<Record<OkfConceptType, string[]>>;
+  };
+  layout: {
+    direction: (typeof okfSourceViewDirections)[number];
+    preserve_source_order: boolean;
+    semantic_parity: boolean;
+    ordering_parity: boolean;
+    visual_parity: (typeof okfSourceViewVisualParityValues)[number];
+  };
+};
 
 export type OkfPaper = {
+  schema_version: typeof OKF_SCHEMA_VERSION;
   paper_id: string;
+  slug: string;
   title: string;
+  short_title?: string | null;
   authors?: string[];
   year?: number;
+  venue?: string | null;
+  doi?: string | null;
+  doi_url?: string | null;
+  source_url?: string | null;
   source_pdf_path?: string;
+  domain_context?: string | null;
+  abstract?: string | null;
+  research_problem: string[];
+  research_objective: string[];
+  research_questions: string[];
+  artifact_type?: string | null;
+  blockchain_dlt_role?: string | null;
+  methodology?: string | null;
+  theoretical_foundations: string[];
+  evaluation_method: string[];
+  key_contributions: string[];
+  design_knowledge_output: string[];
+  limitations: string[];
+  notes?: string | null;
+  extraction_status: OkfExtractionStatus;
   review_status: OkfReviewStatus;
+  author_check_status: OkfAuthorCheckStatus;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  last_indexed_at?: string | null;
+  presentation?: OkfPresentation;
+  graph_source_reference?: OkfGraphSourceReference;
+  source_views?: OkfSourceView[];
   source_file: string;
   body_text?: string;
 };
@@ -57,6 +186,7 @@ export type OkfConcept = {
   title: string;
   description: string;
   body_text: string;
+  evidence_ids: string[];
   tags: string[];
   confidence: ConfidenceLabel;
   extraction_type: OkfExtractionType;
@@ -70,10 +200,12 @@ export type OkfEvidenceItem = {
   evidence_id: string;
   paper_id: string;
   concept_id?: string;
+  supports: string[];
   page_number?: number;
   section?: string;
   quote?: string;
   paraphrase: string;
+  evidence_type: OkfEvidenceType;
   confidence: ConfidenceLabel;
   source_location?: string;
   source_file: string;
@@ -86,10 +218,10 @@ export type OkfRelation = {
   target_concept_id: string;
   evidence_id?: string;
   confidence: ConfidenceLabel;
+  extraction_type: OkfExtractionType;
   relation_scope: OkfRelationScope;
   source_file: string;
 };
-
 export type OkfValidationWarning = {
   file: string;
   message: string;
@@ -134,6 +266,8 @@ export type FlowGraphEdge = {
   predicate: string;
   relation_id?: string;
   provenance: FlowGraphProvenance;
+  stored_provenance?: "source_view_explicit" | "explicit" | "explicit_in_artifact" | "inferred";
+  source_view_ids?: string[];
   confidence: ConfidenceLabel;
   evidence_ids: string[];
 };

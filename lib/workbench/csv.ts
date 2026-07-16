@@ -150,6 +150,7 @@ export function validateWorkbenchRows(rows: {
 export function mapPaper(row: Record<string, string>): Paper {
   return {
     paper_id: required(row.Paper_ID),
+    title: text(row.Full_Citation) ?? text(row.Short_Title) ?? required(row.Paper_ID),
     short_title: text(row.Short_Title),
     full_citation: text(row.Full_Citation),
     year: int(row.Year),
@@ -171,7 +172,7 @@ export function mapPaper(row: Record<string, string>): Paper {
     coder: text(row.Coder),
     date_coded: text(row.Date_Coded),
     reviewer: text(row.Reviewer),
-    review_status: text(row.Review_Status),
+    review_status: legacyReviewStatus(row.Review_Status),
     notes: text(row.Notes)
   };
 }
@@ -197,7 +198,7 @@ export function mapElement(row: Record<string, string>, index: number): Workbenc
     evaluation_support: text(row.Evaluation_Support),
     confidence: int(row.Confidence_1_3),
     coder: text(row.Coder),
-    review_status: text(row.Review_Status),
+    review_status: legacyReviewStatus(row.Review_Status),
     notes: text(row.Notes),
     short_label: labelSource ? labelSource.slice(0, 50) : row.Element_ID,
     display_order: order,
@@ -222,7 +223,7 @@ export function mapRelation(row: Record<string, string>): WorkbenchRelation {
     confidence: int(row.Confidence_1_3),
     diagram_include: include,
     diagram_view: diagramToken?.toLowerCase() === "extended" ? "Extended" : include ? "Main" : "Hidden",
-    review_status: text(row.Review_Status),
+    review_status: legacyReviewStatus(row.Review_Status),
     notes: text(row.Notes)
   };
 }
@@ -258,6 +259,11 @@ function duplicates(values: string[]) {
     seen.add(value);
   }
   return [...duplicate];
+}
+
+function legacyReviewStatus(value: string | undefined | null) {
+  void value;
+  return "unreviewed" as const;
 }
 
 function text(value: string | undefined | null) {

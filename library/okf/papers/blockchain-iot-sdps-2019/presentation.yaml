@@ -1,0 +1,83 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "BLOCKCHAIN_IOT_SDPS_2019",
+  "card": {
+    "domain_label": "Internet of Things; sensor data protection; privacy; security; blockchain; odometer fraud",
+    "artifact_summary": "Design theory; blockchain-based SDPS prototype; CertifiCar; ex post evaluation",
+    "dlt_role": "Public permissionless blockchain is used as independent verification storage for hashes of off-chain encrypted sensor data, enabling tamper-resistant certification while avoiding raw sensor data disclosure and reducing on-chain storage."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "IoT sensor data generation, processing, and exchange create simultaneous integrity, privacy, scalability, and cost challenges. Sensor data may be manipulated across a multistage pipeline, may reveal sensitive personal or business information, may be produced at large volume, and may become too expensive to protect with naive blockchain storage. Existing SDPS work lacks generalizable design knowledge linking requirements, principles, features, and instantiation.",
+    "research_objective": null,
+    "methodology": null,
+    "evaluation_method": [
+      "Evaluation includes three iterative CertifiCar development cycles, field tests with 5 cars and later 100 cars, workshops, semistructured expert interviews, a 16-person focus group for the smartphone certificate interface, and an ex post evaluation with nine domain experts across odometer, cold-chain, and energy microgrid use cases. The results support source-to-sink protection, cross-validation, data-owner control, and hybrid scalable architecture, while identifying limitations and design implications."
+    ],
+    "key_contributions": [
+      "SDPS design theory",
+      "Blockchain-based SDPS usage implications"
+    ],
+    "design_knowledge_output": [
+      "SDPS design theory",
+      "Blockchain-based SDPS usage implications"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "IoT sensor data generation, processing, and exchange create simultaneous integrity, privacy, scalability, and cost challenges. Sensor data may be manipulated across a multistage pipeline, may reveal sensitive personal or business information, may be produced at large volume, and may become too expensive to protect with naive blockchain storage. Existing SDPS work lacks generalizable design knowledge linking requirements, principles, features, and instantiation.",
+    "input_knowledge": "IoT and big-data security and privacy literature; information asymmetry and certification theory; Westin privacy theory; DeLone and McLean IS success/net benefits; blockchain literature on immutable ledgers and hybrid on-chain/off-chain architectures; Peffers DSRM, Beck ex-post evaluation, Meth design-cycle guidance, and Gregor/Jones design theory components.",
+    "research_process": "The paper follows design science research. It derives design requirements from IoT sensor-data protection challenges, derives design principles from justificatory theories, maps principles to design features, builds CertifiCar across three design cycles, evaluates the prototype through field tests, expert workshops and interviews, and then conducts an ex post evaluation across odometer fraud, pharmaceutical cold chains, and energy microgrids to formulate an SDPS design theory.",
+    "key_concepts": [
+      "Sensor data protection system",
+      "IoT sensor data",
+      "tamper resistance",
+      "privacy preservation",
+      "data certification",
+      "source-to-sink protection",
+      "cross-validation",
+      "data-owner control",
+      "hybrid blockchain architecture",
+      "public permissionless blockchain",
+      "on-chain hash",
+      "off-chain encrypted raw storage",
+      "CertifiCar",
+      "odometer fraud",
+      "design theory."
+    ],
+    "solution": "The proposed solution is a blockchain-based sensor data protection system that collects sensor and validation data, preprocesses data into blockchain transactions, stores encrypted raw data off-chain, stores hashes on-chain as independent verification evidence, controls data access through owner-managed access rights, certifies data by comparing raw-data hashes with blockchain hashes and performing consistency/cross-validation checks, and retrieves only selected certified data for recipients.",
+    "output_knowledge": "The paper produces an SDPS design theory consisting of four design requirements, four design principles, nine design features, an instantiated CertifiCar prototype, design implications for blockchain-based SDPSs, and reusable knowledge that hybrid blockchain architectures can support tamper-resistant, privacy-preserving, scalable, and economically feasible IoT sensor-data certification."
+  },
+  "additional_context": {
+    "summary": "Evaluation includes three iterative CertifiCar development cycles, field tests with 5 cars and later 100 cars, workshops, semistructured expert interviews, a 16-person focus group for the smartphone certificate interface, and an ex post evaluation with nine domain experts across odometer, cold-chain, and energy microgrid use cases. The results support source-to-sink protection, cross-validation, data-owner control, and hybrid scalable architecture, while identifying limitations and design implications.",
+    "limitations": [
+      "The design is most relevant for IoT sensor-data pipelines in multiparty ecosystems or settings with conflicting interests. It assumes raw sensor data should not be stored directly on a public blockchain, source-to-sink protection should occur as early as possible but may not be perfect with current sensors, cross-validation is use-case specific, privacy requires mechanisms on top of blockchain, and current scalability and cost constraints favor hybrid on-chain/off-chain architectures."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "card.domain_label": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:iot_sdps_csvs/iot_v2_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "The canonical index contains no dedicated methodology value; overview.methodology remains null rather than inferring one from research-process prose.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps explicit DR-DP-DF mappings and prototype/evaluation flow. Extended flow includes kernel theories, technical implementation details, design implications, and boundary conditions."
+    ]
+  }
+}

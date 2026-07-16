@@ -1,0 +1,83 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "SHORT_END_STICK_2025",
+  "card": {
+    "domain_label": "Interorganizational information sharing; sensitive data; machine tool leasing; opportunism",
+    "artifact_summary": "Design principles; Hyperledger Fabric prototype; shared information system; interview and survey evaluation",
+    "dlt_role": "Permissioned blockchain is used as a jointly governed, manipulation-resistant shared information system with private data collections, smart contracts, and governance policies for computing verifiable information from confidential data without exposing raw data."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "Interorganizational information sharing based on sensitive data is blocked by two-sided opportunism: information providers fear information poaching if recipients access sensitive data, while information recipients fear information manipulation if providers keep the data hidden. Existing organizational and technical safeguards either cannot reliably prevent opportunism or address only one side at a time.",
+    "research_objective": null,
+    "methodology": "Design science research",
+    "evaluation_method": [
+      "Evaluation combines proof of concept and proof of value. Semistructured expert interviews indicate that the prototype addresses both information poaching and information manipulation and is technologically novel. A vignette-based survey shows that the system increases providers' willingness to share sensitive data and recipients' willingness to rely on the provided information."
+    ],
+    "key_contributions": [
+      "Information poaching and manipulation as two sides of one problem",
+      "Design blueprint for reliable information sharing without revealing underlying data",
+      "Recombination of private data collections, smart contracts, and joint governance"
+    ],
+    "design_knowledge_output": [
+      "Information poaching and manipulation as two sides of one problem",
+      "Design blueprint for reliable information sharing without revealing underlying data",
+      "Recombination of private data collections, smart contracts, and joint governance"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "Interorganizational information sharing based on sensitive data is blocked by two-sided opportunism: information providers fear information poaching if recipients access sensitive data, while information recipients fear information manipulation if providers keep the data hidden. Existing organizational and technical safeguards either cannot reliably prevent opportunism or address only one side at a time.",
+    "input_knowledge": "Transaction cost economics and opportunism theory; information poaching and information manipulation literature; interorganizational information sharing; organizational and technical safeguards; blockchain systems; Hyperledger Fabric private data collections; smart contracts; joint governance; design science research methodology.",
+    "research_process": "The paper follows DSRM: it identifies the two-sided opportunism problem from literature, derives two design requirements and three design principles, instantiates them in a machine-tool leasing research consortium, implements a Hyperledger Fabric prototype, demonstrates efficacy through 22 expert interviews, and evaluates utility through vignette-based surveys of 85 machine tool users and 77 lessors.",
+    "key_concepts": [
+      "Two-sided opportunism",
+      "information poaching",
+      "information manipulation",
+      "sensitive data",
+      "reliable information sharing",
+      "proof of integrity",
+      "nonreversible functions",
+      "private data collections",
+      "smart contracts",
+      "joint governance",
+      "Hyperledger Fabric",
+      "stress factor",
+      "wear-based leasing."
+    ],
+    "solution": "The solution is a blockchain-based shared information system in which sensor data remain in a provider-exclusive private data collection, a hash/proof of integrity is made available to the recipient, a smart contract computes a nonreversible stress factor from the private data, and Hyperledger Fabric governance policies require joint approval for changes to computation and access mechanisms.",
+    "output_knowledge": "The paper produces reusable design knowledge for shared information systems: sensitive data should remain with the information provider while integrity is proven to the recipient; shared information should be computed through nonreversible, reliable, independently executed functions; and changes to computation mechanisms should require joint approval. It also shows empirically that addressing poaching and manipulation together increases data sharing and reliance."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines proof of concept and proof of value. Semistructured expert interviews indicate that the prototype addresses both information poaching and information manipulation and is technologically novel. A vignette-based survey shows that the system increases providers' willingness to share sensitive data and recipients' willingness to rely on the provided information.",
+    "limitations": [
+      "The design is most useful when both parties fear opportunism. It requires technical expertise to define nonreversible functions and govern the system, works better under relatively stable computation logic, depends on the integrity of the blockchain network and correctness of data before entry into the system, and was utility-tested through artificial vignette evaluation rather than full naturalistic deployment."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:stick_dsr_csvs/stick_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps conceptual DSR chain; technical requirements, kernel theories, and boundary conditions are placed in Extended Flow."
+    ]
+  }
+}

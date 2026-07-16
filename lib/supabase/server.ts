@@ -1,5 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * This module is also imported by standalone Node validation/index scripts, so
+ * Next's `server-only` marker cannot be used without breaking those entry
+ * points. Keep an equivalent runtime boundary here and enforce the import
+ * graph with a source-scan test.
+ */
+if (typeof window !== "undefined") {
+  throw new Error("The Supabase service-role helper is server-only.");
+}
+
 export type SupabaseServerKeyType = "service_role" | "anon" | "unavailable";
 
 type SupabaseEnvironment = Record<string, string | undefined>;
@@ -50,7 +60,10 @@ export function serviceRoleRestHeaders(serviceRoleKey: string): Record<string, s
   return headers;
 }
 
-export function getSupabaseServiceRoleClient(env: Partial<SupabaseEnvironment> = process.env) {
+export function getSupabaseServiceRoleClient(
+  env: Partial<SupabaseEnvironment> = process.env,
+  fetchImpl: typeof fetch = fetch
+) {
   const credential = resolveSupabaseServerCredential(env);
   if (credential.key_type !== "service_role" || !credential.url || !credential.service_role_key) {
     throw new Error("Missing Supabase service-role environment variables.");
@@ -60,8 +73,36 @@ export function getSupabaseServiceRoleClient(env: Partial<SupabaseEnvironment> =
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false
+    },
+    global: {
+      fetch: serviceRoleClientFetch(credential.service_role_key, fetchImpl)
     }
   });
+}
+
+/**
+ * Supabase JS currently supplies its client key as a Bearer token as well as
+ * an apikey. That is correct for legacy JWT service-role keys, but modern
+ * sb_secret keys are not JWTs and PostgREST must receive them only as apikey.
+ */
+export function serviceRoleClientFetch(
+  serviceRoleKey: string,
+  fetchImpl: typeof fetch = fetch
+): typeof fetch {
+  const jwt = isJwt(serviceRoleKey);
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(input instanceof Request ? input.headers : undefined);
+    new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
+    headers.set("apikey", serviceRoleKey);
+    if (jwt) headers.set("Authorization", `Bearer ${serviceRoleKey}`);
+    else headers.delete("Authorization");
+
+    return fetchImpl(input, {
+      ...init,
+      headers,
+      credentials: "omit"
+    });
+  }) as typeof fetch;
 }
 
 function isJwt(value: string) {

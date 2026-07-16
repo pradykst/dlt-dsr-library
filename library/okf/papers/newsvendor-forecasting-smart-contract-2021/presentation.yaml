@@ -1,0 +1,85 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021",
+  "card": {
+    "domain_label": "Supply chain forecasting; newsvendor problem; forecast contracting",
+    "artifact_summary": "Smart contract prototype; DApp prototype; mathematical scoring rule",
+    "dlt_role": "Blockchain is used as a decentralized, immutable, escrow-like execution layer for enforcing forecast-contingent payments through smart contracts."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "A newsvendor depends on an expert for demand forecasts, but the parties may have misaligned incentives and trust issues because the expert's payment depends on a realized outcome that may only be observable to the newsvendor, allowing payment manipulation.",
+    "research_objective": null,
+    "methodology": "Design science research",
+    "evaluation_method": [
+      "Evaluation is mainly analytical and artifact-oriented: the authors validate the design principles against the theoretical model, discuss oracle and realized-outcome scenarios, estimate Ethereum deployment and interaction costs, and demonstrate a working smart contract and DApp prototype."
+    ],
+    "key_contributions": [
+      "Tailored proper scoring rules can align expert and newsvendor incentives",
+      "Blockchain smart contracts can mitigate outcome-contingent forecast-payment trust issues",
+      "Design blueprint for blockchain-based forecast acquisition contracts",
+      "Deployment fit depends on cost, privacy, and oracle design choices"
+    ],
+    "design_knowledge_output": [
+      "Tailored proper scoring rules can align expert and newsvendor incentives",
+      "Blockchain smart contracts can mitigate outcome-contingent forecast-payment trust issues",
+      "Design blueprint for blockchain-based forecast acquisition contracts",
+      "Deployment fit depends on cost, privacy, and oracle design choices"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "A newsvendor depends on an expert for demand forecasts, but the parties may have misaligned incentives and trust issues because the expert's payment depends on a realized outcome that may only be observable to the newsvendor, allowing payment manipulation.",
+    "input_knowledge": "Proper scoring rules; tailored scoring rules; newsvendor model; trust and trustworthiness in supply chain management; blockchain and smart contracts; supply chain transparency; design science research methodology.",
+    "research_process": "The paper develops a normative mathematical model, proposes a tailored proper scoring rule, analyzes trust through a game of incomplete information, derives three design principles, designs and develops a blockchain-based smart contract artifact, demonstrates it through an Ethereum prototype and DApp, and evaluates it through theoretical alignment, design-principle validation, oracle analysis, and cost/deployment analysis.",
+    "key_concepts": [
+      "Newsvendor",
+      "expert forecaster",
+      "proper scoring rule",
+      "tailored scoring rule",
+      "incentive alignment",
+      "trustworthiness",
+      "dishonest newsvendor",
+      "blockchain",
+      "smart contract",
+      "escrow",
+      "oracle",
+      "DApp",
+      "supply chain transparency."
+    ],
+    "solution": "The solution is a blockchain-based smart contract that stores an immutable scoring algorithm, holds the expert's maximum payment in escrow, validates forecasts, retrieves the realized outcome through an oracle, computes payment using the tailored scoring rule, pays the expert, and returns surplus funds to the newsvendor.",
+    "output_knowledge": "The paper produces reusable design knowledge that blockchain-based smart contracts can align forecast-provider incentives and mitigate trust issues in outcome-contingent forecasting contracts by combining escrow without single-entity control, immutable enforceable algorithms, and unambiguous outcome sources."
+  },
+  "additional_context": {
+    "summary": "Evaluation is mainly analytical and artifact-oriented: the authors validate the design principles against the theoretical model, discuss oracle and realized-outcome scenarios, estimate Ethereum deployment and interaction costs, and demonstrate a working smart contract and DApp prototype.",
+    "limitations": [
+      "The solution assumes the realized outcome source can be agreed upon and trusted or replaced by a suitable oracle/dispute mechanism. It does not apply when the expert determines or strongly influences the realized outcome. The authors leave collusion-proof scoring rules, continuous scoring rules, multi-valued effort/types, and practitioner survey/interview validation for future work."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:dsr_news_vendor_csvs/v2_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High confidence overall. Human check recommended for whether Requirements 1-4 should be treated as design requirements or technical functional requirements."
+    ]
+  }
+}

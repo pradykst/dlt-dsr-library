@@ -76,7 +76,7 @@ function StageContent({ currentStep }: { currentStep: number }) {
   if (currentStep === 0) {
     return (
       <dl className="grid gap-3 text-sm">
-        <StageRow label="Detected domain" value="Marketplace data consistency" />
+        <StageRow label="Detected domain" value="Cross-organizational record coordination" />
         <StageRow label="Detected DLT problem type" value="Multi-party trust and information manipulation" />
         <StageRow label="Likely output requested" value="Design guidance" />
       </dl>
@@ -117,7 +117,7 @@ function StageContent({ currentStep }: { currentStep: number }) {
     return <ScanningNote text="Checking whether the answer is comprehensive, generalizable, and grounded in evidence-backed relations." />;
   }
 
-  return <ScanningNote text="Final design direction ready: DLT-backed Product Identity Registry with evidence-backed dispute review." complete />;
+  return <ScanningNote text="Final design direction ready: Evidence-backed Shared Record Registry with reviewable dispute handling." complete />;
 }
 
 function StageRow({ label, value }: { label: string; value: string }) {

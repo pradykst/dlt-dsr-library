@@ -1,16 +1,1 @@
-﻿paper_id: CURATED_2026
-relations:
-  - relation_id: rel_001
-    source: dr_001_prevent_manipulation
-    predicate: addressed_by
-    target: dp_001_auditability
-    evidence: ev_002_principle
-    confidence: high
-    relation_scope: paper_level
-  - relation_id: rel_002
-    source_concept_id: CURATED_2026:dp_001_auditability
-    predicate: instantiated_by
-    target_concept_id: df_001_hash_anchor
-    evidence_id: ev_002_principle
-    confidence: medium-high
-    relation_scope: paper_level
+{"schema_version":"okf-dsr-v1","paper_id":"CURATED_2026","relations":[{"id":"CURATED_2026:rel_001","source":"CURATED_2026:dr_001_prevent_manipulation","target":"CURATED_2026:dp_001_auditability","predicate":"addressed_by","evidence":"CURATED_2026:ev_002_principle","confidence":"high","extraction_type":"explicit"},{"id":"CURATED_2026:rel_002","source":"CURATED_2026:dp_001_auditability","target":"CURATED_2026:df_001_hash_anchor","predicate":"instantiated_by","evidence":"CURATED_2026:ev_002_principle","confidence":"medium-high","extraction_type":"inferred"}]}

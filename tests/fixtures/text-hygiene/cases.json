@@ -1,0 +1,20 @@
+{
+  "invalid": [
+    { "code": "MISSING_SENTENCE_SPACE", "text": "A complete sentence.Next sentence starts here." },
+    { "code": "MISSING_SEPARATOR_SPACE", "text": "Evidence·page 4" },
+    { "code": "PAGE_NUMBER_SPACING", "text": "See page7 for the model." },
+    { "code": "CONCATENATED_CANONICAL_LABEL", "text": "DesignRequirement" },
+    { "code": "PLACEHOLDER_TEXT", "text": "TODO: add a summary" },
+    { "code": "RAW_SNAKE_CASE", "text": "review_status is exposed" },
+    { "code": "SUSPICIOUS_LOWERCASE_JOIN", "text": "The productdata record is shared." },
+    { "code": "MALFORMED_SOURCE_LOCATION", "text": "neutral-paper.pdf#page=4", "sourceLocation": true },
+    { "code": "MALFORMED_SOURCE_LOCATION", "text": "neutral-paper.pdf ? page4", "sourceLocation": true },
+    { "code": "MOJIBAKE", "text": "Evidence Â· page 4" }
+  ],
+  "valid": [
+    "A complete sentence. Next sentence starts here.",
+    "Blockchain metadata supports a marketplace workflow.",
+    "Design Requirement → Design Principle → Design Feature",
+    "Evidence · page 4"
+  ]
+}

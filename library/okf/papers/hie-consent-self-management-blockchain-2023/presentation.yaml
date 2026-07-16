@@ -1,0 +1,92 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023",
+  "card": {
+    "domain_label": "Health information exchange; patient consent; protected health information; healthcare interoperability",
+    "artifact_summary": "Design principles; permissioned Ethereum DApp prototype; consent self-management app; survey and technical evaluation",
+    "dlt_role": "Permissioned blockchain is used as a decentralized and distributed consent-status backbone across HIEs, with wallets, smart contracts, immutability, and replicated HIE nodes enabling private, auditable, and interoperable patient consent self-management without a central authority."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "Current U.S. HIE consent management relies heavily on patients completing consent forms at provider locations. Many HIEs are not connected, so consent decisions cannot be shared consistently across providers and HIEs. This limits patient self-management, weakens trust and informed decision-making, complicates compliance across variable regulations, and constrains PHI exchange.",
+    "research_objective": null,
+    "methodology": "Design science research",
+    "evaluation_method": [
+      "Evaluation combines a 200-participant survey in which 70% preferred the consent app, survey evidence about care-continuity gaps and record-access preferences, DApp instantiation on a permissioned Ethereum model, a 50-node AWS technical evaluation, approximately 115 transactions per second, approximately 118 ms average latency, and about $446.47 monthly cost for 50 nodes."
+    ],
+    "key_contributions": [
+      "Blockchain can serve as a backbone for patient consent self-management across HIEs",
+      "Permissioned blockchains are suitable when consent data should not be public",
+      "Consent self-management apps can augment, not replace, existing provider-site processes",
+      "The design can generalize to self-management of private information requiring trusted sharing and immutable history"
+    ],
+    "design_knowledge_output": [
+      "Blockchain can serve as a backbone for patient consent self-management across HIEs",
+      "Permissioned blockchains are suitable when consent data should not be public",
+      "Consent self-management apps can augment, not replace, existing provider-site processes",
+      "The design can generalize to self-management of private information requiring trusted sharing and immutable history"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "Current U.S. HIE consent management relies heavily on patients completing consent forms at provider locations. Many HIEs are not connected, so consent decisions cannot be shared consistently across providers and HIEs. This limits patient self-management, weakens trust and informed decision-making, complicates compliance across variable regulations, and constrains PHI exchange.",
+    "input_knowledge": "HIE consent management; HIPAA and state consent regulation; privacy and self-management literature; patient trust in HIE; interoperability literature; blockchain trust-by-design; permissioned blockchain; smart contracts; wallets and key management; DSRM.",
+    "research_process": "The paper uses two DSRM iterations. The first identifies and motivates consent self-management through a mock-up and survey of 200 MTurk participants. The second refines objectives into privacy, self-management, trust, compliance, and interoperability requirements, derives five design principles and five blockchain-related features, instantiates a permissioned Ethereum DApp, and evaluates it through throughput, latency, cost, and benchmark analysis.",
+    "key_concepts": [
+      "Patient consent",
+      "HIE",
+      "PHI",
+      "consent self-management",
+      "privacy",
+      "self-management",
+      "trust",
+      "compliance",
+      "interoperability",
+      "blockchain",
+      "permissioned Ethereum",
+      "DApp",
+      "smart contract",
+      "MetaMask wallet",
+      "encryption",
+      "key management",
+      "immutability",
+      "decentralization",
+      "distribution",
+      "auditability."
+    ],
+    "solution": "The proposed solution is a blockchain-based Consent Self-Management DApp. Patients authenticate through a wallet, view providers with consent, add or revoke provider consent, and submit consent transactions through a smart contract to a permissioned Ethereum network whose HIE nodes share the consent status. The design augments existing provider consent forms while enabling patient-originated consent changes across HIEs.",
+    "output_knowledge": "The paper contributes reusable design knowledge showing how a permissioned blockchain DApp can support patient consent self-management across distributed HIEs. The reusable pattern links five requirements to five design principles and five blockchain features: authorized visibility, patient-only changes, immutable audit history, cross-HIE communication without a central authority, and distributed sharing of patient consent changes."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines a 200-participant survey in which 70% preferred the consent app, survey evidence about care-continuity gaps and record-access preferences, DApp instantiation on a permissioned Ethereum model, a 50-node AWS technical evaluation, approximately 115 transactions per second, approximately 118 ms average latency, and about $446.47 monthly cost for 50 nodes.",
+    "limitations": [
+      "The design is tailored to decentralized HIE contexts with sensitive PHI, varying consent regulations, and multiple stakeholder roles. It assumes permissioned access is preferable because public access would violate privacy needs, and the prototype is context-specific, not fully optimized, and evaluated using a convenience MTurk sample. The app is positioned as augmenting rather than fully replacing provider-based consent forms."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:hie_consent_dsr_csvs/hie_consent_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps explicit Figure 3 requirement-principle-feature chain and core DApp/evaluation flow. Extended flow includes DSRM, survey, decision-path, technical deployment, benchmarks, and boundary conditions."
+    ]
+  }
+}

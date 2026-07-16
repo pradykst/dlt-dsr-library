@@ -1,0 +1,91 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "SSI_KYC_FRAMEWORK_2022",
+  "card": {
+    "domain_label": "Banking; digital KYC; self-sovereign identity; verifiable credentials; distributed ledger technology",
+    "artifact_summary": "SSI-based eKYC framework; architecture and process model; nascent blockchain-based SSI design principles; expert interview evaluation",
+    "dlt_role": "Distributed ledger technology is used as a neutral public trust infrastructure for issuer public keys, credential schemas, institutional DID documents, and revocation registries. Personal KYC data, peer DIDs, and verifiable credentials remain off-chain under customer control."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "KYC processes are costly, inefficient, repetitive, inconvenient for customers, and difficult to reuse across banks. Centralized eKYC utilities may improve efficiency but create privacy, security, market-power, and regulatory risks. Direct blockchain storage of KYC data conflicts with privacy and GDPR requirements, while blockchain’s precise role in SSI-based KYC remains unclear.",
+    "research_objective": null,
+    "methodology": "Peffers et al. design science research methodology",
+    "evaluation_method": [
+      "Evaluation combines formative expert validation of objectives and summative expert evaluation of the framework. Nine KYC/SSI experts were involved across two episodes, including 320 recorded interview minutes. The framework is evaluated against efficiency, regulatory compliance, decentralization, trust, privacy, and user experience objectives."
+    ],
+    "key_contributions": [
+      "Blockchain’s role in SSI should be restrictive and public-data-oriented",
+      "SSI enables reusable identity without centralized identity providers",
+      "Fast onboarding pattern for reusable KYC credentials",
+      "Bilateral verifiable presentation exchange as a privacy pattern",
+      "SSI interoperability requires standards and cross-ledger governance"
+    ],
+    "design_knowledge_output": [
+      "Blockchain’s role in SSI should be restrictive and public-data-oriented",
+      "SSI enables reusable identity without centralized identity providers",
+      "Fast onboarding pattern for reusable KYC credentials",
+      "Bilateral verifiable presentation exchange as a privacy pattern",
+      "SSI interoperability requires standards and cross-ledger governance"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "KYC processes are costly, inefficient, repetitive, inconvenient for customers, and difficult to reuse across banks. Centralized eKYC utilities may improve efficiency but create privacy, security, market-power, and regulatory risks. Direct blockchain storage of KYC data conflicts with privacy and GDPR requirements, while blockchain’s precise role in SSI-based KYC remains unclear.",
+    "input_knowledge": "KYC/AML regulation; FATF recommendations; GDPR; eIDAS; blockchain and DLT literature; SSI, DID, VC, wallet, agent, and revocation-registry literature; prior blockchain KYC and SSI-KYC work; design science research methodology; expert interviews with KYC and SSI practitioners.",
+    "research_process": "The paper follows Peffers-style design science research. It identifies KYC process problems, derives six design objectives and detailed requirements from literature, regulation, and formative expert interviews, designs an SSI-based eKYC architecture and onboarding/monitoring processes, demonstrates the framework through process models and UML diagrams, evaluates the framework through additional expert interviews and criteria-based evaluation, and abstracts three nascent design principles for blockchain-based SSI.",
+    "key_concepts": [
+      "KYC",
+      "eKYC",
+      "self-sovereign identity",
+      "decentralized identifiers",
+      "verifiable credentials",
+      "verifiable presentations",
+      "pairwise DIDs",
+      "digital wallet",
+      "user agent",
+      "cloud agent",
+      "revocation registry",
+      "distributed ledger",
+      "GDPR",
+      "eIDAS",
+      "AML",
+      "blockchain public data",
+      "edge decentralization."
+    ],
+    "solution": "The proposed solution is an SSI-based eKYC framework in which customers hold KYC-related verifiable credentials in wallets, banks and issuers use DIDs and institutional agents, customers present selective verifiable presentations over bilateral encrypted channels, and a distributed ledger stores only public verification infrastructure such as issuer keys, credential schemas, DID documents, and privacy-preserving revocation registries. The framework covers completely new onboarding, fast onboarding, new-to-KYC onboarding, name screening, risk assessment, ongoing monitoring, and record keeping.",
+    "output_knowledge": "The paper produces reusable design knowledge for blockchain-based SSI and digital KYC: blockchain should be used restrictively for public data only; designers should anticipate multiple SSI ledgers and interoperability requirements; and SSI architectures should enable decentralization at the edge while using optional encrypted cloud support for usability and recovery. The paper also contributes an eKYC architecture and process framework that can generalize beyond banking."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines formative expert validation of objectives and summative expert evaluation of the framework. Nine KYC/SSI experts were involved across two episodes, including 320 recorded interview minutes. The framework is evaluated against efficiency, regulatory compliance, decentralization, trust, privacy, and user experience objectives.",
+    "limitations": [
+      "The framework is conceptual and not yet deployed in a real bank setting. It depends on governance frameworks for trusted issuers and accepted schemas, legal acceptance of SSI/VCs, interoperability across ledgers, usable wallet and recovery mechanisms, bank collaboration, and an emerging SSI credential ecosystem. Banks may still need local records because of AML requirements."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:ssi_kyc_v2_flowfix/ssi_kyc_v2_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps the six objective/requirement families, three explicit blockchain-based SSI design principles, core SSI/eKYC architecture, evaluation, and output design knowledge. Extended flow includes subrequirements, onboarding variants, regulatory and governance boundary conditions, and implementation process details."
+    ]
+  }
+}

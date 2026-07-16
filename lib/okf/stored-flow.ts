@@ -4,9 +4,9 @@ import { isStoredMainElementType, projectStoredMainFlow, type StoredFlowProjecti
 import type { OkfConcept, OkfKnowledgeBase, OkfRelation, OkfRelationPredicate } from "./schema.ts";
 
 type StoredGraphMetadata = {
+  schema_version?: unknown;
   paper_id?: unknown;
-  recommended_main_flow?: unknown;
-  recommended_main_paths?: unknown;
+  recommended_paths?: unknown;
   nodes?: unknown;
   edges?: unknown;
 };
@@ -49,8 +49,9 @@ export function projectStoredOkfFlow(
     const useGraphMainLayerFallback = recommendedPaths.length === 0 && Boolean(storedMetadata?.graphNodes.length && storedMetadata.graphEdges.length);
     const graphNodeIds = new Set((storedMetadata?.graphNodes ?? []).map((node) => scopedGraphId(paperId, node.id)));
     const graphEdgeKeys = new Set((storedMetadata?.graphEdges ?? []).map((edge) => graphEdgeKey(paperId, edge.source, edge.target, edge.predicate)));
+    const recommendedNodeIds = new Set(recommendedPaths.flat().map((id) => scopedGraphId(paperId, id)));
     const candidateConcepts = recommendedPaths.length
-      ? paperConcepts
+      ? paperConcepts.filter((concept) => recommendedNodeIds.has(concept.concept_id))
       : useGraphMainLayerFallback
         ? paperConcepts.filter((concept) => graphNodeIds.has(concept.concept_id))
         : paperConcepts.filter((concept) => selectedIds.has(concept.concept_id));
@@ -58,7 +59,7 @@ export function projectStoredOkfFlow(
     const candidateRelations = kb.relations.filter((relation) => {
       if (!candidateIds.has(relation.source_concept_id) || !candidateIds.has(relation.target_concept_id)) return false;
       if (!predicates.includes(relation.predicate)) return false;
-      if (useGraphMainLayerFallback && !graphEdgeKeys.has(graphEdgeKey(paperId, relation.source_concept_id, relation.target_concept_id, relation.predicate))) return false;
+      if (storedMetadata && !graphEdgeKeys.has(graphEdgeKey(paperId, relation.source_concept_id, relation.target_concept_id, relation.predicate))) return false;
       return !storedOnly || relation.relation_scope !== "query_generated";
     });
     const projection = projectStoredMainFlow({
@@ -82,6 +83,9 @@ export function projectStoredOkfFlow(
     if (projection.unresolvedRecommendedNodeIds.length) {
       warnings.push(`${paperId} stored-flow metadata references unresolved node(s): ${projection.unresolvedRecommendedNodeIds.join(", ")}.`);
     }
+    if (projection.unresolvedRecommendedEdges.length) {
+      warnings.push(`${paperId} recommended path references unresolved stored edge(s): ${projection.unresolvedRecommendedEdges.map((edge) => `${edge.source} -> ${edge.target}`).join(", ")}.`);
+    }
     if (useGraphMainLayerFallback) {
       warnings.push(`${paperId} graph metadata has no recommended main flow; using the shared stored Requirement/Principle/Feature fallback because OKF relations do not carry Workbench diagram flags.`);
     }
@@ -102,12 +106,9 @@ export function loadRecommendedStoredFlowPaths(paperId: string) {
 export function loadStoredPaperFlowMetadata(paperId: string): StoredPaperFlowMetadata | undefined {
   const metadata = readStoredGraphMetadata(paperId);
   if (!metadata) return undefined;
-  const single = stringArray(metadata.recommended_main_flow);
-  const recommendedPaths = single.length
-    ? [single]
-    : Array.isArray(metadata.recommended_main_paths)
-      ? metadata.recommended_main_paths.map(stringArray).filter((candidate) => candidate.length > 0)
-      : [];
+  const recommendedPaths = Array.isArray(metadata.recommended_paths)
+    ? metadata.recommended_paths.map(stringArray).filter((candidate) => candidate.length > 0)
+    : [];
   const graphNodes = recordArray(metadata.nodes).flatMap((node) => {
     if (typeof node.id !== "string" || !node.id.trim()) return [];
     return [{ id: node.id, type: typeof node.type === "string" ? node.type : undefined }];

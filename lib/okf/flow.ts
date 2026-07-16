@@ -2,7 +2,7 @@ import type { ConfidenceLabel, DesignMove, FlowGraphLayer, FlowGraphMode, FlowGr
 import { projectStoredOkfFlow } from "./stored-flow.ts";
 
 const graphLayers: FlowGraphLayer[] = ["Problem", "Requirement", "Principle", "Feature", "Artifact", "Evaluation", "OutputKnowledge"];
-const preferredTypes = ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"];
+const preferredTypes: OkfConceptType[] = ["Problem", "Design Requirement", "Design Principle", "Design Feature", "Artifact", "Evaluation", "Output Knowledge"];
 const flowPredicates: OkfRelationPredicate[] = [
   "motivates",
   "requires",
@@ -79,7 +79,7 @@ export function buildOkfFlow(query: string, selectedConcepts: OkfConcept[], kb: 
 
   const queryProblem = [...nodesById.values()].find((node) => node.id.startsWith("query_problem:"));
   if (queryProblem) {
-    const firstStored = [...nodesById.values()].find((node) => !node.query_generated && (node.type === "DesignRequirement" || node.type === "Problem" || node.type === "ResearchQuestion"));
+    const firstStored = [...nodesById.values()].find((node) => !node.query_generated && (node.type === "Design Requirement" || node.type === "Problem"));
     if (firstStored) addGeneratedEdge(edgesById, queryProblem.id, firstStored.id, "motivates", "query_generated", "low", []);
   }
 
@@ -130,9 +130,9 @@ function buildMoveProjectedFlow(query: string, designMoves: DesignMove[], select
   for (const move of moves) {
     const supportingPapers = new Set(move.supporting_paper_ids);
     const pathSpecs: Array<{ layer: FlowGraphLayer; type: OkfConceptType; label: string }> = [
-      { layer: "Requirement", type: "DesignRequirement", label: move.reused_requirement },
-      { layer: "Principle", type: "DesignPrinciple", label: move.reused_principle },
-      { layer: "Feature", type: "DesignFeature", label: move.candidate_feature },
+      { layer: "Requirement", type: "Design Requirement", label: move.reused_requirement },
+      { layer: "Principle", type: "Design Principle", label: move.reused_principle },
+      { layer: "Feature", type: "Design Feature", label: move.candidate_feature },
       { layer: "Artifact", type: "Artifact", label: move.artifact_pattern }
     ];
     const path = pathSpecs.map((spec) => {
@@ -252,9 +252,9 @@ function addRelationEdge(edgesById: Map<string, OkfFlowEdge>, relation: OkfRelat
 function addRowDerivedFlow(query: string, rows: OkfReuseFlowRow[], selectedConcepts: OkfConcept[], kb: OkfKnowledgeBase, nodesById: Map<string, OkfFlowNode>, edgesById: Map<string, OkfFlowEdge>, mode: FlowGraphMode) {
   const conceptById = new Map(selectedConcepts.map((concept) => [concept.concept_id, concept]));
   for (const row of rows) {
-    const requirement = ensureRowNode(query, row, "DesignRequirement", "Requirement", row.requirement_label, conceptById, kb, nodesById, mode);
-    const principle = ensureRowNode(query, row, "DesignPrinciple", "Principle", row.principle_label, conceptById, kb, nodesById, mode);
-    const feature = ensureRowNode(query, row, "DesignFeature", "Feature", row.feature_label, conceptById, kb, nodesById, mode);
+    const requirement = ensureRowNode(query, row, "Design Requirement", "Requirement", row.requirement_label, conceptById, kb, nodesById, mode);
+    const principle = ensureRowNode(query, row, "Design Principle", "Principle", row.principle_label, conceptById, kb, nodesById, mode);
+    const feature = ensureRowNode(query, row, "Design Feature", "Feature", row.feature_label, conceptById, kb, nodesById, mode);
     const artifact = ensureRowNode(query, row, "Artifact", "Artifact", row.artifact_pattern, conceptById, kb, nodesById, mode);
     const chain = [requirement, principle, feature, artifact].filter((node): node is OkfFlowNode => Boolean(node));
     for (let index = 0; index < chain.length - 1; index += 1) {
@@ -331,19 +331,19 @@ function orderNodesForFlow(nodes: OkfFlowNode[]) {
 }
 
 function layerForConceptType(type: OkfConceptType): FlowGraphLayer | undefined {
-  if (type === "Problem" || type === "ResearchQuestion") return "Problem";
-  if (type === "DesignRequirement") return "Requirement";
-  if (type === "DesignPrinciple") return "Principle";
-  if (type === "DesignFeature") return "Feature";
+  if (type === "Problem") return "Problem";
+  if (type === "Design Requirement") return "Requirement";
+  if (type === "Design Principle") return "Principle";
+  if (type === "Design Feature") return "Feature";
   if (type === "Artifact") return "Artifact";
   if (type === "Evaluation") return "Evaluation";
-  if (type === "OutputKnowledge" || type === "KernelTheory" || type === "Limitation") return "OutputKnowledge";
+  if (type === "Output Knowledge") return "OutputKnowledge";
   return undefined;
 }
 
 
 function hasPrimaryFlowType(type: OkfConceptType) {
-  return type === "DesignRequirement" || type === "DesignPrinciple" || type === "DesignFeature" || type === "Artifact";
+  return type === "Design Requirement" || type === "Design Principle" || type === "Design Feature" || type === "Artifact";
 }
 
 

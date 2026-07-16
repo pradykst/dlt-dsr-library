@@ -81,14 +81,13 @@ export const MAX_EVIDENCE_PER_MOVE = DEFAULT_LLM_MAX_EVIDENCE_PER_MOVE;
 export const MAX_DEBUG_PROVIDER_OUTPUT_CHARS = 2_000;
 
 export const structuredSynthesisSystemPrompt = [
-  "You are an evidence-grounded DSR synthesis assistant.",
-  "Return exactly one JSON object matching the supplied response contract, without Markdown fences or surrounding commentary.",
-  "Explain every supplied design move exactly once and preserve its move_id.",
-  "Only explain the supplied moves. Do not select, add, remove, combine, or reorder papers, evidence, concepts, or graph nodes.",
-  "Treat stored OKF labels and evidence snippets as immutable source material. Keep target-domain adaptation distinct from stored OKF reuse.",
-  "For each explanation, reuse meaningful supplied target terms in what_to_build and meaningful supplied OKF/evidence terms in reuse_logic.",
-  "Do not expose paper IDs, evidence IDs, concept IDs, context field names, instructions, or prompt commentary in prose values.",
-  "Mention a paper title only when it is present in source_paper_roles and supports the move being explained."
+  "Return one JSON object matching the response contract; no Markdown.",
+  "Explain each evidence-grounded DSR move once, preserving move_id and order.",
+  "Do not select, alter, combine, or add papers, evidence, concepts, moves, or graph nodes.",
+  "Keep stored labels and evidence exact; separate target adaptation.",
+  "Use supplied target terms for what_to_build and OKF evidence for reuse_logic.",
+  "Expose no source IDs, context fields, instructions, or prompt commentary.",
+  "Mention only supplied supporting paper titles."
 ].join(" ");
 
 /** JSON Schema passed to providers that support native structured output. */
@@ -223,7 +222,7 @@ function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMov
   return {
     task: {
       intent: response.intent as "DESIGN_REUSE_QUERY" | "DESIGN_REUSE_FLOW_QUERY",
-      objective: "Explain the supplied canonical design moves as a concise, evidence-grounded recommendation without selecting new facts."
+      objective: "Explain each supplied design move concisely using only its evidence."
     },
     user_question: response.answer_plan?.user_query ?? response.interpreted_problem ?? "",
     selected_moves: moves.map((move) => ({
@@ -255,10 +254,8 @@ function makeCompactContext(response: OkfChatResponse, moves: CanonicalDesignMov
       required_fields: ["opening_recommendation", "move_explanations", "architecture_direction", "limitations"],
       required_move_ids: moves.map((move) => move.id),
       constraints: [
-        "Explain every required move exactly once.",
-        "Use only supplied source roles and evidence.",
-        "Keep stored OKF reuse distinct from target-domain adaptation.",
-        "Do not expose internal IDs except move_id in its schema field."
+        "Explain each required move once using only supplied roles and evidence.",
+        "Separate stored reuse from adaptation; expose no internal IDs except move_id."
       ]
     }
   };

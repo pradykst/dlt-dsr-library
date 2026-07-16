@@ -1,0 +1,7 @@
+presentation_version: workbench-v1
+paper_id: FIXTURE_2026
+card: {domain_label: "Testing", artifact_summary: "Fixture artifact", dlt_role: null}
+overview: {abstract_summary: null, research_problem: "A fixture problem", research_objective: "Validate the canonical OKF parser", methodology: "Fixture method", evaluation_method: ["Fixture evaluation"], key_contributions: ["Canonical parser fixture"], design_knowledge_output: ["Fixture output knowledge"]}
+dsr_summary_grid: {problem: "A fixture problem.", input_knowledge: "Fixture input knowledge.", research_process: "Fixture research process.", key_concepts: ["Fixture concept"], solution: "A fixture solution.", output_knowledge: "Fixture output knowledge."}
+additional_context: {summary: "A canonical fixture presentation.", limitations: ["Fixture limitation."]}
+provenance: {migrated_from_legacy_csv: false, source_fields: {}, migration_notes: []}

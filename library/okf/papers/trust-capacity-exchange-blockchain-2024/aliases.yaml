@@ -1,58 +1,88 @@
-type: AliasCollection
-paper_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024
-aliases:
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:prob_001_low_trust_in_capacity_exchange
-  terms:
-  - inter-organizational trust
-  - capacity exchange trust
-  - behavioral uncertainty
-  - transaction costs
-  - lack of trust
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  terms:
-  - tender signaling
-  - precise tender
-  - capacity tender
-  - signaling of tender information
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  terms:
-  - identity signaling
-  - identity verification
-  - decentralized identity
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  terms:
-  - authority
-  - fairness
-  - contract enforcement
-  - sanctions
-  - rewards
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  terms:
-  - incentive mechanism
-  - deterrence
-  - opportunism
-  - value adding benefits
-  - losses from violation
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  terms:
-  - screening
-  - validity checking
-  - permitted access
-  - information retrieval
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  terms:
-  - reputation mechanism
-  - rating
-  - assessment
-  - trust score
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  terms:
-  - 3D printer capacity exchange
-  - blockchain prototype
-  - capacity exchange prototype
-  - decentralized negotiation platform
-- target_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust
-  terms:
-  - blockchain does not create trust automatically
-  - blockchain not sufficient
-  - poor smart contract design reduces trust
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024",
+  "aliases": [
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:prob_001_low_trust_in_capacity_exchange",
+      "terms": [
+        "inter-organizational trust",
+        "capacity exchange trust",
+        "behavioral uncertainty",
+        "transaction costs",
+        "lack of trust"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "terms": [
+        "tender signaling",
+        "precise tender",
+        "capacity tender",
+        "signaling of tender information"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "terms": [
+        "identity signaling",
+        "identity verification",
+        "decentralized identity"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "terms": [
+        "authority",
+        "fairness",
+        "contract enforcement",
+        "sanctions",
+        "rewards"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "terms": [
+        "incentive mechanism",
+        "deterrence",
+        "opportunism",
+        "value adding benefits",
+        "losses from violation"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "terms": [
+        "screening",
+        "validity checking",
+        "permitted access",
+        "information retrieval"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "terms": [
+        "reputation mechanism",
+        "rating",
+        "assessment",
+        "trust score"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "terms": [
+        "3D printer capacity exchange",
+        "blockchain prototype",
+        "capacity exchange prototype",
+        "decentralized negotiation platform"
+      ]
+    },
+    {
+      "target_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust",
+      "terms": [
+        "blockchain does not create trust automatically",
+        "blockchain not sufficient",
+        "poor smart contract design reduces trust"
+      ]
+    }
+  ]
+}

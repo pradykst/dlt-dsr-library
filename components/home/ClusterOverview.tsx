@@ -5,7 +5,7 @@ const clusters = [
   ["Privacy and auditability", "Designs that preserve sensitive data while keeping state changes verifiable."],
   ["Tokenized incentives", "Token mechanisms for reviewer effort, recognition, and marketplace participation."],
   ["Fair marketplaces", "Allocation designs that combine inclusive primary access and merit-sensitive secondary markets."],
-  ["IoT data integrity", "Sensor data certification, hash anchoring, and linearly scalable protection."],
+  ["IoT data integrity", "Sensor-origin integrity controls, hash anchoring, and linearly scalable protection."],
   ["Identity and consent", "SSI, reusable credentials, and patient-controlled consent across organizations."],
   ["Development lifecycle", "Method fragments, roles, modeling, and governance checkpoints for blockchain systems."]
 ];

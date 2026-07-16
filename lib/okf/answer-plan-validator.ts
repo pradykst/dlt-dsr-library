@@ -149,11 +149,11 @@ function validateFlowRows(rows: OkfReuseFlowRow[], moves: DesignMove[], errors: 
 }
 
 function conceptMatchesMove(concept: OkfAnswerPlan["extraction_items"][number], move: DesignMove) {
-  const expected = concept.type === "DesignRequirement"
+  const expected = concept.type === "Design Requirement"
     ? move.reused_requirement
-    : concept.type === "DesignPrinciple"
+    : concept.type === "Design Principle"
       ? move.reused_principle
-      : concept.type === "DesignFeature"
+      : concept.type === "Design Feature"
         ? move.candidate_feature
         : concept.type === "Artifact"
           ? move.artifact_pattern

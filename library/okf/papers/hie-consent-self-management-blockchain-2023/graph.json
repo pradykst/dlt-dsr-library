@@ -1,629 +1,509 @@
 {
+  "schema_version": "okf-dsr-v1",
   "paper_id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023",
   "title": "Core DSR flow: HIE consent self-management blockchain",
-  "recommended_main_flow": [
-    "prob_001_fragmented_hie_consent_self_management_problem",
-    "dr_002_patient_self_management",
-    "dp_002_patient_only_changes_consent_status",
-    "df_008_patient_facing_consent_dapp",
-    "art_002_blockchain_consent_self_management_dapp",
-    "eval_001_patient_survey_evaluation",
-    "ok_001_blockchain_backbone_for_consent_self_management"
-  ],
+  "source_reference": {
+    "type": "paper_figure",
+    "label": "Figure 3",
+    "page": 8,
+    "caption": "Design requirements, principles, and features.",
+    "validation_status": "unreviewed",
+    "validation_notes": "Source figure identified from the paper; semantic mapping remains subject to manual review."
+  },
   "nodes": [
     {
-      "id": "prob_001_fragmented_hie_consent_self_management_problem",
-      "label": "Fragmented HIE consent management limits patient self-management, trust, interoperability, and auditability",
-      "type": "Problem"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_001_consent_self_management_mockup",
+      "type": "Artifact",
+      "title": "Consent self-management app mock-up"
     },
     {
-      "id": "rq_001_self_managed_consent_across_distributed_hies",
-      "label": "How to enable patient consent self-management across distributed HIE systems",
-      "type": "ResearchQuestion"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
+      "type": "Artifact",
+      "title": "Blockchain-enabled Consent Self-Management DApp"
     },
     {
-      "id": "rq_002_blockchain_for_private_trusted_auditable_consent",
-      "label": "How blockchain can support private, trusted, and auditable consent changes",
-      "type": "ResearchQuestion"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
+      "type": "Artifact",
+      "title": "Permissioned HIE consent blockchain network"
     },
     {
-      "id": "dr_001_privacy_of_consent_status",
-      "label": "Protect privacy of patient consent status and PHI-sharing preferences",
-      "type": "DesignRequirement"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_001_encryption",
+      "type": "Design Feature",
+      "title": "Encryption for consent-management interactions"
     },
     {
-      "id": "dr_002_patient_self_management",
-      "label": "Enable patients to self-manage consent status",
-      "type": "DesignRequirement"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_002_key_management",
+      "type": "Design Feature",
+      "title": "Key management through blockchain wallets"
     },
     {
-      "id": "dr_003_patient_and_hie_trust",
-      "label": "Build patient and HIE trust through visibility and reliable consent handling",
-      "type": "DesignRequirement"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_003_immutable_consent_log",
+      "type": "Design Feature",
+      "title": "Immutable consent transaction log"
     },
     {
-      "id": "dr_004_regulatory_compliance_and_auditability",
-      "label": "Support regulatory compliance through auditable consent transaction history",
-      "type": "DesignRequirement"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_004_decentralized_hie_network",
+      "type": "Design Feature",
+      "title": "Decentralized HIE blockchain network"
     },
     {
-      "id": "dr_005_interoperability_across_fragmented_hies",
-      "label": "Enable interoperability of consent status across fragmented HIEs",
-      "type": "DesignRequirement"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_005_distributed_consent_status_replication",
+      "type": "Design Feature",
+      "title": "Distributed replication of consent transactions across HIE nodes"
     },
     {
-      "id": "dp_001_permissioned_view_of_consent_status",
-      "label": "Only HIEs and providers with permission can view patient consent status",
-      "type": "DesignPrinciple"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_006_permissioned_blockchain_access_model",
+      "type": "Design Feature",
+      "title": "Permissioned blockchain access model"
     },
     {
-      "id": "dp_002_patient_only_changes_consent_status",
-      "label": "Only the patient can change their consent status",
-      "type": "DesignPrinciple"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
+      "type": "Design Feature",
+      "title": "Smart contract functions for adding, revoking, and querying consent"
     },
     {
-      "id": "dp_003_auditable_consent_transaction_history",
-      "label": "Consent transaction history between patient and HIE must be auditable",
-      "type": "DesignPrinciple"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp",
+      "type": "Design Feature",
+      "title": "Patient-facing Consent Self-Management DApp"
     },
     {
-      "id": "dp_004_cross_hie_communication_without_central_authority",
-      "label": "HIEs should communicate consent status across HIEs without a central authority",
-      "type": "DesignPrinciple"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_009_provider_search_and_consent_grant",
+      "type": "Design Feature",
+      "title": "Provider search and consent-grant workflow"
     },
     {
-      "id": "dp_005_patient_shares_consent_changes_across_hies",
-      "label": "Enable patients to share consent-status changes across HIEs",
-      "type": "DesignPrinciple"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_010_consent_provider_list_and_revocation",
+      "type": "Design Feature",
+      "title": "Provider consent list and revocation workflow"
     },
     {
-      "id": "df_001_encryption",
-      "label": "Encryption for consent-management interactions",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_011_proof_of_authority_permissioned_ethereum",
+      "type": "Design Feature",
+      "title": "Proof-of-authority permissioned Ethereum deployment"
     },
     {
-      "id": "df_002_key_management",
-      "label": "Key management through blockchain wallets",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status",
+      "type": "Design Principle",
+      "title": "Only HIEs and providers with permission can view patient consent status"
     },
     {
-      "id": "df_003_immutable_consent_log",
-      "label": "Immutable consent transaction log",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "type": "Design Principle",
+      "title": "Only the patient can change their consent status"
     },
     {
-      "id": "df_004_decentralized_hie_network",
-      "label": "Decentralized HIE blockchain network",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history",
+      "type": "Design Principle",
+      "title": "Consent transaction history between patient and HIE must be auditable"
     },
     {
-      "id": "df_005_distributed_consent_status_replication",
-      "label": "Distributed replication of consent transactions across HIE nodes",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_004_cross_hie_communication_without_central_authority",
+      "type": "Design Principle",
+      "title": "HIEs should communicate consent status across HIEs without a central authority"
     },
     {
-      "id": "df_006_permissioned_blockchain_access_model",
-      "label": "Permissioned blockchain access model",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_005_patient_shares_consent_changes_across_hies",
+      "type": "Design Principle",
+      "title": "Enable patients to share consent-status changes across HIEs"
     },
     {
-      "id": "df_007_smart_contract_consent_functions",
-      "label": "Smart contract functions for adding, revoking, and querying consent",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_001_privacy_of_consent_status",
+      "type": "Design Requirement",
+      "title": "Protect privacy of patient consent status and PHI-sharing preferences"
     },
     {
-      "id": "df_008_patient_facing_consent_dapp",
-      "label": "Patient-facing Consent Self-Management DApp",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_002_patient_self_management",
+      "type": "Design Requirement",
+      "title": "Enable patients to self-manage consent status"
     },
     {
-      "id": "df_009_provider_search_and_consent_grant",
-      "label": "Provider search and consent-grant workflow",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_003_patient_and_hie_trust",
+      "type": "Design Requirement",
+      "title": "Build patient and HIE trust through visibility and reliable consent handling"
     },
     {
-      "id": "df_010_consent_provider_list_and_revocation",
-      "label": "Provider consent list and revocation workflow",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_004_regulatory_compliance_and_auditability",
+      "type": "Design Requirement",
+      "title": "Support regulatory compliance through auditable consent transaction history"
     },
     {
-      "id": "df_011_proof_of_authority_permissioned_ethereum",
-      "label": "Proof-of-authority permissioned Ethereum deployment",
-      "type": "DesignFeature"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_005_interoperability_across_fragmented_hies",
+      "type": "Design Requirement",
+      "title": "Enable interoperability of consent status across fragmented HIEs"
     },
     {
-      "id": "art_001_consent_self_management_mockup",
-      "label": "Consent self-management app mock-up",
-      "type": "Artifact"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_001_patient_survey_evaluation",
+      "type": "Evaluation",
+      "title": "Survey evaluation of patient interest in consent self-management"
     },
     {
-      "id": "art_002_blockchain_consent_self_management_dapp",
-      "label": "Blockchain-enabled Consent Self-Management DApp",
-      "type": "Artifact"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_002_design_requirement_and_principle_mapping",
+      "type": "Evaluation",
+      "title": "Design requirement and principle mapping evaluation"
     },
     {
-      "id": "art_003_permissioned_hie_consent_blockchain",
-      "label": "Permissioned HIE consent blockchain network",
-      "type": "Artifact"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_003_blockchain_performance_evaluation",
+      "type": "Evaluation",
+      "title": "Permissioned blockchain performance evaluation"
     },
     {
-      "id": "eval_001_patient_survey_evaluation",
-      "label": "Survey evaluation of patient interest in consent self-management",
-      "type": "Evaluation"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_004_cost_feasibility_evaluation",
+      "type": "Evaluation",
+      "title": "Cost feasibility evaluation of running the consent blockchain network"
     },
     {
-      "id": "eval_002_design_requirement_and_principle_mapping",
-      "label": "Design requirement and principle mapping evaluation",
-      "type": "Evaluation"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_001_blockchain_backbone_for_consent_self_management",
+      "type": "Output Knowledge",
+      "title": "Blockchain can serve as a backbone for patient consent self-management across HIEs"
     },
     {
-      "id": "eval_003_blockchain_performance_evaluation",
-      "label": "Permissioned blockchain performance evaluation",
-      "type": "Evaluation"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_002_permissioned_blockchain_is_suitable_for_sensitive_consent_status",
+      "type": "Output Knowledge",
+      "title": "Permissioned blockchains are suitable when consent data should not be public"
     },
     {
-      "id": "eval_004_cost_feasibility_evaluation",
-      "label": "Cost feasibility evaluation of running the consent blockchain network",
-      "type": "Evaluation"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_003_consent_self_management_can_augment_existing_provider_consent_processes",
+      "type": "Output Knowledge",
+      "title": "Consent self-management apps can augment, not replace, existing provider-site processes"
     },
     {
-      "id": "ok_001_blockchain_backbone_for_consent_self_management",
-      "label": "Blockchain can serve as a backbone for patient consent self-management across HIEs",
-      "type": "OutputKnowledge"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_004_design_generalizes_to_private_information_sharing_with_auditable_history",
+      "type": "Output Knowledge",
+      "title": "The design can generalize to self-management of private information requiring trusted sharing and immutable history"
     },
     {
-      "id": "ok_002_permissioned_blockchain_is_suitable_for_sensitive_consent_status",
-      "label": "Permissioned blockchains are suitable when consent data should not be public",
-      "type": "OutputKnowledge"
-    },
-    {
-      "id": "ok_003_consent_self_management_can_augment_existing_provider_consent_processes",
-      "label": "Consent self-management apps can augment, not replace, existing provider-site processes",
-      "type": "OutputKnowledge"
-    },
-    {
-      "id": "ok_004_design_generalizes_to_private_information_sharing_with_auditable_history",
-      "label": "The design can generalize to self-management of private information requiring trusted sharing and immutable history",
-      "type": "OutputKnowledge"
-    },
-    {
-      "id": "kt_001_design_science_research_methodology",
-      "label": "Design Science Research Methodology",
-      "type": "KernelTheory"
-    },
-    {
-      "id": "kt_002_privacy_self_management_and_consent",
-      "label": "Privacy self-management and consent rights",
-      "type": "KernelTheory"
-    },
-    {
-      "id": "kt_003_blockchain_trust_by_design",
-      "label": "Blockchain trust by design",
-      "type": "KernelTheory"
-    },
-    {
-      "id": "kt_004_hie_interoperability_and_regulatory_fragmentation",
-      "label": "HIE interoperability and regulatory fragmentation",
-      "type": "KernelTheory"
-    },
-    {
-      "id": "lim_001_convenience_sample_survey",
-      "label": "Survey uses a convenience sample",
-      "type": "Limitation"
-    },
-    {
-      "id": "lim_002_context_specific_artifact",
-      "label": "Current artifact is context-specific",
-      "type": "Limitation"
-    },
-    {
-      "id": "lim_003_prototype_not_fully_optimized",
-      "label": "Prototype network parameters were not substantially optimized",
-      "type": "Limitation"
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "type": "Problem",
+      "title": "Fragmented HIE consent management limits patient self-management, trust, interoperability, and auditability"
     }
   ],
   "edges": [
     {
-      "id": "rel_001",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "rq_001_self_managed_consent_across_distributed_hies",
-      "predicate": "motivates"
-    },
-    {
-      "id": "rel_002",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "rq_002_blockchain_for_private_trusted_auditable_consent",
-      "predicate": "motivates"
-    },
-    {
-      "id": "rel_003",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "dr_001_privacy_of_consent_status",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_003",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_001_privacy_of_consent_status",
       "predicate": "requires"
     },
     {
-      "id": "rel_004",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "dr_002_patient_self_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_004",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_002_patient_self_management",
       "predicate": "requires"
     },
     {
-      "id": "rel_005",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "dr_003_patient_and_hie_trust",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_005",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_003_patient_and_hie_trust",
       "predicate": "requires"
     },
     {
-      "id": "rel_006",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "dr_004_regulatory_compliance_and_auditability",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_006",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_004_regulatory_compliance_and_auditability",
       "predicate": "requires"
     },
     {
-      "id": "rel_007",
-      "source": "prob_001_fragmented_hie_consent_self_management_problem",
-      "target": "dr_005_interoperability_across_fragmented_hies",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_007",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_005_interoperability_across_fragmented_hies",
       "predicate": "requires"
     },
     {
-      "id": "rel_008",
-      "source": "rq_001_self_managed_consent_across_distributed_hies",
-      "target": "dr_001_privacy_of_consent_status",
-      "predicate": "requires"
-    },
-    {
-      "id": "rel_009",
-      "source": "rq_001_self_managed_consent_across_distributed_hies",
-      "target": "dr_002_patient_self_management",
-      "predicate": "requires"
-    },
-    {
-      "id": "rel_010",
-      "source": "rq_001_self_managed_consent_across_distributed_hies",
-      "target": "dr_003_patient_and_hie_trust",
-      "predicate": "requires"
-    },
-    {
-      "id": "rel_011",
-      "source": "rq_001_self_managed_consent_across_distributed_hies",
-      "target": "dr_004_regulatory_compliance_and_auditability",
-      "predicate": "requires"
-    },
-    {
-      "id": "rel_012",
-      "source": "rq_001_self_managed_consent_across_distributed_hies",
-      "target": "dr_005_interoperability_across_fragmented_hies",
-      "predicate": "requires"
-    },
-    {
-      "id": "rel_013",
-      "source": "dr_001_privacy_of_consent_status",
-      "target": "dp_001_permissioned_view_of_consent_status",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_013",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_001_privacy_of_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_014",
-      "source": "dr_002_patient_self_management",
-      "target": "dp_002_patient_only_changes_consent_status",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_014",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_002_patient_self_management",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_015",
-      "source": "dr_003_patient_and_hie_trust",
-      "target": "dp_002_patient_only_changes_consent_status",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_015",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_003_patient_and_hie_trust",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_016",
-      "source": "dr_003_patient_and_hie_trust",
-      "target": "dp_003_auditable_consent_transaction_history",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_016",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_003_patient_and_hie_trust",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_017",
-      "source": "dr_004_regulatory_compliance_and_auditability",
-      "target": "dp_003_auditable_consent_transaction_history",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_017",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_004_regulatory_compliance_and_auditability",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_018",
-      "source": "dr_005_interoperability_across_fragmented_hies",
-      "target": "dp_004_cross_hie_communication_without_central_authority",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_018",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_005_interoperability_across_fragmented_hies",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_004_cross_hie_communication_without_central_authority",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_019",
-      "source": "dr_005_interoperability_across_fragmented_hies",
-      "target": "dp_005_patient_shares_consent_changes_across_hies",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_019",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_005_interoperability_across_fragmented_hies",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_005_patient_shares_consent_changes_across_hies",
       "predicate": "addressed_by"
     },
     {
-      "id": "rel_020",
-      "source": "dp_001_permissioned_view_of_consent_status",
-      "target": "df_001_encryption",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_020",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_001_encryption",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_021",
-      "source": "dp_001_permissioned_view_of_consent_status",
-      "target": "df_002_key_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_021",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_002_key_management",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_022",
-      "source": "dp_001_permissioned_view_of_consent_status",
-      "target": "df_006_permissioned_blockchain_access_model",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_022",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_001_permissioned_view_of_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_006_permissioned_blockchain_access_model",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_023",
-      "source": "dp_002_patient_only_changes_consent_status",
-      "target": "df_002_key_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_023",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_002_key_management",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_024",
-      "source": "dp_002_patient_only_changes_consent_status",
-      "target": "df_007_smart_contract_consent_functions",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_024",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_025",
-      "source": "dp_002_patient_only_changes_consent_status",
-      "target": "df_008_patient_facing_consent_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_025",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_026",
-      "source": "dp_002_patient_only_changes_consent_status",
-      "target": "df_009_provider_search_and_consent_grant",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_026",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_009_provider_search_and_consent_grant",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_027",
-      "source": "dp_002_patient_only_changes_consent_status",
-      "target": "df_010_consent_provider_list_and_revocation",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_027",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_010_consent_provider_list_and_revocation",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_028",
-      "source": "dp_003_auditable_consent_transaction_history",
-      "target": "df_003_immutable_consent_log",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_028",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_003_immutable_consent_log",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_029",
-      "source": "dp_003_auditable_consent_transaction_history",
-      "target": "df_007_smart_contract_consent_functions",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_029",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_003_auditable_consent_transaction_history",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_030",
-      "source": "dp_004_cross_hie_communication_without_central_authority",
-      "target": "df_004_decentralized_hie_network",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_030",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_004_cross_hie_communication_without_central_authority",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_004_decentralized_hie_network",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_031",
-      "source": "dp_004_cross_hie_communication_without_central_authority",
-      "target": "df_006_permissioned_blockchain_access_model",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_031",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_004_cross_hie_communication_without_central_authority",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_006_permissioned_blockchain_access_model",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_032",
-      "source": "dp_005_patient_shares_consent_changes_across_hies",
-      "target": "df_005_distributed_consent_status_replication",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_032",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_005_patient_shares_consent_changes_across_hies",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_005_distributed_consent_status_replication",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_033",
-      "source": "dp_005_patient_shares_consent_changes_across_hies",
-      "target": "df_007_smart_contract_consent_functions",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_033",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_005_patient_shares_consent_changes_across_hies",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
       "predicate": "instantiated_by"
     },
     {
-      "id": "rel_034",
-      "source": "df_001_encryption",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_034",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_001_encryption",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_035",
-      "source": "df_002_key_management",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_035",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_002_key_management",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_036",
-      "source": "df_003_immutable_consent_log",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_036",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_003_immutable_consent_log",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_037",
-      "source": "df_004_decentralized_hie_network",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_037",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_004_decentralized_hie_network",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_038",
-      "source": "df_005_distributed_consent_status_replication",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_038",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_005_distributed_consent_status_replication",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_039",
-      "source": "df_006_permissioned_blockchain_access_model",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_039",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_006_permissioned_blockchain_access_model",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_040",
-      "source": "df_007_smart_contract_consent_functions",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_040",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_041",
-      "source": "df_011_proof_of_authority_permissioned_ethereum",
-      "target": "art_003_permissioned_hie_consent_blockchain",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_041",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_011_proof_of_authority_permissioned_ethereum",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
       "predicate": "implements"
     },
     {
-      "id": "rel_042",
-      "source": "df_007_smart_contract_consent_functions",
-      "target": "art_002_blockchain_consent_self_management_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_042",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_007_smart_contract_consent_functions",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
       "predicate": "implements"
     },
     {
-      "id": "rel_043",
-      "source": "df_008_patient_facing_consent_dapp",
-      "target": "art_002_blockchain_consent_self_management_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_043",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
       "predicate": "implements"
     },
     {
-      "id": "rel_044",
-      "source": "df_009_provider_search_and_consent_grant",
-      "target": "art_002_blockchain_consent_self_management_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_044",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_009_provider_search_and_consent_grant",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
       "predicate": "implements"
     },
     {
-      "id": "rel_045",
-      "source": "df_010_consent_provider_list_and_revocation",
-      "target": "art_002_blockchain_consent_self_management_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_045",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_010_consent_provider_list_and_revocation",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
       "predicate": "implements"
     },
     {
-      "id": "rel_046",
-      "source": "df_002_key_management",
-      "target": "art_002_blockchain_consent_self_management_dapp",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_046",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_002_key_management",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
       "predicate": "implements"
     },
     {
-      "id": "rel_047",
-      "source": "df_008_patient_facing_consent_dapp",
-      "target": "art_001_consent_self_management_mockup",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_047",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_001_consent_self_management_mockup",
       "predicate": "implements"
     },
     {
-      "id": "rel_048",
-      "source": "df_009_provider_search_and_consent_grant",
-      "target": "art_001_consent_self_management_mockup",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_048",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_009_provider_search_and_consent_grant",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_001_consent_self_management_mockup",
       "predicate": "implements"
     },
     {
-      "id": "rel_049",
-      "source": "df_010_consent_provider_list_and_revocation",
-      "target": "art_001_consent_self_management_mockup",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_049",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_010_consent_provider_list_and_revocation",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_001_consent_self_management_mockup",
       "predicate": "implements"
     },
     {
-      "id": "rel_050",
-      "source": "art_001_consent_self_management_mockup",
-      "target": "eval_001_patient_survey_evaluation",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_050",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_001_consent_self_management_mockup",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_001_patient_survey_evaluation",
       "predicate": "evaluated_by"
     },
     {
-      "id": "rel_051",
-      "source": "art_002_blockchain_consent_self_management_dapp",
-      "target": "eval_002_design_requirement_and_principle_mapping",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_051",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_002_design_requirement_and_principle_mapping",
       "predicate": "evaluated_by"
     },
     {
-      "id": "rel_052",
-      "source": "art_002_blockchain_consent_self_management_dapp",
-      "target": "eval_003_blockchain_performance_evaluation",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_052",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_003_blockchain_performance_evaluation",
       "predicate": "evaluated_by"
     },
     {
-      "id": "rel_053",
-      "source": "art_003_permissioned_hie_consent_blockchain",
-      "target": "eval_003_blockchain_performance_evaluation",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_053",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_003_blockchain_performance_evaluation",
       "predicate": "evaluated_by"
     },
     {
-      "id": "rel_054",
-      "source": "art_003_permissioned_hie_consent_blockchain",
-      "target": "eval_004_cost_feasibility_evaluation",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_054",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_003_permissioned_hie_consent_blockchain",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_004_cost_feasibility_evaluation",
       "predicate": "evaluated_by"
     },
     {
-      "id": "rel_055",
-      "source": "eval_001_patient_survey_evaluation",
-      "target": "ok_003_consent_self_management_can_augment_existing_provider_consent_processes",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_055",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_001_patient_survey_evaluation",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_003_consent_self_management_can_augment_existing_provider_consent_processes",
       "predicate": "contributes_to"
     },
     {
-      "id": "rel_056",
-      "source": "eval_002_design_requirement_and_principle_mapping",
-      "target": "ok_001_blockchain_backbone_for_consent_self_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_056",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_002_design_requirement_and_principle_mapping",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_001_blockchain_backbone_for_consent_self_management",
       "predicate": "contributes_to"
     },
     {
-      "id": "rel_057",
-      "source": "eval_002_design_requirement_and_principle_mapping",
-      "target": "ok_002_permissioned_blockchain_is_suitable_for_sensitive_consent_status",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_057",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_002_design_requirement_and_principle_mapping",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_002_permissioned_blockchain_is_suitable_for_sensitive_consent_status",
       "predicate": "contributes_to"
     },
     {
-      "id": "rel_058",
-      "source": "eval_003_blockchain_performance_evaluation",
-      "target": "ok_001_blockchain_backbone_for_consent_self_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_058",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_003_blockchain_performance_evaluation",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_001_blockchain_backbone_for_consent_self_management",
       "predicate": "contributes_to"
     },
     {
-      "id": "rel_059",
-      "source": "eval_004_cost_feasibility_evaluation",
-      "target": "ok_001_blockchain_backbone_for_consent_self_management",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_059",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:eval_004_cost_feasibility_evaluation",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_001_blockchain_backbone_for_consent_self_management",
       "predicate": "contributes_to"
     },
     {
-      "id": "rel_060",
-      "source": "art_002_blockchain_consent_self_management_dapp",
-      "target": "ok_004_design_generalizes_to_private_information_sharing_with_auditable_history",
+      "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_060",
+      "source": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp",
+      "target": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ok_004_design_generalizes_to_private_information_sharing_with_auditable_history",
       "predicate": "contributes_to"
-    },
-    {
-      "id": "rel_061",
-      "source": "kt_001_design_science_research_methodology",
-      "target": "art_002_blockchain_consent_self_management_dapp",
-      "predicate": "derived_from"
-    },
-    {
-      "id": "rel_062",
-      "source": "kt_002_privacy_self_management_and_consent",
-      "target": "dr_002_patient_self_management",
-      "predicate": "derived_from"
-    },
-    {
-      "id": "rel_063",
-      "source": "kt_003_blockchain_trust_by_design",
-      "target": "dp_003_auditable_consent_transaction_history",
-      "predicate": "derived_from"
-    },
-    {
-      "id": "rel_064",
-      "source": "kt_004_hie_interoperability_and_regulatory_fragmentation",
-      "target": "dr_005_interoperability_across_fragmented_hies",
-      "predicate": "derived_from"
-    },
-    {
-      "id": "rel_065",
-      "source": "lim_001_convenience_sample_survey",
-      "target": "eval_001_patient_survey_evaluation",
-      "predicate": "contrasts_with"
-    },
-    {
-      "id": "rel_066",
-      "source": "lim_002_context_specific_artifact",
-      "target": "ok_004_design_generalizes_to_private_information_sharing_with_auditable_history",
-      "predicate": "contrasts_with"
-    },
-    {
-      "id": "rel_067",
-      "source": "lim_003_prototype_not_fully_optimized",
-      "target": "eval_003_blockchain_performance_evaluation",
-      "predicate": "contrasts_with"
     }
+  ],
+  "recommended_paths": [
+    [
+      "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:prob_001_fragmented_hie_consent_self_management_problem",
+      "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dr_002_patient_self_management",
+      "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:dp_002_patient_only_changes_consent_status",
+      "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:df_008_patient_facing_consent_dapp",
+      "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:art_002_blockchain_consent_self_management_dapp"
+    ]
   ]
 }

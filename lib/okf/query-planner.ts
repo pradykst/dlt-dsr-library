@@ -20,6 +20,15 @@ export type QueryPlanOutputShape =
   | "evaluation_plan"
   | "clarification";
 
+export type RequestedFlowView = "source_figure" | "recommended" | "full";
+export type PaperContextField =
+  | "research_questions"
+  | "theoretical_foundations"
+  | "limitations"
+  | "methodology"
+  | "evaluation"
+  | "presentation";
+
 export type QueryPlannerStatus = {
   provider: "gemini" | "groq";
   configured: boolean;
@@ -54,6 +63,9 @@ export type QueryPlan = {
   requires_cross_paper: boolean;
   requires_graph: boolean;
   requires_llm_synthesis: boolean;
+  requested_flow_view?: RequestedFlowView;
+  source_view_selector?: string;
+  requested_context_fields: PaperContextField[];
   clarification_question?: string;
   planner_status?: QueryPlannerStatus;
 };
@@ -94,15 +106,48 @@ export function buildDeterministicQueryPlan(query: string, intent: OkfChatIntent
     confidence,
     requested_output_shape: outputShapeForIntent(intent),
     named_papers: namedPapers,
-    requested_element_types: unique(requestedTypes).filter((type) => type !== "Paper"),
+    requested_element_types: unique(requestedTypes),
     themes: criteria.themes,
     must_have_criteria: criteria.mustHaveTerms,
     optional_criteria: criteria.optionalTerms,
     requires_cross_paper: requiresCrossPaper(intent, namedPapers),
     requires_graph: intent === "DSR_FLOW_QUERY" || intent === "DESIGN_REUSE_FLOW_QUERY",
     requires_llm_synthesis: requiresLlmSynthesis(intent),
+    requested_flow_view: intent === "DSR_FLOW_QUERY" ? detectRequestedFlowView(query) : undefined,
+    source_view_selector: extractSourceViewSelector(query),
+    requested_context_fields: detectRequestedContextFields(query),
     clarification_question: intent === "CLARIFICATION_QUERY" ? "Do you want to find papers, extract exact paper elements, build a DSR flow graph, or get design reuse guidance?" : undefined
   };
+}
+
+export function detectRequestedFlowView(query: string): RequestedFlowView {
+  const normalized = normalizeText(query);
+  if (/\b(?:full|all|complete|advanced|raw)\b.*\b(?:relations?|graph|flow|mapping)\b|\b(?:relations?|graph|flow|mapping)\b.*\b(?:full|all|complete|advanced|raw)\b/.test(normalized)) return "full";
+  if (/\b(?:source|paper|original|exact|stored)\b.*\b(?:figure|table|diagram|mapping)\b|\b(?:figure|table|diagram)\s+[a-z0-9][a-z0-9.-]*\b/.test(normalized)) return "source_figure";
+  return "recommended";
+}
+
+export function extractSourceViewSelector(query: string): string | undefined {
+  const normalized = normalizeText(query);
+  const labelled = normalized.match(/\b(?:figure|table|diagram)\s+([a-z0-9][a-z0-9.-]*)\b/);
+  const labelToken = labelled?.[1];
+  if (labelled && labelToken && (/\d/.test(labelToken) || /^[a-z]$/.test(labelToken) || /^(?:i|ii|iii|iv|v|vi|vii|viii|ix|x)$/.test(labelToken))) {
+    return labelled[0];
+  }
+  const quoted = query.match(/["'\u201c\u201d]([^"'\u201c\u201d]{2,100})["'\u201c\u201d]/)?.[1]?.trim();
+  return quoted || undefined;
+}
+
+export function detectRequestedContextFields(query: string): PaperContextField[] {
+  const normalized = normalizeText(query);
+  const fields: PaperContextField[] = [];
+  if (/\bresearch questions?\b|\brqs?\b/.test(normalized)) fields.push("research_questions");
+  if (/\btheoretical foundations?\b|\bkernel theor(?:y|ies)\b|\bjustificatory knowledge\b/.test(normalized)) fields.push("theoretical_foundations");
+  if (/\blimitations?\b|\bboundary conditions?\b|\bcaveats?\b/.test(normalized)) fields.push("limitations");
+  if (/\bmethodology\b|\bresearch method\b|\bresearch process\b/.test(normalized)) fields.push("methodology");
+  if (/\bevaluation methods?\b|\bevaluation approach\b|\bhow (?:was|is) .*evaluat/.test(normalized)) fields.push("evaluation");
+  if (/\bpresentation metadata\b|\bdsr summary\b|\bpaper summary\b|\boverview metadata\b/.test(normalized)) fields.push("presentation");
+  return unique(fields);
 }
 
 function deterministicConfidence(query: string, intent: OkfChatIntent, namedPapers: string[], requestedTypes: OkfConceptType[]): QueryPlanConfidence {
@@ -110,9 +155,9 @@ function deterministicConfidence(query: string, intent: OkfChatIntent, namedPape
   if (!q) return "low";
   if (intent === "CLARIFICATION_QUERY") return "low";
   if (intent === "LIBRARY_STATS_QUERY" || intent === "LIBRARY_OVERVIEW_QUERY" || intent === "LIBRARY_COVERAGE_QUERY") return "high";
-  if (intent === "PAPER_ELEMENT_QUERY" && namedPapers.length && requestedTypes.length) return "high";
+  if (intent === "PAPER_ELEMENT_QUERY" && namedPapers.length && (requestedTypes.length || detectRequestedContextFields(query).length)) return "high";
   if (intent === "PAPER_DISCOVERY_QUERY" && /find (?:me )?(?:a )?papers?|which papers?|which paper has|papers? (?:with|about|that|which)|what papers do we have/.test(q)) return "high";
-  if ((intent === "DSR_FLOW_QUERY" || intent === "DESIGN_REUSE_FLOW_QUERY") && /flow|graph|path|trace|map|requirement.*principle.*feature|rpf/.test(q)) return "high";
+  if ((intent === "DSR_FLOW_QUERY" || intent === "DESIGN_REUSE_FLOW_QUERY") && /flow|graph|path|trace|map|figure|table|diagram|relations?|requirement.*principle.*feature|rpf/.test(q)) return "high";
   if (intent === "NEGATIVE_OR_EXISTENCE_QUERY" || intent === "IMPLEMENTATION_LIFECYCLE_QUERY") return "high";
   if (intent === "DESIGN_REUSE_QUERY" && /i want to|create .*application|build .*system|design .*system|solve(?:s)? the problem|what .*reuse|guide me|principles?.*things?.*reuse/.test(q)) return "high";
   if (intent === "EVIDENCE_QUERY" || intent === "COMPARISON_QUERY" || intent === "EVALUATION_PLANNING_QUERY") return "medium";
@@ -203,7 +248,7 @@ function plannerPromptPayload(query: string, base: QueryPlan, kb: OkfKnowledgeBa
     allowed_intents: allowedIntents,
     query_plan_schema: { intent: "allowed intent", confidence: "high|medium|low", requested_output_shape: "counts|library_coverage|paper_list|exact_elements|flow_graph|design_recommendation|evidence|comparison|lifecycle|evaluation_plan|clarification", named_papers: [], requested_element_types: [], themes: [], must_have_criteria: [], optional_criteria: [], requires_cross_paper: true, requires_graph: false, requires_llm_synthesis: false, clarification_question: "optional" },
     known_papers: kb.papers.map((paper) => ({ paper_id: paper.paper_id, title: paper.title })).slice(0, 50),
-    known_element_types: ["Problem", "ResearchQuestion", "DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact", "Evaluation", "OutputKnowledge", "KernelTheory", "Limitation"],
+    known_element_types: ["Problem", "Design Requirement", "Design Principle", "Design Feature", "Artifact", "Evaluation", "Output Knowledge"],
     rules: ["Do not choose facts, citations, evidence, final sources, or claims.", "If the user asks which paper has a theme, classify as PAPER_DISCOVERY_QUERY.", "If the user asks to create/build/design an application/system and asks what to reuse, classify as DESIGN_REUSE_QUERY unless a graph/flow is requested.", "Clarification should be rare; use it only for greetings or underspecified queries without domain/action."]
   };
 }
@@ -396,7 +441,7 @@ function validateQueryPlan(candidate: Partial<QueryPlan> | undefined, base: Quer
       ? base.intent
       : candidateIntent;
   const named_papers = unique([...base.named_papers, ...arrayOfStrings(candidate.named_papers).flatMap((value) => matchKnownPaper(value, kb))]).filter((paperId) => paperIds.has(paperId));
-  const requested_element_types = unique([...base.requested_element_types, ...arrayOfStrings(candidate.requested_element_types)]).filter((type) => isOkfConceptType(type) && type !== "Paper");
+  const requested_element_types = unique([...base.requested_element_types, ...arrayOfStrings(candidate.requested_element_types)]).filter((type) => isOkfConceptType(type));
   return {
     intent,
     confidence: base.confidence === "high" ? base.confidence : validateConfidence(candidate.confidence) ?? base.confidence,
@@ -409,6 +454,9 @@ function validateQueryPlan(candidate: Partial<QueryPlan> | undefined, base: Quer
     requires_cross_paper: Boolean(candidate.requires_cross_paper ?? base.requires_cross_paper) || requiresCrossPaper(intent, named_papers),
     requires_graph: Boolean(candidate.requires_graph ?? base.requires_graph) || intent === "DSR_FLOW_QUERY" || intent === "DESIGN_REUSE_FLOW_QUERY",
     requires_llm_synthesis: Boolean(candidate.requires_llm_synthesis ?? base.requires_llm_synthesis) || requiresLlmSynthesis(intent),
+    requested_flow_view: intent === "DSR_FLOW_QUERY" ? base.requested_flow_view ?? detectRequestedFlowView(query) : undefined,
+    source_view_selector: base.source_view_selector,
+    requested_context_fields: base.requested_context_fields,
     clarification_question: intent === "CLARIFICATION_QUERY" && typeof candidate.clarification_question === "string" && candidate.clarification_question.trim() ? candidate.clarification_question.trim() : base.clarification_question
   };
 }

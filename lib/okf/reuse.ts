@@ -3,7 +3,7 @@ import { selectPolicySourcePapers } from "./policy.ts";
 import type { ConfidenceLabel, DecisionSupportAnswer, DesignMove, OkfConcept, OkfConceptType, OkfEvidenceRef, OkfKnowledgeBase, OkfPaperSupport, OkfReuseFlowRow } from "./schema.ts";
 import type { OkfAnswerPlan, OkfChatResponse, OkfQueryPlan } from "./chat.ts";
 
-const rowTypes: OkfConceptType[] = ["DesignRequirement", "DesignPrinciple", "DesignFeature", "Artifact"];
+const rowTypes: OkfConceptType[] = ["Design Requirement", "Design Principle", "Design Feature", "Artifact"];
 
 type DesignTheme = {
   id: string;
@@ -101,9 +101,9 @@ export function buildReuseFlowResponse(query: string, plan: OkfQueryPlan, answer
     task_type: plan.task_type,
     answer: renderDecisionSupportMarkdown(payload),
     interpreted_problem: query,
-    requirements: dedupeCards(rows.map((row) => card(row.requirement_label, row, "DesignRequirement", concepts))),
-    principles: dedupeCards(rows.map((row) => card(row.principle_label, row, "DesignPrinciple", concepts))),
-    features: dedupeCards(rows.map((row) => card(row.feature_label, row, "DesignFeature", concepts))),
+    requirements: dedupeCards(rows.map((row) => card(row.requirement_label, row, "Design Requirement", concepts))),
+    principles: dedupeCards(rows.map((row) => card(row.principle_label, row, "Design Principle", concepts))),
+    features: dedupeCards(rows.map((row) => card(row.feature_label, row, "Design Feature", concepts))),
     artifact_direction: dedupeCards(rows.map((row) => card(row.artifact_pattern, row, "Artifact", concepts))),
     source_papers: sourcePapers,
     retrieved_concepts: concepts,
@@ -233,9 +233,9 @@ function buildRelationRows(concepts: OkfConcept[], evidence: OkfEvidenceRef[], k
     outgoing.set(relation.source_concept_id, [...(outgoing.get(relation.source_concept_id) ?? []), relation.target_concept_id]);
   }
   const rows: OkfReuseFlowRow[] = [];
-  for (const requirement of concepts.filter((concept) => concept.type === "DesignRequirement")) {
-    for (const principle of (outgoing.get(requirement.concept_id) ?? []).map((id) => byId.get(id)).filter((concept): concept is OkfConcept => concept?.type === "DesignPrinciple")) {
-      const features = (outgoing.get(principle.concept_id) ?? []).map((id) => byId.get(id)).filter((concept): concept is OkfConcept => concept?.type === "DesignFeature");
+  for (const requirement of concepts.filter((concept) => concept.type === "Design Requirement")) {
+    for (const principle of (outgoing.get(requirement.concept_id) ?? []).map((id) => byId.get(id)).filter((concept): concept is OkfConcept => concept?.type === "Design Principle")) {
+      const features = (outgoing.get(principle.concept_id) ?? []).map((id) => byId.get(id)).filter((concept): concept is OkfConcept => concept?.type === "Design Feature");
       for (const feature of features.length ? features : [undefined]) {
         const artifacts = feature ? (outgoing.get(feature.concept_id) ?? []).map((id) => byId.get(id)).filter((concept): concept is OkfConcept => concept?.type === "Artifact") : [];
         const selected = [requirement, principle, feature, artifacts[0]].filter((concept): concept is OkfConcept => Boolean(concept));
@@ -261,9 +261,9 @@ function buildCrossPaperRows(query: string, papers: OkfPaperSupport[], concepts:
     const primary = concepts.filter((concept) => concept.paper_id === papers[index].paper_id);
     const secondary = concepts.filter((concept) => concept.paper_id === papers[index + 1].paper_id);
     const selected = [
-      bestConcept(primary, "DesignRequirement", terms),
-      bestConcept(primary, "DesignPrinciple", terms) ?? bestConcept(secondary, "DesignPrinciple", terms),
-      bestConcept(secondary, "DesignFeature", terms),
+      bestConcept(primary, "Design Requirement", terms),
+      bestConcept(primary, "Design Principle", terms) ?? bestConcept(secondary, "Design Principle", terms),
+      bestConcept(secondary, "Design Feature", terms),
       bestConcept(secondary, "Artifact", terms) ?? bestConcept(primary, "Artifact", terms)
     ].filter((concept): concept is OkfConcept => Boolean(concept));
     if (selected.length >= 2) rows.push(rowFromConcepts(`cross-paper-${index + 1}`, selected, evidence, relationConnected(selected, kb) ? "mixed" : "query_generated"));
@@ -317,15 +317,16 @@ function selectDiverseGroundedRows(rows: OkfReuseFlowRow[], answerPlan: OkfAnswe
     seenPaths.add(key);
     selected.push(row);
   };
+  const targetMoveCount = Math.min(7, Math.max(5, rankedPaperIds.length));
   for (const paperId of rankedPaperIds) {
     const candidates = rows.filter((row) => row.supporting_papers.includes(paperId) && row.evidence_ids.some((id) => evidenceById.get(id)?.paper_id === paperId));
     const directPaperRow = candidates.find((row) => row.row_id.startsWith(`paper-${paperId}-`));
     add(directPaperRow ?? candidates.find((row) => row.adaptation_status === "stored") ?? candidates[0]);
-    if (selected.length >= 5) return selected;
+    if (selected.length >= targetMoveCount) return selected;
   }
   for (const row of rows) {
     add(row);
-    if (selected.length >= 5) break;
+    if (selected.length >= targetMoveCount) break;
   }
   return selected;
 }
@@ -360,9 +361,9 @@ function buildGroundedSamePaperBackfill(answerPlan: OkfAnswerPlan, kb: OkfKnowle
   for (const concept of eligibleConcepts) {
     const matchingLabel = existingMoves.some((move) => {
       if (!move.supporting_paper_ids.includes(concept.paper_id)) return false;
-      const label = concept.type === "DesignRequirement" ? move.reused_requirement
-        : concept.type === "DesignPrinciple" ? move.reused_principle
-          : concept.type === "DesignFeature" ? move.candidate_feature
+      const label = concept.type === "Design Requirement" ? move.reused_requirement
+        : concept.type === "Design Principle" ? move.reused_principle
+          : concept.type === "Design Feature" ? move.candidate_feature
             : move.artifact_pattern;
       return normalizeText(label) === normalizeText(concept.title);
     });
@@ -469,10 +470,10 @@ function rowFromConcepts(rowId: string, selected: OkfConcept[], evidence: OkfEvi
   const titleFallback = selected[0]?.title ?? "Retrieved OKF concept";
   return {
     row_id: rowId,
-    requirement_label: byType("DesignRequirement")?.title ?? titleFallback,
-    principle_label: byType("DesignPrinciple")?.title ?? byType("DesignRequirement")?.title ?? titleFallback,
-    feature_label: byType("DesignFeature")?.title ?? byType("DesignPrinciple")?.title ?? titleFallback,
-    artifact_pattern: byType("Artifact")?.title ?? byType("DesignFeature")?.title ?? titleFallback,
+    requirement_label: byType("Design Requirement")?.title ?? titleFallback,
+    principle_label: byType("Design Principle")?.title ?? byType("Design Requirement")?.title ?? titleFallback,
+    feature_label: byType("Design Feature")?.title ?? byType("Design Principle")?.title ?? titleFallback,
+    artifact_pattern: byType("Artifact")?.title ?? byType("Design Feature")?.title ?? titleFallback,
     supporting_papers: papers,
     evidence_ids: evidenceIds,
     concept_ids: conceptIds,
@@ -540,9 +541,9 @@ function rowFromDesignMove(move: DesignMove, concepts: OkfConcept[], evidence: O
   const supportingPaperIds = new Set(move.supporting_paper_ids);
   const findConcept = (type: OkfConceptType, label: string) => concepts.find((concept) => concept.type === type && supportingPaperIds.has(concept.paper_id) && normalizeText(concept.title) === normalizeText(label));
   const selected = [
-    findConcept("DesignRequirement", move.reused_requirement),
-    findConcept("DesignPrinciple", move.reused_principle),
-    findConcept("DesignFeature", move.candidate_feature),
+    findConcept("Design Requirement", move.reused_requirement),
+    findConcept("Design Principle", move.reused_principle),
+    findConcept("Design Feature", move.candidate_feature),
     findConcept("Artifact", move.artifact_pattern)
   ].filter((concept): concept is OkfConcept => Boolean(concept));
   const evidenceConceptIds = evidence
@@ -619,7 +620,7 @@ function sourceRoles(concepts: OkfConcept[], kb: OkfKnowledgeBase, ranked: OkfPa
     const paperConcepts = concepts.filter((concept) => concept.paper_id === paper.paper_id);
     const evidenceCount = kb.evidence_items.filter((item) => item.paper_id === paper.paper_id && (!item.concept_id || paperConcepts.some((concept) => concept.concept_id === item.concept_id))).length;
     const roles = paperDomainRole(paper.paper_id, paper.title) ?? ([...new Set(paperConcepts.map((concept) => roleLabel(concept.type)))].join(", ") || "Matched source");
-    return { paper_id: paper.paper_id, title: paper.title, role: roles, reason: paper.reason, requirements_count: paperConcepts.filter((concept) => concept.type === "DesignRequirement").length, principles_count: paperConcepts.filter((concept) => concept.type === "DesignPrinciple").length, features_count: paperConcepts.filter((concept) => concept.type === "DesignFeature").length, evidence_count: evidenceCount, score: paper.score };
+    return { paper_id: paper.paper_id, title: paper.title, role: roles, reason: paper.reason, requirements_count: paperConcepts.filter((concept) => concept.type === "Design Requirement").length, principles_count: paperConcepts.filter((concept) => concept.type === "Design Principle").length, features_count: paperConcepts.filter((concept) => concept.type === "Design Feature").length, evidence_count: evidenceCount, score: paper.score };
   });
 }
 
@@ -653,14 +654,14 @@ function scoreText(text: string, terms: string[]) {
 }
 
 function roleLabel(type: string) {
-  if (type === "DesignRequirement") return "Requirement";
-  if (type === "DesignPrinciple") return "Design principle";
-  if (type === "DesignFeature") return "Feature";
+  if (type === "Design Requirement") return "Requirement";
+  if (type === "Design Principle") return "Design principle";
+  if (type === "Design Feature") return "Feature";
   if (type === "Artifact") return "Artifact pattern";
   if (type === "Evaluation") return "Evaluation";
-  if (type === "OutputKnowledge") return "Output knowledge";
-  if (type === "KernelTheory") return "Kernel theory";
-  if (type === "Limitation") return "Limitation";
+  if (type === "Output Knowledge") return "Output knowledge";
+
+
   return type;
 }
 

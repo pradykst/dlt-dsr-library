@@ -1,0 +1,12 @@
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "TEMPLATE_PAPER",
+  "relations": [
+    {"id":"TEMPLATE_PAPER:rel_001","source":"TEMPLATE_PAPER:prob_001","target":"TEMPLATE_PAPER:dr_001","predicate":"requires","evidence":null,"confidence":"low","extraction_type":"explicit"},
+    {"id":"TEMPLATE_PAPER:rel_002","source":"TEMPLATE_PAPER:dr_001","target":"TEMPLATE_PAPER:dp_001","predicate":"addressed_by","evidence":null,"confidence":"low","extraction_type":"explicit"},
+    {"id":"TEMPLATE_PAPER:rel_003","source":"TEMPLATE_PAPER:dp_001","target":"TEMPLATE_PAPER:df_001","predicate":"instantiates","evidence":null,"confidence":"low","extraction_type":"explicit"},
+    {"id":"TEMPLATE_PAPER:rel_004","source":"TEMPLATE_PAPER:df_001","target":"TEMPLATE_PAPER:art_001","predicate":"contributes_to","evidence":null,"confidence":"low","extraction_type":"explicit"},
+    {"id":"TEMPLATE_PAPER:rel_005","source":"TEMPLATE_PAPER:art_001","target":"TEMPLATE_PAPER:eval_001","predicate":"evaluated_by","evidence":null,"confidence":"low","extraction_type":"explicit"},
+    {"id":"TEMPLATE_PAPER:rel_006","source":"TEMPLATE_PAPER:eval_001","target":"TEMPLATE_PAPER:ok_001","predicate":"contributes_to","evidence":null,"confidence":"low","extraction_type":"explicit"}
+  ]
+}

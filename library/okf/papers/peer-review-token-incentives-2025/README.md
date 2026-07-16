@@ -2,7 +2,7 @@
 
 DSR-OKF bundle for the peer-review token incentive paper.
 
-This bundle is a reviewed draft extraction for the DSR chatbot. It captures the paper's peer-review incentive problem, DSRM process, formal design principles, design features, blockchain token artifact, prototype, evaluation, output knowledge, and limitations.
+This bundle is an unreviewed OKF draft extraction for the DSR chatbot. It captures the paper's peer-review incentive problem, DSRM process, formal design principles, design features, blockchain token artifact, prototype, evaluation, output knowledge, and limitations.
 
 ## Files
 

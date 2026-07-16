@@ -1,425 +1,465 @@
-type: RelationCollection
-paper_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021
-title: Relations for newsvendor-forecaster blockchain smart contract paper
-review_status: reviewed
-relations:
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_001
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: motivates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rq_001_align_forecaster_and_newsvendor_interests
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_004_normative_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_002
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: motivates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rq_002_blockchain_for_forecast_payment_trust
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_004_normative_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_003
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_004
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_002_induce_truthful_forecast_reporting
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_005
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_006
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_004_remove_unilateral_payment_control
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_007
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_005_define_unambiguous_realized_outcome_source
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_012_design_principle_oracle
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_008
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_006_preserve_auditability_of_forecast_contract_events
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_022_transaction_hash_dispute
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_009
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  predicate: requires
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_007_manage_deployment_cost_and_privacy_fit
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_010
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:kt_001_newsvendor_model
-  predicate: derived_from
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_006_newsvendor_model
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_011
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:kt_002_proper_scoring_rules
-  predicate: derived_from
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_005_proper_scoring_rules
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_012
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:kt_003_trust_and_trustworthiness
-  predicate: derived_from
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_009_trust_in_forecast_sharing
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_013
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:kt_004_blockchain_and_smart_contracts
-  predicate: derived_from
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_014
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_015
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_016
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_002_induce_truthful_forecast_reporting
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_005_proper_scoring_rules
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_017
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_018
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_019
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_004_remove_unilateral_payment_control
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_020
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_005_define_unambiguous_realized_outcome_source
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_012_design_principle_oracle
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_021
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_006_preserve_auditability_of_forecast_contract_events
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_022
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_007_manage_deployment_cost_and_privacy_fit
-  predicate: addressed_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_011_permissioned_channel_for_private_forecasts
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_021_permissioned_private_forecasts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_023
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_024
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_025
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_026
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_004_contract_deployment_validation
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_027
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_028
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_029
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_030
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_008_role_authentication_with_blockchain_addresses
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_031
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_032
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_010_decentralized_oracle_or_dispute_extension
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_033
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_034
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_035
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_036
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_037
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts
-  predicate: instantiates
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_038
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_003_tailored_scoring_rule_model
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_039
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_014_contract_deployment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_040
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_041
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_004_contract_deployment_validation
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_014_contract_deployment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_042
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_015_report_forecast_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_043
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_016_retrieve_outcome_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_044
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_045
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_008_role_authentication_with_blockchain_addresses
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_022_transaction_hash_dispute
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_046
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_009_dapp_interaction_interface
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_002_blockchain_based_forecasting_dapp
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_047
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_010_decentralized_oracle_or_dispute_extension
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_048
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_011_permissioned_channel_for_private_forecasts
-  predicate: implements
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_021_permissioned_private_forecasts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_049
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_003_tailored_scoring_rule_model
-  predicate: evaluated_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_050
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  predicate: evaluated_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_002_design_principle_functionality_evaluation
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_051
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract
-  predicate: evaluated_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_003_cost_and_deployment_evaluation
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_052
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_002_blockchain_based_forecasting_dapp
-  predicate: evaluated_by
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_004_prototype_demonstration
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_053
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis
-  predicate: supports
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_001_tailored_scoring_aligns_incentives
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_008_corollary_high_effort_profit
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_054
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis
-  predicate: supports
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_002_blockchain_smart_contracts_mitigate_trust_issue
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_025_proposition_3_equilibrium
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_055
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_002_design_principle_functionality_evaluation
-  predicate: supports
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_003_design_blueprint_for_blockchain_forecasting_contracts
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_056
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_003_cost_and_deployment_evaluation
-  predicate: supports
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_004_deployment_fit_requires_cost_privacy_and_oracle_choices
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_057
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_004_prototype_demonstration
-  predicate: supports
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_003_design_blueprint_for_blockchain_forecasting_contracts
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration
-  confidence: high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_058
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:lim_001_outcome_oracle_dependence
-  predicate: contributes_to
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_004_deployment_fit_requires_cost_privacy_and_oracle_choices
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_059
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:lim_002_expert_controlled_outcome_not_addressed
-  predicate: contributes_to
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_004_deployment_fit_requires_cost_privacy_and_oracle_choices
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_026_future_work_limitations
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_060
-  source_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:lim_003_public_chain_cost_and_privacy_constraints
-  predicate: contributes_to
-  target_concept_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_004_deployment_fit_requires_cost_privacy_and_oracle_choices
-  evidence_id: NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain
-  confidence: medium-high
-  relation_scope: paper_level
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021",
+  "relations": [
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_003",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_004",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_002_induce_truthful_forecast_reporting",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_005",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_003_two_major_challenges",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_006",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_004_remove_unilateral_payment_control",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_007",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_005_define_unambiguous_realized_outcome_source",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_012_design_principle_oracle",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_008",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_006_preserve_auditability_of_forecast_contract_events",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_022_transaction_hash_dispute",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_009",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:prob_001_forecast_incentive_trust_problem",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_007_manage_deployment_cost_and_privacy_fit",
+      "predicate": "requires",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_014",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_015",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_001_align_expert_effort_with_newsvendor_profit",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_016",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_002_induce_truthful_forecast_reporting",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_005_proper_scoring_rules",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_017",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_018",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_003_make_outcome_contingent_payment_enforceable",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_019",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_004_remove_unilateral_payment_control",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_020",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_005_define_unambiguous_realized_outcome_source",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_012_design_principle_oracle",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_021",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_006_preserve_auditability_of_forecast_contract_events",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_022",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dr_007_manage_deployment_cost_and_privacy_fit",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_011_permissioned_channel_for_private_forecasts",
+      "predicate": "addressed_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_021_permissioned_private_forecasts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_023",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_024",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_001_decentralized_escrow_for_payments",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_025",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_026",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_004_contract_deployment_validation",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_027",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_028",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_029",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_030",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_002_contracts_as_enforceable_immutable_algorithms",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_008_role_authentication_with_blockchain_addresses",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_031",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_032",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_003_unambiguous_outcome_oracle",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_010_decentralized_oracle_or_dispute_extension",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_033",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_034",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_035",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_036",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_037",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:dp_004_supply_chain_transparency_for_forecast_contracts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function",
+      "predicate": "instantiates",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_010_blockchain_transparency_high_effort",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_038",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_001_tailored_proper_scoring_rule",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_003_tailored_scoring_rule_model",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_039",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_002_funded_smart_contract_escrow",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_014_contract_deployment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_040",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_003_contract_metadata_and_deadlines",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_013_smart_contract_attributes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_041",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_004_contract_deployment_validation",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_014_contract_deployment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_042",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_005_report_forecast_function",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_015_report_forecast_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_043",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_006_retrieve_realized_outcome_function",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_016_retrieve_outcome_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_044",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_007_issue_payment_function",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_045",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_008_role_authentication_with_blockchain_addresses",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_022_transaction_hash_dispute",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_046",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_009_dapp_interaction_interface",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_002_blockchain_based_forecasting_dapp",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_047",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_010_decentralized_oracle_or_dispute_extension",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_019_oracles_and_disputes",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_048",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:df_011_permissioned_channel_for_private_forecasts",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "predicate": "implements",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_021_permissioned_private_forecasts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_049",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_003_tailored_scoring_rule_model",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis",
+      "predicate": "evaluated_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_007_tailored_scoring_rule",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_050",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_002_design_principle_functionality_evaluation",
+      "predicate": "evaluated_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_017_payment_validation",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_051",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_001_blockchain_forecasting_smart_contract",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_003_cost_and_deployment_evaluation",
+      "predicate": "evaluated_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_052",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:art_002_blockchain_based_forecasting_dapp",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_004_prototype_demonstration",
+      "predicate": "evaluated_by",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_053",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_001_tailored_scoring_aligns_incentives",
+      "predicate": "supports",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_008_corollary_high_effort_profit",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_054",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_001_formal_proofs_and_game_theoretic_analysis",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_002_blockchain_smart_contracts_mitigate_trust_issue",
+      "predicate": "supports",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_025_proposition_3_equilibrium",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_055",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_002_design_principle_functionality_evaluation",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_003_design_blueprint_for_blockchain_forecasting_contracts",
+      "predicate": "supports",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_011_design_principles_escrow_immutable",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_056",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_003_cost_and_deployment_evaluation",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_004_deployment_fit_requires_cost_privacy_and_oracle_choices",
+      "predicate": "supports",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_020_cost_public_blockchain",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:rel_057",
+      "source": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:eval_004_prototype_demonstration",
+      "target": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ok_003_design_blueprint_for_blockchain_forecasting_contracts",
+      "predicate": "supports",
+      "evidence": "NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021:ev_018_dapp_demonstration",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    }
+  ]
+}

@@ -30,7 +30,7 @@ export function DemoChatPanel({ currentStep }: { currentStep: number }) {
 
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
         <UserMessage>
-          I want to design a DLT-based system that helps marketplaces prevent inconsistent product identities and manipulated product descriptions. What design knowledge from prior DSR papers should I reuse?
+          I want to design a DLT-based system that helps partner organizations coordinate shared records without exposing confidential details. What reusable design knowledge should I inspect?
         </UserMessage>
 
         {currentStep >= 1 && (
@@ -137,7 +137,7 @@ function FinalAnswerCard() {
 
         <AnswerSection title="1. Interpreted design problem">
           <p className="text-sm leading-6 text-muted">
-            You are designing a DLT-based information sharing system for marketplaces where product identity and product descriptions must remain consistent, verifiable, and resistant to manipulation.
+            You are designing a DLT-based information-sharing system where shared records must remain consistent, verifiable, and resistant to manipulation while confidential details stay controlled.
           </p>
         </AnswerSection>
 

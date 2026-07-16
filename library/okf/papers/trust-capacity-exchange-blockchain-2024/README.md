@@ -4,7 +4,7 @@
 - Year: 2024
 - Venue: Decision Support Systems
 - Source PDF: `designing trust enabling blockchain systems.pdf`
-- Review status: reviewed
+- Review status: unreviewed (OKF draft)
 
 ## Contents
 

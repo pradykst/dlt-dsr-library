@@ -1,1603 +1,983 @@
 {
+  "schema_version": "okf-dsr-v1",
   "paper_id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024",
+  "title": "Towards an integrated framework for developing blockchain systems",
+  "source_reference": {
+    "type": "paper_figure",
+    "label": "Figure 2",
+    "page": 7,
+    "caption": "Framework as a backbone providing constituent method fragments classified under development process, modeling, and role aspects.",
+    "validation_status": "unreviewed",
+    "validation_notes": "Source figure identified from the paper; semantic mapping remains subject to manual review."
+  },
   "nodes": [
     {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_001_lack_integrated_blockchain_isdm",
-      "label": "Lack of an integrated ISDM framework for blockchain systems",
-      "type": "Problem",
-      "dsr_layer": "Problem",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_002_blockchain_development_complexity_and_failures",
-      "label": "Complexity and failures in blockchain system implementation",
-      "type": "Problem",
-      "dsr_layer": "Problem",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_003_fragmented_technical_and_partial_method_knowledge",
-      "label": "Fragmented and overly technical blockchain development knowledge",
-      "type": "Problem",
-      "dsr_layer": "Problem",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "label": "Design an integrated framework for blockchain system development methods",
-      "type": "ResearchQuestion",
-      "dsr_layer": "ResearchQuestion",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_002_validate_framework_with_experts_and_case_studies",
-      "label": "Validate the framework through experts and real-world blockchain cases",
-      "type": "ResearchQuestion",
-      "dsr_layer": "ResearchQuestion",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_003_support_evaluation_and_design_of_in_house_isdms",
-      "label": "Use the framework to evaluate and design in-house blockchain ISDMs",
-      "type": "ResearchQuestion",
-      "dsr_layer": "ResearchQuestion",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness",
-      "label": "Comprehensiveness of blockchain ISDM coverage",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_002_generality",
-      "label": "Generality across platforms and implementations",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_003_soundness",
-      "label": "Soundness and semantic link to real blockchain development",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy",
-      "label": "Address security and privacy in blockchain development",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_005_scalability_and_performance",
-      "label": "Address scalability and performance",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_006_interoperability",
-      "label": "Address interoperability across chains and legacy systems",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_007_energy_and_gas_efficiency",
-      "label": "Address energy and gas consumption",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability",
-      "label": "Address maintainability and lifecycle updates",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_009_platform_and_language_fit",
-      "label": "Address platform and programming-language fit",
-      "type": "DesignRequirement",
-      "dsr_layer": "Requirement",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "label": "Organize blockchain ISDMs by development process, roles, and modeling",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
-      "label": "Conduct blockchain-specific analysis before design",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
-      "label": "Separate preliminary blockchain architecture decisions from detailed design",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "label": "Design blockchain-specific protocols and smart-contract details explicitly",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
-      "label": "Construct, test, integrate, configure, and publish smart contracts before operation",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
-      "label": "Plan blockchain operation, maintenance, and retirement",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
-      "label": "Evaluate blockchain ISDMs using comprehensiveness, generality, and soundness",
-      "type": "DesignPrinciple",
-      "dsr_layer": "Design Principle",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_001_assess_readiness",
-      "label": "Assess readiness",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_002_analyze_technology",
-      "label": "Analyze technology",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_003_identify_participants",
-      "label": "Identify participants",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_004_develop_use_cases",
-      "label": "Develop use cases",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_005_approve_agreement",
-      "label": "Approve agreement",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_006_decide_on_off_blockchain",
-      "label": "Decide on/off blockchain",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_007_decide_blockchain_type",
-      "label": "Decide on blockchain type",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_008_define_smart_contract_skeleton",
-      "label": "Define smart contract skeleton",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_009_select_platform",
-      "label": "Select platform",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_010_create_consensus_protocols",
-      "label": "Create consensus protocols",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_011_define_incentive_protocols",
-      "label": "Define incentive protocols",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_012_define_smart_contract_changes",
-      "label": "Define smart contract changes",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_013_define_interactions",
-      "label": "Define interactions",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_014_design_security",
-      "label": "Design security",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_015_optimize_gas_consumption",
-      "label": "Optimize gas consumption",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_016_resolve_disputes",
-      "label": "Resolve disputes",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_017_design_permissions",
-      "label": "Design permissions",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_018_design_replications",
-      "label": "Design replications",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_019_implement_smart_contracts",
-      "label": "Implement smart contracts",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_020_test_smart_contracts",
-      "label": "Test smart contracts",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_021_integrate_with_off_blockchain",
-      "label": "Integrate with off blockchain",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_022_configure_system",
-      "label": "Configure system",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_023_publish_smart_contracts",
-      "label": "Publish smart contracts",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_024_monitor_nodes",
-      "label": "Monitor nodes",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_025_evaluate_contract_correctness",
-      "label": "Evaluate contract correctness",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_026_terminate",
-      "label": "Terminate",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_027_model_use_case_prototype_requirements",
-      "label": "Model use cases, prototypes, and requirements",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_028_model_smart_contract_architecture_forking",
-      "label": "Model smart contracts, base architecture, and forking",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_029_model_data_flow_interactions_consensus_transactions",
-      "label": "Model data flow, interactions, consensus, and transactions",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_030_model_executable_smart_contracts",
-      "label": "Model executable smart contracts",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_031_include_blockchain_user_and_legal_professional_roles",
-      "label": "Include blockchain user and legal professional roles",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_032_include_architect_role",
-      "label": "Include architect role",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_033_include_security_core_and_contract_developer_roles",
-      "label": "Include security, core blockchain developer, and smart-contract developer roles",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_034_include_smart_contract_developer_role",
-      "label": "Include smart-contract developer role",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_035_include_integrator_and_auditor_roles",
-      "label": "Include integrator and auditor roles",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_036_include_miner_and_node_operator_roles",
-      "label": "Include miner and node operator roles",
-      "type": "DesignFeature",
-      "dsr_layer": "Feature",
-      "confidence": "high"
-    },
-    {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "label": "Integrated blockchain ISDM framework",
       "type": "Artifact",
-      "dsr_layer": "Artifact",
-      "confidence": "high"
+      "title": "Integrated blockchain ISDM framework"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_002_blockchain_method_fragment_repository",
-      "label": "Repository of blockchain development method fragments",
       "type": "Artifact",
-      "dsr_layer": "Artifact",
-      "confidence": "high"
+      "title": "Repository of blockchain development method fragments"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_003_food_trust_case_framework_instantiation",
-      "label": "Food Trust case framework instantiation",
       "type": "Artifact",
-      "dsr_layer": "Artifact",
-      "confidence": "high"
+      "title": "Food Trust case framework instantiation"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_004_token_exchanger_case_framework_instantiation",
-      "label": "Token Exchanger case framework instantiation",
       "type": "Artifact",
-      "dsr_layer": "Artifact",
-      "confidence": "high"
+      "title": "Token Exchanger case framework instantiation"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_005_isdm_evaluation_yardstick",
-      "label": "Blockchain ISDM evaluation yardstick",
       "type": "Artifact",
-      "dsr_layer": "Artifact",
-      "confidence": "high"
+      "title": "Blockchain ISDM evaluation yardstick"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_001_assess_readiness",
+      "type": "Design Feature",
+      "title": "Assess readiness"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_002_analyze_technology",
+      "type": "Design Feature",
+      "title": "Analyze technology"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_003_identify_participants",
+      "type": "Design Feature",
+      "title": "Identify participants"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_004_develop_use_cases",
+      "type": "Design Feature",
+      "title": "Develop use cases"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_005_approve_agreement",
+      "type": "Design Feature",
+      "title": "Approve agreement"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_006_decide_on_off_blockchain",
+      "type": "Design Feature",
+      "title": "Decide on/off blockchain"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_007_decide_blockchain_type",
+      "type": "Design Feature",
+      "title": "Decide on blockchain type"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_008_define_smart_contract_skeleton",
+      "type": "Design Feature",
+      "title": "Define smart contract skeleton"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_009_select_platform",
+      "type": "Design Feature",
+      "title": "Select platform"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_010_create_consensus_protocols",
+      "type": "Design Feature",
+      "title": "Create consensus protocols"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_011_define_incentive_protocols",
+      "type": "Design Feature",
+      "title": "Define incentive protocols"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_012_define_smart_contract_changes",
+      "type": "Design Feature",
+      "title": "Define smart contract changes"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_013_define_interactions",
+      "type": "Design Feature",
+      "title": "Define interactions"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_014_design_security",
+      "type": "Design Feature",
+      "title": "Design security"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_015_optimize_gas_consumption",
+      "type": "Design Feature",
+      "title": "Optimize gas consumption"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_016_resolve_disputes",
+      "type": "Design Feature",
+      "title": "Resolve disputes"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_017_design_permissions",
+      "type": "Design Feature",
+      "title": "Design permissions"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_018_design_replications",
+      "type": "Design Feature",
+      "title": "Design replications"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_019_implement_smart_contracts",
+      "type": "Design Feature",
+      "title": "Implement smart contracts"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_020_test_smart_contracts",
+      "type": "Design Feature",
+      "title": "Test smart contracts"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_021_integrate_with_off_blockchain",
+      "type": "Design Feature",
+      "title": "Integrate with off blockchain"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_022_configure_system",
+      "type": "Design Feature",
+      "title": "Configure system"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_023_publish_smart_contracts",
+      "type": "Design Feature",
+      "title": "Publish smart contracts"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_024_monitor_nodes",
+      "type": "Design Feature",
+      "title": "Monitor nodes"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_025_evaluate_contract_correctness",
+      "type": "Design Feature",
+      "title": "Evaluate contract correctness"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_026_terminate",
+      "type": "Design Feature",
+      "title": "Terminate"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_027_model_use_case_prototype_requirements",
+      "type": "Design Feature",
+      "title": "Model use cases, prototypes, and requirements"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_028_model_smart_contract_architecture_forking",
+      "type": "Design Feature",
+      "title": "Model smart contracts, base architecture, and forking"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_029_model_data_flow_interactions_consensus_transactions",
+      "type": "Design Feature",
+      "title": "Model data flow, interactions, consensus, and transactions"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_030_model_executable_smart_contracts",
+      "type": "Design Feature",
+      "title": "Model executable smart contracts"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_031_include_blockchain_user_and_legal_professional_roles",
+      "type": "Design Feature",
+      "title": "Include blockchain user and legal professional roles"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_032_include_architect_role",
+      "type": "Design Feature",
+      "title": "Include architect role"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_033_include_security_core_and_contract_developer_roles",
+      "type": "Design Feature",
+      "title": "Include security, core blockchain developer, and smart-contract developer roles"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_034_include_smart_contract_developer_role",
+      "type": "Design Feature",
+      "title": "Include smart-contract developer role"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_035_include_integrator_and_auditor_roles",
+      "type": "Design Feature",
+      "title": "Include integrator and auditor roles"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_036_include_miner_and_node_operator_roles",
+      "type": "Design Feature",
+      "title": "Include miner and node operator roles"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
+      "type": "Design Principle",
+      "title": "Organize blockchain ISDMs by development process, roles, and modeling"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
+      "type": "Design Principle",
+      "title": "Conduct blockchain-specific analysis before design"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
+      "type": "Design Principle",
+      "title": "Separate preliminary blockchain architecture decisions from detailed design"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
+      "type": "Design Principle",
+      "title": "Design blockchain-specific protocols and smart-contract details explicitly"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
+      "type": "Design Principle",
+      "title": "Construct, test, integrate, configure, and publish smart contracts before operation"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
+      "type": "Design Principle",
+      "title": "Plan blockchain operation, maintenance, and retirement"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
+      "type": "Design Principle",
+      "title": "Evaluate blockchain ISDMs using comprehensiveness, generality, and soundness"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness",
+      "type": "Design Requirement",
+      "title": "Comprehensiveness of blockchain ISDM coverage"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_002_generality",
+      "type": "Design Requirement",
+      "title": "Generality across platforms and implementations"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_003_soundness",
+      "type": "Design Requirement",
+      "title": "Soundness and semantic link to real blockchain development"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy",
+      "type": "Design Requirement",
+      "title": "Address security and privacy in blockchain development"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_005_scalability_and_performance",
+      "type": "Design Requirement",
+      "title": "Address scalability and performance"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_006_interoperability",
+      "type": "Design Requirement",
+      "title": "Address interoperability across chains and legacy systems"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_007_energy_and_gas_efficiency",
+      "type": "Design Requirement",
+      "title": "Address energy and gas consumption"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability",
+      "type": "Design Requirement",
+      "title": "Address maintainability and lifecycle updates"
+    },
+    {
+      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_009_platform_and_language_fit",
+      "type": "Design Requirement",
+      "title": "Address platform and programming-language fit"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_001_systematic_literature_review_iteration",
-      "label": "Systematic literature review iteration",
       "type": "Evaluation",
-      "dsr_layer": "Evaluation",
-      "confidence": "high"
+      "title": "Systematic literature review iteration"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_002_domain_expert_review_iteration",
-      "label": "Domain expert review iteration",
       "type": "Evaluation",
-      "dsr_layer": "Evaluation",
-      "confidence": "high"
+      "title": "Domain expert review iteration"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
-      "label": "Case study application iteration",
       "type": "Evaluation",
-      "dsr_layer": "Evaluation",
-      "confidence": "high"
+      "title": "Case study application iteration"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_004_food_trust_case_evaluation",
-      "label": "Food Trust case evaluation",
       "type": "Evaluation",
-      "dsr_layer": "Evaluation",
-      "confidence": "high"
+      "title": "Food Trust case evaluation"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_005_token_exchanger_case_evaluation",
-      "label": "Token Exchanger case evaluation",
       "type": "Evaluation",
-      "dsr_layer": "Evaluation",
-      "confidence": "high"
+      "title": "Token Exchanger case evaluation"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_001_framework_elevates_blockchain_isdm_to_managerial_level",
-      "label": "Framework elevates blockchain ISDM from technical to managerial level",
-      "type": "OutputKnowledge",
-      "dsr_layer": "Output Knowledge",
-      "confidence": "high"
+      "type": "Output Knowledge",
+      "title": "Framework elevates blockchain ISDM from technical to managerial level"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_002_framework_integrates_fragmented_blockchain_method_knowledge",
-      "label": "Framework integrates fragmented blockchain method knowledge",
-      "type": "OutputKnowledge",
-      "dsr_layer": "Output Knowledge",
-      "confidence": "high"
+      "type": "Output Knowledge",
+      "title": "Framework integrates fragmented blockchain method knowledge"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_003_framework_identifies_in_house_isdm_deficiencies",
-      "label": "Framework identifies deficiencies in in-house blockchain ISDMs",
-      "type": "OutputKnowledge",
-      "dsr_layer": "Output Knowledge",
-      "confidence": "high"
+      "type": "Output Knowledge",
+      "title": "Framework identifies deficiencies in in-house blockchain ISDMs"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_004_conventional_isd_fragments_can_be_reused_but_must_be_extended",
-      "label": "Conventional ISD fragments can be reused but must be extended",
-      "type": "OutputKnowledge",
-      "dsr_layer": "Output Knowledge",
-      "confidence": "high"
+      "type": "Output Knowledge",
+      "title": "Conventional ISD fragments can be reused but must be extended"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_005_framework_supports_new_isdm_design_evaluation_and_tailoring",
-      "label": "Framework supports new ISDM design, evaluation, and tailoring",
-      "type": "OutputKnowledge",
-      "dsr_layer": "Output Knowledge",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "label": "Information systems development methods",
-      "type": "KernelTheory",
-      "dsr_layer": "Kernel Theory",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "label": "Method engineering and method fragments",
-      "type": "KernelTheory",
-      "dsr_layer": "Kernel Theory",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_003_design_science_research",
-      "label": "Design science research",
-      "type": "KernelTheory",
-      "dsr_layer": "Kernel Theory",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "label": "Unique blockchain system requirements",
-      "type": "KernelTheory",
-      "dsr_layer": "Kernel Theory",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_005_classificatory_framework_quality_criteria",
-      "label": "Quality criteria for classificatory frameworks",
-      "type": "KernelTheory",
-      "dsr_layer": "Kernel Theory",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_001_tailoring_and_boundary_conditions_not_defined",
-      "label": "Tailoring and boundary conditions are not fully defined",
-      "type": "Limitation",
-      "dsr_layer": "Limitation",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_002_limited_domain_experts_and_case_studies",
-      "label": "Limited number of experts and case studies",
-      "type": "Limitation",
-      "dsr_layer": "Limitation",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_003_retrospective_case_interviews",
-      "label": "Retrospective case interviews may affect recall precision",
-      "type": "Limitation",
-      "dsr_layer": "Limitation",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_004_no_longitudinal_project_lifecycle_evaluation",
-      "label": "No full longitudinal project-lifecycle evaluation",
-      "type": "Limitation",
-      "dsr_layer": "Limitation",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_005_not_exhaustive_for_all_blockchain_projects",
-      "label": "Not exhaustive for all blockchain projects and domains",
-      "type": "Limitation",
-      "dsr_layer": "Limitation",
-      "confidence": "high"
+      "type": "Output Knowledge",
+      "title": "Framework supports new ISDM design, evaluation, and tailoring"
     }
   ],
   "edges": [
     {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_001",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_001_lack_integrated_blockchain_isdm",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_002",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_001_lack_integrated_blockchain_isdm",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_003_support_evaluation_and_design_of_in_house_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_003",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_002_blockchain_development_complexity_and_failures",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_004",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_002_blockchain_development_complexity_and_failures",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_003_support_evaluation_and_design_of_in_house_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_005",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_003_fragmented_technical_and_partial_method_knowledge",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_006",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:prob_003_fragmented_technical_and_partial_method_knowledge",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_003_support_evaluation_and_design_of_in_house_isdms",
-      "predicate": "motivates",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_007",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_002_validate_framework_with_experts_and_case_studies",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_008",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_009",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_002_generality",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_010",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_003_soundness",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_011",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_012",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_005_scalability_and_performance",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_013",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_006_interoperability",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_014",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_007_energy_and_gas_efficiency",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_015",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_016",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rq_001_design_integrated_framework_for_blockchain_isdms",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_009_platform_and_language_fit",
-      "predicate": "requires",
-      "confidence": "high"
-    },
-    {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_017",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_018",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_019",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_002_generality",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_020",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_002_generality",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_021",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_003_soundness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_022",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_003_soundness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_023",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_024",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_005_scalability_and_performance",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_025",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_006_interoperability",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_026",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_007_energy_and_gas_efficiency",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_027",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_028",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_009_platform_and_language_fit",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
-      "predicate": "addressed_by",
-      "confidence": "high"
+      "predicate": "addressed_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_029",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_001_assess_readiness",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_030",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_002_analyze_technology",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_031",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_003_identify_participants",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_032",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_004_develop_use_cases",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_033",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_005_approve_agreement",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_034",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_006_decide_on_off_blockchain",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_035",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_007_decide_blockchain_type",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_036",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_008_define_smart_contract_skeleton",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_037",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_009_select_platform",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_038",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_010_create_consensus_protocols",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_039",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_011_define_incentive_protocols",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_040",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_012_define_smart_contract_changes",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_041",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_013_define_interactions",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_042",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_014_design_security",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_043",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_015_optimize_gas_consumption",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_044",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_016_resolve_disputes",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_045",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_017_design_permissions",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_046",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_018_design_replications",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_047",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_019_implement_smart_contracts",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_048",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_020_test_smart_contracts",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_049",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_021_integrate_with_off_blockchain",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_050",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_022_configure_system",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_051",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_023_publish_smart_contracts",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_052",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_024_monitor_nodes",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_053",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_025_evaluate_contract_correctness",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_054",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_026_terminate",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_055",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_027_model_use_case_prototype_requirements",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_056",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_028_model_smart_contract_architecture_forking",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_057",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_029_model_data_flow_interactions_consensus_transactions",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_058",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_030_model_executable_smart_contracts",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_059",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_031_include_blockchain_user_and_legal_professional_roles",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_060",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_032_include_architect_role",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_061",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_033_include_security_core_and_contract_developer_roles",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_062",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_034_include_smart_contract_developer_role",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_063",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_035_include_integrator_and_auditor_roles",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_064",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_036_include_miner_and_node_operator_roles",
-      "predicate": "instantiated_by",
-      "confidence": "high"
+      "predicate": "instantiated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_065",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_001_assess_readiness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_066",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_002_analyze_technology",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_067",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_003_identify_participants",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_068",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_004_develop_use_cases",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_069",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_005_approve_agreement",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_070",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_006_decide_on_off_blockchain",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_071",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_007_decide_blockchain_type",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_072",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_008_define_smart_contract_skeleton",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_073",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_009_select_platform",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_074",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_010_create_consensus_protocols",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_075",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_011_define_incentive_protocols",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_076",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_012_define_smart_contract_changes",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_077",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_013_define_interactions",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_078",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_014_design_security",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_079",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_015_optimize_gas_consumption",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_080",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_016_resolve_disputes",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_081",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_017_design_permissions",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_082",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_018_design_replications",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_083",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_019_implement_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_084",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_020_test_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_085",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_021_integrate_with_off_blockchain",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_086",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_022_configure_system",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_087",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_023_publish_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_088",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_024_monitor_nodes",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_089",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_025_evaluate_contract_correctness",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_090",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_026_terminate",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_091",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_027_model_use_case_prototype_requirements",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_092",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_028_model_smart_contract_architecture_forking",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_093",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_029_model_data_flow_interactions_consensus_transactions",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_094",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_030_model_executable_smart_contracts",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_095",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_031_include_blockchain_user_and_legal_professional_roles",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_096",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_032_include_architect_role",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_097",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_033_include_security_core_and_contract_developer_roles",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_098",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_034_include_smart_contract_developer_role",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_099",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_035_include_integrator_and_auditor_roles",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_100",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_036_include_miner_and_node_operator_roles",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_101",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_002_blockchain_method_fragment_repository",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_102",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_005_isdm_evaluation_yardstick",
-      "predicate": "implements",
-      "confidence": "high"
+      "predicate": "implements"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_103",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_001_systematic_literature_review_iteration",
-      "predicate": "evaluated_by",
-      "confidence": "high"
+      "predicate": "evaluated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_104",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_002_domain_expert_review_iteration",
-      "predicate": "evaluated_by",
-      "confidence": "high"
+      "predicate": "evaluated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_105",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
-      "predicate": "evaluated_by",
-      "confidence": "high"
+      "predicate": "evaluated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_106",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_003_food_trust_case_framework_instantiation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_004_food_trust_case_evaluation",
-      "predicate": "evaluated_by",
-      "confidence": "high"
+      "predicate": "evaluated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_107",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_004_token_exchanger_case_framework_instantiation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_005_token_exchanger_case_evaluation",
-      "predicate": "evaluated_by",
-      "confidence": "high"
+      "predicate": "evaluated_by"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_108",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_003_food_trust_case_framework_instantiation",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_109",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_004_token_exchanger_case_framework_instantiation",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_110",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_001_systematic_literature_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_001_framework_elevates_blockchain_isdm_to_managerial_level",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_111",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_002_domain_expert_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_001_framework_elevates_blockchain_isdm_to_managerial_level",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_112",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_001_systematic_literature_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_002_framework_integrates_fragmented_blockchain_method_knowledge",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_113",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_002_domain_expert_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_002_framework_integrates_fragmented_blockchain_method_knowledge",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_114",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_001_systematic_literature_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_005_framework_supports_new_isdm_design_evaluation_and_tailoring",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_115",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_002_domain_expert_review_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_005_framework_supports_new_isdm_design_evaluation_and_tailoring",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_116",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_003_framework_identifies_in_house_isdm_deficiencies",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_117",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_004_food_trust_case_evaluation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_003_framework_identifies_in_house_isdm_deficiencies",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_118",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_005_token_exchanger_case_evaluation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_003_framework_identifies_in_house_isdm_deficiencies",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_119",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_003_case_study_application_iteration",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_004_conventional_isd_fragments_can_be_reused_but_must_be_extended",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_120",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_004_food_trust_case_evaluation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_004_conventional_isd_fragments_can_be_reused_but_must_be_extended",
-      "predicate": "supports",
-      "confidence": "high"
+      "predicate": "supports"
     },
     {
       "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_121",
       "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:eval_005_token_exchanger_case_evaluation",
       "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:ok_004_conventional_isd_fragments_can_be_reused_but_must_be_extended",
-      "predicate": "supports",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_122",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_123",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_124",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_125",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_002_conduct_blockchain_specific_analysis_before_design",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_126",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_127",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_003_separate_preliminary_architecture_from_detailed_design",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_128",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_129",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_130",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_131",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_005_construct_test_integrate_and_transition_smart_contracts",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_132",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_001_information_system_development_methods",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_133",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_002_method_engineering",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_134",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_007_evaluate_isdms_using_comprehensiveness_generality_soundness",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_005_classificatory_framework_quality_criteria",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_135",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_136",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_005_scalability_and_performance",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_137",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_006_interoperability",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_138",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_007_energy_and_gas_efficiency",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_139",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_140",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_009_platform_and_language_fit",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:kt_004_blockchain_unique_requirements",
-      "predicate": "derived_from",
-      "confidence": "high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_141",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_001_tailoring_and_boundary_conditions_not_defined",
-      "predicate": "supported_by",
-      "confidence": "medium-high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_142",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_002_limited_domain_experts_and_case_studies",
-      "predicate": "supported_by",
-      "confidence": "medium-high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_143",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_003_retrospective_case_interviews",
-      "predicate": "supported_by",
-      "confidence": "medium-high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_144",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_004_no_longitudinal_project_lifecycle_evaluation",
-      "predicate": "supported_by",
-      "confidence": "medium-high"
-    },
-    {
-      "id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_145",
-      "source": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework",
-      "target": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:lim_005_not_exhaustive_for_all_blockchain_projects",
-      "predicate": "supported_by",
-      "confidence": "medium-high"
+      "predicate": "supports"
     }
-  ]
+  ],
+  "recommended_paths": []
 }

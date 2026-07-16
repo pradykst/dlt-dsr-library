@@ -1,0 +1,88 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024",
+  "card": {
+    "domain_label": "Blockchain systems development; information systems development methods; design science; method engineering",
+    "artifact_summary": "Integrated blockchain-specific ISDM framework; reusable method-fragment framework; expert and case-study evaluated classificatory artifact",
+    "dlt_role": "Blockchain is the target class of information systems being developed. The paper does not instantiate a new on-chain business artifact; it designs a framework that guides how blockchain systems should be analyzed, designed, constructed, transitioned, maintained, and retired through lifecycle method fragments, roles, and models."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "Blockchain system development is complex, risky, and poorly supported by mature information system development methods. Existing knowledge is fragmented across technical smart-contract methods, partial governance/adoption studies, agile practices, and practitioner reports, leaving researchers and practitioners without a coherent blockchain-specific ISDM foundation.",
+    "research_objective": null,
+    "methodology": "Information systems development methods",
+    "evaluation_method": [
+      "Evaluation combines literature-derived method fragments, qualitative expert review, and two case-study applications. The framework is used to analyze Food Trust and Token Exchanger in-house ISDMs, identifying instantiated fragments, unnecessary fragments, and missing improvement areas such as technology analysis, gas optimization, security role support, and early participant identification."
+    ],
+    "key_contributions": [
+      "Framework elevates blockchain ISDM from technical to managerial level",
+      "Framework integrates fragmented blockchain method knowledge",
+      "Framework identifies deficiencies in in-house blockchain ISDMs",
+      "Conventional ISD fragments can be reused but must be extended",
+      "Framework supports new ISDM design, evaluation, and tailoring"
+    ],
+    "design_knowledge_output": [
+      "Framework elevates blockchain ISDM from technical to managerial level",
+      "Framework integrates fragmented blockchain method knowledge",
+      "Framework identifies deficiencies in in-house blockchain ISDMs",
+      "Conventional ISD fragments can be reused but must be extended",
+      "Framework supports new ISDM design, evaluation, and tailoring"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "Blockchain system development is complex, risky, and poorly supported by mature information system development methods. Existing knowledge is fragmented across technical smart-contract methods, partial governance/adoption studies, agile practices, and practitioner reports, leaving researchers and practitioners without a coherent blockchain-specific ISDM foundation.",
+    "input_knowledge": "Information systems development methods; method engineering and reusable method fragments; design science research; blockchain assumptions and requirements; smart-contract and blockchain software literature; governance and adoption literature; systematic literature review; expert feedback; Food Trust and Token Exchanger case studies.",
+    "research_process": "The paper follows design science research in three iterations: first, it derives an initial framework from 63 blockchain-development studies using systematic review and thematic analysis; second, it refines the framework through blockchain domain-expert review; third, it applies the framework to two real-world in-house ISDM case studies to validate utility and discover further refinements.",
+    "key_concepts": [
+      "ISDM",
+      "method engineering",
+      "method fragments",
+      "blockchain systems development",
+      "development process",
+      "roles",
+      "modeling",
+      "smart contracts",
+      "on-chain/off-chain design",
+      "consensus protocols",
+      "gas optimization",
+      "security design",
+      "permissioning",
+      "case-study evaluation."
+    ],
+    "solution": "The solution is an integrated blockchain-specific ISDM framework organized around development process, role, and modeling aspects. It decomposes development into analysis, preliminary design, detailed design, construction, transition, maintenance, and retirement phases; specifies blockchain-specific tasks, roles, and model outputs; and acts as a reusable repository for designing or evaluating blockchain development methods.",
+    "output_knowledge": "The paper contributes an integrated framework and meta-method for blockchain ISDMs, showing how blockchain-development lifecycle tasks, roles, and models can be organized, tailored, and used to evaluate existing in-house methods. It shifts the discussion from isolated technical smart-contract programming to a managerial and lifecycle-level understanding of blockchain system development."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines literature-derived method fragments, qualitative expert review, and two case-study applications. The framework is used to analyze Food Trust and Token Exchanger in-house ISDMs, identifying instantiated fragments, unnecessary fragments, and missing improvement areas such as technology analysis, gas optimization, security role support, and early participant identification.",
+    "limitations": [
+      "The framework is conceptual and not a fully operational step-by-step ISDM. It requires contextual tailoring, was evaluated through limited expert and case samples, uses retrospective case evidence, and still needs longitudinal validation across complete blockchain project lifecycles and different situational factors."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Domain",
+      "card.artifact_summary": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:integrated_blockchain_isdm_csvs/integrated_blockchain_isdm_papers_FIXED.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow preserves the paper problem, ISDM/method-engineering input, three framework aspects, seven development phases, method fragments, role/model outputs, expert/case evaluation, and output claims. Extended flow includes blockchain-specific requirements, literature streams, case-study contrasts, and limitations."
+    ]
+  }
+}

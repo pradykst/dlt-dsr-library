@@ -1,0 +1,52 @@
+presentation_version: workbench-v1
+paper_id: TEMPLATE_PAPER
+
+card:
+  domain_label: Replace with a concise human-readable domain label
+  artifact_summary: null
+  dlt_role: null
+
+overview:
+  abstract_summary: null
+  research_problem: Replace with a source-grounded research-problem synthesis.
+  research_objective: null
+  methodology: null
+  evaluation_method:
+    - Replace with a source-grounded evaluation method, or use an empty list and explain the absence in provenance.
+  key_contributions:
+    - Replace with a source-grounded key contribution.
+  design_knowledge_output:
+    - Replace with a source-grounded design-knowledge output.
+
+dsr_summary_grid:
+  problem: Replace with a readable synthesis of the problem addressed by the paper.
+  input_knowledge: Replace with the theories, prior knowledge, or source context used by the paper.
+  research_process: Replace with a readable account of the research and design process.
+  key_concepts:
+    - Replace with a human-readable key concept.
+  solution: Replace with a readable synthesis of the designed solution or artifact.
+  output_knowledge: Replace with the reusable design knowledge contributed by the paper.
+
+additional_context:
+  summary: Replace with a concise researcher-facing summary of the paper.
+  limitations:
+    - Replace with a source-grounded limitation, or use an empty list and explain the absence in provenance.
+
+provenance:
+  migrated_from_legacy_csv: false
+  source_fields:
+    card.domain_label: template:replace-with-source-location
+    overview.research_problem: template:replace-with-source-location
+    overview.evaluation_method: template:replace-with-source-location
+    overview.key_contributions: template:replace-with-source-location
+    overview.design_knowledge_output: template:replace-with-source-location
+    dsr_summary_grid.problem: template:replace-with-source-location
+    dsr_summary_grid.input_knowledge: template:replace-with-source-location
+    dsr_summary_grid.research_process: template:replace-with-source-location
+    dsr_summary_grid.key_concepts: template:replace-with-source-location
+    dsr_summary_grid.solution: template:replace-with-source-location
+    dsr_summary_grid.output_knowledge: template:replace-with-source-location
+    additional_context.summary: template:replace-with-source-location
+    additional_context.limitations: template:replace-with-source-location
+  migration_notes:
+    - Template content only; replace all example values with source-grounded presentation prose.

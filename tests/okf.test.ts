@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { answerOkfChat, routeOkfQuery, selectSourcePapers } from "../lib/okf/chat.ts";
 import { validateAuthoritativeReuseAnswerPlan } from "../lib/okf/answer-plan-validator.ts";
 import { synthesizeWithOptionalLlm } from "../lib/okf/llm.ts";
@@ -10,16 +11,28 @@ import { clearSuccessfulSynthesisCache } from "../lib/llm/runtime-policy.ts";
 import { compactPromptSize } from "../lib/llm/structured-synthesis.ts";
 import { buildMarkdownSynthesisContext } from "../lib/llm/groq.ts";
 import { synthesizeWithFeatherless } from "../lib/llm/featherless.ts";
-import { indexOkfKnowledgeBase } from "../lib/okf/indexer.ts";
+import { indexOkfKnowledgeBase, selectIndexedEvidenceConceptId, serializeOkfPaperMetadata } from "../lib/okf/indexer.ts";
 import { getOkfDatabaseHealthStatus, getOkfKnowledgeBaseLoadMetadata, loadOkfKnowledgeBaseFromSupabase } from "../lib/okf/retrieval.ts";
-import { resolveSupabaseServerCredential, serviceRoleRestHeaders } from "../lib/supabase/server.ts";
+import { getSupabaseServiceRoleClient, resolveSupabaseServerCredential, serviceRoleRestHeaders } from "../lib/supabase/server.ts";
 import { parseOkfLibrary, validateKnowledgeBase } from "../lib/okf/parser.ts";
-import { getWorkbenchFlowGraph, getWorkbenchPaper, getWorkbenchPapers } from "../lib/okf/workbench-adapter.ts";
-import type { OkfKnowledgeBase } from "../lib/okf/schema.ts";
+import { getWorkbenchFlowGraph, getWorkbenchPaper, getWorkbenchPapers, workbenchCanonicalTargetPath, workbenchChangeTargetExists } from "../lib/okf/workbench-adapter.ts";
+import { OKF_PRESENTATION_VERSION, okfConceptTypes, type OkfKnowledgeBase } from "../lib/okf/schema.ts";
+import { validateOkfFlows } from "../lib/okf/flow-validation.ts";
+import { buildWorkbenchDsrMatrix } from "../lib/okf/workbench-matrix.ts";
+import { isCanonicalDsrTransition } from "../lib/okf/dsr-transition-contract.ts";
+import { requiredOkfBundleFiles, validateOkfSource, validateOkfTemplate } from "../lib/okf/source-validator.ts";
+import { workbenchChangeFields } from "../lib/workbench/schema.ts";
 import { GET as getWorkbenchPapersRoute } from "../app/api/workbench/papers/route.ts";
 import { GET as getWorkbenchPaperRoute } from "../app/api/workbench/paper/[paperId]/route.ts";
 import { projectStoredMainFlow, isStoredMainElementType } from "../lib/okf/stored-flow-projection.ts";
 import { loadRecommendedStoredFlowPaths, loadStoredPaperFlowMetadata, projectStoredOkfFlow } from "../lib/okf/stored-flow.ts";
+import "./presentation-migration.test.ts";
+import "./source-view.test.ts";
+import "./source-view-runtime.test.ts";
+import "./text-hygiene.test.ts";
+import "./flow-projection.test.ts";
+import "./final-flow-regression.test.ts";
+import "./chatbot-flow-context.test.ts";
 const fixtureRoot = path.join(process.cwd(), "tests", "fixtures", "okf");
 const curatedFixtureRoot = path.join(process.cwd(), "tests", "fixtures", "curated-okf");
 
@@ -148,17 +161,29 @@ test("Workbench stored flows prefer explicit graph recommendations and compact r
 test("Workbench stored flow falls back to canonical OKF relations when graph metadata is absent", async () => {
   const kb: OkfKnowledgeBase = {
     papers: [{
+      schema_version: "okf-dsr-v1",
       paper_id: "WORKBENCH_FALLBACK_2099",
+      slug: "workbench-fallback-2099",
       title: "Workbench fallback fixture",
       authors: ["Test Author"],
       year: 2099,
-      review_status: "reviewed",
+      research_problem: [],
+      research_objective: [],
+      research_questions: [],
+      theoretical_foundations: [],
+      evaluation_method: [],
+      key_contributions: [],
+      design_knowledge_output: [],
+      limitations: [],
+      extraction_status: "okf_draft",
+      review_status: "unreviewed",
+      author_check_status: "not_requested",
       source_file: "fixture/index.md"
     }],
     concepts: [
-      workbenchFixtureConcept("dr", "DesignRequirement", "Requirement"),
-      workbenchFixtureConcept("dp", "DesignPrinciple", "Principle"),
-      workbenchFixtureConcept("df", "DesignFeature", "Feature")
+      workbenchFixtureConcept("dr", "Design Requirement", "Requirement"),
+      workbenchFixtureConcept("dp", "Design Principle", "Principle"),
+      workbenchFixtureConcept("df", "Design Feature", "Feature")
     ],
     relations: [
       {
@@ -167,6 +192,7 @@ test("Workbench stored flow falls back to canonical OKF relations when graph met
         predicate: "addressed_by",
         target_concept_id: "WORKBENCH_FALLBACK_2099:dp",
         confidence: "high",
+        extraction_type: "explicit",
         relation_scope: "paper_level",
         source_file: "fixture/relations.yaml"
       },
@@ -176,6 +202,7 @@ test("Workbench stored flow falls back to canonical OKF relations when graph met
         predicate: "instantiates",
         target_concept_id: "WORKBENCH_FALLBACK_2099:df",
         confidence: "high",
+        extraction_type: "explicit",
         relation_scope: "paper_level",
         source_file: "fixture/relations.yaml"
       }
@@ -246,7 +273,7 @@ test("Workbench runtime, navigation, parsing, and correction boundaries stay can
   assert.ok(decision.includes("canonical_data_modified: false"));
 });
 
-function workbenchFixtureConcept(id: string, type: "DesignRequirement" | "DesignPrinciple" | "DesignFeature", title: string) {
+function workbenchFixtureConcept(id: string, type: "Design Requirement" | "Design Principle" | "Design Feature", title: string) {
   return {
     concept_id: "WORKBENCH_FALLBACK_2099:" + id,
     paper_id: "WORKBENCH_FALLBACK_2099",
@@ -255,15 +282,341 @@ function workbenchFixtureConcept(id: string, type: "DesignRequirement" | "Design
     title,
     description: title,
     body_text: title,
+    evidence_ids: [],
     tags: [],
     confidence: "high" as const,
     extraction_type: "explicit" as const,
-    review_status: "reviewed" as const,
+    review_status: "unreviewed" as const,
     source_file: "fixture/dsr.md",
     okf_path: "fixture/dsr.md"
   };
 }
 
+test("current canonical papers and concepts are unreviewed without explicit human review records", () => {
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  assert.ok(kb.papers.every((paper) => paper.review_status === "unreviewed"));
+  assert.ok(kb.concepts.every((concept) => concept.review_status === "unreviewed"));
+  for (const paper of kb.papers) {
+    if (paper.review_status === "unreviewed") {
+      assert.equal(paper.reviewed_by ?? null, null);
+      assert.equal(paper.reviewed_at ?? null, null);
+    }
+  }
+  const source = validateOkfSource();
+  assert.equal(source.ok, true);
+  assert.equal(source.errors.some((error) => /REVIEW_METADATA|CONCEPT_REVIEW_RECORD/.test(error.code)), false);
+});
+
+test("canonical TEMPLATE and all nine real bundles follow okf-dsr-v1", () => {
+  const template = validateOkfTemplate();
+  assert.equal(template.ok, true, template.errors.map((error) => `${error.code}: ${error.message}`).join("\n"));
+  assert.deepEqual(template.counts, {
+    papers: 1,
+    concepts: 7,
+    evidence: 1,
+    relations: 6,
+    graph_nodes: 7,
+    graph_edges: 6,
+    recommended_paths: 1
+  });
+
+  const source = validateOkfSource();
+  assert.equal(source.ok, true, source.errors.map((error) => `${error.code}: ${error.message}`).join("\n"));
+  assert.equal(source.counts.papers, 9);
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  assert.ok(kb.papers.every((paper) => paper.schema_version === "okf-dsr-v1"));
+  assert.ok(kb.concepts.every((concept) => okfConceptTypes.includes(concept.type)));
+});
+
+test("strict source validation rejects noncanonical concept types but permits context metadata", () => {
+  const forbiddenTypes = [
+    { type: "Objective", existing: "Problem" },
+    { type: "Requirement", existing: "Design Requirement" },
+    { type: "KernelTheory", existing: "Problem" },
+    { type: "Limitation", existing: "Problem" }
+  ];
+
+  for (const scenario of forbiddenTypes) {
+    const tempRoot = path.join(mkdtempSync(path.join(tmpdir(), "okf-type-validator-")), "okf");
+    try {
+      cpSync(fixtureRoot, tempRoot, { recursive: true });
+      const target = path.join(tempRoot, "papers", "fixture-paper", "dsr.md");
+      const source = readFileSync(target, "utf8");
+      writeFileSync(target, source.replace(`"type":"${scenario.existing}"`, `"type":"${scenario.type}"`), "utf8");
+      const result = validateOkfSource(tempRoot);
+      assert.equal(result.ok, false, scenario.type);
+      assert.ok(result.errors.some((error) => error.code === "CONCEPT_TYPE_NONCANONICAL"), scenario.type);
+    } finally {
+      rmSync(path.dirname(tempRoot), { recursive: true, force: true });
+    }
+  }
+
+  const metadataRoot = path.join(mkdtempSync(path.join(tmpdir(), "okf-context-validator-")), "okf");
+  try {
+    cpSync(fixtureRoot, metadataRoot, { recursive: true });
+    const target = path.join(metadataRoot, "papers", "fixture-paper", "index.md");
+    const source = readFileSync(target, "utf8")
+      .replace("research_questions: []", 'research_questions: ["Placeholder research question"]')
+      .replace("theoretical_foundations: []", 'theoretical_foundations: ["Placeholder kernel theory"]')
+      .replace("limitations: []", 'limitations: ["Placeholder limitation"]');
+    writeFileSync(target, source, "utf8");
+    const result = validateOkfSource(metadataRoot);
+    assert.equal(result.ok, true, result.errors.map((error) => error.code).join(", "));
+  } finally {
+    rmSync(path.dirname(metadataRoot), { recursive: true, force: true });
+  }
+});
+
+test("strict source validation rejects missing files, dangling graph nodes, and alias type redefinitions", () => {
+  const scenarios: Array<{
+    expectedCode: string;
+    mutate: (root: string) => void;
+  }> = [
+    {
+      expectedCode: "REQUIRED_FILE_MISSING",
+      mutate: (root) => rmSync(path.join(root, "papers", "fixture-paper", "README.md"))
+    },
+    {
+      expectedCode: "GRAPH_NODE_UNKNOWN",
+      mutate: (root) => {
+        const target = path.join(root, "papers", "fixture-paper", "graph.json");
+        const source = readFileSync(target, "utf8");
+        writeFileSync(target, source.replace("FIXTURE_2026:prob_001", "FIXTURE_2026:unknown_node"), "utf8");
+      }
+    },
+    {
+      expectedCode: "ALIAS_KEYS",
+      mutate: (root) => {
+        const target = path.join(root, "papers", "fixture-paper", "aliases.yaml");
+        const source = readFileSync(target, "utf8");
+        writeFileSync(target, source.replace('"terms":', '"type":"Requirement","terms":'), "utf8");
+      }
+    },
+    {
+      expectedCode: "CONCEPT_EVIDENCE_UNKNOWN",
+      mutate: (root) => {
+        const target = path.join(root, "papers", "fixture-paper", "dsr.md");
+        const source = readFileSync(target, "utf8");
+        writeFileSync(target, source.replace("FIXTURE_2026:ev_001", "FIXTURE_2026:ev_missing"), "utf8");
+      }
+    },
+    {
+      expectedCode: "REVIEW_METADATA_MISSING",
+      mutate: (root) => {
+        const target = path.join(root, "papers", "fixture-paper", "index.md");
+        const source = readFileSync(target, "utf8");
+        writeFileSync(target, source.replace('review_status: "unreviewed"', 'review_status: "internally_reviewed"'), "utf8");
+      }
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const tempRoot = path.join(mkdtempSync(path.join(tmpdir(), "okf-reference-validator-")), "okf");
+    try {
+      cpSync(fixtureRoot, tempRoot, { recursive: true });
+      scenario.mutate(tempRoot);
+      const result = validateOkfSource(tempRoot);
+      assert.equal(result.ok, false, scenario.expectedCode);
+      assert.ok(result.errors.some((error) => error.code === scenario.expectedCode), scenario.expectedCode);
+    } finally {
+      rmSync(path.dirname(tempRoot), { recursive: true, force: true });
+    }
+  }
+});
+
+test("Workbench cards and overview expose rich canonical metadata and safe review labels", async () => {
+  const kb = parseOkfLibrary();
+  const papers = await getWorkbenchPapers({ knowledgeBase: kb });
+  assert.equal(papers.length, 9);
+  for (const paper of papers) {
+    assert.equal(paper.review_status, "unreviewed");
+    assert.equal(paper.schema_version, "okf-dsr-v1");
+    assert.ok("venue" in paper && "doi" in paper && "source_url" in paper);
+    assert.ok("research_problem" in paper && "research_objective" in paper);
+    assert.ok("evaluation_method" in paper && "key_contributions" in paper);
+    assert.ok(paper.counts && paper.counts.concepts > 0);
+    assert.ok(paper.counts && paper.counts.evidence >= 0 && paper.counts.relations > 0);
+  }
+
+  const ui = [
+    readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchLanding.tsx"), "utf8"),
+    readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchPaper.tsx"), "utf8")
+  ].join("\n");
+  assert.equal(/\bREVIEWED\b/.test(ui), false);
+  assert.ok(ui.includes("Needs review"));
+  assert.ok(ui.includes("Bibliographic metadata"));
+  assert.ok(ui.includes("Evaluation and contribution"));
+  assert.ok(ui.includes("Not recorded"));
+});
+
+test("Workbench preserves canonical full titles and validates Git-oriented correction targets", async () => {
+  const kb = parseOkfLibrary();
+  const papers = await getWorkbenchPapers({ knowledgeBase: kb });
+  for (const paper of papers) {
+    assert.equal(paper.title, kb.papers.find((candidate) => candidate.paper_id === paper.paper_id)?.title);
+    const bundle = await getWorkbenchPaper(paper.paper_id, { knowledgeBase: kb });
+    assert.ok(bundle);
+    assert.ok(workbenchChangeTargetExists(bundle, "paper", paper.paper_id));
+    assert.ok(workbenchChangeTargetExists(bundle, "graph", paper.slug ?? paper.paper_id));
+    assert.equal(workbenchCanonicalTargetPath(bundle, "paper"), paper.canonical_paths?.index);
+    assert.equal(workbenchCanonicalTargetPath(bundle, "graph"), paper.canonical_paths?.graph);
+    assert.equal(workbenchChangeTargetExists(bundle, "concept", "missing-concept"), false);
+  }
+  assert.ok((workbenchChangeFields.paper as readonly string[]).includes("blockchain_dlt_role"));
+  assert.equal((workbenchChangeFields.paper as readonly string[]).includes("dlt_role"), false);
+
+
+});
+
+test("runtime evidence indexing never writes a paper id into the concept foreign key", () => {
+  const kb = parseOkfLibrary();
+  const conceptIds = new Set(kb.concepts.map((concept) => concept.concept_id));
+  const projected = kb.evidence_items.map((item) => selectIndexedEvidenceConceptId(item, conceptIds));
+  assert.equal(projected.filter((conceptId) => conceptId === null).length, 27);
+  assert.ok(projected.every((conceptId) => conceptId === null || conceptIds.has(conceptId)));
+});
+test("Workbench DSR matrix uses stored paths only and separates unmapped concepts", async () => {
+  const kb = parseOkfLibrary();
+  const relationIds = new Set(kb.relations.map((relation) => relation.relation_id));
+  for (const paper of kb.papers) {
+    const bundle = await getWorkbenchPaper(paper.paper_id, { knowledgeBase: kb });
+    assert.ok(bundle?.dsrMatrix, paper.paper_id);
+    const matrix = bundle.dsrMatrix;
+    const conceptTypeById = new Map(kb.concepts.map((concept) => [concept.concept_id, concept.type]));
+    assert.deepEqual(matrix.columns.map((column) => column.key), [...okfConceptTypes]);
+    if (matrix.source === "stored_relations_fallback") {
+      assert.ok(matrix.rows.length <= 12, paper.paper_id + " fallback matrix exceeds representative row cap");
+      assert.equal(matrix.stats.selected_row_limit, 12);
+      assert.equal(matrix.stats.selection_strategy, "coverage_representative");
+    } else if (matrix.source === "graph_json_recommended_paths") {
+      assert.equal(matrix.stats.selection_strategy, "recommended_paths");
+      assert.equal(matrix.stats.omitted_candidate_path_count, 0, paper.paper_id + " recommended paths should be preserved");
+    }
+    assert.ok(matrix.rows.length > 0, paper.paper_id + " has no coherent matrix rows");
+    const primaryIds = new Set(matrix.rows.flatMap((row) => row.concept_ids));
+    assert.ok(matrix.additional_concepts.every((concept) => !primaryIds.has(concept.concept_id)));
+    for (const row of matrix.rows) {
+      assert.ok(row.segments.length > 0);
+      for (const segment of row.segments) {
+        assert.ok(segment.relation_ids.length > 0, segment.segment_id);
+        assert.ok(segment.relation_ids.every((id) => relationIds.has(id)), idList(segment.relation_ids));
+        const sourceType = conceptTypeById.get(segment.source_concept_id);
+        const targetType = conceptTypeById.get(segment.target_concept_id);
+        assert.ok(sourceType && targetType);
+        assert.ok(segment.predicates.every((predicate) => isCanonicalDsrTransition(sourceType, targetType, predicate)), segment.segment_id);
+      }
+    }
+  }
+});
+
+test("Workbench matrix excludes invalid predicates and non-adjacent stored transitions", () => {
+  const concepts = [
+    { id: "p", type: "Problem", title: "Problem" },
+    { id: "dr", type: "Design Requirement", title: "Requirement" },
+    { id: "dp", type: "Design Principle", title: "Principle" },
+    { id: "df", type: "Design Feature", title: "Feature" }
+  ];
+  const matrix = buildWorkbenchDsrMatrix({
+    paper_id: "MATRIX_CONTRACT",
+    concepts,
+    relations: [
+      { id: "valid-rp", source: "dr", target: "dp", predicate: "addressed_by" },
+      { id: "valid-pf", source: "dp", target: "df", predicate: "instantiates" },
+      { id: "bad-predicate", source: "dr", target: "dp", predicate: "supports" },
+      { id: "skip-layer", source: "dr", target: "df", predicate: "addressed_by" },
+      { id: "backward", source: "df", target: "dp", predicate: "instantiates" }
+    ],
+    graph: {
+      nodes: concepts.map((concept) => ({ id: concept.id, type: concept.type })),
+      edges: [
+        { id: "graph-bad-predicate", source: "dp", target: "df", predicate: "supports" },
+        { id: "graph-skip-layer", source: "p", target: "dp", predicate: "motivates" }
+      ],
+      recommended_paths: []
+    }
+  });
+
+  assert.equal(matrix.source, "stored_relations_fallback");
+  assert.deepEqual(matrix.rows.map((row) => row.concept_ids), [["dr", "dp", "df"]]);
+  assert.deepEqual(matrix.rows.flatMap((row) => row.segments.flatMap((segment) => segment.relation_ids)).sort(), ["valid-pf", "valid-rp"]);
+  assert.equal(matrix.stats.stored_segment_count, 2);
+  assert.ok(matrix.warnings.some((warning) => warning.includes("bad-predicate") && warning.includes("allow only")));
+  assert.ok(matrix.warnings.some((warning) => warning.includes("skip-layer") && warning.includes("adjacent canonical")));
+  assert.ok(matrix.warnings.some((warning) => warning.includes("backward") && warning.includes("adjacent canonical")));
+  assert.ok(matrix.warnings.some((warning) => warning.includes("graph-bad-predicate") && warning.includes("allow only")));
+  assert.ok(matrix.warnings.some((warning) => warning.includes("graph-skip-layer") && warning.includes("adjacent canonical")));
+});
+
+test("Workbench fallback matrix selects representative paths for stored concept and edge coverage", () => {
+  const requirements = Array.from({ length: 5 }, (_, index) => ({
+    id: `dr-${index + 1}`,
+    type: "Design Requirement",
+    title: `Requirement ${index + 1}`
+  }));
+  const features = Array.from({ length: 5 }, (_, index) => ({
+    id: `df-${index + 1}`,
+    type: "Design Feature",
+    title: `Feature ${index + 1}`
+  }));
+  const principle = { id: "dp", type: "Design Principle", title: "Shared principle" };
+  const matrix = buildWorkbenchDsrMatrix({
+    paper_id: "MATRIX_COVERAGE",
+    concepts: [...requirements, principle, ...features],
+    relations: [
+      ...requirements.map((requirement, index) => ({
+        id: `rel-rp-${index + 1}`,
+        source: requirement.id,
+        target: principle.id,
+        predicate: "addressed_by"
+      })),
+      ...features.map((feature, index) => ({
+        id: `rel-pf-${index + 1}`,
+        source: principle.id,
+        target: feature.id,
+        predicate: "instantiates"
+      }))
+    ],
+    options: { maxFallbackRows: 5 }
+  });
+
+  assert.equal(matrix.source, "stored_relations_fallback");
+  assert.equal(matrix.stats.candidate_path_count, 25);
+  assert.equal(matrix.stats.primary_row_count, 5);
+  assert.equal(matrix.stats.primary_concept_count, 11);
+  assert.equal(matrix.stats.omitted_candidate_path_count, 20);
+  assert.equal(matrix.stats.selected_row_limit, 5);
+  assert.equal(matrix.stats.selection_strategy, "coverage_representative");
+  assert.equal(matrix.stats.rows_truncated, true);
+  assert.ok(matrix.warnings.some((warning) => warning.includes("representative path") && warning.includes("20 additional")));
+});
+test("flow validation passes all nine canonical bundles without structural errors", async () => {
+  const report = await validateOkfFlows();
+  assert.equal(report.summary.papers, 9);
+  assert.equal(report.summary.failed, 0);
+  assert.equal(report.summary.errors, 0);
+  assert.ok(report.papers.every((paper) => paper.issues.every((issue) => issue.severity !== "error")));
+});
+
+test("corrections default UI is Git-oriented and keeps indexed fields read-only", () => {
+  const source = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchPaper.tsx"), "utf8");
+  const form = readFileSync(path.join(process.cwd(), "components", "workbench", "SuggestionForm.tsx"), "utf8");
+  assert.ok(source.includes("Issue and change requests"));
+  assert.ok(source.includes("Advanced indexed-field audit"));
+  assert.ok(source.includes("read-only fields"));
+  assert.ok(form.includes("Accepted reports produce a Git change"));
+  assert.ok(form.includes("never overwrites facts in Supabase"));
+  assert.equal(source.includes("editable fields"), false);
+  const route = readFileSync(path.join(process.cwd(), "app", "api", "workbench", "change-request", "route.ts"), "utf8");
+  assert.equal(route.includes("body.target_okf_path"), false);
+  assert.ok(route.includes("workbenchChangeTargetExists"));
+  assert.ok(route.includes("!reason"));
+});
+
+function idList(ids: string[]) {
+  return ids.join(", ");
+}
 test("relation validation emits warnings instead of crashing", () => {
   const kb = parseOkfLibrary(fixtureRoot);
   kb.relations.push({ ...kb.relations[0], relation_id: "FIXTURE_2026:bad", target_concept_id: "FIXTURE_2026:missing" });
@@ -298,6 +651,11 @@ test("runtime OKF loader prefers the service role and never uses cookie or brows
   const fetchImpl = mockOkfRestFetch(calls);
   const kb = await loadOkfKnowledgeBaseFromSupabase({ env, fetchImpl });
   assert.equal(kb?.papers.length, 1);
+  assert.equal(kb?.papers[0].last_indexed_at, "2026-07-14T10:00:00.000Z");
+  assert.equal(kb?.papers[0].extraction_status, "indexed_from_canonical_okf");
+  assert.equal(kb?.papers[0].review_status, "unreviewed");
+  assert.deepEqual(kb?.evidence_items[0].supports, ["TEST_PAPER"]);
+  assert.equal(kb?.evidence_items[0].concept_id, undefined);
   assert.equal(getOkfKnowledgeBaseLoadMetadata().key_type, "service_role");
   assert.equal(getOkfKnowledgeBaseLoadMetadata().db_loaded_from, "supabase");
   assert.equal(calls.length, 4);
@@ -312,6 +670,48 @@ test("runtime OKF loader prefers the service role and never uses cookie or brows
   }
 });
 
+test("Supabase JS service-role client sends modern sb_secret keys only as apikey", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const client = getSupabaseServiceRoleClient({
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "sb_secret_modern_test"
+  }, captureSupabaseClientFetch(calls));
+
+  const { error } = await client.from("okf_papers").select("paper_id").limit(1);
+  assert.equal(error, null);
+  assert.equal(calls.length, 1);
+  const headers = new Headers(calls[0].init?.headers);
+  assert.equal(headers.get("apikey"), "sb_secret_modern_test");
+  assert.equal(headers.get("authorization"), null);
+  assert.equal(calls[0].init?.credentials, "omit");
+});
+
+test("Supabase JS service-role client retains Authorization for legacy JWT keys", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const legacyJwt = "header.payload.signature";
+  const client = getSupabaseServiceRoleClient({
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: legacyJwt
+  }, captureSupabaseClientFetch(calls));
+
+  const { error } = await client.from("okf_papers").select("paper_id").limit(1);
+  assert.equal(error, null);
+  assert.equal(calls.length, 1);
+  const headers = new Headers(calls[0].init?.headers);
+  assert.equal(headers.get("apikey"), legacyJwt);
+  assert.equal(headers.get("authorization"), `Bearer ${legacyJwt}`);
+  assert.equal(calls[0].init?.credentials, "omit");
+});
+
+function captureSupabaseClientFetch(calls: Array<{ url: string; init?: RequestInit }>): typeof fetch {
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), init });
+    return new Response("[]", {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }) as typeof fetch;
+}
 test("health DB status reports service_role and Supabase row counts", async () => {
   const env: Record<string, string | undefined> = {
     NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -378,8 +778,10 @@ function mockOkfRestFetch(calls: Array<{ url: string; init?: RequestInit }>): ty
     calls.push({ url, init });
     const table = new URL(url).pathname.split("/").at(-1);
     const rows = table === "okf_papers"
-      ? [{ paper_id: "TEST_PAPER", title: "Test paper", review_status: "reviewed" }]
-      : [];
+      ? [{ paper_id: "TEST_PAPER", title: "Test paper", review_status: "author_verified", author_check_status: "requested", reviewed_by: "Reviewer", reviewed_at: "2026-07-14T09:00:00.000Z", last_indexed_at: "2026-07-14T10:00:00.000Z" }]
+      : table === "okf_evidence_items"
+        ? [{ evidence_id: "TEST_EVIDENCE", paper_id: "TEST_PAPER", concept_id: null, supports: ["TEST_PAPER"], paraphrase: "Paper-level summary", quote_or_summary: "Paper-level summary", evidence_type: "summary", confidence: "medium" }]
+        : [];
     return new Response(JSON.stringify(rows), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -393,6 +795,40 @@ test("browser Supabase client remains anon-only", () => {
   assert.equal(source.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
   assert.equal(source.includes("getSupabaseServiceRoleClient"), false);
 });
+
+test("service-role Supabase access has a server-only boundary and no client import path", () => {
+  const serverSource = readFileSync(path.join(process.cwd(), "lib", "supabase", "server.ts"), "utf8");
+  assert.ok(serverSource.includes('typeof window !== "undefined"'));
+  assert.ok(serverSource.includes("The Supabase service-role helper is server-only."));
+
+  const clientFiles = ["app", "components", "lib"]
+    .flatMap((root) => sourceFiles(path.join(process.cwd(), root)))
+    .filter((file) => /^\s*["']use client["'];/m.test(readFileSync(file, "utf8")));
+  assert.ok(clientFiles.length > 0);
+
+  const forbiddenClientMarkers = [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "getSupabaseServiceRoleClient",
+    "resolveSupabaseServerCredential",
+    "serviceRoleRestHeaders",
+    "supabase/server",
+    "supabase-admin"
+  ];
+  for (const file of clientFiles) {
+    const source = readFileSync(file, "utf8");
+    for (const marker of forbiddenClientMarkers) {
+      assert.equal(source.includes(marker), false, `${path.relative(process.cwd(), file)} exposes server-only marker ${marker}`);
+    }
+  }
+});
+
+function sourceFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(root, entry.name);
+    if (entry.isDirectory()) return sourceFiles(target);
+    return entry.isFile() && /\.[cm]?[jt]sx?$/.test(entry.name) ? [target] : [];
+  });
+}
 
 test("OKF index script loads Next env before indexing", () => {
   const script = readFileSync(path.join(process.cwd(), "scripts", "okf-index.ts"), "utf8");
@@ -421,8 +857,8 @@ test("OKF database access uses prefixed table names", () => {
   for (const table of unprefixedTables) {
     assert.equal(new RegExp(`create table if not exists ${table}\\b`).test(migration), false);
     assert.equal(new RegExp(`references ${table}\\(`).test(migration), false);
-    assert.equal(indexer.includes(`"${table}"`), false);
-    assert.equal(correctionsRoute.includes(`"${table}"`), false);
+    assert.equal(new RegExp(`(?:from\\(|table:\\s*)["']${table}["']`).test(indexer), false);
+    assert.equal(new RegExp(`\\.from\\(["']${table}["']\\)`).test(correctionsRoute), false);
   }
 
   for (const table of ["okf_papers", "okf_concepts", "okf_evidence_items", "okf_relations", "okf_user_corrections"]) {
@@ -437,8 +873,8 @@ test("paper-specific element query returns only the named paper and both request
   assert.equal(response.intent, "PAPER_ELEMENT_QUERY");
   assert.ok(response.retrieved_concepts.length > 0);
   assert.ok(response.retrieved_concepts.every((concept) => concept.paper_id === "BLOCKCHAIN_IOT_SDPS_2019"));
-  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignRequirement").length, 4);
-  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignPrinciple").length, 4);
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "Design Requirement").length, 4);
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "Design Principle").length, 4);
 });
 
 test("flow query is classified and uses stored relations without requirement-to-requirement chaining", async () => {
@@ -452,7 +888,7 @@ test("flow query is classified and uses stored relations without requirement-to-
   const byId = new Map(response.flow.nodes.map((node) => [node.id, node]));
   assert.ok(response.flow.edges.length > 0);
   assert.ok(response.flow_graph.edges.every((edge) => edge.provenance === "stored" && edge.relation_id));
-  assert.equal(response.flow.edges.some((edge) => byId.get(edge.source)?.type === "DesignRequirement" && byId.get(edge.target)?.type === "DesignRequirement"), false);
+  assert.equal(response.flow.edges.some((edge) => byId.get(edge.source)?.type === "Design Requirement" && byId.get(edge.target)?.type === "Design Requirement"), false);
   for (const layer of ["Requirement", "Principle", "Feature", "Artifact"]) assert.ok(response.flow_graph.nodes.some((node) => node.layer === layer), layer);
 });
 
@@ -483,7 +919,7 @@ test("feature element query does not mention zero requirements or principles", a
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Show me the design features from Blockchain for the IoT.", kb);
   assert.equal(response.intent, "PAPER_ELEMENT_QUERY");
-  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "DesignFeature").length, 9);
+  assert.equal(response.retrieved_concepts.filter((concept) => concept.type === "Design Feature").length, 9);
   assert.match(response.answer, /9 design features/i);
   assert.equal(/0 design requirement|0 design principle/i.test(response.answer), false);
 });
@@ -597,7 +1033,10 @@ test("Workbench diagram metadata and chatbot stored metadata use the shared proj
   assert.deepEqual(fallback.relationIds, ["stored-1", "stored-2"]);
   const adapterSource = readFileSync(path.join(process.cwd(), "lib", "okf", "workbench-adapter.ts"), "utf8");
   const workbenchSource = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchFlow.tsx"), "utf8");
-  assert.ok(adapterSource.includes("buildOkfFlow("));
+  assert.ok(adapterSource.includes("projectRecommendedFlow("));
+  assert.ok(adapterSource.includes("projectFullRelations("));
+  assert.ok(adapterSource.includes("projectSourceView("));
+  assert.ok(adapterSource.includes("loadStoredPaperFlowMetadata("));
   assert.ok(workbenchSource.includes("flowGraph"));
   assert.equal(workbenchSource.includes("projectStoredMainFlow"), false);
 });
@@ -1773,8 +2212,8 @@ test("final evaluation queries Q1-Q4 follow the new answer policies", async () =
   const q3 = await answerOkfChat("Show me the design requirements and design principles from Blockchain for the IoT.", kb);
   assert.equal(q3.intent, "PAPER_ELEMENT_QUERY");
   assert.deepEqual([...new Set(q3.retrieved_concepts.map((concept) => concept.paper_id))], ["BLOCKCHAIN_IOT_SDPS_2019"]);
-  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "DesignRequirement").length, 4);
-  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "DesignPrinciple").length, 4);
+  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "Design Requirement").length, 4);
+  assert.equal(q3.retrieved_concepts.filter((concept) => concept.type === "Design Principle").length, 4);
 
   const q4 = await answerOkfChat("Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(q4.intent, "DSR_FLOW_QUERY");
@@ -1793,7 +2232,7 @@ test("final evaluation queries Q5-Q10 pick the correct primary DSR source", asyn
   const cases = [
     ["What design knowledge should I reuse for sensitive commercial data where parties compute or verify without exposing raw data?", "SHORT_END_STICK_2025", /proof of integrity|proof-of-integrity|nonreversible|joint approval/i],
     ["What design knowledge should I reuse for a B2B capacity marketplace with trust, reputation, and screening?", "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024", /signaling|screening|reputation|authority|fairness|deterrence/i],
-    ["How should I structure the implementation lifecycle for a blockchain-based artifact?", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024", /analysis -> preliminary design -> detailed design -> construction -> transition -> maintenance -> retirement/i],
+    ["How should I structure the implementation lifecycle for a blockchain-based artifact?", "INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024", /analysis, preliminary design, detailed design, construction, transition, maintenance, and retirement/i],
     ["What design knowledge should I reuse for token incentives and reviewer motivation?", "PEER_REVIEW_TOKEN_INCENTIVES_2025", /token|incentive|reviewer|motivation|reward/i],
     ["What design knowledge should I reuse for a fair inclusive marketplace?", "NIL_NFT_MARKETPLACE_2026", /inclusive|fair|meritocratic|market thickness|market safety|random minting|royalt/i],
     ["What design knowledge should I reuse for consent status and auditability?", "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023", /consent|status|audit|permission|interoperability/i]
@@ -1814,25 +2253,26 @@ test("library stats queries return exact OKF counts", async () => {
   assert.match(papers.answer, new RegExp(`${kb.papers.length} paper`));
 
   const researchQuestions = await answerOkfChat("How many research questions are in the library?", kb);
-  const rqCount = kb.concepts.filter((concept) => concept.type === "ResearchQuestion").length;
-  assert.equal(researchQuestions.library_stats?.counts.by_type.ResearchQuestion, rqCount);
-  assert.match(researchQuestions.answer, new RegExp(`${rqCount} ResearchQuestion`));
+  const objectiveCount = kb.papers.filter((paper) => paper.research_objective.length > 0).length;
+  assert.equal(researchQuestions.library_stats?.counts.by_type.ResearchQuestion, undefined);
+  assert.match(researchQuestions.answer, /not a canonical DSR concept type/i);
+  assert.match(researchQuestions.answer, new RegExp(`${objectiveCount} paper`));
 
   const principles = await answerOkfChat("How many design principles are stored?", kb);
-  const principleCount = kb.concepts.filter((concept) => concept.type === "DesignPrinciple").length;
-  assert.equal(principles.library_stats?.counts.by_type.DesignPrinciple, principleCount);
+  const principleCount = kb.concepts.filter((concept) => concept.type === "Design Principle").length;
+  assert.equal(principles.library_stats?.counts.by_type["Design Principle"], principleCount);
   assert.match(principles.answer, new RegExp(`${principleCount} design principle`));
 
   const ambiguous = await answerOkfChat("How many questions are in the library?", kb);
   assert.equal(ambiguous.intent, "LIBRARY_STATS_QUERY");
-  assert.match(ambiguous.answer, /Do you mean research questions extracted from papers, or example\/user questions/i);
-  assert.match(ambiguous.answer, new RegExp(`${rqCount} ResearchQuestion`));
+  assert.match(ambiguous.answer, /not a canonical DSR concept type/i);
+  assert.match(ambiguous.answer, new RegExp(`${objectiveCount} paper`));
 });
 test("negative ZKP and library overview queries stay deterministic and honest", async () => {
   const kb = parseOkfLibrary();
   const negative = await answerOkfChat("Which paper uses zero-knowledge proofs as a formal design principle?", kb);
   assert.equal(negative.intent, "NEGATIVE_OR_EXISTENCE_QUERY");
-  assert.match(negative.answer, /did not find a formal stored DesignPrinciple/i);
+  assert.match(negative.answer, /did not find a formal stored Design Principle/i);
   assert.equal(/formal stored design principle match\(es\):\n1\./i.test(negative.answer), false);
 
   const overview = await answerOkfChat("List all papers currently in the OKF library.", kb);
@@ -1859,9 +2299,9 @@ test("final query interpreter handles tokenization, product-data reuse, coverage
 
   const formalTokenization = await answerOkfChat("which paper has tokenization as a formal design principle", kb);
   assert.equal(formalTokenization.intent, "NEGATIVE_OR_EXISTENCE_QUERY");
-  assert.match(formalTokenization.answer, /did not find a formal stored DesignPrinciple/i);
+  assert.match(formalTokenization.answer, /did not find a formal stored Design Principle/i);
   assert.equal(/formal stored design principle match\(es\):\n1\./i.test(formalTokenization.answer), false);
-  assert.match(formalTokenization.answer, /DesignFeature|DesignPrinciple|Related stored OKF material/i);
+  assert.match(formalTokenization.answer, /Design Feature|Design Principle|Related stored OKF material/i);
 
   const fragmentedProductData = await answerOkfChat("i want to create an application which solves the problem of fragmented product data, what principles and things i can reuse from the library, pls guide me", kb);
   assert.equal(fragmentedProductData.intent, "DESIGN_REUSE_QUERY");
@@ -1951,7 +2391,9 @@ test("DSR flow answer strips command phrase from the human-readable subject", as
   const kb = parseOkfLibrary();
   const response = await answerOkfChat("Build a Requirement -> Principle -> Feature flow for tamper-resistant sensor data protection.", kb);
   assert.equal(response.intent, "DSR_FLOW_QUERY");
-  assert.match(response.answer, /^The relation-backed flow for tamper-resistant sensor-data protection is built from stored OKF relations in Blockchain for the IoT\./);
+  assert.equal(response.flow_view?.resolved_mode, "recommended");
+  assert.match(response.answer, /^This Recommended Flow/);
+  assert.match(response.answer, /Recommended stored pathway|stored graph\.json recommended paths|stored OKF relation fallback/i);
   assert.equal(/Build a Requirement/i.test(response.answer), false);
 });
 
@@ -1960,9 +2402,19 @@ test("implementation lifecycle answer includes all seven ISDM stages with roles 
   const response = await answerOkfChat("How should I structure the implementation lifecycle for a blockchain artifact?", kb);
   assert.equal(response.intent, "IMPLEMENTATION_LIFECYCLE_QUERY");
   for (const stage of ["Analysis", "Preliminary design", "Detailed design", "Construction", "Transition", "Maintenance", "Retirement"]) assert.match(response.answer, new RegExp(stage, "i"));
-  assert.match(response.answer, /blockchain user, legal professional, architect, security\/core blockchain developer, smart contract developer, integrator\/auditor/i);
-  assert.match(response.answer, /use case, prototype, requirements, smart contract\/base architecture, data flow\/interactions\/consensus\/transactions, and executable smart contracts/i);
-  assert.match(response.answer, /domain-specific privacy, IoT, or identity patterns only after the lifecycle framing/i);
+  for (const rolePattern of [
+    /Include blockchain user and legal professional roles/i,
+    /Include architect role/i,
+    /Include security, core blockchain developer, and smart-contract developer roles/i,
+    /Include integrator and auditor roles/i
+  ]) assert.match(response.answer, rolePattern);
+  for (const modelPattern of [
+    /Model use cases, prototypes, and requirements/i,
+    /Model smart contracts, base architecture, and forking/i,
+    /Model data flow, interactions, consensus, and transactions/i,
+    /Model executable smart contracts/i
+  ]) assert.match(response.answer, modelPattern);
+  assert.match(response.answer, /Treat domain-specific controls as adaptations layered onto the stored process, role, and modeling structure/i);
 });
 
 test("Flow tab uses layered graph classes, edge provenance classes, and non-flow empty state", () => {
@@ -2234,5 +2686,298 @@ async function withTemporaryEnv(overrides: Record<string, string | undefined>, f
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
+  }
+}
+test("strict OKF source validation rejects runtime-invisible collection data and invalid source extraction status", () => {
+  const cases: Array<{
+    file: "dsr.md" | "evidence.md" | "index.md";
+    expectedCode: string;
+    mutate: (source: string) => string;
+  }> = [
+    {
+      file: "dsr.md",
+      expectedCode: "CONCEPT_SECTION_LEVEL_INVALID",
+      mutate: (source) => source.replace("## Concept:", "### Concept:")
+    },
+    {
+      file: "evidence.md",
+      expectedCode: "EVIDENCE_JSON_INVALID",
+      mutate: (source) => source.replace('"id":', '"id"')
+    },
+    {
+      file: "dsr.md",
+      expectedCode: "CONCEPT_COLLECTION_EMPTY",
+      mutate: (source) => `${source.match(/^---\s*\r?\n[\s\S]*?\r?\n---\s*\r?\n?/)?.[0] ?? ""}# Canonical DSR Concepts\n`
+    },
+    {
+      file: "index.md",
+      expectedCode: "PAPER_SOURCE_EXTRACTION_STATUS_INVALID",
+      mutate: (source) => source.replace('extraction_status: "okf_draft"', 'extraction_status: "indexed_from_canonical_okf"')
+    }
+  ];
+
+  for (const scenario of cases) {
+    const tempRoot = path.join(mkdtempSync(path.join(tmpdir(), "okf-v1-validator-")), "okf");
+    try {
+      cpSync(fixtureRoot, tempRoot, { recursive: true });
+      const target = path.join(tempRoot, "papers", "fixture-paper", scenario.file);
+      writeFileSync(target, scenario.mutate(readFileSync(target, "utf8")), "utf8");
+      const result = validateOkfSource(tempRoot);
+      assert.equal(result.ok, false, scenario.expectedCode);
+      assert.ok(result.errors.some((error) => error.code === scenario.expectedCode), scenario.expectedCode);
+    } finally {
+      rmSync(path.dirname(tempRoot), { recursive: true, force: true });
+    }
+  }
+});
+
+test("OKF indexing fails closed before writes when parsing is incomplete", async () => {
+  const kb = parseOkfLibrary(fixtureRoot);
+  kb.warnings.push({ file: "fixture/dsr.md", message: "synthetic incomplete parse" });
+  await assert.rejects(() => indexOkfKnowledgeBase(kb), /Refusing to index an OKF knowledge base with parser warnings/);
+
+  const script = readFileSync(path.join(process.cwd(), "scripts", "okf-index.ts"), "utf8");
+  assert.ok(script.includes("validateOkfSource"));
+  assert.ok(script.indexOf("validateOkfSource()") < script.indexOf("indexOkfKnowledgeBase(kb)"));
+});
+
+test("OKF v1 migration removes legacy review checks before data normalization and couples author verification", () => {
+  const migration = readFileSync(path.join(process.cwd(), "supabase", "migrations", "20260714090000_okf_dsr_v1.sql"), "utf8");
+  assert.ok(migration.indexOf("drop constraint if exists okf_papers_review_status_check") < migration.indexOf("update okf_papers set review_status = 'unreviewed'"));
+  assert.ok(migration.indexOf("drop constraint if exists okf_concepts_review_status_check") < migration.indexOf("update okf_concepts set review_status = 'unreviewed'"));
+  assert.match(migration, /check \(\(review_status = 'author_verified'\) = \(author_check_status = 'verified'\)\)/);
+});
+
+test("runtime index preserves explicit review metadata and runtime extraction semantics", () => {
+  const indexer = readFileSync(path.join(process.cwd(), "lib", "okf", "indexer.ts"), "utf8");
+  assert.ok(indexer.includes('extraction_status: "indexed_from_canonical_okf"'));
+  assert.ok(indexer.includes("reviewed_by: reviewByPaperId.get(concept.paper_id)?.reviewed_by ?? null"));
+  assert.ok(indexer.includes("reviewed_at: reviewByPaperId.get(concept.paper_id)?.reviewed_at ?? null"));
+});
+test("canonical paper objectives are not inferred from research questions", () => {
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  assert.ok(kb.papers.every((paper) => paper.research_objective.length === 0));
+  assert.ok(kb.papers.every((paper) => paper.research_questions.length > 0));
+  const normalizer = readFileSync(path.join(process.cwd(), "scripts", "normalize-okf-v1.ts"), "utf8");
+  assert.equal(normalizer.includes("research_objective: researchQuestions"), false);
+  assert.ok(normalizer.includes("research_objective: stringArray(indexDocument.frontmatter.research_objective)"));
+});
+
+test("all production bundles and TEMPLATE use the exact eight-file presentation contract", () => {
+  const required = [...requiredOkfBundleFiles].sort();
+  assert.deepEqual(required, [
+    "README.md", "aliases.yaml", "dsr.md", "evidence.md", "graph.json", "index.md", "presentation.yaml", "relations.yaml"
+  ]);
+
+  const papersRoot = path.join(process.cwd(), "library", "okf", "papers");
+  const paperDirs = readdirSync(papersRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+  assert.equal(paperDirs.length, 9);
+  for (const entry of paperDirs) {
+    assert.deepEqual(readdirSync(path.join(papersRoot, entry.name)).sort(), required, entry.name);
+  }
+  assert.deepEqual(readdirSync(path.join(process.cwd(), "library", "okf", "TEMPLATE")).sort(), required);
+
+  const source = validateOkfSource();
+  const template = validateOkfTemplate();
+  assert.equal(source.ok, true, source.errors.map((error) => `${error.code}: ${error.message}`).join("\n"));
+  assert.equal(template.ok, true, template.errors.map((error) => `${error.code}: ${error.message}`).join("\n"));
+
+  const kb = parseOkfLibrary();
+  assert.equal(kb.papers.length, 9);
+  assert.ok(kb.papers.every((paper) => paper.presentation?.presentation_version === OKF_PRESENTATION_VERSION));
+  assert.ok(kb.papers.every((paper) => paper.presentation?.paper_id === paper.paper_id));
+  assert.ok(kb.papers.every((paper) => paper.presentation?.dsr_summary_grid.key_concepts.length));
+  assert.ok(kb.papers.every((paper) => paper.review_status === "unreviewed"));
+});
+
+test("strict presentation validation rejects versions, IDs, unknown keys, and literal placeholders", () => {
+  const scenarios: Array<{ code: string; mutate: (source: string) => string }> = [
+    {
+      code: "PRESENTATION_VERSION_INVALID",
+      mutate: (source) => source.replace("presentation_version: workbench-v1", "presentation_version: workbench-v2")
+    },
+    {
+      code: "PRESENTATION_PAPER_MISMATCH",
+      mutate: (source) => source.replace("paper_id: FIXTURE_2026", "paper_id: WRONG_2026")
+    },
+    {
+      code: "PRESENTATION_KEYS",
+      mutate: (source) => `${source}\nunexpected_key: true\n`
+    },
+    {
+      code: "LITERAL_PLACEHOLDER_FORBIDDEN",
+      mutate: (source) => source.replace('domain_label: "Testing"', 'domain_label: "Not recorded"')
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const result = validateFixtureMutation("presentation.yaml", scenario.mutate);
+    assert.equal(result.ok, false, scenario.code);
+    assert.ok(result.errors.some((error) => error.code === scenario.code), scenario.code);
+  }
+});
+
+test("strict presentation validation rejects missing and unknown nested keys", () => {
+  const scenarios: Array<{ code: string; mutate: (source: string) => string }> = [
+    {
+      code: "PRESENTATION_CARD_KEYS",
+      mutate: (source) => source.replace(', dlt_role: null}', "}")
+    },
+    {
+      code: "PRESENTATION_CARD_KEYS",
+      mutate: (source) => source.replace('dlt_role: null}', 'dlt_role: null, review_status: "unreviewed"}')
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const result = validateFixtureMutation("presentation.yaml", scenario.mutate);
+    assert.equal(result.ok, false, scenario.code);
+    assert.ok(result.errors.some((error) => error.code === scenario.code), scenario.code);
+  }
+});
+
+test("empty presentation arrays require a field-specific migration note", () => {
+  const emptyEvaluation = (source: string, note: string) => source
+    .replace('evaluation_method: ["Fixture evaluation"]', "evaluation_method: []")
+    .replace("migration_notes: []", `migration_notes: [${JSON.stringify(note)}]`);
+
+  const unrelated = validateFixtureMutation("presentation.yaml", (source) => emptyEvaluation(source, "General migration completed."));
+  assert.equal(unrelated.ok, false);
+  const issue = unrelated.errors.find((error) => error.code === "PRESENTATION_EMPTY_ARRAY_UNEXPLAINED");
+  assert.ok(issue);
+  assert.match(issue.message, /overview\.evaluation_method/);
+
+  const fieldSpecific = validateFixtureMutation("presentation.yaml", (source) => emptyEvaluation(
+    source,
+    "overview.evaluation_method: the source records no evaluation method."
+  ));
+  assert.equal(fieldSpecific.ok, true, fieldSpecific.errors.map((error) => `${error.code}: ${error.message}`).join("\n"));
+});
+test("strict graph source-reference validation rejects unknown keys, status values, and unrecorded review elevation", () => {
+  const base = {
+    type: "paper_figure",
+    label: "Figure 1",
+    page: 1,
+    caption: "Fixture flow.",
+    validation_status: "unreviewed",
+    validation_notes: null
+  };
+  const scenarios: Array<{ code: string; source: Record<string, unknown> }> = [
+    { code: "GRAPH_SOURCE_REFERENCE_KEYS", source: { ...base, unexpected: true } },
+    { code: "GRAPH_SOURCE_REFERENCE_STATUS_INVALID", source: { ...base, validation_status: "reviewed" } },
+    { code: "GRAPH_SOURCE_REFERENCE_REVIEW_METADATA_MISSING", source: { ...base, validation_status: "internally_validated" } }
+  ];
+
+  for (const scenario of scenarios) {
+    const result = validateFixtureMutation("graph.json", (source) => {
+      const graph = JSON.parse(source) as Record<string, unknown>;
+      graph.source_reference = scenario.source;
+      return `${JSON.stringify(graph, null, 2)}\n`;
+    });
+    assert.equal(result.ok, false, scenario.code);
+    assert.ok(result.errors.some((error) => error.code === scenario.code), scenario.code);
+  }
+});
+
+test("Workbench adapter and runtime index expose canonical presentation and source-reference data", async () => {
+  const kb = parseOkfLibrary();
+  const papers = await getWorkbenchPapers({ knowledgeBase: kb });
+  assert.equal(papers.length, 9);
+  assert.ok(papers.every((paper) => paper.presentation?.presentation_version === "workbench-v1"));
+  assert.ok(papers.every((paper) => paper.presentation?.card.dlt_role?.trim()));
+  assert.ok(papers.every((paper) => paper.doi_url?.startsWith("https://doi.org/")));
+
+  const bundle = await getWorkbenchPaper("blockchain-iot-sdps-2019", { knowledgeBase: kb });
+  assert.ok(bundle?.presentation);
+  assert.equal(bundle.paper.domain, bundle.presentation.card.domain_label);
+  assert.equal(bundle.paper.artifact_type, bundle.presentation.card.artifact_summary);
+  assert.equal(bundle.paper.blockchain_dlt_role, bundle.presentation.card.dlt_role);
+  assert.equal(bundle.paper.problem_description, bundle.presentation.dsr_summary_grid.problem);
+  assert.equal(bundle.paper.canonical_paths?.presentation, "library/okf/papers/blockchain-iot-sdps-2019/presentation.yaml");
+  assert.equal(bundle.flowGraph?.source_reference?.label, "Figure 3");
+  assert.equal(bundle.flowGraph?.source_reference?.validation_status, "unreviewed");
+
+  const canonical = kb.papers.find((paper) => paper.paper_id === "BLOCKCHAIN_IOT_SDPS_2019");
+  assert.ok(canonical);
+  const indexedMetadata = serializeOkfPaperMetadata(canonical);
+  assert.deepEqual(indexedMetadata.graph_source_reference, canonical.graph_source_reference);
+  const indexerSource = readFileSync(path.join(process.cwd(), "lib", "okf", "indexer.ts"), "utf8");
+  assert.ok(indexerSource.includes("paper_metadata: serializeOkfPaperMetadata(paper)"));
+  assert.ok(indexerSource.includes("presentation: paper.presentation ?? null"));
+});
+
+test("Workbench presentation UI defaults to Design Summary and keeps machine detail in advanced modes", () => {
+  const paperSource = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchPaper.tsx"), "utf8");
+  const landingSource = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchLanding.tsx"), "utf8");
+  const flowSource = readFileSync(path.join(process.cwd(), "components", "workbench", "WorkbenchFlow.tsx"), "utf8");
+  assert.ok(paperSource.includes('useState<"summary" | "matrix" | "catalog">("summary")'));
+  assert.ok(paperSource.includes('data-workbench-dsr-default="design-summary"'));
+  for (const heading of ["Problem", "Input Knowledge", "Research Process", "Key Concepts", "Solution", "Output Knowledge"]) {
+    assert.ok(paperSource.includes(`title: "${heading}"`), heading);
+  }
+  assert.ok(paperSource.includes("Pathway Matrix"));
+  assert.ok(paperSource.includes("Concept Catalog"));
+  const summaryStart = paperSource.indexOf("function DesignSummary");
+  const summaryEnd = paperSource.indexOf("function SummaryCard", summaryStart);
+  const summarySource = paperSource.slice(summaryStart, summaryEnd);
+  assert.equal(summarySource.includes("element_id"), false);
+  assert.equal(summarySource.includes("evidence_count"), false);
+  assert.ok(landingSource.includes("paper.presentation?.card"));
+  assert.ok(landingSource.includes("Open DOI"));
+  assert.equal(landingSource.includes('>Not recorded<'), false);
+  assert.ok(flowSource.includes("sourceReference"));
+  assert.ok(flowSource.includes("semantic"));
+});
+
+test("normal Workbench runtime has no legacy CSV dependency and corrections support presentation Git targets", () => {
+  const runtimeFiles = [
+    "lib/okf/workbench-adapter.ts",
+    "app/api/workbench/papers/route.ts",
+    "app/api/workbench/paper/[paperId]/route.ts",
+    "components/workbench/WorkbenchLanding.tsx",
+    "components/workbench/WorkbenchPaper.tsx",
+    "components/workbench/WorkbenchFlow.tsx"
+  ];
+  for (const file of runtimeFiles) {
+    const source = readFileSync(path.join(process.cwd(), file), "utf8");
+    assert.equal(source.includes("lib/workbench/csv"), false, file);
+    assert.equal(source.includes("papaparse"), false, file);
+  }
+  assert.ok(workbenchChangeFields.presentation.includes("dsr_summary_grid.problem"));
+  assert.ok(workbenchChangeFields.presentation.includes("additional_context.limitations"));
+
+  const migration = readFileSync(path.join(process.cwd(), "scripts", "migrate-legacy-presentation-to-okf.ts"), "utf8");
+  assert.ok(migration.includes('presentation_version: "workbench-v1"'));
+  assert.ok(migration.includes("if (fs.existsSync(file) && fs.readFileSync(file, \"utf8\") === content) return false"));
+  assert.equal(migration.includes("new Date("), false);
+});
+
+test("presentation architecture preserves canonical and contextual data counts", () => {
+  const kb = parseOkfLibrary();
+  assert.equal(kb.concepts.length, 351);
+  assert.equal(kb.relations.length, 577);
+  assert.equal(kb.evidence_items.length, 305);
+  const contextualClaims = kb.papers.reduce((count, paper) => (
+    count + paper.research_questions.length + paper.theoretical_foundations.length + paper.limitations.length
+  ), 0);
+  assert.equal(contextualClaims, 92);
+
+  const contextualRelations = kb.papers.reduce((count, paper) => {
+    const lines = readFileSync(paper.source_file, "utf8").split(/\r?\n/);
+    return count + lines.filter((line) => line.startsWith(`- ${String.fromCharCode(96)}`) && line.includes(":rel_")).length;
+  }, 0);
+  assert.equal(contextualRelations, 183);
+});
+
+function validateFixtureMutation(fileName: "presentation.yaml" | "graph.json", mutate: (source: string) => string) {
+  const tempRoot = path.join(mkdtempSync(path.join(tmpdir(), "okf-presentation-validator-")), "okf");
+  try {
+    cpSync(fixtureRoot, tempRoot, { recursive: true });
+    const target = path.join(tempRoot, "papers", "fixture-paper", fileName);
+    writeFileSync(target, mutate(readFileSync(target, "utf8")), "utf8");
+    return validateOkfSource(tempRoot);
+  } finally {
+    rmSync(path.dirname(tempRoot), { recursive: true, force: true });
   }
 }

@@ -1,0 +1,86 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "NIL_NFT_MARKETPLACE_2026",
+  "card": {
+    "domain_label": "Name-image-likeness; student-athlete NIL; fairness; inclusiveness; NFT marketplace; digital collectibles",
+    "artifact_summary": "Design theory; Ethereum NFT marketplace DApp prototype; smart-contract royalty system; student-athlete interview evaluation",
+    "dlt_role": "Public blockchain and smart contracts are used as an NFT marketplace backbone for minting, exchanging, tracking ownership of, and paying automated royalties from student-athlete NIL collectibles."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "NIL regulatory changes create opportunities for student-athletes, but only a small fraction, especially prominent athletes in high-revenue sports or with large followings, are likely to profit. This creates inclusiveness concerns, fairness concerns, and marketplace-design concerns around thickness, congestion, and safety.",
+    "research_objective": null,
+    "methodology": "Peffers et al. design science research methodology",
+    "evaluation_method": [
+      "Evaluation combines informed argument against the five design requirements, demonstration through an Ethereum NFT DApp and smart contracts, and qualitative interviews with the same 12 student-athletes. Interviewees supported the inclusive and meritocratic logic, while also raising adoption, fan community, usability, and stakeholder-governance concerns."
+    ],
+    "key_contributions": [
+      "Inclusive-meritocratic fairness criterion",
+      "Design theory for fair and inclusive market-based NIL systems",
+      "Random-primary plus deterministic-secondary royalty pattern",
+      "Blockchain marketplace for fair and inclusive resource distribution"
+    ],
+    "design_knowledge_output": [
+      "Inclusive-meritocratic fairness criterion",
+      "Design theory for fair and inclusive market-based NIL systems",
+      "Random-primary plus deterministic-secondary royalty pattern",
+      "Blockchain marketplace for fair and inclusive resource distribution"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "NIL regulatory changes create opportunities for student-athletes, but only a small fraction, especially prominent athletes in high-revenue sports or with large followings, are likely to profit. This creates inclusiveness concerns, fairness concerns, and marketplace-design concerns around thickness, congestion, and safety.",
+    "input_knowledge": "Design science research; inclusive design and distributive justice literature; Aristotle equality principle; fair division; blockchain and smart contracts; NFTs and sports digital collectibles; Roth market design; design principle schema; Gregor and Jones design theory.",
+    "research_process": "The paper follows Peffers-style design science: interviews with 12 Division I student-athletes identify and validate the NIL fairness/inclusiveness problem; the authors derive five design requirements, three design principles, and two core design features; build an Ethereum-based NFT marketplace DApp and smart contracts; evaluate through informed argument and follow-up student-athlete interviews; and formalize an NIL design theory.",
+    "key_concepts": [
+      "Student-athlete NIL",
+      "inclusive-meritocratic fairness",
+      "random minting",
+      "market royalties",
+      "NFT collectibles",
+      "smart contracts",
+      "public blockchain marketplace",
+      "primary market packs",
+      "secondary market exchanges",
+      "royalty distribution",
+      "fan engagement",
+      "market thickness",
+      "congestion",
+      "safety."
+    ],
+    "solution": "The solution is a blockchain-based NFT marketplace where all student-athletes are associated with digital collectibles. Fans buy randomly minted collectible packs in primary markets, which creates non-zero royalty opportunities for every athlete. Collectibles can later be sold or exchanged in secondary markets, with smart contracts automatically distributing royalties to the featured athletes.",
+    "output_knowledge": "The paper produces reusable design knowledge for fair and inclusive digital-asset marketplaces: random primary-market minting can support inclusiveness, secondary-market royalties can support meritocratic allocation, and blockchain-based marketplaces can improve market thickness, congestion, and safety. These components are formalized as a prescriptive NIL design theory that may generalize to other creator-centric economies."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines informed argument against the five design requirements, demonstration through an Ethereum NFT DApp and smart contracts, and qualitative interviews with the same 12 student-athletes. Interviewees supported the inclusive and meritocratic logic, while also raising adoption, fan community, usability, and stakeholder-governance concerns.",
+    "limitations": [
+      "The design assumes a pool of players with recognizable NIL value, a fan base willing to buy or trade collectibles, reliable athlete verification, and careful privacy/regulatory governance. It does not fully solve fan engagement, technology adoption, quantitative validation, NFT speculation, side-payment avoidance, or jurisdiction-specific NIL compliance."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "overview.methodology": "canonical:index.md#methodology",
+      "card.domain_label": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:nil_marketplace_dsr_csvs/nil_marketplace_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow keeps the explicit DR-DP-DF chain from Fig. 1 plus core NFT marketplace artifact, evaluation, and NIL design-theory outputs. Extended flow includes kernel theories, prototype details, artifact mutations, ethical/regulatory limits, and future-validation conditions."
+    ]
+  }
+}

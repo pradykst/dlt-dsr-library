@@ -9,11 +9,11 @@ import { Select } from "@/components/ui/Select";
 import { fetchWorkbenchJson } from "@/lib/workbench/client";
 import type { ChangeRequest } from "@/lib/workbench/types";
 
-const statuses = ["pending", "accepted", "rejected", "needs_clarification", "all"];
+const statuses = ["open", "accepted_for_git_change", "rejected", "resolved_after_reindex", "all"];
 
 export function WorkbenchAdmin() {
   const [adminSecret, setAdminSecret] = useState("");
-  const [status, setStatus] = useState("pending");
+  const [status, setStatus] = useState("open");
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [message, setMessage] = useState<string>();
   const [decisionNote, setDecisionNote] = useState("");
@@ -36,7 +36,7 @@ export function WorkbenchAdmin() {
     }
   }
 
-  async function decide(id: string, decision: "accepted" | "rejected" | "needs_clarification") {
+  async function decide(id: string, decision: "accepted_for_git_change" | "rejected" | "resolved_after_reindex") {
     setMessage(undefined);
     try {
       const result = await fetchWorkbenchJson<{ ok: true; status: string; message: string }>(`/api/workbench/change-requests/${id}/decision`, {
@@ -64,7 +64,7 @@ export function WorkbenchAdmin() {
         <div className="grid gap-3 md:grid-cols-[1fr_220px_180px_auto]">
           <Input className="mp-mask" data-mp-block type="password" placeholder="Admin secret" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} />
           <Select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</Select>
-          <Input placeholder="Reviewed by" value={decidedBy} onChange={(event) => setDecidedBy(event.target.value)} />
+          <Input placeholder="Decision owner" value={decidedBy} onChange={(event) => setDecidedBy(event.target.value)} />
           <Button type="button" disabled={!adminSecret || loading} onClick={load}>{loading ? "Loading..." : "Load requests"}</Button>
         </div>
         <textarea className="mp-mask mt-3 min-h-20 w-full border border-line bg-white px-3 py-2 text-sm outline-none focus:border-blue" data-mp-block placeholder="Decision note / Git implementation guidance" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} />
@@ -75,13 +75,13 @@ export function WorkbenchAdmin() {
           <Card key={request.id} className="p-5">
             <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
               <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{request.paper_id} / {request.target_table}.{request.target_field}</div>
-                <h2 className="mt-2 break-words font-serif text-xl text-ink sm:text-2xl">{request.target_row_key}</h2>
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{request.paper_id} / {request.target_type}.{request.field}</div>
+                <h2 className="mt-2 break-words font-serif text-xl text-ink sm:text-2xl">{request.target_id}</h2>
               </div>
               <span className="border border-line bg-paper px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">{request.status}</span>
             </div>
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <Block label="Current value" value={request.old_value} />
+              <Block label="Current value" value={request.current_value} />
               <Block label="Proposed change" value={request.proposed_value} />
               <Block label="Reason" value={request.reason} />
               <Block label="Evidence note" value={request.evidence_note} />
@@ -90,9 +90,9 @@ export function WorkbenchAdmin() {
               <Block label="Created" value={request.created_at} />
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button type="button" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "accepted")}>Approve for Git change</Button>
-              <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "rejected")}>Reject</button>
-              <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "pending"} onClick={() => request.id && decide(request.id, "needs_clarification")}>Needs clarification</button>
+              <Button type="button" disabled={request.status !== "open"} onClick={() => request.id && decide(request.id, "accepted_for_git_change")}>Approve for Git change</Button>
+              <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "open"} onClick={() => request.id && decide(request.id, "rejected")}>Reject</button>
+              <button className="border border-line bg-white px-3 py-2 text-sm font-medium text-ink hover:border-blue disabled:opacity-50" disabled={request.status !== "open"} onClick={() => request.id && decide(request.id, "resolved_after_reindex")}>Resolve after re-index</button>
             </div>
           </Card>
         ))}
@@ -103,5 +103,5 @@ export function WorkbenchAdmin() {
 }
 
 function Block({ label, value }: { label: string; value: string | null | undefined }) {
-  return <div><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div><div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{value || "NA"}</div></div>;
+  return <div><div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{label}</div><div className="mt-1 whitespace-pre-wrap text-sm leading-6 text-ink">{value || "No value provided"}</div></div>;
 }

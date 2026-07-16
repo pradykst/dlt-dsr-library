@@ -1,978 +1,861 @@
-type: RelationCollection
-paper_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024
-title: Relations for trust-enabling blockchain systems paper
-review_status: reviewed
-relations:
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_001
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:prob_001_low_trust_in_capacity_exchange
-  predicate: motivates
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_004_intro_research_question
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_002
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:prob_002_capacity_volatility_and_transaction_costs
-  predicate: motivates
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_004_intro_research_question
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_003
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:prob_001_low_trust_in_capacity_exchange
-  predicate: motivates
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_004
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_005
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_006
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_007
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_008
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_009
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_010
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_011
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_012
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_013
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_014
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_015
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_016
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_017
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_018
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_019
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_020
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_021
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_022
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_001_design_trust_enabling_capacity_exchange_artifact
-  predicate: requires
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_011_meta_requirements_overview
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_023
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_024
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_025
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_026
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_027
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_028
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_029
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_030
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_031
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_032
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_033
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_034
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_035
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_036
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_037
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_038
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_039
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_040
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_041
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_042
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_043
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_044
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_045
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_046
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_047
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_048
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_049
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_050
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_051
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_052
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_053
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity
-  predicate: addressed_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_054
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_055
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_056
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_057
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_058
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_059
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_060
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_061
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_062
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_063
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_064
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_065
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_066
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_067
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_068
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_069
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_070
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_071
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_072
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_073
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  predicate: instantiated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_074
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_075
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_076
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_077
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_078
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_079
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_080
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_081
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_082
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_083
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_084
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_085
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_086
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_087
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_088
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_089
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_016_blockchain_testnet_and_smart_contracts
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_090
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_091
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_092
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_093
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_094
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_095
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_096
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_097
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_098
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_099
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_016_blockchain_testnet_and_smart_contracts
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_026_permissioned_testnet
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_100
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules
-  predicate: implements
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_026_permissioned_testnet
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_101
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_102
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_103
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_104
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_004_experimental_manipulated_prototype
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_105
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_004_pretest_high_trust_observation
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_030_pretest_results
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_106
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_005_control_group_steady_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_031_control_posttest_results
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_107
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_004_experimental_manipulated_prototype
-  predicate: evaluated_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_032_test_posttest_results
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_108
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_002_ex_ante_design_principle_evaluation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_109
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_110
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_004_pretest_high_trust_observation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_111
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_005_control_group_steady_trust
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_112
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_113
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_033_ex_post_summary
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_114
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_005_design_principles_are_interdependent
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_034_principle_interdependence
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_115
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_001_meta_requirements_for_capacity_exchange
-  predicate: contributes_to
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_116
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust
-  predicate: contributes_to
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_003_blockchain_design_features_for_trust_principles
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_117
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_003_blockchain_design_features_for_trust_principles
-  predicate: contributes_to
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_033_ex_post_summary
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_118
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_001_transaction_costs_and_interorganizational_trust
-  predicate: derived_from
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_119
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_002_agency_theory_behavioral_uncertainty
-  predicate: derived_from
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_120
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: derived_from
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_121
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: derived_from
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_122
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_005_design_principle_reusability
-  predicate: derived_from
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rq_002_generate_design_knowledge_on_blockchain_trust
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_005_research_gap_empirical_blockchain_trust
-  confidence: medium-high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_123
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_124
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_125
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_126
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_127
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_128
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_129
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_130
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_131
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_132
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_133
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_003_signaling_screening_authority_reputation
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_134
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:kt_004_blockchain_as_trust_enabling_infrastructure
-  predicate: supports
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts
-  confidence: high
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_135
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supported_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:lim_001_artificial_small_sample_single_case
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_036_limitations
-  confidence: medium
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_136
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supported_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:lim_002_blockchain_not_sufficient_without_design_principles
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_036_limitations
-  confidence: medium
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_137
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supported_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:lim_003_design_principle_interdependencies_complicate_causality
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_036_limitations
-  confidence: medium
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_138
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supported_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:lim_004_permissioned_testnet_not_mainnet
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_036_limitations
-  confidence: medium
-  relation_scope: paper_level
-- relation_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_139
-  source_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment
-  predicate: supported_by
-  target_concept_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:lim_005_need_for_broader_variables_and_domains
-  evidence_id: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_036_limitations
-  confidence: medium
-  relation_scope: paper_level
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024",
+  "relations": [
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_023",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_024",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_025",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_026",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_027",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_028",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_029",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_030",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_031",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_032",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_033",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_034",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_035",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_036",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_037",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_038",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_039",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_040",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_041",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_042",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_043",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_044",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_045",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_046",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_047",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_048",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_049",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_050",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_051",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_052",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_053",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "predicate": "addressed_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_054",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_055",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_056",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_057",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_058",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_059",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_060",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_061",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_062",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_063",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_064",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_065",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_066",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_067",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_068",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_069",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_070",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_071",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_072",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_073",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "predicate": "instantiated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_074",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_075",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_076",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_077",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_078",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_079",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_080",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_081",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_082",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_083",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_084",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_085",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_086",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_087",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_088",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_089",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_016_blockchain_testnet_and_smart_contracts",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_090",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_091",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_092",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_093",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_094",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_095",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_096",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_097",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_098",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_025_instantiation_smart_contracts",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_099",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_016_blockchain_testnet_and_smart_contracts",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_026_permissioned_testnet",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_100",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_015_smart_contract_tender_identity_reputation_modules",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform",
+      "predicate": "implements",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_026_permissioned_testnet",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_101",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_102",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_002_decentralized_negotiation_platform",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_103",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_003_smart_contract_modules",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_104",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_004_experimental_manipulated_prototype",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_029_ex_post_method",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_105",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_004_pretest_high_trust_observation",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_030_pretest_results",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_106",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_005_control_group_steady_trust",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_031_control_posttest_results",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_107",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_004_experimental_manipulated_prototype",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse",
+      "predicate": "evaluated_by",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_032_test_posttest_results",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_108",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_002_ex_ante_design_principle_evaluation",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_109",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_003_pretest_posttest_experiment",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_110",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_004_pretest_high_trust_observation",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_111",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_005_control_group_steady_trust",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_112",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_113",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_033_ex_post_summary",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_114",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:eval_006_manipulated_test_group_trust_collapse",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_005_design_principles_are_interdependent",
+      "predicate": "supports",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_034_principle_interdependence",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_115",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_001_meta_requirements_for_capacity_exchange",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "predicate": "contributes_to",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_116",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_002_six_design_principles_for_interorganizational_trust",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_003_blockchain_design_features_for_trust_principles",
+      "predicate": "contributes_to",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_035_research_contributions",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    },
+    {
+      "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_117",
+      "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_003_blockchain_design_features_for_trust_principles",
+      "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ok_004_blockchain_does_not_automatically_create_trust",
+      "predicate": "contributes_to",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_033_ex_post_summary",
+      "confidence": "high",
+      "extraction_type": "inferred"
+    }
+  ]
+}

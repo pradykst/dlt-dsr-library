@@ -17,6 +17,7 @@ export type StoredFlowProjection = {
   relationIds: string[];
   source: "diagram_main" | "recommended_paths" | "graph_main_layers" | "stored_relations";
   unresolvedRecommendedNodeIds: string[];
+  unresolvedRecommendedEdges: Array<{ source: string; target: string }>;
 };
 
 export function projectStoredMainFlow(input: {
@@ -49,9 +50,22 @@ export function projectStoredMainFlow(input: {
     for (const id of path) if (!resolveNodeId(id, nodeById)) unresolvedRecommendedNodeIds.push(id);
   }
   if (recommendedPaths.length) {
-    const pathSets = recommendedPaths.map((path) => new Set(path));
-    const selected = relations.filter((relation) => pathSets.some((path) => path.has(relation.source) && path.has(relation.target)));
-    return { ...resultFromRelations(selected, "recommended_paths"), unresolvedRecommendedNodeIds: unique(unresolvedRecommendedNodeIds) };
+    const consecutivePairs = new Set<string>();
+    for (const path of recommendedPaths) {
+      for (let index = 0; index < path.length - 1; index += 1) {
+        consecutivePairs.add(relationPairKey(path[index], path[index + 1]));
+      }
+    }
+    const selected = relations.filter((relation) => consecutivePairs.has(relationPairKey(relation.source, relation.target)));
+    const selectedPairs = new Set(selected.map((relation) => relationPairKey(relation.source, relation.target)));
+    const unresolvedRecommendedEdges = [...consecutivePairs]
+      .filter((pair) => !selectedPairs.has(pair))
+      .map(parseRelationPairKey);
+    return {
+      ...resultFromRelations(selected, "recommended_paths"),
+      unresolvedRecommendedNodeIds: unique(unresolvedRecommendedNodeIds),
+      unresolvedRecommendedEdges
+    };
   }
 
   return resultFromRelations(relations, input.fallbackSource ?? "stored_relations");
@@ -82,8 +96,18 @@ function resultFromRelations(relations: StoredFlowProjectionRelation[], source: 
     nodeIds: unique(relations.flatMap((relation) => [relation.source, relation.target])),
     relationIds: unique(relations.map((relation) => relation.id)),
     source,
-    unresolvedRecommendedNodeIds: []
+    unresolvedRecommendedNodeIds: [],
+    unresolvedRecommendedEdges: []
   };
+}
+
+function relationPairKey(source: string, target: string) {
+  return `${source}\u0000${target}`;
+}
+
+function parseRelationPairKey(value: string) {
+  const [source, target] = value.split("\u0000");
+  return { source, target };
 }
 
 function unique(values: string[]) {

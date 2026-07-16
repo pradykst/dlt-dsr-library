@@ -1,0 +1,90 @@
+{
+  "presentation_version": "workbench-v1",
+  "paper_id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024",
+  "card": {
+    "domain_label": "Inter-organizational capacity exchange; trust; transaction costs; blockchain; design science; industrial platforms",
+    "artifact_summary": "Design principles; Ethereum smart-contract prototype; Web3 capacity-exchange platform; subject-based experiment",
+    "dlt_role": "Blockchain is used as a decentralized, immutable, and transparent execution and record layer for tender, identity, permission, incentive, screening, and reputation functions in inter-organizational capacity exchange."
+  },
+  "overview": {
+    "abstract_summary": null,
+    "research_problem": "Virtual capacity exchange platforms can help firms exchange underused capacity, but anonymous market-like participation creates behavioral uncertainty, information asymmetry, weak inter-organizational trust, and transaction costs across specification, information, negotiation, fulfillment, and after-sales stages.",
+    "research_objective": null,
+    "methodology": null,
+    "evaluation_method": [
+      "Evaluation combines ex-ante expert assessment of design principles, showing overall reusability approval, and ex-post subject-based experiments. The non-manipulated blockchain prototype received high perceived-trust scores, while a manipulated version with violated design principles sharply reduced perceived trust."
+    ],
+    "key_contributions": [
+      "Nineteen meta-requirements for trust-enabling capacity exchange",
+      "Six design principles for inter-organizational trust",
+      "Blockchain design features instantiate trust principles",
+      "Blockchain does not automatically create trust",
+      "Trust-enabling design principles are interdependent"
+    ],
+    "design_knowledge_output": [
+      "Nineteen meta-requirements for trust-enabling capacity exchange",
+      "Six design principles for inter-organizational trust",
+      "Blockchain design features instantiate trust principles",
+      "Blockchain does not automatically create trust",
+      "Trust-enabling design principles are interdependent"
+    ]
+  },
+  "dsr_summary_grid": {
+    "problem": "Virtual capacity exchange platforms can help firms exchange underused capacity, but anonymous market-like participation creates behavioral uncertainty, information asymmetry, weak inter-organizational trust, and transaction costs across specification, information, negotiation, fulfillment, and after-sales stages.",
+    "input_knowledge": "Transaction cost economics; agency theory; network and inter-organizational trust literature; cooperation designs such as signaling, screening, authority, incentive mechanisms, and reputation; blockchain and smart-contract literature; design science research methodology; design-principle evaluation frameworks.",
+    "research_process": "The paper follows a two-iteration design science process: it identifies trust and transaction-cost problems, extracts meta-requirements from literature and 11 stakeholder interviews, derives and ex-ante evaluates six design principles, instantiates them in an Ethereum-based Web3 artifact, and ex-post evaluates perceived trust through pretest-posttest subject experiments.",
+    "key_concepts": [
+      "Capacity exchange",
+      "inter-organizational trust",
+      "behavioral uncertainty",
+      "transaction lifecycle",
+      "transaction costs",
+      "agency theory",
+      "signaling",
+      "screening",
+      "authority and fairness",
+      "incentive mechanisms",
+      "reputation mechanisms",
+      "Ethereum",
+      "smart contracts",
+      "Web3 frontend",
+      "Solidity",
+      "proof-of-authority test network."
+    ],
+    "solution": "The solution is a blockchain-based negotiation artifact for capacity exchange. It uses smart contracts for tender, identity, and reputation, require statements for authority and permitted execution, read functions for screening, and rating/reward traceability to reduce opportunism and support perceived inter-organizational trust.",
+    "output_knowledge": "The paper contributes 19 meta-requirements, six design principles, blockchain-based design features, and experimental evidence that blockchain can support perceived trust only when trust-relevant design principles are implemented holistically. The findings warn that blockchain alone does not automatically create trust."
+  },
+  "additional_context": {
+    "summary": "Evaluation combines ex-ante expert assessment of design principles, showing overall reusability approval, and ex-post subject-based experiments. The non-manipulated blockchain prototype received high perceived-trust scores, while a manipulated version with violated design principles sharply reduced perceived trust.",
+    "limitations": [
+      "The artifact is evaluated in an artificial 3D-printer capacity exchange scenario with a small expert sample. The experiment uses a controlled Ethereum test network, not an open naturalistic mainnet deployment. Results depend on holistic design-principle implementation, participant roles, and the short-term market-like exchange setting."
+    ]
+  },
+  "provenance": {
+    "migrated_from_legacy_csv": true,
+    "source_fields": {
+      "card.domain_label": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Domain",
+      "card.artifact_summary": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Artifact_Type",
+      "card.dlt_role": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Blockchain_DLT_Role",
+      "overview.research_problem": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Problem_Description",
+      "overview.evaluation_method": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Evaluation_Summary",
+      "overview.key_contributions": "canonical:index.md#key_contributions",
+      "overview.design_knowledge_output": "canonical:index.md#design_knowledge_output",
+      "dsr_summary_grid.problem": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Problem_Description",
+      "dsr_summary_grid.input_knowledge": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Input_Knowledge",
+      "dsr_summary_grid.research_process": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Research_Process",
+      "dsr_summary_grid.key_concepts": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Key_Concepts",
+      "dsr_summary_grid.solution": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Solution_Description",
+      "dsr_summary_grid.output_knowledge": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Output_Knowledge",
+      "additional_context.summary": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Evaluation_Summary",
+      "additional_context.limitations": "legacy_csv:trust_capacity_exchange_dsr/trust_capacity_v3_papers.csv#Boundary_Conditions"
+    },
+    "migration_notes": [
+      "The legacy paper CSV and canonical index contain no dedicated abstract summary; overview.abstract_summary remains null.",
+      "The legacy paper CSV and canonical index contain no separate research objective; overview.research_objective remains null.",
+      "The canonical index contains no dedicated methodology value; overview.methodology remains null rather than inferring one from research-process prose.",
+      "Legacy extraction and review workflow fields were intentionally excluded; the canonical paper remains unreviewed.",
+      "Legacy source note (provenance only; not a review record): High-confidence extraction. Main flow preserves the explicit research design, Fig. 3 meta-requirement to design-principle logic, Fig. 6 design-feature instantiation, and ex-ante/ex-post evaluation findings. Extended flow includes kernel theories, blockchain architecture, manipulations, and boundary conditions."
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schema_version": "okf-dsr-v1",
+  "paper_id": "TEMPLATE_PAPER",
+  "title": "Replace with the stored paper flow title",
+  "source_reference": {
+    "type": "okf_relations_projection",
+    "label": null,
+    "page": null,
+    "caption": null,
+    "validation_status": "unreviewed",
+    "validation_notes": "Replace with source-reference notes when a paper figure or table is available."
+  },
+  "source_views": [
+    {
+      "source_view_id": "template_source_figure",
+      "title": "Replace with the source figure or table title",
+      "view_type": "paper_figure",
+      "source_reference": {
+        "type": "paper_figure",
+        "label": "Figure N",
+        "page": 1,
+        "caption": "Replace with the exact source caption",
+        "validation_status": "unreviewed",
+        "validation_notes": "Template example only; transcribe a complete formal mapping before use.",
+        "reviewed_by": null,
+        "reviewed_at": null,
+        "author_verification": null
+      },
+      "layers": [
+        {
+          "concept_type": "Design Requirement",
+          "node_ids": [
+            "TEMPLATE_PAPER:dr_001"
+          ]
+        },
+        {
+          "concept_type": "Design Principle",
+          "node_ids": [
+            "TEMPLATE_PAPER:dp_001"
+          ]
+        },
+        {
+          "concept_type": "Design Feature",
+          "node_ids": [
+            "TEMPLATE_PAPER:df_001"
+          ]
+        }
+      ],
+      "edge_ids": [
+        "TEMPLATE_PAPER:rel_002",
+        "TEMPLATE_PAPER:rel_003"
+      ],
+      "ordering": {
+        "layer_order": [
+          "Design Requirement",
+          "Design Principle",
+          "Design Feature"
+        ],
+        "node_order": {
+          "Design Requirement": [
+            "TEMPLATE_PAPER:dr_001"
+          ],
+          "Design Principle": [
+            "TEMPLATE_PAPER:dp_001"
+          ],
+          "Design Feature": [
+            "TEMPLATE_PAPER:df_001"
+          ]
+        }
+      },
+      "layout": {
+        "direction": "LEFT_TO_RIGHT",
+        "preserve_source_order": true,
+        "semantic_parity": false,
+        "ordering_parity": true,
+        "visual_parity": "automatic_approximation"
+      }
+    }
+  ],
+  "nodes": [
+    {"id":"TEMPLATE_PAPER:prob_001","type":"Problem","title":"Replace with a source-supported problem"},
+    {"id":"TEMPLATE_PAPER:dr_001","type":"Design Requirement","title":"Replace with a source-supported design requirement"},
+    {"id":"TEMPLATE_PAPER:dp_001","type":"Design Principle","title":"Replace with a source-supported design principle"},
+    {"id":"TEMPLATE_PAPER:df_001","type":"Design Feature","title":"Replace with a source-supported design feature"},
+    {"id":"TEMPLATE_PAPER:art_001","type":"Artifact","title":"Replace with a source-supported artifact"},
+    {"id":"TEMPLATE_PAPER:eval_001","type":"Evaluation","title":"Replace with a source-supported evaluation"},
+    {"id":"TEMPLATE_PAPER:ok_001","type":"Output Knowledge","title":"Replace with source-supported output knowledge"}
+  ],
+  "edges": [
+    {"id":"TEMPLATE_PAPER:rel_001","source":"TEMPLATE_PAPER:prob_001","target":"TEMPLATE_PAPER:dr_001","predicate":"requires"},
+    {"id":"TEMPLATE_PAPER:rel_002","source":"TEMPLATE_PAPER:dr_001","target":"TEMPLATE_PAPER:dp_001","predicate":"addressed_by"},
+    {"id":"TEMPLATE_PAPER:rel_003","source":"TEMPLATE_PAPER:dp_001","target":"TEMPLATE_PAPER:df_001","predicate":"instantiates"},
+    {"id":"TEMPLATE_PAPER:rel_004","source":"TEMPLATE_PAPER:df_001","target":"TEMPLATE_PAPER:art_001","predicate":"contributes_to"},
+    {"id":"TEMPLATE_PAPER:rel_005","source":"TEMPLATE_PAPER:art_001","target":"TEMPLATE_PAPER:eval_001","predicate":"evaluated_by"},
+    {"id":"TEMPLATE_PAPER:rel_006","source":"TEMPLATE_PAPER:eval_001","target":"TEMPLATE_PAPER:ok_001","predicate":"contributes_to"}
+  ],
+  "recommended_paths": [
+    ["TEMPLATE_PAPER:prob_001","TEMPLATE_PAPER:dr_001","TEMPLATE_PAPER:dp_001","TEMPLATE_PAPER:df_001","TEMPLATE_PAPER:art_001","TEMPLATE_PAPER:eval_001","TEMPLATE_PAPER:ok_001"]
+  ]
+}
