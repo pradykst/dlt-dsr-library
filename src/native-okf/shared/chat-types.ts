@@ -21,10 +21,28 @@ export interface NativeOkfSourceCard {
   resource?: string;
 }
 
+export const GENERATED_DIAGRAM_STAGES = [
+  "problem",
+  "requirements",
+  "principles",
+  "features",
+  "artifact",
+  "governance",
+  "evaluation",
+  "outcome",
+  "other",
+] as const;
+
+export type DiagramStage = (typeof GENERATED_DIAGRAM_STAGES)[number];
+
 export interface GeneratedDiagramNode {
   id: string;
   label: string;
+  description: string;
   category: string;
+  stage: DiagramStage;
+  order: number;
+  group: string | null;
   sourcePaths: string[];
   synthesis: boolean;
 }

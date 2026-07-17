@@ -83,6 +83,10 @@ function validDiagram() {
         id: "stored",
         label: "Stored principle",
         category: "design-principle",
+        description: "A stored principle grounded in the retrieved concept.",
+        stage: "principles",
+        order: 20,
+        group: null,
         sourcePaths: ["design-knowledge/example-paper-dp1"],
         synthesis: false,
       },
@@ -91,6 +95,10 @@ function validDiagram() {
         label: "Combined proposal",
         category: "synthesis",
         sourcePaths: ["papers/example-paper", "design-knowledge/example-paper-dp1"],
+        description: "A grounded synthesis informed by the paper and principle.",
+        stage: "artifact",
+        order: 60,
+        group: null,
         synthesis: true,
       },
 
@@ -241,6 +249,32 @@ test("missing API key produces a clear server configuration error", () => {
     },
   );
 });
+test("diagram output budget accommodates the richer grounded node contract", () => {
+  const environment = readOpenAiEnvironment({
+    NODE_ENV: "test",
+    OPENAI_API_KEY: "sk-test",
+    OPENAI_MODEL: "test-model",
+  });
+
+  assert.equal(environment.diagramMaxOutputTokens, 4_096);
+
+  const constrained = readOpenAiEnvironment({
+    NODE_ENV: "test",
+    OPENAI_API_KEY: "sk-test",
+    OPENAI_MODEL: "test-model",
+    OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS: "1800",
+  });
+  assert.equal(constrained.diagramMaxOutputTokens, 4_096);
+
+  const expanded = readOpenAiEnvironment({
+    NODE_ENV: "test",
+    OPENAI_API_KEY: "sk-test",
+    OPENAI_MODEL: "test-model",
+    OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS: "5000",
+  });
+  assert.equal(expanded.diagramMaxOutputTokens, 5_000);
+});
+
 
 test("moderation is skipped when disabled and blocks flagged content when enabled", async () => {
   let calls = 0;
@@ -625,4 +659,42 @@ test("an uncited answer receives one bounded citation repair attempt only", asyn
     result.warnings?.some((warning) =>
       warning.includes("bounded citation repair did not produce")),
   );
+});
+
+test("diagram requests suppress ASCII and Mermaid duplication only for diagram answers", async () => {
+  for (const includeDiagram of [true, false]) {
+    const requests: Array<{ instructions?: unknown }> = [];
+    const client = {
+      responses: {
+        create: async (request: { instructions?: unknown }) => {
+          requests.push(request);
+          return completedResponse("Grounded answer [[S1]].");
+        },
+      },
+      moderations: moderationClient(false).moderations,
+    } as unknown as NativeOpenAiClient;
+
+    await answerNativeOkfChat(
+      {
+        question: "Explain the grounded fixture paper",
+        includeDiagram,
+      },
+      {
+        retrieve: async () => retrievalFixture(),
+        environment: CONFIG,
+        client,
+        generateDiagram: async () => ({ warnings: [] }),
+      },
+    );
+
+    assert.equal(requests.length, 1);
+    const instructions = String(requests[0]?.instructions);
+    if (includeDiagram) {
+      assert.match(instructions, /ASCII-art flowchart/);
+      assert.match(instructions, /Mermaid/);
+      assert.match(instructions, /Do not repeat every visual node/);
+    } else {
+      assert.doesNotMatch(instructions, /ASCII-art flowchart|Mermaid/);
+    }
+  }
 });

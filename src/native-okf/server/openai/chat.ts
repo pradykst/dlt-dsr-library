@@ -33,6 +33,7 @@ import {
 import { moderateNativeOkfText } from "./moderation.ts";
 import {
   NATIVE_OKF_CITATION_REPAIR_INSTRUCTION,
+  NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION,
   NATIVE_OKF_SYSTEM_PROMPT,
 } from "./prompts.ts";
 
@@ -245,6 +246,13 @@ export async function answerNativeOkfChat(
   dependencies: NativeOkfChatDependencies = {},
 ): Promise<NativeOkfChatResponse> {
   const request = validateNativeOkfChatRequest(input);
+  const includeDiagram = request.includeDiagram === true ||
+    (request.includeDiagram === undefined &&
+      questionRequestsDiagram(request.question));
+  const answerInstructions = includeDiagram
+    ? `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION}`
+    : NATIVE_OKF_SYSTEM_PROMPT;
+
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const retrieval = await retrieve(request.question);
   const retrievalDebug = developmentRetrievalDebug(retrieval);
@@ -274,7 +282,7 @@ export async function answerNativeOkfChat(
   const draftAnswer = await createTextResponse(
     client,
     environment,
-    NATIVE_OKF_SYSTEM_PROMPT,
+    answerInstructions,
     modelInput,
   );
 
@@ -291,7 +299,7 @@ export async function answerNativeOkfChat(
       const repairedAnswer = await createTextResponse(
         client,
         environment,
-        `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_CITATION_REPAIR_INSTRUCTION}`,
+        `${answerInstructions}\n\n${NATIVE_OKF_CITATION_REPAIR_INSTRUCTION}`,
         repairInput,
       );
       const repairedCitations = validateAnswerCitations(repairedAnswer, context);
@@ -313,8 +321,6 @@ export async function answerNativeOkfChat(
 
   await moderateNativeOkfText(citationResult.answerMarkdown, environment, client);
 
-  const includeDiagram = request.includeDiagram === true ||
-    (request.includeDiagram === undefined && questionRequestsDiagram(request.question));
   let diagram: GeneratedDiagram | undefined;
   if (includeDiagram) {
     try {

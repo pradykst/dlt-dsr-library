@@ -12,7 +12,7 @@ import {
 import { DIAGRAM_LIMITS } from "../server/openai/diagram-schema.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
-import type { GeneratedDiagram } from "../shared/chat-types.ts";
+import type { DiagramStage, GeneratedDiagram } from "../shared/chat-types.ts";
 
 const PAPER_ID = "papers/example-paper";
 const PRINCIPLE_ID = "design-knowledge/example-dp1";
@@ -43,6 +43,10 @@ function validDiagram(): GeneratedDiagram {
         id: "stored",
         label: "Stored principle",
         category: "design-principle",
+        description: "A design principle represented directly by an OKF source.",
+        stage: "principles",
+        order: 20,
+        group: null,
         sourcePaths: [PRINCIPLE_ID],
         synthesis: false,
       },
@@ -51,10 +55,69 @@ function validDiagram(): GeneratedDiagram {
         label: "Proposed combination",
         category: "synthesis",
         sourcePaths: [PAPER_ID, PRINCIPLE_ID],
+        description: "A proposed combination informed by the retrieved sources.",
+        stage: "artifact",
+        order: 60,
+        group: null,
         synthesis: true,
       },
     ],
     edges: [{ source: "stored", target: "proposal", label: "informs" }],
+  };
+}
+
+function validTwelveNodeDiagram(): GeneratedDiagram {
+  const node = (
+    id: string,
+    label: string,
+    stage: DiagramStage,
+    order: number,
+    group: string | null,
+    synthesis = false,
+  ): GeneratedDiagram["nodes"][number] => ({
+    id,
+    label,
+    description: `Grounded description for ${label}.`,
+    category: synthesis ? "synthesis" : "stored knowledge",
+    stage,
+    order,
+    group,
+    sourcePaths: [synthesis ? PAPER_ID : PRINCIPLE_ID],
+    synthesis,
+  });
+
+  return {
+    title: "Compact multi-branch flow",
+    explanation: "Three grounded branches converge into one evaluated outcome.",
+    nodes: [
+      node("problem", "Define problem", "problem", 0, null),
+      node("requirements", "Set requirements", "requirements", 10, null),
+      node("principle-a", "Apply principle A", "principles", 20, "branch-a"),
+      node("principle-b", "Apply principle B", "principles", 21, "branch-b"),
+      node("principle-c", "Apply principle C", "principles", 22, "branch-c"),
+      node("feature-a", "Build feature A", "features", 40, "branch-a"),
+      node("feature-b", "Build feature B", "features", 41, "branch-b"),
+      node("feature-c", "Build feature C", "features", 42, "branch-c"),
+      node("artifact", "Integrate artifact", "artifact", 60, null, true),
+      node("governance", "Apply governance", "governance", 70, null, true),
+      node("evaluation", "Evaluate artifact", "evaluation", 80, null, true),
+      node("outcome", "Assess outcome", "outcome", 90, null, true),
+    ],
+    edges: [
+      { source: "problem", target: "requirements", label: "requires" },
+      { source: "requirements", target: "principle-a", label: "addresses" },
+      { source: "requirements", target: "principle-b", label: "addresses" },
+      { source: "requirements", target: "principle-c", label: "addresses" },
+      { source: "principle-a", target: "feature-a", label: "enables" },
+      { source: "principle-b", target: "feature-b", label: "enables" },
+      { source: "principle-c", target: "feature-c", label: "enables" },
+      { source: "feature-a", target: "artifact", label: "implements" },
+      { source: "feature-b", target: "artifact", label: "implements" },
+      { source: "feature-c", target: "artifact", label: "implements" },
+      { source: "artifact", target: "governance", label: "requires" },
+      { source: "governance", target: "evaluation", label: "enables" },
+      { source: "evaluation", target: "outcome", label: "validates" },
+    ],
   };
 }
 
@@ -128,6 +191,152 @@ test("accepts a valid grounded synthesis node", () => {
   assert.deepEqual(result.diagram.nodes[1]?.sourcePaths, [PAPER_ID, PRINCIPLE_ID]);
 });
 
+test("requires description, stage, order, and nullable group metadata", () => {
+  for (const field of ["description", "stage", "order", "group"] as const) {
+    const diagram = validDiagram();
+    delete (diagram.nodes[0] as unknown as Record<string, unknown>)[field];
+    const result = validateGeneratedDiagram(diagram, ALLOWLIST);
+    assert.equal(result.ok, false, `missing ${field} should be rejected`);
+    if (!result.ok) {
+      assert.match(result.errors.join(" "), new RegExp(`\\.${field}\\b`));
+    }
+  }
+
+  const nullableGroup = validateGeneratedDiagram(validDiagram(), ALLOWLIST);
+  assert.equal(nullableGroup.ok, true);
+});
+
+test("rejects unknown stages and oversized canvas labels", () => {
+  const unknownStage = validDiagram();
+  (unknownStage.nodes[0] as unknown as Record<string, unknown>).stage =
+    "unsupported-stage";
+  const stageResult = validateGeneratedDiagram(unknownStage, ALLOWLIST);
+  assert.equal(stageResult.ok, false);
+  if (!stageResult.ok) assert.match(stageResult.errors.join(" "), /stage must be one of/);
+
+  const oversizedLabel = validDiagram();
+  oversizedLabel.nodes[0]!.label = "x".repeat(
+    DIAGRAM_LIMITS.maxNodeLabelCharacters + 1,
+  );
+  const labelResult = validateGeneratedDiagram(oversizedLabel, ALLOWLIST);
+  assert.equal(labelResult.ok, false);
+  if (!labelResult.ok) {
+    assert.match(
+      labelResult.errors.join(" "),
+      new RegExp(`label must not exceed ${DIAGRAM_LIMITS.maxNodeLabelCharacters}`),
+    );
+  }
+});
+
+test("accepts a valid 12-node flow with three grounded branches", () => {
+  const result = validateGeneratedDiagram(validTwelveNodeDiagram(), ALLOWLIST);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.diagram.nodes.length, 12);
+  assert.equal(result.diagram.edges.length, 13);
+  assert.deepEqual(
+    [...new Set(result.diagram.nodes.map((node) => node.group).filter(Boolean))],
+    ["branch-a", "branch-b", "branch-c"],
+  );
+});
+
+test("rejects isolated and duplicate-semantic nodes", () => {
+  const isolated = validDiagram();
+  isolated.nodes.push({
+    id: "isolated",
+    label: "Unconnected decision",
+    description: "This node has no relationship to the decision flow.",
+    category: "synthesis",
+    stage: "other",
+    order: 50,
+    group: null,
+    sourcePaths: [PAPER_ID],
+    synthesis: true,
+  });
+  const isolatedResult = validateGeneratedDiagram(isolated, ALLOWLIST);
+  assert.equal(isolatedResult.ok, false);
+  if (!isolatedResult.ok) {
+    assert.match(isolatedResult.errors.join(" "), /isolated/);
+  }
+
+  const duplicate = validDiagram();
+  duplicate.nodes[1]!.label = "stored---PRINCIPLE";
+  const duplicateResult = validateGeneratedDiagram(duplicate, ALLOWLIST);
+  assert.equal(duplicateResult.ok, false);
+  if (!duplicateResult.ok) {
+    assert.match(duplicateResult.errors.join(" "), /duplicates the semantic label/);
+  }
+});
+
+test("rejects reordered morphological near-duplicate labels", () => {
+  const diagram = validDiagram();
+  diagram.nodes[0]!.label = "Verify provenance";
+  diagram.nodes[1]!.label = "Provenance verification";
+
+  const result = validateGeneratedDiagram(diagram, ALLOWLIST);
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.match(result.errors.join(" "), /near-duplicates the semantic label/);
+  }
+});
+
+test("rejects deterministic weakly disconnected flow components", () => {
+  const diagram = validDiagram();
+  diagram.nodes.push(
+    {
+      id: "component-a",
+      label: "Audit inputs",
+      description: "A separate grounded audit step.",
+      category: "evaluation",
+      stage: "evaluation",
+      order: 70,
+      group: null,
+      sourcePaths: [PAPER_ID],
+      synthesis: false,
+    },
+    {
+      id: "component-b",
+      label: "Record findings",
+      description: "A separate grounded reporting step.",
+      category: "outcome",
+      stage: "outcome",
+      order: 80,
+      group: null,
+      sourcePaths: [PAPER_ID],
+      synthesis: false,
+    },
+  );
+  diagram.edges.push({
+    source: "component-a",
+    target: "component-b",
+    label: "enables",
+  });
+
+  const result = validateGeneratedDiagram(diagram, ALLOWLIST);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  const disconnectedError = result.errors.find((error) =>
+    error.includes("disconnected flow components"),
+  );
+  assert.ok(disconnectedError);
+
+  const reordered: GeneratedDiagram = {
+    ...diagram,
+    nodes: [...diagram.nodes].reverse(),
+    edges: [...diagram.edges].reverse(),
+  };
+  const reorderedResult = validateGeneratedDiagram(reordered, ALLOWLIST);
+  assert.equal(reorderedResult.ok, false);
+  if (!reorderedResult.ok) {
+    assert.equal(
+      reorderedResult.errors.find((error) =>
+        error.includes("disconnected flow components"),
+      ),
+      disconnectedError,
+    );
+  }
+});
+
 test("rejects a diagram source path outside the retrieval allowlist", () => {
   const diagram = validDiagram();
   diagram.nodes[0]!.sourcePaths = ["papers/invented"];
@@ -173,6 +382,10 @@ test("enforces diagram node and edge bounds", () => {
       id: `node-${index}`,
       label: `Node ${index}`,
       category: "concept",
+      description: `Grounded node ${index}.`,
+      stage: "other" as const,
+      order: index,
+      group: null,
       sourcePaths: [PAPER_ID],
       synthesis: false,
     }),
@@ -202,12 +415,20 @@ test("uses Responses Structured Outputs without tools or storage", async () => {
     tools?: unknown[];
     tool_choice?: unknown;
     text?: { format?: { type?: unknown; strict?: unknown } };
+    instructions?: unknown;
   };
   assert.equal(request.store, false);
   assert.deepEqual(request.tools, []);
   assert.equal(request.tool_choice, "none");
   assert.equal(request.text?.format?.type, "json_schema");
   assert.equal(request.text?.format?.strict, true);
+  assert.match(String(request.instructions), /compact decision-support flow/);
+  assert.match(String(request.instructions), /7 to 12 nodes/);
+  assert.match(String(request.instructions), /short canvas label/);
+  assert.match(String(request.instructions), /one concise sentence/);
+  assert.match(String(request.instructions), /same weakly connected flow/);
+  assert.match(String(request.instructions), /no more than three major parallel branches/);
+  assert.match(String(request.instructions), /Do not output coordinates/);
 });
 
 test("repairs invalid structured output once", async () => {
@@ -220,6 +441,8 @@ test("repairs invalid structured output once", async () => {
   const repairRequest = fake.requests[1] as { input?: unknown };
   assert.match(String(repairRequest.input), /Validation errors/);
   assert.match(String(repairRequest.input), /allowlist/);
+  assert.match(String(repairRequest.input), /Consolidate semantically overlapping/);
+  assert.match(String(repairRequest.input), /preserve every relevant allowlisted sourcePath/);
 });
 
 test("makes only one repair attempt for malformed structured output", async () => {

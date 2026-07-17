@@ -57,3 +57,11 @@ citations, grounded structured diagrams, `/api/native-okf/chat`, and the isolate
 `/native-okf/chat` interface. It does not authorize legacy chatbot, AnswerPlan,
 deterministic composer, intent-routing, generated-flow, vector RAG, Supabase
 conversation, persistence, migration, or legacy-cleanup work.
+
+## Current generated-diagram readability repair phase
+
+Phase 4.5 authorizes only the grounded generated-diagram contract, its general
+diagram-specific prompts, deterministic ELK layout and presentation components,
+and their native tests. The stored `NativeOkfGraph`, native retrieval scoring and
+expansion, source-ID and citation validation, no-match behavior, moderation, and
+all quarantined legacy areas remain unchanged and out of scope.

@@ -1,16 +1,25 @@
 import "server-only";
 
+import { GENERATED_DIAGRAM_STAGES } from "../../shared/chat-types.ts";
+
 export const DIAGRAM_LIMITS = Object.freeze({
   maxTitleCharacters: 160,
   maxExplanationCharacters: 2_000,
-  maxNodes: 18,
-  maxEdges: 30,
+  preferredMinNodes: 7,
+  preferredMaxNodes: 12,
+  maxNodes: 14,
+  maxEdges: 20,
+  maxParallelBranches: 3,
   maxNodeIdCharacters: 64,
-  maxNodeLabelCharacters: 160,
-  maxCategoryCharacters: 80,
+  maxNodeLabelCharacters: 72,
+  maxNodeDescriptionCharacters: 280,
+  maxCategoryCharacters: 40,
+  maxGroupCharacters: 40,
+  minOrder: 0,
+  maxOrder: 100,
   maxSourcePathsPerNode: 20,
   maxSourcePathCharacters: 320,
-  maxEdgeLabelCharacters: 120,
+  maxEdgeLabelCharacters: 32,
 });
 
 /**
@@ -40,7 +49,17 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "label", "category", "sourcePaths", "synthesis"],
+        required: [
+          "id",
+          "label",
+          "description",
+          "category",
+          "stage",
+          "order",
+          "group",
+          "sourcePaths",
+          "synthesis",
+        ],
         properties: {
           id: {
             type: "string",
@@ -52,10 +71,34 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
             minLength: 1,
             maxLength: DIAGRAM_LIMITS.maxNodeLabelCharacters,
           },
+          description: {
+            type: "string",
+            minLength: 1,
+            maxLength: DIAGRAM_LIMITS.maxNodeDescriptionCharacters,
+          },
           category: {
             type: "string",
             minLength: 1,
             maxLength: DIAGRAM_LIMITS.maxCategoryCharacters,
+          },
+          stage: {
+            type: "string",
+            enum: GENERATED_DIAGRAM_STAGES,
+          },
+          order: {
+            type: "integer",
+            minimum: DIAGRAM_LIMITS.minOrder,
+            maximum: DIAGRAM_LIMITS.maxOrder,
+          },
+          group: {
+            anyOf: [
+              { type: "null" },
+              {
+                type: "string",
+                minLength: 1,
+                maxLength: DIAGRAM_LIMITS.maxGroupCharacters,
+              },
+            ],
           },
           sourcePaths: {
             type: "array",
@@ -91,7 +134,7 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
           },
           label: {
             type: "string",
-            minLength: 1,
+            minLength: 0,
             maxLength: DIAGRAM_LIMITS.maxEdgeLabelCharacters,
           },
         },

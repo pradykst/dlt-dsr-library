@@ -21,7 +21,7 @@
     "test:native-okf": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/parser.test.ts src/native-okf/tests/graph.test.ts src/native-okf/tests/validation.test.ts src/native-okf/tests/repository.test.ts",
     "test:native-okf:ui": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/workbench.test.ts src/native-okf/tests/presentation.test.ts",
     "test:native-okf:retrieval": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/search.test.ts src/native-okf/tests/retrieval.test.ts",
-    "test:native-okf:chat": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/chat.test.ts src/native-okf/tests/chat-isolation.test.ts src/native-okf/tests/diagram.test.ts",
+    "test:native-okf:chat": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/chat.test.ts src/native-okf/tests/chat-isolation.test.ts src/native-okf/tests/diagram.test.ts src/native-okf/tests/diagram-layout.test.ts src/native-okf/tests/diagram-presentation.test.ts",
     "smoke:native-okf:chat": "node --conditions=react-server --experimental-strip-types src/native-okf/tests/chat-live-smoke.ts"
   },
   "dependencies": {

@@ -23,7 +23,7 @@ export interface NativeOpenAiEnvironment {
 }
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 1_800;
-const DEFAULT_DIAGRAM_MAX_OUTPUT_TOKENS = 1_800;
+const DEFAULT_DIAGRAM_MAX_OUTPUT_TOKENS = 4_096;
 const MIN_OUTPUT_TOKENS = 128;
 const MAX_OUTPUT_TOKENS = 16_384;
 
@@ -98,10 +98,13 @@ export function readOpenAiEnvironment(
       DEFAULT_MAX_OUTPUT_TOKENS,
       "OPENAI_MAX_OUTPUT_TOKENS",
     ),
-    diagramMaxOutputTokens: optionalInteger(
-      environment.OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS,
+    diagramMaxOutputTokens: Math.max(
       DEFAULT_DIAGRAM_MAX_OUTPUT_TOKENS,
-      "OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS",
+      optionalInteger(
+        environment.OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS,
+        DEFAULT_DIAGRAM_MAX_OUTPUT_TOKENS,
+        "OPENAI_DIAGRAM_MAX_OUTPUT_TOKENS",
+      ),
     ),
   };
 
