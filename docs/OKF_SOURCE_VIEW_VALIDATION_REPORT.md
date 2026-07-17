@@ -6,27 +6,27 @@ This report separates machine-checkable structural validity from human semantic 
 
 - Runtime bundles: 9
 - TEMPLATE checked: yes
-- Source views checked: 4
-- Structurally valid source views: 4
-- Source-view projections executed: 4
-- Deterministic repeated projections: 4
+- Source views checked: 9
+- Structurally valid source views: 9
+- Source-view projections executed: 9
+- Deterministic repeated projections: 9
 - Structural errors: 0
 - Projection errors: 0
-- Semantic statuses: unreviewed: 4
+- Semantic statuses: unreviewed: 9
 
 ## Bundle results
 
 | Bundle | Paper ID | Runtime | Source views | Structurally valid | Projected | Deterministic | Semantic status |
 |---|---|---|---:|---:|---:|---:|---|
 | blockchain-iot-sdps-2019 | BLOCKCHAIN_IOT_SDPS_2019 | yes | 1 | 1 | 1 | 1 | unreviewed: 1 |
-| hie-consent-self-management-blockchain-2023 | HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023 | yes | 0 | 0 | 0 | 0 | none |
+| hie-consent-self-management-blockchain-2023 | HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023 | yes | 1 | 1 | 1 | 1 | unreviewed: 1 |
 | integrated-blockchain-isdm-framework-2024 | INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024 | yes | 0 | 0 | 0 | 0 | none |
 | newsvendor-forecasting-smart-contract-2021 | NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021 | yes | 0 | 0 | 0 | 0 | none |
 | nil-nft-marketplace-2026 | NIL_NFT_MARKETPLACE_2026 | yes | 1 | 1 | 1 | 1 | unreviewed: 1 |
 | peer-review-token-incentives-2025 | PEER_REVIEW_TOKEN_INCENTIVES_2025 | yes | 1 | 1 | 1 | 1 | unreviewed: 1 |
-| short-end-stick-2025 | SHORT_END_STICK_2025 | yes | 0 | 0 | 0 | 0 | none |
+| short-end-stick-2025 | SHORT_END_STICK_2025 | yes | 2 | 2 | 2 | 2 | unreviewed: 2 |
 | ssi-kyc-framework-2022 | SSI_KYC_FRAMEWORK_2022 | yes | 0 | 0 | 0 | 0 | none |
-| trust-capacity-exchange-blockchain-2024 | TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024 | yes | 0 | 0 | 0 | 0 | none |
+| trust-capacity-exchange-blockchain-2024 | TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024 | yes | 2 | 2 | 2 | 2 | unreviewed: 2 |
 | TEMPLATE | TEMPLATE_PAPER | no | 1 | 1 | 1 | 1 | unreviewed: 1 |
 
 ## Structural issues

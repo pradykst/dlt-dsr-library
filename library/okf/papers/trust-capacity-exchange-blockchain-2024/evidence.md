@@ -682,3 +682,43 @@ review_status: "unreviewed"
   "evidence_type": "paraphrase"
 }
 ```
+
+---
+
+## Evidence: TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping
+
+```json
+{
+  "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
+  "supports": [
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+    "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism"
+  ],
+  "source_location": "designing trust enabling blockchain systems.pdf - PDF page 5 - Figure 3",
+  "quote_or_summary": "Figure 3 presents the complete ordered inventory of nineteen meta-requirements, six design principles, and the explicit arrows connecting the requirements to the principles.",
+  "evidence_type": "paraphrase"
+}
+```

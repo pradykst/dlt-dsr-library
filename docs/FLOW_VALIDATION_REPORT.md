@@ -11,21 +11,21 @@ This report is generated deterministically from canonical OKF bundles and the re
 - Manual review: 9
 - Failed: 0
 - Structural errors: 0
-- Warnings: 23
+- Warnings: 19
 
 **Outcome:** All canonical graph and Workbench projection structural checks passed. Manual-review status reflects non-blocking recommendation or legacy-comparison gaps.
 
 | Paper | Status | Graph | Recommended paths | Stored R->P->F matrix chains | Source reference | Legacy |
 | --- | --- | ---: | ---: | ---: | --- | --- |
-| BLOCKCHAIN_IOT_SDPS_2019 | manual review | 23 nodes / 32 edges | 2 | 12 | Figure 3 (unreviewed) | 2 node / 0 edge matches |
+| BLOCKCHAIN_IOT_SDPS_2019 | manual review | 23 nodes / 32 edges | 3 | 12 | Figure 3 (unreviewed) | 2 node / 0 edge matches |
 | HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023 | manual review | 33 nodes / 53 edges | 1 | 21 | Figure 3 (unreviewed) | 2 node / 0 edge matches |
-| INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024 | manual review | 67 nodes / 105 edges | 0 | 73 | Figure 2 (unreviewed) | Not available |
+| INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024 | manual review | 67 nodes / 105 edges | 3 | 73 | Figure 2 (unreviewed) | Not available |
 | NEWSVENDOR_FORECASTING_SMART_CONTRACT_2021 | manual review | 34 nodes / 51 edges | 1 | 23 | Figure 3 (unreviewed) | Not available |
-| NIL_NFT_MARKETPLACE_2026 | manual review | 31 nodes / 62 edges | 0 | 32 | Figure 1 (unreviewed) | 1 node / 0 edge matches |
-| PEER_REVIEW_TOKEN_INCENTIVES_2025 | manual review | 37 nodes / 68 edges | 0 | 14 | Figure 2 (unreviewed) | 0 node / 0 edge matches |
+| NIL_NFT_MARKETPLACE_2026 | manual review | 31 nodes / 62 edges | 2 | 32 | Figure 1 (unreviewed) | 1 node / 0 edge matches |
+| PEER_REVIEW_TOKEN_INCENTIVES_2025 | manual review | 37 nodes / 68 edges | 4 | 14 | Figure 2 (unreviewed) | 0 node / 0 edge matches |
 | SHORT_END_STICK_2025 | manual review | 17 nodes / 23 edges | 3 | 12 | Figures 1 and 2 (unreviewed) | 2 node / 1 edge matches |
 | SSI_KYC_FRAMEWORK_2022 | manual review | 41 nodes / 85 edges | 1 | 46 | Figure 4 (unreviewed) | 1 node / 0 edge matches |
-| TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024 | manual review | 55 nodes / 95 edges | 0 | 106 | Figures 3 and 6 (unreviewed) | 0 node / 0 edge matches |
+| TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024 | manual review | 55 nodes / 95 edges | 3 | 106 | Figures 3 and 6 (unreviewed) | 0 node / 0 edge matches |
 
 ## Paper results
 
@@ -34,17 +34,19 @@ This report is generated deterministically from canonical OKF bundles and the re
 - Graph: `library/okf/papers/blockchain-iot-sdps-2019/graph.json`
 - Status: **manual review**
 - Stored Workbench source: graph_json
-- Stored relation checks: 3 recommended-flow, 4 R->P->F matrix, 32 full-relations
+- Stored relation checks: 12 recommended-flow, 6 R->P->F matrix, 32 full-relations
 
 - Source reference: Figure 3, page 13 - Design Requirements, Principles, and Features.
 - Semantic validation: unreviewed
 
 Recommended paths:
 
-- Path 1: `BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem` -> `BLOCKCHAIN_IOT_SDPS_2019:dr1_tamper_resistant_pipeline` -> `BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification`
-  - Stored relations: `BLOCKCHAIN_IOT_SDPS_2019:rel_004`, `BLOCKCHAIN_IOT_SDPS_2019:rel_008`
-- Path 2: `BLOCKCHAIN_IOT_SDPS_2019:df6_independent_verification_storage` -> `BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture`
-  - Stored relations: `BLOCKCHAIN_IOT_SDPS_2019:rel_027`
+- Path 1: `BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem` -> `BLOCKCHAIN_IOT_SDPS_2019:dr1_tamper_resistant_pipeline` -> `BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification` -> `BLOCKCHAIN_IOT_SDPS_2019:df1_sensor_data_collection` -> `BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture`
+  - Stored relations: `BLOCKCHAIN_IOT_SDPS_2019:rel_004`, `BLOCKCHAIN_IOT_SDPS_2019:rel_008`, `BLOCKCHAIN_IOT_SDPS_2019:rel_013`, `BLOCKCHAIN_IOT_SDPS_2019:rel_022`
+- Path 2: `BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem` -> `BLOCKCHAIN_IOT_SDPS_2019:dr2_privacy_preserving_pipeline` -> `BLOCKCHAIN_IOT_SDPS_2019:dp3_data_owner_controlled_disclosure` -> `BLOCKCHAIN_IOT_SDPS_2019:df7_access_right_management` -> `BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture`
+  - Stored relations: `BLOCKCHAIN_IOT_SDPS_2019:rel_005`, `BLOCKCHAIN_IOT_SDPS_2019:rel_010`, `BLOCKCHAIN_IOT_SDPS_2019:rel_017`, `BLOCKCHAIN_IOT_SDPS_2019:rel_028`
+- Path 3: `BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem` -> `BLOCKCHAIN_IOT_SDPS_2019:dr3_large_data_volume_throughput` -> `BLOCKCHAIN_IOT_SDPS_2019:dp4_linearly_scalable_architecture` -> `BLOCKCHAIN_IOT_SDPS_2019:df6_independent_verification_storage` -> `BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture`
+  - Stored relations: `BLOCKCHAIN_IOT_SDPS_2019:rel_006`, `BLOCKCHAIN_IOT_SDPS_2019:rel_011`, `BLOCKCHAIN_IOT_SDPS_2019:rel_021`, `BLOCKCHAIN_IOT_SDPS_2019:rel_027`
 
 Issues:
 
@@ -132,16 +134,24 @@ Legacy comparison:
 
 - Graph: `library/okf/papers/integrated-blockchain-isdm-framework-2024/graph.json`
 - Status: **manual review**
-- Stored Workbench source: okf_relations_fallback
-- Stored relation checks: 7 recommended-flow, 2 R->P->F matrix, 105 full-relations
+- Stored Workbench source: graph_json
+- Stored relation checks: 9 recommended-flow, 6 R->P->F matrix, 105 full-relations
 
 - Source reference: Figure 2, page 7 - Framework as a backbone providing constituent method fragments classified under development process, modeling, and role aspects.
 - Semantic validation: unreviewed
 
+Recommended paths:
+
+- Path 1: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_001_comprehensiveness` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_001_organize_isdm_by_process_roles_models` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_027_model_use_case_prototype_requirements` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework`
+  - Stored relations: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_017`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_055`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_091`
+- Path 2: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_004_security_and_privacy` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_004_design_blockchain_specific_protocols_and_contract_details` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_014_design_security` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework`
+  - Stored relations: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_023`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_042`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_078`
+- Path 3: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dr_008_maintainability` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:dp_006_plan_operation_maintenance_and_retirement` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:df_024_monitor_nodes` -> `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:art_001_integrated_blockchain_isdm_framework`
+  - Stored relations: `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_027`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_052`, `INTEGRATED_BLOCKCHAIN_ISDM_FRAMEWORK_2024:rel_088`
+
 Issues:
 
 - **WARNING LEGACY_SOURCE_UNAVAILABLE:** No deterministic legacy static-flow source is mapped for this paper.
-- **WARNING RECOMMENDED_PATHS_MISSING:** No reviewer-selected recommended path is recorded; runtime may use a relation fallback.
 - **WARNING SOURCE_REFERENCE_UNREVIEWED:** Figure 2 is recorded but still requires manual semantic review.
 
 Legacy comparison:
@@ -176,11 +186,18 @@ Legacy comparison:
 
 - Graph: `library/okf/papers/nil-nft-marketplace-2026/graph.json`
 - Status: **manual review**
-- Stored Workbench source: okf_relations_fallback
-- Stored relation checks: 9 recommended-flow, 2 R->P->F matrix, 62 full-relations
+- Stored Workbench source: graph_json
+- Stored relation checks: 8 recommended-flow, 4 R->P->F matrix, 62 full-relations
 
 - Source reference: Figure 1, page 5 - Design requirements (DR), principles (DP), and features (DF).
 - Semantic validation: unreviewed
+
+Recommended paths:
+
+- Path 1: `NIL_NFT_MARKETPLACE_2026:prob_001_nil_fairness_inclusiveness_problem` -> `NIL_NFT_MARKETPLACE_2026:dr_001_inclusiveness` -> `NIL_NFT_MARKETPLACE_2026:dp_001_plausible_events` -> `NIL_NFT_MARKETPLACE_2026:df_001_random_minting` -> `NIL_NFT_MARKETPLACE_2026:art_001_fair_inclusive_nil_nft_marketplace`
+  - Stored relations: `NIL_NFT_MARKETPLACE_2026:rel_002`, `NIL_NFT_MARKETPLACE_2026:rel_012`, `NIL_NFT_MARKETPLACE_2026:rel_017`, `NIL_NFT_MARKETPLACE_2026:rel_031`
+- Path 2: `NIL_NFT_MARKETPLACE_2026:prob_001_nil_fairness_inclusiveness_problem` -> `NIL_NFT_MARKETPLACE_2026:dr_002_meritocratic_allocation` -> `NIL_NFT_MARKETPLACE_2026:dp_002_market_royalties` -> `NIL_NFT_MARKETPLACE_2026:df_002_market_exchanges` -> `NIL_NFT_MARKETPLACE_2026:art_001_fair_inclusive_nil_nft_marketplace`
+  - Stored relations: `NIL_NFT_MARKETPLACE_2026:rel_004`, `NIL_NFT_MARKETPLACE_2026:rel_013`, `NIL_NFT_MARKETPLACE_2026:rel_021`, `NIL_NFT_MARKETPLACE_2026:rel_033`
 
 Issues:
 
@@ -188,7 +205,6 @@ Issues:
   - IDs: `feature-nft-collectibles`
 - **WARNING LEGACY_ALIAS_UNRESOLVED:** 11 legacy node alias(es) are unresolved.
   - IDs: `artifact-nil-marketplace`, `eval-interviews-athletes`, `feature-secondary-market`, `feature-smart-contract-royalties`, `principle-blockchain-market-infrastructure`, `principle-market-royalties`, `principle-random-primary-market`, `problem-fair-inclusive-nil`, `req-inclusiveness`, `req-market-soundness`, `req-meritocratic-fairness`
-- **WARNING RECOMMENDED_PATHS_MISSING:** No reviewer-selected recommended path is recorded; runtime may use a relation fallback.
 - **WARNING SOURCE_REFERENCE_UNREVIEWED:** Figure 1 is recorded but still requires manual semantic review.
 
 Legacy comparison:
@@ -219,17 +235,27 @@ Legacy comparison:
 
 - Graph: `library/okf/papers/peer-review-token-incentives-2025/graph.json`
 - Status: **manual review**
-- Stored Workbench source: okf_relations_fallback
-- Stored relation checks: 10 recommended-flow, 2 R->P->F matrix, 68 full-relations
+- Stored Workbench source: graph_json
+- Stored relation checks: 7 recommended-flow, 4 R->P->F matrix, 68 full-relations
 
 - Source reference: Figure 2, page 6 - Relationships between design principles and features.
 - Semantic validation: unreviewed
+
+Recommended paths:
+
+- Path 1: `PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system`
+  - Stored relations: `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_035`, `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_044`
+- Path 2: `PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system`
+  - Stored relations: `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_038`, `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_044`
+- Path 3: `PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts`
+  - Stored relations: `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_040`, `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_046`
+- Path 4: `PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization` -> `PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts`
+  - Stored relations: `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_041`, `PEER_REVIEW_TOKEN_INCENTIVES_2025:rel_047`
 
 Issues:
 
 - **WARNING LEGACY_ALIAS_UNRESOLVED:** 13 legacy node alias(es) are unresolved.
   - IDs: `artifact-peer-review-platform`, `eval-peer-review-cost-survey`, `feature-batch-reward-processing`, `feature-fungible-review-tokens`, `feature-offchain-review-data`, `feature-sbt`, `principle-flexible-token-policy`, `principle-reviewer-trust-preservation`, `principle-token-incentives`, `problem-reviewer-shortage`, `req-flexibility`, `req-incentives`, `req-trust`
-- **WARNING RECOMMENDED_PATHS_MISSING:** No reviewer-selected recommended path is recorded; runtime may use a relation fallback.
 - **WARNING SOURCE_REFERENCE_UNREVIEWED:** Figure 2 is recorded but still requires manual semantic review.
 
 Legacy comparison:
@@ -350,17 +376,25 @@ Legacy comparison:
 
 - Graph: `library/okf/papers/trust-capacity-exchange-blockchain-2024/graph.json`
 - Status: **manual review**
-- Stored Workbench source: okf_relations_fallback
-- Stored relation checks: 10 recommended-flow, 2 R->P->F matrix, 95 full-relations
+- Stored Workbench source: graph_json
+- Stored relation checks: 9 recommended-flow, 6 R->P->F matrix, 95 full-relations
 
 - Source reference: Figures 3 and 6 - Formulation and categorization of meta-requirements and design principles; design features.
 - Semantic validation: unreviewed
+
+Recommended paths:
+
+- Path 1: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype`
+  - Stored relations: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_023`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_054`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_074`
+- Path 2: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype`
+  - Stored relations: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_033`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_060`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_078`
+- Path 3: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment` -> `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype`
+  - Stored relations: `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_050`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_071`, `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_086`
 
 Issues:
 
 - **WARNING LEGACY_ALIAS_UNRESOLVED:** 8 legacy node alias(es) are unresolved.
   - IDs: `artifact-capacity-exchange`, `eval-trust-experiments`, `feature-immutable-ledger`, `principle-reputation-screening`, `principle-trust-signaling`, `problem-trust-capacity`, `req-traceability`, `req-trust`
-- **WARNING RECOMMENDED_PATHS_MISSING:** No reviewer-selected recommended path is recorded; runtime may use a relation fallback.
 - **WARNING SOURCE_REFERENCE_UNREVIEWED:** Figures 3 and 6 is recorded but still requires manual semantic review.
 
 Legacy comparison:

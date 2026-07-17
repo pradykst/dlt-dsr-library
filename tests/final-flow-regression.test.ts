@@ -132,6 +132,25 @@ test("papers without source views expose only stored recommended and full projec
   }
 });
 
+test("all nine production papers have explicit curation outcomes and stored recommended/full flow coverage", () => {
+  assert.equal(knowledgeBase.papers.length, 9);
+  const audit = readRepositoryFile("docs/OKF_SOURCE_VIEW_AUDIT.md");
+
+  for (const paper of knowledgeBase.papers) {
+    const metadata = loadStoredPaperFlowMetadata(paper.paper_id);
+    assert.ok(metadata?.recommendedPaths.length, paper.slug + " must define at least one stored recommended path.");
+
+    const bundle = canonicalBundle(paper, knowledgeBase);
+    const full = projectFullRelations(bundle);
+    assert.ok(full.edges.length > 0, paper.slug + " must expose Full Relations.");
+
+    const outcomeA = "### " + paper.slug + " - Outcome A";
+    const outcomeB = "### " + paper.slug + " - Outcome B";
+    assert.ok(audit.includes(outcomeA) || audit.includes(outcomeB), paper.slug + " is omitted from the explicit source-view audit outcomes.");
+    assert.equal(audit.includes(outcomeA), Boolean(paper.source_views?.length), paper.slug + " audit outcome must match canonical source_views availability.");
+  }
+});
+
 test("Workbench exposes every structurally valid production source view without changing its inventory", async () => {
   for (const paper of knowledgeBase.papers) {
     const workbench = await getWorkbenchPaper(paper.paper_id, { knowledgeBase });

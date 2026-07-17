@@ -54,7 +54,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_014",
@@ -63,7 +63,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_015",
@@ -72,7 +72,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_016",
@@ -81,7 +81,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_017",
@@ -90,7 +90,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_018",
@@ -99,7 +99,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_019",
@@ -108,7 +108,7 @@
       "predicate": "addressed_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_020",
@@ -117,7 +117,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_021",
@@ -126,7 +126,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_016_design_principles_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_022",
@@ -144,7 +144,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_020_wallet_encryption_key_management",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_024",
@@ -189,7 +189,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_021_wallet_control_and_immutability",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_029",
@@ -207,7 +207,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_022_distribution_and_decentralization",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_031",
@@ -225,7 +225,7 @@
       "predicate": "instantiated_by",
       "evidence": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:ev_022_distribution_and_decentralization",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023:rel_033",

@@ -7,279 +7,279 @@
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_024",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_025",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_026",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_027",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_028",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_018_dp1_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_029",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_030",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_031",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_032",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_019_dp2_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_033",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_034",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_035",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_036",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_037",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_038",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_020_dp3_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_039",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_040",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_041",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_042",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_021_dp4_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_043",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_044",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_045",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_046",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_047",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_048",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_049",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_022_dp5_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_050",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_051",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_052",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_053",
       "source": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
       "target": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
       "predicate": "addressed_by",
-      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_023_dp6_table",
+      "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_054",
@@ -288,7 +288,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_055",
@@ -297,7 +297,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_056",
@@ -315,7 +315,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_058",
@@ -324,7 +324,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_059",
@@ -342,7 +342,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_061",
@@ -351,7 +351,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_062",
@@ -360,7 +360,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_063",
@@ -378,7 +378,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_065",
@@ -387,7 +387,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_066",
@@ -405,7 +405,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_068",
@@ -414,7 +414,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_069",
@@ -423,7 +423,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_070",
@@ -441,7 +441,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_072",
@@ -450,7 +450,7 @@
       "predicate": "instantiated_by",
       "evidence": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_027_design_features_figure",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_073",

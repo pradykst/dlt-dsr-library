@@ -398,10 +398,23 @@ function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
 }
 
+const curatedStart = "<!-- CURATED_NINE_PAPER_AUDIT_START -->";
+const curatedEnd = "<!-- CURATED_NINE_PAPER_AUDIT_END -->";
+
+function readCuratedAppendix(file: string) {
+  if (!fs.existsSync(file)) return "";
+  const current = fs.readFileSync(file, "utf8");
+  const start = current.indexOf(curatedStart);
+  const end = current.indexOf(curatedEnd);
+  if (start < 0 || end < start) return "";
+  return "\n" + current.slice(start, end + curatedEnd.length) + "\n";
+}
+
 function main() {
   const audit = auditOkfSourceViews();
   const output = path.join(process.cwd(), "docs", "OKF_SOURCE_VIEW_AUDIT.md");
-  fs.writeFileSync(output, renderSourceViewAudit(audit), "utf8");
+  const curatedAppendix = readCuratedAppendix(output);
+  fs.writeFileSync(output, renderSourceViewAudit(audit) + curatedAppendix, "utf8");
   console.log("papers: " + audit.totals.papers);
   console.log("source_views: " + audit.totals.source_views);
   console.log("structurally_valid: " + audit.totals.structurally_valid_source_views);

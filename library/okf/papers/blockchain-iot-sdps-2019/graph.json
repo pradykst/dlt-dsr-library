@@ -432,9 +432,21 @@
     [
       "BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem",
       "BLOCKCHAIN_IOT_SDPS_2019:dr1_tamper_resistant_pipeline",
-      "BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification"
+      "BLOCKCHAIN_IOT_SDPS_2019:dp1_source_to_sink_certification",
+      "BLOCKCHAIN_IOT_SDPS_2019:df1_sensor_data_collection",
+      "BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture"
     ],
     [
+      "BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem",
+      "BLOCKCHAIN_IOT_SDPS_2019:dr2_privacy_preserving_pipeline",
+      "BLOCKCHAIN_IOT_SDPS_2019:dp3_data_owner_controlled_disclosure",
+      "BLOCKCHAIN_IOT_SDPS_2019:df7_access_right_management",
+      "BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture"
+    ],
+    [
+      "BLOCKCHAIN_IOT_SDPS_2019:prob_001_iot_sensor_data_protection_problem",
+      "BLOCKCHAIN_IOT_SDPS_2019:dr3_large_data_volume_throughput",
+      "BLOCKCHAIN_IOT_SDPS_2019:dp4_linearly_scalable_architecture",
       "BLOCKCHAIN_IOT_SDPS_2019:df6_independent_verification_storage",
       "BLOCKCHAIN_IOT_SDPS_2019:art1_sdps_general_architecture"
     ]

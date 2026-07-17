@@ -115,7 +115,7 @@ test("Workbench DSR grid groups the seven canonical layers with evidence counts"
   assert.ok((bundle.dsrGrid ?? []).flatMap((group) => group.concepts).every((concept) => typeof concept.evidence_count === "number"));
 });
 
-test("Workbench stored flows prefer explicit graph recommendations and compact relation fallbacks without invented edges", async () => {
+test("Workbench stored flows use compact explicit graph recommendations without invented edges", async () => {
   const kb = parseOkfLibrary();
   const canonicalRelationIds = new Set(kb.relations.map((relation) => relation.relation_id));
   for (const paper of kb.papers) {
@@ -125,7 +125,8 @@ test("Workbench stored flows prefer explicit graph recommendations and compact r
     assert.ok(flow, paper.paper_id);
     assert.equal(flow.stored_flow_source, expectedSource, paper.paper_id);
     assert.ok(flow.recommended.nodes.length <= 14, paper.paper_id + " recommended graph is not compact");
-    assert.ok(flow.focused.nodes.length <= 8, paper.paper_id + " focused graph is not compact");
+    const focusedBound = Math.max(8, metadata.recommendedPaths.length * 3);
+    assert.ok(flow.focused.nodes.length <= focusedBound, paper.paper_id + " focused graph is not compact");
 
     for (const graph of [flow.recommended, flow.focused]) {
       const degree = new Map<string, number>();
@@ -949,7 +950,7 @@ test("paper-specific flow query uses only Blockchain IoT stored relations", asyn
   const graphNodeIds = new Set(response.flow_graph.nodes.map((node) => node.id));
   assert.ok((response.flow_rows ?? []).every((row) => row.concept_ids.every((id) => graphNodeIds.has(id))));
   assert.ok(response.retrieved_concepts.every((concept) => graphNodeIds.has(concept.concept_id)));
-  assert.equal(response.answer.includes("Sensor data collection"), false);
+  assert.equal(response.answer.includes("Sensor data collection"), true);
   assert.equal(response.answer.includes("Blockchain transaction and data transmission"), false);
 });
 test("stored paper flow reports OKF-relations fallback when graph metadata is absent", async () => {
@@ -1075,8 +1076,8 @@ test("all nine papers have deterministic graph-metadata stored projections with 
       assert.ok(projection.warnings.some((warning) => warning.includes("do not carry Workbench diagram flags")), paperId);
     }
   }
-  assert.equal(recommendedCount, 5);
-  assert.equal(fallbackCount, 4);
+  assert.equal(recommendedCount, 9);
+  assert.equal(fallbackCount, 0);
 });
 const productIdentityQuery = "I want to design a cross-marketplace product identity and review-continuity protocol where the same exact product variant can be listed on multiple marketplaces, sellers can relist products, buyers can leave verified-purchase reviews, and competitors should not expose raw commercial data. Which reusable DSR design requirements, design principles, design features, and artifact patterns should I reuse from the OKF library? Build a concise Requirement -> Principle -> Feature -> Artifact flow, explain which papers support each part, show evidence, and clearly mark any product-identity-specific suggestions as query-generated.";
 const fragmentedProductFlowQuery = "Build a Requirement -> Principle -> Feature flow for an application that solves fragmented product data across manufacturers, sellers, and marketplaces. Reuse relevant OKF principles and features for product identity, data integrity, verification, and governance.";
@@ -2221,7 +2222,7 @@ test("final evaluation queries Q1-Q4 follow the new answer policies", async () =
   const q4NodeIds = new Set(q4.flow_graph.nodes.map((node) => node.id));
   assert.ok((q4.flow_rows ?? []).length > 0);
   assert.ok((q4.flow_rows ?? []).every((row) => row.concept_ids.every((id) => q4NodeIds.has(id))));
-  assert.equal(q4.answer.includes("Sensor data collection"), false);
+  assert.equal(q4.answer.includes("Sensor data collection"), true);
   assert.equal(q4.flow_graph.mode, "stored_paper_flow");
   assert.match(q4.answer, /The layered graph is in the Flow tab/i);
   assert.equal(/Design moves to reuse/i.test(q4.answer), false);
@@ -2957,7 +2958,7 @@ test("presentation architecture preserves canonical and contextual data counts",
   const kb = parseOkfLibrary();
   assert.equal(kb.concepts.length, 351);
   assert.equal(kb.relations.length, 577);
-  assert.equal(kb.evidence_items.length, 305);
+  assert.equal(kb.evidence_items.length, 306);
   const contextualClaims = kb.papers.reduce((count, paper) => (
     count + paper.research_questions.length + paper.theoretical_foundations.length + paper.limitations.length
   ), 0);

@@ -27,7 +27,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_005_dp1_storage_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_004",
@@ -36,7 +36,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_005_dp1_storage_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_005",
@@ -45,7 +45,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_006_dp2_processing_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_006",
@@ -54,7 +54,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_006_dp2_processing_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_007",
@@ -63,7 +63,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_007_dp3_governance_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_008",
@@ -72,7 +72,7 @@
       "predicate": "addressed_by",
       "evidence": "SHORT_END_STICK_2025:ev_007_dp3_governance_principle",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_009",
@@ -81,7 +81,7 @@
       "predicate": "instantiated_by",
       "evidence": "SHORT_END_STICK_2025:ev_012_private_data_collection_implementation",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_010",
@@ -90,7 +90,7 @@
       "predicate": "instantiated_by",
       "evidence": "SHORT_END_STICK_2025:ev_012_private_data_collection_implementation",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_011",
@@ -99,7 +99,7 @@
       "predicate": "instantiated_by",
       "evidence": "SHORT_END_STICK_2025:ev_013_smart_contract_implementation",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_012",
@@ -108,7 +108,7 @@
       "predicate": "instantiated_by",
       "evidence": "SHORT_END_STICK_2025:ev_013_smart_contract_implementation",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_013",
@@ -117,7 +117,7 @@
       "predicate": "instantiated_by",
       "evidence": "SHORT_END_STICK_2025:ev_014_joint_governance_implementation",
       "confidence": "high",
-      "extraction_type": "inferred"
+      "extraction_type": "explicit-in-artifact"
     },
     {
       "id": "SHORT_END_STICK_2025:rel_014",

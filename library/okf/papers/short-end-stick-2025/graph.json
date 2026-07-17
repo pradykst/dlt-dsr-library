@@ -10,6 +10,143 @@
     "validation_status": "unreviewed",
     "validation_notes": "Source figures identified from the paper; semantic mapping remains subject to manual review."
   },
+  "source_views": [
+    {
+      "source_view_id": "figure_1_requirements_to_design_principles",
+      "title": "Requirements and design principles for two-sided opportunism",
+      "view_type": "paper_figure",
+      "source_reference": {
+        "type": "paper_figure",
+        "label": "Figure 1",
+        "page": 9,
+        "caption": "Summary of the Design Principles.",
+        "validation_status": "unreviewed",
+        "validation_notes": "Complete formal requirement, principle, and mapping inventory transcribed from the cited figure; independent semantic review is still required.",
+        "reviewed_by": null,
+        "reviewed_at": null,
+        "author_verification": null
+      },
+      "layers": [
+        {
+          "concept_type": "Design Requirement",
+          "node_ids": [
+            "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+            "SHORT_END_STICK_2025:dr_002_prevent_information_poaching"
+          ]
+        },
+        {
+          "concept_type": "Design Principle",
+          "node_ids": [
+            "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+            "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+            "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes"
+          ]
+        }
+      ],
+      "edge_ids": [
+        "SHORT_END_STICK_2025:rel_003",
+        "SHORT_END_STICK_2025:rel_004",
+        "SHORT_END_STICK_2025:rel_005",
+        "SHORT_END_STICK_2025:rel_006",
+        "SHORT_END_STICK_2025:rel_007",
+        "SHORT_END_STICK_2025:rel_008"
+      ],
+      "ordering": {
+        "layer_order": [
+          "Design Requirement",
+          "Design Principle"
+        ],
+        "node_order": {
+          "Design Requirement": [
+            "SHORT_END_STICK_2025:dr_001_prevent_information_manipulation",
+            "SHORT_END_STICK_2025:dr_002_prevent_information_poaching"
+          ],
+          "Design Principle": [
+            "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+            "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+            "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes"
+          ]
+        }
+      },
+      "layout": {
+        "direction": "LEFT_TO_RIGHT",
+        "preserve_source_order": true,
+        "semantic_parity": false,
+        "ordering_parity": true,
+        "visual_parity": "automatic_approximation"
+      }
+    },
+    {
+      "source_view_id": "table_3_design_principle_implementations",
+      "title": "Implementation of the design principles",
+      "view_type": "paper_table",
+      "source_reference": {
+        "type": "paper_table",
+        "label": "Table 3",
+        "page": 12,
+        "caption": "Implementation of the Design Principles.",
+        "validation_status": "unreviewed",
+        "validation_notes": "Complete design-principle and implementation inventory transcribed from the cited table; independent semantic review is still required.",
+        "reviewed_by": null,
+        "reviewed_at": null,
+        "author_verification": null
+      },
+      "layers": [
+        {
+          "concept_type": "Design Principle",
+          "node_ids": [
+            "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+            "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+            "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes"
+          ]
+        },
+        {
+          "concept_type": "Design Feature",
+          "node_ids": [
+            "SHORT_END_STICK_2025:df_001_private_data_collection_as_provider_only_sensitive_data_store",
+            "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+            "SHORT_END_STICK_2025:df_003_smart_contract_stress_factor_computation",
+            "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+            "SHORT_END_STICK_2025:df_005_joint_governance_policy"
+          ]
+        }
+      ],
+      "edge_ids": [
+        "SHORT_END_STICK_2025:rel_009",
+        "SHORT_END_STICK_2025:rel_010",
+        "SHORT_END_STICK_2025:rel_011",
+        "SHORT_END_STICK_2025:rel_012",
+        "SHORT_END_STICK_2025:rel_013"
+      ],
+      "ordering": {
+        "layer_order": [
+          "Design Principle",
+          "Design Feature"
+        ],
+        "node_order": {
+          "Design Principle": [
+            "SHORT_END_STICK_2025:dp_001_manipulation_resistant_private_storage_with_integrity_proof",
+            "SHORT_END_STICK_2025:dp_002_nonreversible_reliable_independent_computation",
+            "SHORT_END_STICK_2025:dp_003_joint_approval_for_computation_mechanism_changes"
+          ],
+          "Design Feature": [
+            "SHORT_END_STICK_2025:df_001_private_data_collection_as_provider_only_sensitive_data_store",
+            "SHORT_END_STICK_2025:df_002_public_hash_integrity_proof",
+            "SHORT_END_STICK_2025:df_003_smart_contract_stress_factor_computation",
+            "SHORT_END_STICK_2025:df_004_nonreversible_aggregation_function",
+            "SHORT_END_STICK_2025:df_005_joint_governance_policy"
+          ]
+        }
+      },
+      "layout": {
+        "direction": "LEFT_TO_RIGHT",
+        "preserve_source_order": true,
+        "semantic_parity": false,
+        "ordering_parity": true,
+        "visual_parity": "automatic_approximation"
+      }
+    }
+  ],
   "nodes": [
     {
       "id": "SHORT_END_STICK_2025:artifact_001_hyperledger_fabric_two_sided_opportunism_solution",

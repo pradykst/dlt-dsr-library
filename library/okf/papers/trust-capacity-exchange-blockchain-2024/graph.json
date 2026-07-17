@@ -10,6 +10,241 @@
     "validation_status": "unreviewed",
     "validation_notes": "The source spans Figures 3 (page 5) and 6 (page 8); semantic mapping remains subject to manual review."
   },
+  "source_views": [
+    {
+      "source_view_id": "figure_3_meta_requirements_to_design_principles",
+      "title": "Meta-requirements and design principles",
+      "view_type": "paper_figure",
+      "source_reference": {
+        "type": "paper_figure",
+        "label": "Figure 3",
+        "page": 5,
+        "caption": "Formulation and categorization of meta-requirements and design principles.",
+        "validation_status": "unreviewed",
+        "validation_notes": "Complete meta-requirement, design-principle, and arrow inventory transcribed from the cited figure; transaction-stage headings remain grouping annotations rather than canonical concepts.",
+        "reviewed_by": null,
+        "reviewed_at": null,
+        "author_verification": null
+      },
+      "layers": [
+        {
+          "concept_type": "Design Requirement",
+          "node_ids": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts"
+          ]
+        },
+        {
+          "concept_type": "Design Principle",
+          "node_ids": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism"
+          ]
+        }
+      ],
+      "edge_ids": [
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_023",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_024",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_025",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_026",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_027",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_028",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_029",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_030",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_031",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_032",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_033",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_034",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_035",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_036",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_037",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_038",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_039",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_040",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_041",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_042",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_043",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_044",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_045",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_046",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_047",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_048",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_049",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_050",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_051",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_052",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_053"
+      ],
+      "ordering": {
+        "layer_order": [
+          "Design Requirement",
+          "Design Principle"
+        ],
+        "node_order": {
+          "Design Requirement": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_002_cross_domain_management",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_003_search_functions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_004_identity_management_and_verification",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_005_initiation_support_services",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_007_contract_heterogeneity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_008_final_award_function",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_009_payment_fulfilment_conditions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_010_legal_framework_compliance",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_012_decision_relevant_kpis",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_013_transaction_transparency_completeness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_014_decentralization_and_simultaneity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_015_communication_services",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_016_equality_of_participants",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_017_interface_compatibility_and_standards",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_018_human_interaction_and_role_models",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_019_encryption_concepts"
+          ],
+          "Design Principle": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism"
+          ]
+        }
+      },
+      "layout": {
+        "direction": "LEFT_TO_RIGHT",
+        "preserve_source_order": true,
+        "semantic_parity": false,
+        "ordering_parity": true,
+        "visual_parity": "automatic_approximation"
+      }
+    },
+    {
+      "source_view_id": "figure_6_design_principles_to_features",
+      "title": "Design principles and blockchain design features",
+      "view_type": "paper_figure",
+      "source_reference": {
+        "type": "paper_figure",
+        "label": "Figure 6",
+        "page": 8,
+        "caption": "Design features and their consideration in a blockchain-based instantiation using Solidity.",
+        "validation_status": "unreviewed",
+        "validation_notes": "Complete DP1-DP6 and DF1.1-DF6.2 mapping transcribed from the cited figure; prototype screenshots and code fragments remain presentation annotations rather than canonical concepts.",
+        "reviewed_by": null,
+        "reviewed_at": null,
+        "author_verification": null
+      },
+      "layers": [
+        {
+          "concept_type": "Design Principle",
+          "node_ids": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism"
+          ]
+        },
+        {
+          "concept_type": "Design Feature",
+          "node_ids": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information"
+          ]
+        }
+      ],
+      "edge_ids": [
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_054",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_055",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_057",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_058",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_060",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_061",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_062",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_064",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_065",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_067",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_068",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_069",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_071",
+        "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:rel_072"
+      ],
+      "ordering": {
+        "layer_order": [
+          "Design Principle",
+          "Design Feature"
+        ],
+        "node_order": {
+          "Design Principle": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_002_signaling_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_004_incentive_mechanisms",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_005_screening_functionality",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism"
+          ],
+          "Design Feature": [
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_002_distributing_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_003_creating_an_identity",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_004_distributing_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_006_configuring_permissions",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_007_prevention_of_fraud",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_008_enforcing_rewards_and_incentive",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_009_traceability_of_rewards_and_incentives",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_010_permitted_access_tender_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_011_permitted_access_identity_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_012_permitted_access_reputation_information",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+            "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_014_distributing_assessment_information"
+          ]
+        }
+      },
+      "layout": {
+        "direction": "LEFT_TO_RIGHT",
+        "preserve_source_order": true,
+        "semantic_parity": false,
+        "ordering_parity": true,
+        "visual_parity": "automatic_approximation"
+      }
+    }
+  ],
   "nodes": [
     {
       "id": "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype",
@@ -859,5 +1094,24 @@
       "predicate": "contributes_to"
     }
   ],
-  "recommended_paths": []
+  "recommended_paths": [
+    [
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_001_creation_and_management_of_tender",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_001_signaling_tender_information",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_001_creating_a_tender",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype"
+    ],
+    [
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_006_intermediate_connection",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_003_authority_and_fairness",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_005_ensuring_authorized_access",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype"
+    ],
+    [
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dr_011_serious_rating",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:dp_006_reputation_mechanism",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:df_013_creating_individual_assessment",
+      "TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:art_001_blockchain_based_capacity_exchange_prototype"
+    ]
+  ]
 }

@@ -629,5 +629,20 @@
       "predicate": "instantiated_by"
     }
   ],
-  "recommended_paths": []
+  "recommended_paths": [
+    [
+      "NIL_NFT_MARKETPLACE_2026:prob_001_nil_fairness_inclusiveness_problem",
+      "NIL_NFT_MARKETPLACE_2026:dr_001_inclusiveness",
+      "NIL_NFT_MARKETPLACE_2026:dp_001_plausible_events",
+      "NIL_NFT_MARKETPLACE_2026:df_001_random_minting",
+      "NIL_NFT_MARKETPLACE_2026:art_001_fair_inclusive_nil_nft_marketplace"
+    ],
+    [
+      "NIL_NFT_MARKETPLACE_2026:prob_001_nil_fairness_inclusiveness_problem",
+      "NIL_NFT_MARKETPLACE_2026:dr_002_meritocratic_allocation",
+      "NIL_NFT_MARKETPLACE_2026:dp_002_market_royalties",
+      "NIL_NFT_MARKETPLACE_2026:df_002_market_exchanges",
+      "NIL_NFT_MARKETPLACE_2026:art_001_fair_inclusive_nil_nft_marketplace"
+    ]
+  ]
 }

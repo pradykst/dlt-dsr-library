@@ -674,5 +674,26 @@
       "predicate": "contributes_to"
     }
   ],
-  "recommended_paths": []
+  "recommended_paths": [
+    [
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_001_incentives",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system"
+    ],
+    [
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_002_flexibility",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_001_tokenization",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_001_token_based_peer_review_incentive_system"
+    ],
+    [
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_002_immutability",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts"
+    ],
+    [
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:dp_003_trust",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:df_003_decentralization",
+      "PEER_REVIEW_TOKEN_INCENTIVES_2025:art_003_polygon_token_smart_contracts"
+    ]
+  ]
 }

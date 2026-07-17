@@ -625,3 +625,27 @@ The later source-view pass retains the normalization checkpoint above and adds o
 - Structural validation does not elevate human review: all three production source views remain unreviewed.
 
 The exact inventories and remaining transcription gaps are recorded in docs/OKF_SOURCE_VIEW_AUDIT.md.
+
+## Complete nine-paper source-view curation addendum
+
+The 2026-07-16 completion pass re-inspected all nine source PDFs and finalized an explicit Outcome A or Outcome B for every runtime bundle. It preserves the schema-normalization verdict above.
+
+| Measure | Before completion pass | After completion pass | Change |
+|---|---:|---:|---:|
+| Canonical concepts | 351 | 351 | 0 |
+| Canonical relations | 577 | 577 | 0 |
+| Evidence records | 305 | 306 | +1 |
+| Graph nodes | 338 | 338 | 0 |
+| Graph edges | 574 | 574 | 0 |
+| Runtime exact source views | 3 | 8 | +5 |
+| Explicit recommended paths | 8 | 21 | +13 |
+
+- The only new evidence record is `TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024:ev_041_figure_3_requirement_principle_mapping`, which records the complete Figure 3 node/arrow inventory. The 31 pre-existing Figure 3 relations now reference it.
+- No relation was added, removed, reversed, or assigned a new endpoint or predicate in this completion pass.
+- Sixty-nine pre-existing source-visible relations changed provenance from `inferred` to `explicit-in-artifact`: HIE 13, Short End 11, and Trust Capacity 45.
+- Five exact runtime source views were added: HIE Figure 3, Short End Figure 1, Short End Table 3, Trust Figure 3, and Trust Figure 6. The three existing views were revalidated against their PDFs.
+- Integrated ISDM, Newsvendor, and SSI/KYC retain zero exact source views because an exact transcription would require noncanonical grouping, actor, agent, lifeline, or message concepts and/or relations not present in the canonical graph. Their design claims remain available through Recommended Flow, Full Relations, concepts, evidence, and context metadata.
+- Every paper now has at least one explicit stored Recommended Flow. These paths select existing relations only and do not claim source-figure parity.
+- No substantive DSR claim was removed or weakened. All source-view semantic statuses remain `unreviewed` pending named human review.
+
+The final nine-paper inventories and decisions are in `docs/OKF_SOURCE_VIEW_AUDIT.md`.

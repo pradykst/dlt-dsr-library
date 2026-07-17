@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { knowledgeEdges, knowledgeNodes } from "../../data/knowledge-base.ts";
 import { getWorkbenchFlowGraph } from "./workbench-adapter.ts";
 import { parseOkfLibrary } from "./parser.ts";
 import type { OkfConcept, OkfGraphSourceReference, OkfKnowledgeBase, OkfRelation } from "./schema.ts";
@@ -49,7 +48,16 @@ export type FlowValidationReport = {
   summary: { papers: number; passed: number; manual_review: number; failed: number; errors: number; warnings: number };
   papers: PaperFlowValidation[];
 };
-export type ValidateOkfFlowsOptions = { knowledgeBase?: OkfKnowledgeBase; okfRoot?: string };
+export type LegacyFlowComparisonSource = {
+  paperIds: Readonly<Record<string, string>>;
+  nodes: ReadonlyArray<{ id: string; label: string; type: string }>;
+  edges: ReadonlyArray<{ source: string; target: string; type: string; paperIds?: string[] }>;
+};
+export type ValidateOkfFlowsOptions = {
+  knowledgeBase?: OkfKnowledgeBase;
+  okfRoot?: string;
+  legacyComparison?: LegacyFlowComparisonSource;
+};
 
 type RawGraphNode = { id?: unknown; type?: unknown; title?: unknown };
 type RawGraphEdge = { id?: unknown; source?: unknown; target?: unknown; predicate?: unknown };
@@ -60,15 +68,6 @@ type RawGraph = {
 
 const allowedGraphRootKeys = new Set(["schema_version", "paper_id", "title", "source_reference", "source_views", "nodes", "edges", "recommended_paths"]);
 const canonicalTypeSet = new Set<string>(canonicalFlowTypes);
-const legacyPaperIds: Record<string, string> = {
-  BLOCKCHAIN_IOT_SDPS_2019: "paper-iot-sdps",
-  HIE_CONSENT_SELF_MANAGEMENT_BLOCKCHAIN_2023: "paper-consent-hie",
-  NIL_NFT_MARKETPLACE_2026: "paper-nil-marketplace",
-  PEER_REVIEW_TOKEN_INCENTIVES_2025: "paper-peer-review-token",
-  SHORT_END_STICK_2025: "paper-opportunism",
-  SSI_KYC_FRAMEWORK_2022: "paper-ssi-kyc",
-  TRUST_CAPACITY_EXCHANGE_BLOCKCHAIN_2024: "paper-trust-capacity"
-};
 const legacyNodeTypeToCanonical: Record<string, CanonicalFlowType | undefined> = {
   problem: "Problem", requirement: "Design Requirement", principle: "Design Principle",
   feature: "Design Feature", artifact: "Artifact", evaluation: "Evaluation"
@@ -188,7 +187,7 @@ export async function validateOkfFlows(options: ValidateOkfFlowsOptions = {}): P
       addIssue(issues, "WORKBENCH_PROJECTION_ERROR", "error", `Workbench projection failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    const legacy = compareLegacyFlow({ paperId: paper.paper_id, paperDir, paperConcepts, paperRelations });
+    const legacy = compareLegacyFlow({ paperId: paper.paper_id, paperDir, paperConcepts, paperRelations, legacyComparison: options.legacyComparison });
     if (legacy.source === "none") addIssue(issues, "LEGACY_SOURCE_UNAVAILABLE", "warning", "No deterministic legacy static-flow source is mapped for this paper.");
     else {
       if (legacy.unresolved_aliases.length) addIssue(issues, "LEGACY_ALIAS_UNRESOLVED", "warning", `${legacy.unresolved_aliases.length} legacy node alias(es) are unresolved.`, legacy.unresolved_aliases);
@@ -401,13 +400,14 @@ function findFocusedRpfChains(nodes: RawGraphNode[], edges: RawGraphEdge[], type
   return left.flatMap((a) => right.filter((b) => b.source === a.target).map((b) => ({ requirement: a.source, principle: a.target, feature: b.target, relation_ids: [a.id, b.id] })))
     .sort((a, b) => `${a.requirement}|${a.principle}|${a.feature}`.localeCompare(`${b.requirement}|${b.principle}|${b.feature}`));
 }
-function compareLegacyFlow(input: { paperId: string; paperDir: string; paperConcepts: OkfConcept[]; paperRelations: OkfRelation[] }): LegacyFlowComparison {
-  const legacyPaperId = legacyPaperIds[input.paperId];
-  if (!legacyPaperId) return emptyLegacyComparison();
+function compareLegacyFlow(input: { paperId: string; paperDir: string; paperConcepts: OkfConcept[]; paperRelations: OkfRelation[]; legacyComparison?: LegacyFlowComparisonSource }): LegacyFlowComparison {
+  const legacyComparison = input.legacyComparison;
+  const legacyPaperId = legacyComparison?.paperIds[input.paperId];
+  if (!legacyComparison || !legacyPaperId) return emptyLegacyComparison();
   const aliases = readExplicitAliases(path.join(input.paperDir, "aliases.yaml"), input.paperId);
-  const relevantLegacyEdges = knowledgeEdges.filter((edge) => edge.paperIds?.includes(legacyPaperId));
+  const relevantLegacyEdges = legacyComparison.edges.filter((edge) => edge.paperIds?.includes(legacyPaperId));
   const legacyNodeIds = new Set(relevantLegacyEdges.flatMap((edge) => [edge.source, edge.target]));
-  const legacyNodes = knowledgeNodes.filter((node) => legacyNodeIds.has(node.id) && legacyNodeTypeToCanonical[node.type])
+  const legacyNodes = legacyComparison.nodes.filter((node) => legacyNodeIds.has(node.id) && legacyNodeTypeToCanonical[node.type])
     .sort((left, right) => left.id.localeCompare(right.id));
   const matchedNodes: LegacyNodeMatch[] = [];
   const unresolvedAliases: string[] = [];
