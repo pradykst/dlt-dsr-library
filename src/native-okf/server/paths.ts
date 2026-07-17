@@ -61,13 +61,18 @@ export function normalizeBundleRelativePath(inputPath: string): string {
 export function resolveOkfBundleRoot(
   options: LoadOkfBundleOptions = {},
 ): string {
-  const cwd = path.resolve(options.cwd ?? process.cwd());
+  const cwd = path.resolve(
+    /* turbopackIgnore: true */ options.cwd ?? process.cwd(),
+  );
   const configuredPath =
     options.bundlePath ??
     process.env.OKF_BUNDLE_PATH?.trim() ??
     DEFAULT_OKF_BUNDLE_PATH;
 
-  return path.resolve(cwd, configuredPath || DEFAULT_OKF_BUNDLE_PATH);
+  return path.resolve(
+    /* turbopackIgnore: true */ cwd,
+    configuredPath || DEFAULT_OKF_BUNDLE_PATH,
+  );
 }
 
 export function isPathWithinBundle(

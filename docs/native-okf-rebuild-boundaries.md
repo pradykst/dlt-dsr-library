@@ -39,3 +39,7 @@ Environment files and files containing secrets must never be read.
 - No legacy file is deleted, renamed, or refactored during this phase.
 - No commit, merge, push, reset, rebase, stash, or branch switch occurs without explicit approval.
 - Phase 2 concerns—including UI, retrieval, OpenAI, chat, diagrams, Supabase, and migration—remain out of scope.
+
+## Current UI-only phase
+
+The later native Workbench request supersedes only the earlier UI exclusion. It authorizes isolated routes and components under the native namespace; retrieval, OpenAI, chatbot behavior, Supabase, migration, and legacy cleanup remain out of scope.

@@ -56,7 +56,7 @@ async function readUtf8Markdown(
 ): Promise<string | undefined> {
   let bytes: Uint8Array;
   try {
-    bytes = await readFile(absolutePath);
+    bytes = await readFile(/* turbopackIgnore: true */ absolutePath);
   } catch (error) {
     const detail = error instanceof Error ? ` ${error.message}` : "";
     fatalErrors.push(
@@ -137,7 +137,7 @@ async function discoverMarkdownFiles(
   fatalErrors: OkfValidationIssue[],
 ): Promise<string[]> {
   try {
-    const rootStat = await stat(rootPath);
+    const rootStat = await stat(/* turbopackIgnore: true */ rootPath);
     if (!rootStat.isDirectory()) {
       fatalErrors.push(
         fatalIssue(
@@ -150,7 +150,7 @@ async function discoverMarkdownFiles(
     }
 
     const files = await fastGlob("**/*.md", {
-      cwd: rootPath,
+      cwd: /* turbopackIgnore: true */ rootPath,
       absolute: false,
       onlyFiles: true,
       unique: true,

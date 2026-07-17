@@ -18,7 +18,8 @@
     "smoke:okf-query": "node --experimental-strip-types scripts/smoke-okf-query.ts",
     "okf:validate:text": "node --experimental-strip-types scripts/validate-okf-text.ts",
     "test:text-hygiene": "node --experimental-strip-types tests/text-hygiene.test.ts",
-    "test:native-okf": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/parser.test.ts src/native-okf/tests/graph.test.ts src/native-okf/tests/validation.test.ts src/native-okf/tests/repository.test.ts"
+    "test:native-okf": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/parser.test.ts src/native-okf/tests/graph.test.ts src/native-okf/tests/validation.test.ts src/native-okf/tests/repository.test.ts",
+    "test:native-okf:ui": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/workbench.test.ts src/native-okf/tests/presentation.test.ts"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
@@ -36,8 +37,10 @@
     "pdfjs-dist": "^5.7.284",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
     "reactflow": "^11.11.4",
     "recharts": "^2.13.3",
+    "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "server-only": "^0.0.1",
     "unified": "^11.0.5",

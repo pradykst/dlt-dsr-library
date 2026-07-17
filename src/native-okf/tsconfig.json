@@ -5,6 +5,12 @@
     "plugins": [],
     "types": ["node"]
   },
-  "include": ["server/**/*.ts", "tests/**/*.ts"],
+  "include": [
+    "server/**/*.ts",
+    "shared/**/*.ts",
+    "components/**/*.tsx",
+    "tests/**/*.ts",
+    "../../app/native-okf/**/*.tsx"
+  ],
   "exclude": []
 }
