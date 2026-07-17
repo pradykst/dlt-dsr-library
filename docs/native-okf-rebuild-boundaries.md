@@ -47,3 +47,13 @@ The later native Workbench request supersedes only the earlier UI exclusion. It 
 ## Current local retrieval-only phase
 
 The later local-retrieval request supersedes only the earlier retrieval exclusion. It authorizes lexical search, graph-expanded retrieval, corpus overview generation, and development diagnostics within the native namespace. OpenAI, embeddings, vector databases, answer generation, chatbot behavior, intent routing, Supabase, migration, and legacy cleanup remain out of scope.
+
+## Current grounded-chat-only phase
+
+The later native-chat request supersedes only the earlier OpenAI, chatbot, and
+diagram exclusions. It authorizes a central server-only OpenAI Responses API
+integration, deterministic native-retrieval context packaging, validated source
+citations, grounded structured diagrams, `/api/native-okf/chat`, and the isolated
+`/native-okf/chat` interface. It does not authorize legacy chatbot, AnswerPlan,
+deterministic composer, intent-routing, generated-flow, vector RAG, Supabase
+conversation, persistence, migration, or legacy-cleanup work.

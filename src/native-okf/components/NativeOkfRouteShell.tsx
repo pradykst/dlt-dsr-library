@@ -33,13 +33,12 @@ export function NativeOkfRouteShell({ children }: { children: ReactNode }) {
             >
               Papers
             </Link>
-            <span
-              aria-disabled="true"
-              title="Chat is intentionally disabled in this UI-only phase"
-              className="cursor-not-allowed rounded-lg px-3 py-2 font-medium text-slate-500"
+            <Link
+              href={`${NATIVE_OKF_ROOT}/chat`}
+              className="rounded-lg px-3 py-2 font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
             >
-              Chat <span className="text-[10px] uppercase tracking-wider">later</span>
-            </span>
+              Chat
+            </Link>
           </nav>
         </div>
       </header>

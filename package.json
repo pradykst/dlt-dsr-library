@@ -20,7 +20,9 @@
     "test:text-hygiene": "node --experimental-strip-types tests/text-hygiene.test.ts",
     "test:native-okf": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/parser.test.ts src/native-okf/tests/graph.test.ts src/native-okf/tests/validation.test.ts src/native-okf/tests/repository.test.ts",
     "test:native-okf:ui": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/workbench.test.ts src/native-okf/tests/presentation.test.ts",
-    "test:native-okf:retrieval": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/search.test.ts src/native-okf/tests/retrieval.test.ts"
+    "test:native-okf:retrieval": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/search.test.ts src/native-okf/tests/retrieval.test.ts",
+    "test:native-okf:chat": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/chat.test.ts src/native-okf/tests/chat-isolation.test.ts src/native-okf/tests/diagram.test.ts",
+    "smoke:native-okf:chat": "node --conditions=react-server --experimental-strip-types src/native-okf/tests/chat-live-smoke.ts"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
@@ -35,6 +37,7 @@
     "minisearch": "^7.2.0",
     "mixpanel-browser": "^2.80.0",
     "next": "^16.2.6",
+    "openai": "^6.48.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.7.284",
     "react": "^18.3.1",
