@@ -43,3 +43,7 @@ Environment files and files containing secrets must never be read.
 ## Current UI-only phase
 
 The later native Workbench request supersedes only the earlier UI exclusion. It authorizes isolated routes and components under the native namespace; retrieval, OpenAI, chatbot behavior, Supabase, migration, and legacy cleanup remain out of scope.
+
+## Current local retrieval-only phase
+
+The later local-retrieval request supersedes only the earlier retrieval exclusion. It authorizes lexical search, graph-expanded retrieval, corpus overview generation, and development diagnostics within the native namespace. OpenAI, embeddings, vector databases, answer generation, chatbot behavior, intent routing, Supabase, migration, and legacy cleanup remain out of scope.

@@ -10,7 +10,8 @@
     "shared/**/*.ts",
     "components/**/*.tsx",
     "tests/**/*.ts",
-    "../../app/native-okf/**/*.tsx"
+    "../../app/native-okf/**/*.tsx",
+    "../../app/api/native-okf/**/*.ts"
   ],
   "exclude": []
 }
