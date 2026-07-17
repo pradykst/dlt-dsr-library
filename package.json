@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint .",
-    "okf:validate": "node --experimental-strip-types scripts/okf-validate.ts",
+    "okf:validate": "node --conditions=react-server --experimental-strip-types src/native-okf/server/validate-cli.ts",
     "okf:validate:source-views": "node --experimental-strip-types scripts/validate-okf-source-views.ts",
     "okf:audit:source-views": "node --experimental-strip-types scripts/audit-okf-source-views.ts",
     "okf:validate:strict": "node --experimental-strip-types scripts/okf-validate.ts --strict",
@@ -17,7 +17,8 @@
     "test:llm": "node --experimental-strip-types scripts/test-llm.ts",
     "smoke:okf-query": "node --experimental-strip-types scripts/smoke-okf-query.ts",
     "okf:validate:text": "node --experimental-strip-types scripts/validate-okf-text.ts",
-    "test:text-hygiene": "node --experimental-strip-types tests/text-hygiene.test.ts"
+    "test:text-hygiene": "node --experimental-strip-types tests/text-hygiene.test.ts",
+    "test:native-okf": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/parser.test.ts src/native-okf/tests/graph.test.ts src/native-okf/tests/validation.test.ts src/native-okf/tests/repository.test.ts"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
@@ -25,6 +26,8 @@
     "clsx": "^2.1.1",
     "d3-sankey": "^0.12.3",
     "elkjs": "^0.11.1",
+    "fast-glob": "^3.3.3",
+    "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.1",
     "lucide-react": "^0.468.0",
     "mixpanel-browser": "^2.80.0",
@@ -35,6 +38,10 @@
     "react-dom": "^18.3.1",
     "reactflow": "^11.11.4",
     "recharts": "^2.13.3",
+    "remark-parse": "^11.0.0",
+    "server-only": "^0.0.1",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

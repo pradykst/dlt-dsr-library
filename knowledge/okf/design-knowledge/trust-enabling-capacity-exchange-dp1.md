@@ -1,0 +1,28 @@
+---
+type: design-principle
+title: "DP1 - Signaling of tender-relevant information"
+description: "Provide functions for customized creation of tenders and their linkage to a verified identity, revealing them simultaneously and in a distributed manner, to reduce uncertainty from vague specificat..."
+resource: "https://doi.org/10.1016/j.dss.2024.114182"
+source_paper: "Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity"
+label: "DP1"
+tags:
+  - trust-enabling-capacity-exchange
+  - design-principle
+  - interorganizational
+  - capacity-exchange
+  - trust
+  - platforms
+timestamp: '2026-07-16T00:00:00+00:00'
+---
+
+# Design principle DP1: Signaling of tender-relevant information
+
+Provide functions for customized creation of tenders and their linkage to a verified identity, revealing them simultaneously and in a distributed manner, to reduce uncertainty from vague specifications and missing identity assignments.
+
+## Source paper
+
+This design principle is proposed by [Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity](../papers/trust-enabling-capacity-exchange.md) (Nick Grosse, Frederik Moeller, Thorsten Schoormann, Michael Henke, 2024).
+
+# Citations
+[1] Nick Grosse, Frederik Moeller, Thorsten Schoormann, Michael Henke. Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity. Decision Support Systems 179 (2024) 114182. https://doi.org/10.1016/j.dss.2024.114182
+[2] Source document: designing trust enabling blockchain systems.pdf
