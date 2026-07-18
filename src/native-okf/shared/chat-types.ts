@@ -60,6 +60,15 @@ export interface GeneratedDiagram {
   edges: GeneratedDiagramEdge[];
 }
 
+export interface NativeOkfPersonalQuotaMetadata {
+  questionsRemainingToday: number;
+  diagramsRemainingToday: number;
+  questionsRemainingTotal: number;
+  diagramsRemainingTotal: number;
+  resetAtMs: number;
+  accessExpiresAtMs: number;
+}
+
 export interface NativeOkfChatResponse {
   answerMarkdown: string;
   sources: NativeOkfSourceCard[];
@@ -67,4 +76,5 @@ export interface NativeOkfChatResponse {
   insufficientContext: boolean;
   warnings?: string[];
   retrievalDebug?: unknown;
+  quota?: NativeOkfPersonalQuotaMetadata;
 }

@@ -23,11 +23,20 @@
     "test:native-okf:ui": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/workbench.test.ts src/native-okf/tests/presentation.test.ts",
     "test:native-okf:retrieval": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/search.test.ts src/native-okf/tests/retrieval.test.ts",
     "test:native-okf:chat": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/chat.test.ts src/native-okf/tests/chat-isolation.test.ts src/native-okf/tests/diagram.test.ts src/native-okf/tests/diagram-layout.test.ts src/native-okf/tests/diagram-presentation.test.ts src/native-okf/tests/diagram-viewport.test.ts src/native-okf/tests/phase5-evaluation.test.ts",
-    "smoke:native-okf:chat": "node --conditions=react-server --experimental-strip-types src/native-okf/tests/chat-live-smoke.ts"
+    "test:native-okf:access": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/access-store.test.ts src/native-okf/tests/access-usage.test.ts src/native-okf/tests/access-security.test.ts src/native-okf/tests/access-chat.test.ts src/native-okf/tests/access-cli.test.ts src/native-okf/tests/access-api.test.ts src/native-okf/tests/access-ui.test.ts",
+    "native-okf:invite:create": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts create",
+    "native-okf:invite:list": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts list",
+    "native-okf:invite:update": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts update",
+    "native-okf:invite:revoke": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts revoke",
+    "native-okf:usage:report": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts usage",
+    "native-okf:pause": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts pause",
+    "native-okf:resume": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts resume",
+    "native-okf:cleanup": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts cleanup"
   },
   "dependencies": {
     "@nivo/sankey": "^0.88.0",
     "@supabase/supabase-js": "^2.106.2",
+    "better-sqlite3": "^12.11.1",
     "clsx": "^2.1.1",
     "d3-sankey": "^0.12.3",
     "elkjs": "^0.11.1",
@@ -54,6 +63,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/d3-sankey": "^0.12.4",
     "@types/node": "^20.17.6",
     "@types/papaparse": "^5.5.2",

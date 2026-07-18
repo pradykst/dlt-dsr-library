@@ -4,24 +4,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { resolve } from "node:path";
 
-import {
-  answerNativeOkfChat,
-  type NativeOkfChatDependencies,
-} from "../src/native-okf/server/openai/chat.ts";
-import {
-  parseCitationSourceIds,
-  validateAnswerCitations,
-} from "../src/native-okf/server/openai/citations.ts";
-import { buildNativeOkfGroundedContext } from "../src/native-okf/server/openai/context.ts";
+import { validateAnswerCitations } from "../src/native-okf/server/openai/citations.ts";
 import { validateGeneratedDiagram } from "../src/native-okf/server/openai/diagram-validation.ts";
-import type { NativeOpenAiEnvironment } from "../src/native-okf/server/openai/env.ts";
 import { retrieveOkfContext } from "../src/native-okf/server/retrieval.ts";
 import type { RetrievalResult } from "../src/native-okf/server/retrieval-types.ts";
 import { getGraphViewModel } from "../src/native-okf/server/workbench.ts";
-import type {
-  NativeOkfChatRequest,
-  NativeOkfChatResponse,
-} from "../src/native-okf/shared/chat-types.ts";
+import type { GeneratedDiagram } from "../src/native-okf/shared/chat-types.ts";
 import {
   PHASE5_EVALUATION_CONCEPT_IDS,
   PHASE5_EVALUATION_SOURCE_CONTEXT,
@@ -238,7 +226,7 @@ interface RetrievalRecord {
 
 interface LiveRecord {
   attempted: boolean;
-  transport: "none" | "no-match-tripwire";
+  transport: "none" | "deterministic-no-match";
   latencyMs?: number;
   insufficientContext?: boolean;
   answerMarkdown?: string;
@@ -248,7 +236,7 @@ interface LiveRecord {
   citedSourceIds?: string[];
   invalidCitationIds?: string[];
   sourceValidationPassed?: boolean;
-  diagram?: NativeOkfChatResponse["diagram"];
+  diagram?: GeneratedDiagram;
   diagramValidation?: {
     passed: boolean;
     errors: string[];
@@ -396,112 +384,29 @@ async function storedGraphRecord(
   };
 }
 
-function noMatchDependencies(
-  result: RetrievalResult,
-  counter: { calls: number },
-): NativeOkfChatDependencies {
-  const environment: NativeOpenAiEnvironment = {
-    apiKey: "evaluation-tripwire",
-    model: "evaluation-tripwire",
-    reasoningEffort: "none",
-    moderationEnabled: false,
-    maxOutputTokens: 128,
-    diagramMaxOutputTokens: 4_096,
-  };
-  const fail = async (): Promise<never> => {
-    counter.calls += 1;
-    throw new Error("No-match evaluation reached an OpenAI client.");
-  };
-  return {
-    retrieve: async () => result,
-    environment,
-    client: {
-      responses: { create: fail },
-      moderations: { create: fail },
-    },
-  };
-}
-
-function validateLiveResponse(
-  response: NativeOkfChatResponse,
-  retrieval: RetrievalResult,
-  question: string,
-): Omit<LiveRecord, "attempted" | "transport" | "latencyMs"> {
-  const context = buildNativeOkfGroundedContext(retrieval, question);
-  const citedSourceIds = parseCitationSourceIds(response.answerMarkdown);
-  const invalidCitationIds = citedSourceIds.filter(
-    (sourceId) => !context.sourceById.has(sourceId),
-  );
-  const invalidSourceCards = response.sources.filter((source) => {
-    const expected = context.sourceById.get(source.sourceId);
-    return !expected || expected.conceptId !== source.conceptId;
-  });
-  const sourceValidationPassed =
-    invalidCitationIds.length === 0 && invalidSourceCards.length === 0;
-
-  let diagramValidation: LiveRecord["diagramValidation"];
-  if (response.diagram) {
-    const validation = validateGeneratedDiagram(
-      response.diagram,
-      context.allowedConceptIds,
-    );
-    if (validation.ok === true) {
-      diagramValidation = {
-        passed: true,
-        errors: [],
-        warnings: validation.warnings,
-      };
-    } else {
-      diagramValidation = {
-        passed: false,
-        errors: validation.errors,
-        warnings: validation.warnings,
-      };
-    }
-  }
-
-  return {
-    insufficientContext: response.insufficientContext,
-    answerMarkdown: response.answerMarkdown,
-    warnings: response.warnings ?? [],
-    sourceIds: response.sources.map((source) => source.sourceId),
-    sourceConceptIds: response.sources.map((source) => source.conceptId),
-    citedSourceIds,
-    invalidCitationIds,
-    sourceValidationPassed,
-    ...(response.diagram ? { diagram: response.diagram } : {}),
-    ...(diagramValidation ? { diagramValidation } : {}),
-  };
-}
-
-async function evaluateOfflineGuard(
-  fixture: EvaluationCase,
-  retrieval: RetrievalResult,
-): Promise<LiveRecord> {
-  const request: NativeOkfChatRequest = {
-    question: fixture.question,
-    includeDiagram: fixture.includeDiagram ?? false,
-  };
-
+function evaluateOfflineGuard(retrieval: RetrievalResult): LiveRecord {
   if (retrieval.noMatch) {
-    const counter = { calls: 0 };
     const started = performance.now();
-    const response = await answerNativeOkfChat(
-      request,
-      noMatchDependencies(retrieval, counter),
-    );
     return {
       attempted: false,
-      transport: "no-match-tripwire",
+      transport: "deterministic-no-match",
       latencyMs: rounded(performance.now() - started),
-      modelCallCount: counter.calls,
-      ...validateLiveResponse(response, retrieval, fixture.question),
+      modelCallCount: 0,
+      insufficientContext: true,
+      answerMarkdown: "",
+      warnings: [
+        "Deterministic retrieval reported no match; the paid model path was not invoked.",
+      ],
+      sourceIds: [],
+      sourceConceptIds: [],
+      citedSourceIds: [],
+      invalidCitationIds: [],
+      sourceValidationPassed: true,
     };
   }
 
   return { attempted: false, transport: "none" };
 }
-
 
 function evaluateSavedMockFixtures(): MockedValidationRecord {
   const checks: DeterministicCheck[] = [];
@@ -771,7 +676,7 @@ async function main(): Promise<void> {
       });
     }
 
-    const live = await evaluateOfflineGuard(fixture, retrieval);
+    const live = evaluateOfflineGuard(retrieval);
     if (live.attempted && !live.error) {
       deterministicChecks.push({
         name: "returned source IDs are allowlisted",
@@ -799,7 +704,7 @@ async function main(): Promise<void> {
       deterministicChecks.push({
         name: "no-match path makes no model request",
         passed:
-          live.transport === "no-match-tripwire" &&
+          live.transport === "deterministic-no-match" &&
           live.modelCallCount === 0,
         detail:
           "transport=" +

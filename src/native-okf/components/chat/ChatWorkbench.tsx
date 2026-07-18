@@ -3,6 +3,7 @@
 import {
   type FormEvent,
   type KeyboardEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -11,7 +12,16 @@ import type {
   NativeOkfChatHistoryMessage,
   NativeOkfChatRequest,
   NativeOkfChatResponse,
+  NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
+import {
+  formatNativeOkfQuotaTime,
+  nativeOkfChatErrorMessage,
+  nativeOkfDiagramQuotaExhausted,
+  readNativeOkfPersonalQuota,
+  readNativeOkfResearchAccess,
+  type ResearcherAccessState,
+} from "./access-ui.ts";
 import { ChatAnswer } from "./ChatAnswer.tsx";
 
 const MAX_QUESTION_LENGTH = 2_000;
@@ -49,34 +59,20 @@ function isChatResponse(value: unknown): value is NativeOkfChatResponse {
         typeof source.title === "string" &&
         typeof source.type === "string",
     ) &&
-    typeof value.insufficientContext === "boolean"
+    typeof value.insufficientContext === "boolean" &&
+    (value.quota === undefined ||
+      readNativeOkfPersonalQuota(value.quota) !== null)
   );
 }
 
-function responseError(payload: unknown, status: number): string {
-  if (isRecord(payload)) {
-    if (typeof payload.error === "string" && payload.error.length <= 500) {
-      return payload.error;
-    }
-    if (
-      isRecord(payload.error) &&
-      typeof payload.error.message === "string" &&
-      payload.error.message.length <= 500
-    ) {
-      return payload.error.message;
-    }
-    if (typeof payload.message === "string" && payload.message.length <= 500) {
-      return payload.message;
-    }
-  }
+class NativeOkfUiRequestError extends Error {
+  readonly status: number;
 
-  if (status === 503) {
-    return "The native OKF assistant is not configured on this server.";
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "NativeOkfUiRequestError";
+    this.status = status;
   }
-  if (status === 429) {
-    return "The assistant is temporarily busy. Please wait a moment and try again.";
-  }
-  return "The native OKF assistant could not complete this request.";
 }
 
 function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistoryMessage[] {
@@ -94,6 +90,12 @@ export function ChatWorkbench() {
   const [includeDiagram, setIncludeDiagram] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [quota, setQuota] =
+    useState<NativeOkfPersonalQuotaMetadata | null>(null);
+  const [accessState, setAccessState] =
+    useState<ResearcherAccessState>("checking");
+  const [diagramQuotaBlocked, setDiagramQuotaBlocked] = useState(false);
   const nextId = useRef(1);
   const requestController = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -106,6 +108,52 @@ export function ChatWorkbench() {
     !pending &&
     trimmedQuestion.length >= 3 &&
     question.length <= MAX_QUESTION_LENGTH;
+  const diagramQuotaExhausted =
+    diagramQuotaBlocked || nativeOkfDiagramQuotaExhausted(quota);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/native-okf/access", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          setAccessState(response.status === 503 ? "unavailable" : "required");
+          setQuota(null);
+          return;
+        }
+
+        const payload: unknown = await response.json().catch(() => undefined);
+        const access = readNativeOkfResearchAccess(payload);
+        if (!access) {
+          setAccessState("unavailable");
+          setQuota(null);
+          return;
+        }
+        setAccessState(access.state);
+        setQuota(access.quota);
+        const accessDiagramExhausted =
+          nativeOkfDiagramQuotaExhausted(access.quota);
+        setDiagramQuotaBlocked(accessDiagramExhausted);
+        if (accessDiagramExhausted) {
+          setIncludeDiagram(false);
+        }
+      } catch (caught) {
+        if (caught instanceof DOMException && caught.name === "AbortError") {
+          return;
+        }
+        setAccessState("unavailable");
+        setQuota(null);
+      }
+    })();
+
+    return () => controller.abort();
+  }, []);
 
   function makeId(prefix: "user" | "assistant"): string {
     const id = `${prefix}-${nextId.current}`;
@@ -133,6 +181,7 @@ export function ChatWorkbench() {
     setEntries((current) => [...current, userEntry]);
     setQuestion("");
     setError(null);
+    setErrorStatus(null);
     setPending(true);
 
     const controller = new AbortController();
@@ -149,7 +198,18 @@ export function ChatWorkbench() {
 
       const payload: unknown = await result.json().catch(() => undefined);
       if (!result.ok) {
-        throw new Error(responseError(payload, result.status));
+        if (
+          result.status === 429 &&
+          isRecord(payload) &&
+          payload.code === "diagram_quota_exhausted"
+        ) {
+          setDiagramQuotaBlocked(true);
+          setIncludeDiagram(false);
+        }
+        throw new NativeOkfUiRequestError(
+          nativeOkfChatErrorMessage(payload, result.status),
+          result.status,
+        );
       }
       if (!isChatResponse(payload)) {
         throw new Error("The assistant returned an invalid response.");
@@ -161,9 +221,32 @@ export function ChatWorkbench() {
         content: payload.answerMarkdown,
         response: payload,
       };
+      const nextQuota = readNativeOkfPersonalQuota(payload.quota);
+      if (nextQuota) {
+        setQuota(nextQuota);
+        setAccessState("authenticated");
+        const nextDiagramExhausted =
+          nativeOkfDiagramQuotaExhausted(nextQuota);
+        setDiagramQuotaBlocked(nextDiagramExhausted);
+        if (nextDiagramExhausted) {
+          setIncludeDiagram(false);
+        }
+      }
       setEntries((current) => [...current, assistantEntry]);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
+      if (caught instanceof NativeOkfUiRequestError) {
+        setErrorStatus(caught.status);
+        if (caught.status === 401) {
+          setAccessState("required");
+          setQuota(null);
+        } else if (caught.status === 403) {
+          setAccessState("expired");
+          setQuota(null);
+        } else if (caught.status === 503) {
+          setAccessState("unavailable");
+        }
+      }
       setError(
         caught instanceof Error
           ? caught.message
@@ -195,6 +278,7 @@ export function ChatWorkbench() {
     setEntries([]);
     setQuestion("");
     setError(null);
+    setErrorStatus(null);
     setPending(false);
     inputRef.current?.focus();
   }
@@ -214,7 +298,8 @@ export function ChatWorkbench() {
             </p>
             <p className="mt-1 text-xs leading-5 text-muted">
               Local retrieval supplies the only knowledge context. Conversation
-              history remains in this browser tab.
+              content remains in this browser tab; only access, quota, and safe
+              operational usage counters are persisted.
             </p>
           </div>
           <button
@@ -226,6 +311,64 @@ export function ChatWorkbench() {
             Clear conversation
           </button>
         </div>
+
+        {quota ? (
+          <div
+            aria-label="Personal native OKF allowance"
+            className="border-b border-line bg-blue/5 px-4 py-3 sm:px-5"
+          >
+            <dl className="grid gap-2 text-xs text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <dt className="font-semibold text-ink">Questions remaining</dt>
+                <dd>
+                  {quota.questionsRemainingToday} today /{" "}
+                  {quota.questionsRemainingTotal} total
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-ink">Diagrams remaining</dt>
+                <dd>
+                  {quota.diagramsRemainingToday} today /{" "}
+                  {quota.diagramsRemainingTotal} total
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-ink">Daily reset</dt>
+                <dd>{formatNativeOkfQuotaTime(quota.resetAtMs)}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-ink">Access expires</dt>
+                <dd>{formatNativeOkfQuotaTime(quota.accessExpiresAtMs)}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-slate-50 px-4 py-2.5 text-xs text-slate-700 sm:px-5">
+            <p>
+              {accessState === "checking"
+                ? "Checking researcher access..."
+                : accessState === "disabled"
+                  ? "Paid assistant access is disabled. The native library remains readable."
+                  : accessState === "unavailable"
+                    ? "Paid assistant access is temporarily unavailable."
+                    : accessState === "expired"
+                      ? "Researcher access has expired."
+                      : accessState === "revoked"
+                        ? "Researcher access was revoked."
+                        : "Researcher access is required for grounded model answers."}
+            </p>
+            {accessState === "required" ||
+            accessState === "expired" ||
+            accessState === "revoked" ? (
+              <a
+                href="/native-okf/access"
+                className="font-semibold text-blue underline underline-offset-4"
+              >
+                Enter access code
+              </a>
+            ) : null}
+          </div>
+        )}
 
         <div
           aria-busy={pending}
@@ -319,10 +462,21 @@ export function ChatWorkbench() {
                     Request failed
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-700">{error}</p>
+                  {errorStatus === 401 || errorStatus === 403 ? (
+                    <a
+                      href="/native-okf/access"
+                      className="mt-2 inline-block text-xs font-semibold text-rose-800 underline underline-offset-4"
+                    >
+                      Enter access code
+                    </a>
+                  ) : null}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setError(null)}
+                  onClick={() => {
+                    setError(null);
+                    setErrorStatus(null);
+                  }}
                   className="text-xs font-semibold text-rose-700 underline underline-offset-4"
                 >
                   Dismiss
@@ -357,12 +511,23 @@ export function ChatWorkbench() {
             />
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-2 pt-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+              <label
+                className={`inline-flex items-center gap-2 text-xs font-semibold text-slate-700 ${
+                  diagramQuotaExhausted
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={includeDiagram}
                   onChange={(event) => setIncludeDiagram(event.target.checked)}
-                  disabled={pending}
+                  disabled={pending || diagramQuotaExhausted}
+                  aria-describedby={
+                    diagramQuotaExhausted
+                      ? "native-okf-diagram-quota"
+                      : undefined
+                  }
                   className="h-4 w-4 rounded border-slate-300 text-blue focus:ring-blue"
                 />
                 Include grounded diagram
@@ -385,6 +550,14 @@ export function ChatWorkbench() {
                 </button>
               </div>
             </div>
+            {diagramQuotaExhausted ? (
+              <p
+                id="native-okf-diagram-quota"
+                className="px-2 pt-2 text-xs text-amber-800"
+              >
+                Diagram allowance is exhausted. Text-only questions remain available.
+              </p>
+            ) : null}
           </div>
 
           {invalidLength || overLimit ? (
@@ -395,8 +568,9 @@ export function ChatWorkbench() {
             </p>
           ) : (
             <p className="mt-2 text-xs leading-5 text-muted">
-              Press Enter to send or Shift+Enter for a new line. No account or
-              database history is used.
+              Press Enter to send or Shift+Enter for a new line. Questions,
+              answers, conversation history, and retrieved context are not
+              stored. Only access, quota, and safe usage counters are persisted.
             </p>
           )}
         </form>

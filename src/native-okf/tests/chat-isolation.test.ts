@@ -73,3 +73,32 @@ test("native client modules never import the OpenAI SDK or server-only OpenAI mo
   assert.ok(clientFiles.length > 0, "expected at least one native client module");
   assert.deepEqual(violations, []);
 });
+test("executable native evaluation tools cannot invoke an unprotected model client", async () => {
+  const cwd = process.cwd();
+  const paths = [
+    "scripts/evaluate-native-okf.ts",
+    "src/native-okf/tests/chat-live-smoke.ts",
+  ] as const;
+  const violations: string[] = [];
+
+  for (const displayPath of paths) {
+    const source = await readFile(resolve(cwd, displayPath), "utf8");
+    const forbiddenPatterns = [
+      /server\/openai\/(?:chat|client|env)/u,
+      /\banswerNativeOkfChat\b/u,
+      /\bgetOpenAiClient\b/u,
+      /\bOPENAI_API_KEY\b/u,
+      /\bfrom\s+["']openai(?:\/[^"']*)?["']/u,
+    ];
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(source)) {
+        violations.push(`${displayPath}: ${String(pattern)}`);
+      }
+    }
+  }
+
+  const smokeSource = await readFile(resolve(cwd, paths[1]), "utf8");
+  assert.match(smokeSource, /\/api\/native-okf\/access/u);
+  assert.match(smokeSource, /\/api\/native-okf\/chat/u);
+  assert.deepEqual(violations, []);
+});
