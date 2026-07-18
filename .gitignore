@@ -42,3 +42,6 @@ next-dev*.log
 run-next-dev.cmd
 
 .okf-cache/
+
+# local native OKF evaluation output
+/artifacts/native-okf-evaluation/

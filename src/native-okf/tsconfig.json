@@ -11,7 +11,8 @@
     "components/**/*.tsx",
     "tests/**/*.ts",
     "../../app/native-okf/**/*.tsx",
-    "../../app/api/native-okf/**/*.ts"
+    "../../app/api/native-okf/**/*.ts",
+    "../../scripts/evaluate-native-okf.ts"
   ],
   "exclude": []
 }

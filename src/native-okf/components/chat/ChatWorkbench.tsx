@@ -19,10 +19,10 @@ const MAX_CLIENT_HISTORY_CONTENT = 2_000;
 const HISTORY_LIMIT = 8;
 
 const STARTER_QUESTIONS = [
-  "What design principles address privacy?",
-  "Compare the trust mechanisms in the capacity-exchange and short-end-of-the-stick papers.",
-  "What design features implement source-to-sink certification?",
-  "Visualize reusable design knowledge for interoperable product identities across marketplaces.",
+  "Compare two papers and explain where their design knowledge differs.",
+  "Trace a design principle to the requirements and features linked to it.",
+  "Summarize the reusable design knowledge for a research problem.",
+  "Generate a grounded decision-support flow for a proposed artifact.",
 ] as const;
 
 interface ChatEntry {

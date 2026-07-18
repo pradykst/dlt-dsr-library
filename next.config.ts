@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/native-okf": ["./knowledge/okf/**/*.md"],
     "/native-okf/**": ["./knowledge/okf/**/*.md"],
+    "/api/native-okf/**": ["./knowledge/okf/**/*.md"],
   },
 };
 
