@@ -47,8 +47,12 @@ test("detail drawer starts closed and canvas controls preserve layout state", as
   assert.match(presentation, /Vertical/u);
   assert.match(presentation, /Fullscreen/u);
   assert.match(presentation, /document\.fullscreenElement/u);
-  assert.match(presentation, /READABLE_FIT_MIN_ZOOM = 0\.62/u);
-  assert.match(presentation, /minZoom=\{0\.5\}/u);
+  assert.match(presentation, /calculateDiagramViewport\(/u);
+  assert.match(presentation, /GENERATED_DIAGRAM_FIT_MIN_ZOOM/u);
+  assert.match(presentation, /minZoom=\{GENERATED_DIAGRAM_FIT_MIN_ZOOM\}/u);
+  assert.match(presentation, /maxZoom=\{MANUAL_MAX_ZOOM\}/u);
+  assert.doesNotMatch(presentation, /fitView\(/u);
+  assert.doesNotMatch(presentation, /<Controls\b/u);
   assert.doesNotMatch(presentation, /panOnDrag=\{false\}/u);
   assert.match(presentation, /\[diagram, orientation\]/u);
   assert.doesNotMatch(
@@ -56,6 +60,28 @@ test("detail drawer starts closed and canvas controls preserve layout state", as
     /\[diagram, orientation, selectedId/u,
     "node selection must not rerun ELK layout",
   );
+});
+
+test("fit actions measure the current canvas without interaction-driven refits", async () => {
+  const presentation = await componentSource("GeneratedDiagramPresentation.tsx");
+
+  assert.match(presentation, /canvasRef\.current\.getBoundingClientRect\(\)/u);
+  assert.match(
+    presentation,
+    /\{ width: canvasBounds\.width, height: canvasBounds\.height \}/u,
+  );
+  assert.match(presentation, /setViewport\(/u);
+  assert.equal(presentation.match(/setViewport\(/gu)?.length, 1);
+  assert.match(presentation, /\[fitDiagram, flowReady, layout\]/u);
+  assert.doesNotMatch(
+    presentation,
+    /\[fitDiagram, flowReady, layout, (?:selectedId|edgeLabelMode)/u,
+  );
+  assert.match(presentation, /onClose=\{\(\) => onSelect\(undefined\)\}/u);
+  assert.match(presentation, /onEdgeLabelModeChange=\{setEdgeLabelMode\}/u);
+  assert.match(presentation, /className="relative min-h-0 flex-1"/u);
+  assert.match(presentation, /Zoom out/u);
+  assert.match(presentation, /Zoom in/u);
 });
 
 test("fixed node geometry and label typography remain readable at bounded fit", async () => {

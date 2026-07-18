@@ -10,7 +10,6 @@ import {
 } from "react";
 import ReactFlow, {
   Background,
-  Controls,
   MarkerType,
   ReactFlowProvider,
   type Edge,
@@ -38,6 +37,12 @@ import {
   type DiagramOrientation,
   type GeneratedDiagramLayout,
 } from "./diagram-layout.ts";
+import {
+  calculateDiagramViewport,
+  GENERATED_DIAGRAM_FIT_MAX_ZOOM,
+  GENERATED_DIAGRAM_FIT_MIN_ZOOM,
+  GENERATED_DIAGRAM_FIT_SCREEN_PADDING,
+} from "./diagram-viewport.ts";
 
 const NODE_TYPES = {
   generatedDiagram: GeneratedDiagramNodeRenderer,
@@ -47,14 +52,7 @@ const EDGE_TYPES = {
   elkOrthogonal: ElkFlowEdge,
 } satisfies EdgeTypes;
 
-const READABLE_FIT_MIN_ZOOM = 0.62;
-
-const FIT_OPTIONS = {
-  padding: 0.12,
-  minZoom: READABLE_FIT_MIN_ZOOM,
-  maxZoom: 1.08,
-  duration: 0,
-} as const;
+const MANUAL_MAX_ZOOM = 1.7;
 
 type EdgeLabelMode = "decision" | "all" | "none";
 
@@ -156,6 +154,8 @@ function DiagramToolbar({
   onEdgeLabelModeChange,
   onFit,
   onToggleFullscreen,
+  onZoomIn,
+  onZoomOut,
 }: {
   orientation: DiagramOrientation;
   edgeLabelMode: EdgeLabelMode;
@@ -165,6 +165,8 @@ function DiagramToolbar({
   onEdgeLabelModeChange: (mode: EdgeLabelMode) => void;
   onFit: () => void;
   onToggleFullscreen: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
 }) {
   const buttonClass =
     "nodrag nopan rounded-md border border-line bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-blue/40 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none";
@@ -172,7 +174,7 @@ function DiagramToolbar({
   return (
     <div
       aria-label="Diagram controls"
-      className="absolute left-3 top-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1.5"
+      className="z-20 flex w-full flex-wrap gap-1.5 border-b border-line bg-white/95 px-3 py-2"
     >
       <button
         type="button"
@@ -183,6 +185,26 @@ function DiagramToolbar({
       >
         Fit diagram
       </button>
+      <div role="group" aria-label="Diagram zoom" className="flex rounded-md shadow-sm">
+        <button
+          type="button"
+          onClick={onZoomOut}
+          aria-label="Zoom out of diagram"
+          title="Zoom out"
+          className={`${buttonClass} rounded-r-none`}
+        >
+          Zoom out
+        </button>
+        <button
+          type="button"
+          onClick={onZoomIn}
+          aria-label="Zoom into diagram"
+          title="Zoom in"
+          className={`${buttonClass} rounded-l-none`}
+        >
+          Zoom in
+        </button>
+      </div>
       <div
         role="group"
         aria-label="Diagram orientation"
@@ -264,7 +286,12 @@ function GeneratedDiagramCanvas({
   onEdgeLabelModeChange: (mode: EdgeLabelMode) => void;
   onToggleFullscreen: () => void;
 }) {
-  const { fitView } = useReactFlow<GeneratedDiagramNodeData, ElkFlowEdgeData>();
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [flowReady, setFlowReady] = useState(false);
+  const { setViewport, zoomIn, zoomOut } = useReactFlow<
+    GeneratedDiagramNodeData,
+    ElkFlowEdgeData
+  >();
   const connectedIds = useMemo(
     () => relatedNodeIds(diagram, selectedId),
     [diagram, selectedId],
@@ -335,14 +362,51 @@ function GeneratedDiagramCanvas({
     [layout.edges, selectedId, edgeLabelMode],
   );
 
-  const fitDiagram = useCallback(() => {
-    fitView(FIT_OPTIONS);
-  }, [fitView]);
+  const fitDiagram = useCallback((): boolean => {
+    if (!flowReady || !canvasRef.current) return false;
+
+    const canvasBounds = canvasRef.current.getBoundingClientRect();
+    if (canvasBounds.width <= 0 || canvasBounds.height <= 0) return false;
+
+    const transform = calculateDiagramViewport(
+      layout.bounds,
+      { width: canvasBounds.width, height: canvasBounds.height },
+      GENERATED_DIAGRAM_FIT_SCREEN_PADDING,
+      {
+        minZoom: GENERATED_DIAGRAM_FIT_MIN_ZOOM,
+        maxZoom: GENERATED_DIAGRAM_FIT_MAX_ZOOM,
+      },
+    );
+
+    setViewport(
+      { x: transform.x, y: transform.y, zoom: transform.zoom },
+      { duration: 0 },
+    );
+    return true;
+  }, [flowReady, layout.bounds, setViewport]);
+
+  const zoomInDiagram = useCallback(() => {
+    zoomIn({ duration: 0 });
+  }, [zoomIn]);
+
+  const zoomOutDiagram = useCallback(() => {
+    zoomOut({ duration: 0 });
+  }, [zoomOut]);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(fitDiagram);
+    if (!flowReady) return;
+
+    let frame = 0;
+    let attempts = 0;
+    const fitAfterMount = () => {
+      if (fitDiagram() || attempts >= 3) return;
+      attempts += 1;
+      frame = window.requestAnimationFrame(fitAfterMount);
+    };
+
+    frame = window.requestAnimationFrame(fitAfterMount);
     return () => window.cancelAnimationFrame(frame);
-  }, [fitDiagram, layout]);
+  }, [fitDiagram, flowReady, layout]);
 
   const selectedNode = selectedId
     ? diagram.nodes.find((node) => node.id === selectedId)
@@ -350,34 +414,12 @@ function GeneratedDiagramCanvas({
 
   return (
     <div
-      className={`relative w-full overflow-hidden bg-paper research-grid ${
+      className={`relative flex w-full flex-col overflow-hidden bg-paper research-grid ${
         fullscreen
           ? "h-[calc(100vh-10rem)] min-h-[26rem]"
           : "h-[min(68vh,620px)] min-h-[30rem]"
       }`}
     >
-      <ReactFlow
-        aria-label="Generated decision-support flow"
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={NODE_TYPES}
-        edgeTypes={EDGE_TYPES}
-        minZoom={0.5}
-        maxZoom={1.7}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable
-        nodesFocusable
-        edgesFocusable={false}
-        zoomOnDoubleClick={false}
-        onNodeClick={(_event, node) => onSelect(node.id)}
-        onPaneClick={() => onSelect(undefined)}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="#d8d6cc" gap={28} size={1} />
-        <Controls position="bottom-left" showInteractive={false} />
-      </ReactFlow>
-
       <DiagramToolbar
         orientation={orientation}
         edgeLabelMode={edgeLabelMode}
@@ -386,24 +428,50 @@ function GeneratedDiagramCanvas({
         onOrientationChange={onOrientationChange}
         onEdgeLabelModeChange={onEdgeLabelModeChange}
         onFit={fitDiagram}
+        onZoomIn={zoomInDiagram}
+        onZoomOut={zoomOutDiagram}
         onToggleFullscreen={onToggleFullscreen}
       />
 
-      {layout.warning ? (
-        <p
-          role="status"
-          className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[70%] -translate-x-1/2 rounded-md border border-amber-300 bg-amber-50/95 px-3 py-2 text-center text-xs font-medium text-amber-900 shadow-sm"
+      <div ref={canvasRef} className="relative min-h-0 flex-1">
+        <ReactFlow
+          aria-label="Generated decision-support flow"
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
+          minZoom={GENERATED_DIAGRAM_FIT_MIN_ZOOM}
+          maxZoom={MANUAL_MAX_ZOOM}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          nodesFocusable
+          edgesFocusable={false}
+          zoomOnDoubleClick={false}
+          onInit={() => setFlowReady(true)}
+          onNodeClick={(_event, node) => onSelect(node.id)}
+          onPaneClick={() => onSelect(undefined)}
+          proOptions={{ hideAttribution: true }}
         >
-          {layout.warning}
-        </p>
-      ) : null}
+          <Background color="#d8d6cc" gap={28} size={1} />
+        </ReactFlow>
 
-      {selectedNode ? (
-        <GeneratedDiagramDetailsPanel
-          node={selectedNode}
-          onClose={() => onSelect(undefined)}
-        />
-      ) : null}
+        {layout.warning ? (
+          <p
+            role="status"
+            className="pointer-events-none absolute bottom-3 left-1/2 z-20 max-w-[70%] -translate-x-1/2 rounded-md border border-amber-300 bg-amber-50/95 px-3 py-2 text-center text-xs font-medium text-amber-900 shadow-sm"
+          >
+            {layout.warning}
+          </p>
+        ) : null}
+
+        {selectedNode ? (
+          <GeneratedDiagramDetailsPanel
+            node={selectedNode}
+            onClose={() => onSelect(undefined)}
+          />
+        ) : null}
+      </div>
 
       <span className="sr-only">
         Diagram bounds: {Math.round(layout.bounds.width)} by {Math.round(layout.bounds.height)}.
