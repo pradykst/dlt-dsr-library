@@ -31,6 +31,22 @@ function stableHash(value: string): number {
 
 /** Stable producer-type color assignment without imposing a closed type list. */
 export function colorsForGraphType(type: string): GraphTypeColors {
+  if (/^(?:design-goal|design-objective|meta-requirement|design-requirement)$/u.test(type)) {
+    return { background: "#f0ecf5", border: "#77658f", text: "#4f4163" };
+  }
+  if (type === "design-principle") {
+    return { background: "#eaf2eb", border: "#5f7f67", text: "#35523b" };
+  }
+  if (type === "design-feature") {
+    return { background: "#f8f0df", border: "#a77b37", text: "#694a19" };
+  }
+  if (type === "artifact") {
+    return { background: "#e8f0f7", border: "#4f6f91", text: "#29445d" };
+  }
+  if (type === "evaluation" || type === "outcome") {
+    return { background: "#eef0f2", border: "#77808a", text: "#454d55" };
+  }
+
   return TYPE_PALETTE[stableHash(type) % TYPE_PALETTE.length] ?? TYPE_PALETTE[0]!;
 }
 

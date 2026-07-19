@@ -28,4 +28,6 @@ Do not expose hidden reasoning or chain-of-thought.`;
 
 export const NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION = `A separate structured visual diagram will accompany this answer. Do not generate an ASCII-art flowchart, Mermaid, a Markdown code block, or another textual representation of the same graph. Do not repeat every visual node in prose. Give a concise explanation of the key decisions, clearly identify stored knowledge versus synthesis, and mention grounded limitations; let the structured diagram carry the detailed flow.`;
 
+export const NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION = `This request is configured for a text-only answer. Do not output Mermaid, an ASCII or Unicode diagram, Graphviz or DOT, a pseudo-flowchart, or any code-block diagram syntax. If the user asks for a visual flow while the grounded diagram option is disabled, provide a concise textual explanation and state that the grounded diagram option must be enabled to receive a visual flow.`;
+
 export const NATIVE_OKF_CITATION_REPAIR_INSTRUCTION = `Revise the draft answer only to add valid source citations in the exact [[S1]] form. Preserve the meaning and concise Markdown structure. Cite only source IDs present in the supplied OKF_SOURCE blocks. Remove unsupported claims rather than inventing support. Return only the revised answer.`;

@@ -46,5 +46,8 @@ run-next-dev.cmd
 # local native OKF evaluation output
 /artifacts/native-okf-evaluation/
 
+
+# generated native OKF semantic coverage audit data
+/artifacts/native-okf-coverage-audit/
 # local native OKF operational state (SQLite, journals, reservations)
 /runtime/

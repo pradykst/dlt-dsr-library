@@ -126,6 +126,29 @@ export interface GraphDto {
   truncated: boolean;
 }
 
+export interface PaperDesignMapColumnDto {
+  key: string;
+  type: string;
+  title: string;
+  nodeIds: string[];
+}
+
+export interface PaperDesignMapEdgeDto {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  label: "addresses" | "implements" | "supports" | "satisfies";
+  /** Number of raw links represented by this canonical semantic edge. */
+  sourceRelationshipCount: number;
+}
+
+export interface PaperDesignMapDto {
+  paperId: string;
+  columns: PaperDesignMapColumnDto[];
+  nodes: GraphNodeDto[];
+  edges: PaperDesignMapEdgeDto[];
+}
+
 export interface WorkbenchViewModel {
   kind: "paper" | "concept";
   concept: ConceptDetailDto;
@@ -134,6 +157,7 @@ export interface WorkbenchViewModel {
   incoming: RelationshipDto[];
   graphOneHop: GraphDto;
   graphTwoHops: GraphDto;
+  paperDesignMap?: PaperDesignMapDto;
 }
 
 export type PaperWorkbenchViewModel = WorkbenchViewModel;

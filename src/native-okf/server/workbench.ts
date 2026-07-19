@@ -1,4 +1,5 @@
 import "server-only";
+import { buildPaperDesignMapFromBundle } from "./paper-design-map.ts";
 
 import { getOkfBundle } from "./cache.ts";
 import {
@@ -410,6 +411,9 @@ async function buildWorkbenchViewModel(concept: OkfConcept): Promise<WorkbenchVi
   const visibleLinked = concept.type === "paper"
     ? linked.filter((item) => item.type !== "paper" && item.type !== "reference")
     : linked;
+  const paperDesignMap = concept.type === "paper"
+    ? buildPaperDesignMapFromBundle(bundle, concept)
+    : undefined;
 
   const outgoing = concept.outgoingLinks
     .map((link) => relationshipDto(link, "outgoing", bundle.conceptsById))
@@ -426,6 +430,7 @@ async function buildWorkbenchViewModel(concept: OkfConcept): Promise<WorkbenchVi
     incoming,
     graphOneHop,
     graphTwoHops,
+    ...(paperDesignMap ? { paperDesignMap } : {}),
   };
 }
 

@@ -8,6 +8,7 @@ import { EmptyState } from "./EmptyState.tsx";
 import { MarkdownDocument } from "./MarkdownDocument.tsx";
 import { MetadataGrid } from "./MetadataGrid.tsx";
 import { NativeOkfGraph } from "./NativeOkfGraph.tsx";
+import { PaperGraphViews } from "./PaperGraphViews.tsx";
 import { NativeOkfShell } from "./NativeOkfShell.tsx";
 import { RelationshipList } from "./RelationshipList.tsx";
 import { TypeBadge } from "./TypeBadge.tsx";
@@ -191,14 +192,27 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
         <WorkbenchSection
           id="graph"
           eyebrow="04"
-          title="Local graph"
-          description="One-hop by default, with an optional bounded two-hop view. Nodes are concept files and arrows are Markdown links."
+          title={isPaper ? "Paper design map" : "Local graph"}
+          description={
+            isPaper
+              ? "The default semantic design map canonicalizes stored design relationships; Raw links retains the complete technical Markdown-link view."
+              : "One-hop by default, with an optional bounded two-hop view. Nodes are concept files and arrows are Markdown links."
+          }
         >
-          <NativeOkfGraph
-            graphOneHop={view.graphOneHop}
-            graphTwoHops={view.graphTwoHops}
-            selectedId={concept.id}
-          />
+          {isPaper && view.paperDesignMap ? (
+            <PaperGraphViews
+              designMap={view.paperDesignMap}
+              graphOneHop={view.graphOneHop}
+              graphTwoHops={view.graphTwoHops}
+              selectedId={concept.id}
+            />
+          ) : (
+            <NativeOkfGraph
+              graphOneHop={view.graphOneHop}
+              graphTwoHops={view.graphTwoHops}
+              selectedId={concept.id}
+            />
+          )}
         </WorkbenchSection>
 
         <WorkbenchSection

@@ -441,6 +441,16 @@ Hardening:
 
 All blank values are intentional placeholders. Never place real secrets in the example file, source control, browser-visible configuration, logs, evaluation artifacts, or administrator responses.
 
+## Diagram fallback accounting
+
+If structured diagram generation fails after its bounded repair, the application may render a deterministic **Grounded source map** from connected, retrieved, allowlisted native OKF concepts and their actual Markdown relationships. The fallback contains no synthesis nodes and makes no additional model request.
+
+Quota and accounting remain tied to the paid work that actually occurred:
+
+- any answer, diagram, or repair model call is charged from its returned usage;
+- the diagram allowance follows the existing successful reservation and execution policy for the attempted paid diagram workflow;
+- building or rendering the deterministic stored-source fallback does not add another quota charge or token cost;
+- when no connected stored subgraph exists, the text answer and existing safe warning remain.
 ## Promotion decision
 
 Phase 6A application-owned access, quota, accounting, and hard cost controls are implemented and default to disabled. Activation still requires valid secrets, token prices, public-origin configuration, passing tests, and a supported persistent single-instance SQLite deployment. The evaluator remains on isolated native routes; this status does not authorize canonical promotion.

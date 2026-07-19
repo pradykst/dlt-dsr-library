@@ -15,6 +15,11 @@ import type {
   NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
 import {
+  applyManualDiagramToggle,
+  INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
+  reconcileDiagramIntentToggle,
+} from "../../shared/diagram-intent.ts";
+import {
   formatNativeOkfQuotaTime,
   nativeOkfChatErrorMessage,
   nativeOkfDiagramQuotaExhausted,
@@ -87,7 +92,9 @@ function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistory
 export function ChatWorkbench() {
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [question, setQuestion] = useState("");
-  const [includeDiagram, setIncludeDiagram] = useState(false);
+  const [diagramIntentToggle, setDiagramIntentToggle] = useState(
+    INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -110,6 +117,18 @@ export function ChatWorkbench() {
     question.length <= MAX_QUESTION_LENGTH;
   const diagramQuotaExhausted =
     diagramQuotaBlocked || nativeOkfDiagramQuotaExhausted(quota);
+  const includeDiagram = diagramIntentToggle.enabled;
+
+  function updateComposerQuestion(nextQuestion: string) {
+    setQuestion(nextQuestion);
+    setDiagramIntentToggle((current) =>
+      reconcileDiagramIntentToggle(
+        current,
+        nextQuestion,
+        !diagramQuotaExhausted,
+      ),
+    );
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -141,7 +160,11 @@ export function ChatWorkbench() {
           nativeOkfDiagramQuotaExhausted(access.quota);
         setDiagramQuotaBlocked(accessDiagramExhausted);
         if (accessDiagramExhausted) {
-          setIncludeDiagram(false);
+          setDiagramIntentToggle((current) => ({
+            ...current,
+            enabled: false,
+            autoEnabled: false,
+          }));
         }
       } catch (caught) {
         if (caught instanceof DOMException && caught.name === "AbortError") {
@@ -179,7 +202,7 @@ export function ChatWorkbench() {
     };
 
     setEntries((current) => [...current, userEntry]);
-    setQuestion("");
+    updateComposerQuestion("");
     setError(null);
     setErrorStatus(null);
     setPending(true);
@@ -204,7 +227,11 @@ export function ChatWorkbench() {
           payload.code === "diagram_quota_exhausted"
         ) {
           setDiagramQuotaBlocked(true);
-          setIncludeDiagram(false);
+          setDiagramIntentToggle((current) => ({
+            ...current,
+            enabled: false,
+            autoEnabled: false,
+          }));
         }
         throw new NativeOkfUiRequestError(
           nativeOkfChatErrorMessage(payload, result.status),
@@ -229,7 +256,11 @@ export function ChatWorkbench() {
           nativeOkfDiagramQuotaExhausted(nextQuota);
         setDiagramQuotaBlocked(nextDiagramExhausted);
         if (nextDiagramExhausted) {
-          setIncludeDiagram(false);
+          setDiagramIntentToggle((current) => ({
+            ...current,
+            enabled: false,
+            autoEnabled: false,
+          }));
         }
       }
       setEntries((current) => [...current, assistantEntry]);
@@ -252,7 +283,7 @@ export function ChatWorkbench() {
           ? caught.message
           : "The native OKF assistant could not complete this request.",
       );
-      setQuestion((current) => current || submittedQuestion);
+      updateComposerQuestion(submittedQuestion);
     } finally {
       if (requestController.current === controller) {
         requestController.current = null;
@@ -276,7 +307,7 @@ export function ChatWorkbench() {
     requestController.current?.abort();
     requestController.current = null;
     setEntries([]);
-    setQuestion("");
+    updateComposerQuestion("");
     setError(null);
     setErrorStatus(null);
     setPending(false);
@@ -284,7 +315,7 @@ export function ChatWorkbench() {
   }
 
   function selectStarter(questionText: string) {
-    setQuestion(questionText);
+    updateComposerQuestion(questionText);
     inputRef.current?.focus();
   }
 
@@ -501,7 +532,7 @@ export function ChatWorkbench() {
               ref={inputRef}
               id="native-okf-chat-question"
               value={question}
-              onChange={(event) => setQuestion(event.target.value)}
+              onChange={(event) => updateComposerQuestion(event.target.value)}
               onKeyDown={handleComposerKeyDown}
               rows={3}
               maxLength={MAX_QUESTION_LENGTH + 1}
@@ -521,7 +552,15 @@ export function ChatWorkbench() {
                 <input
                   type="checkbox"
                   checked={includeDiagram}
-                  onChange={(event) => setIncludeDiagram(event.target.checked)}
+                  onChange={(event) =>
+                    setDiagramIntentToggle((current) =>
+                      applyManualDiagramToggle(
+                        current,
+                        question,
+                        event.target.checked,
+                      ),
+                    )
+                  }
                   disabled={pending || diagramQuotaExhausted}
                   aria-describedby={
                     diagramQuotaExhausted
@@ -532,6 +571,12 @@ export function ChatWorkbench() {
                 />
                 Include grounded diagram
               </label>
+
+              {diagramIntentToggle.enabled && diagramIntentToggle.autoEnabled ? (
+                <span className="text-xs text-blue" role="status">
+                  Diagram enabled based on your request.
+                </span>
+              ) : null}
 
               <div className="flex items-center gap-3">
                 <span

@@ -7,11 +7,11 @@ import type {
   NativeOkfChatResponse,
   NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
+import { inferDiagramIntent } from "../../shared/diagram-intent.ts";
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
   answerNativeOkfChat,
-  questionRequestsDiagram,
   validateNativeOkfChatRequest,
   type NativeOkfChatDependencies,
 } from "../openai/chat.ts";
@@ -123,7 +123,7 @@ function includeDiagramFor(request: NativeOkfChatRequest): boolean {
   return (
     request.includeDiagram === true ||
     (request.includeDiagram === undefined &&
-      questionRequestsDiagram(request.question))
+      inferDiagramIntent(request.question))
   );
 }
 

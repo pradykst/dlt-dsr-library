@@ -8,6 +8,7 @@ import type {
   NativeOkfChatRequest,
   NativeOkfChatResponse,
 } from "../../shared/chat-types.ts";
+import { inferDiagramIntent } from "../../shared/diagram-intent.ts";
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
@@ -35,7 +36,9 @@ import {
   NATIVE_OKF_CITATION_REPAIR_INSTRUCTION,
   NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION,
   NATIVE_OKF_SYSTEM_PROMPT,
+  NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
+import { buildGroundedStoredSourceMap } from "./stored-source-map.ts";
 
 export const MAX_NATIVE_OKF_QUESTION_CHARACTERS = 2_000;
 export const MAX_NATIVE_OKF_HISTORY_MESSAGES = 8;
@@ -157,11 +160,6 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
   };
 }
 
-/** This helper decides only whether a diagram call is requested. */
-export function questionRequestsDiagram(question: string): boolean {
-  return /\b(?:diagram|graph|flow|architecture|visuali[sz]e|decision[\s-]+support[\s-]+flow)\b/iu
-    .test(question);
-}
 
 function responseRefused(response: Response): boolean {
   return response.output.some(
@@ -248,10 +246,10 @@ export async function answerNativeOkfChat(
   const request = validateNativeOkfChatRequest(input);
   const includeDiagram = request.includeDiagram === true ||
     (request.includeDiagram === undefined &&
-      questionRequestsDiagram(request.question));
+      inferDiagramIntent(request.question));
   const answerInstructions = includeDiagram
     ? `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION}`
-    : NATIVE_OKF_SYSTEM_PROMPT;
+    : `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION}`;
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const retrieval = await retrieve(request.question);
@@ -338,7 +336,19 @@ export async function answerNativeOkfChat(
     } catch {
       warnings.push("The diagram request could not be completed; the grounded text answer is still available.");
     }
+    if (!diagram) {
+      try {
+        diagram = await buildGroundedStoredSourceMap(retrieval);
+        if (diagram) {
+          warnings.push(
+            "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead.",
+          );
+        }
+      } catch {
+        // The existing safe text-only behavior remains the final fallback.
+      }
     if (diagram) {
+    }
       await moderateNativeOkfText(JSON.stringify(diagram), environment, client);
     }
   }

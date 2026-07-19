@@ -24,10 +24,11 @@ import type {
   GeneratedDiagramNode as DiagramNode,
 } from "../../shared/chat-types.ts";
 import { conceptHref } from "../../shared/links.ts";
+import { SemanticColumnHeadings } from "../SemanticColumnHeadings.tsx";
 import {
-  ElkFlowEdge,
-  type ElkFlowEdgeData,
-} from "./ElkFlowEdge.tsx";
+  StraightFlowEdge,
+  type StraightFlowEdgeData,
+} from "../StraightFlowEdge.tsx";
 import {
   GeneratedDiagramNodeRenderer,
   type GeneratedDiagramNodeData,
@@ -49,7 +50,7 @@ const NODE_TYPES = {
 } satisfies NodeTypes;
 
 const EDGE_TYPES = {
-  elkOrthogonal: ElkFlowEdge,
+  straight: StraightFlowEdge,
 } satisfies EdgeTypes;
 
 const MANUAL_MAX_ZOOM = 1.7;
@@ -290,7 +291,7 @@ function GeneratedDiagramCanvas({
   const [flowReady, setFlowReady] = useState(false);
   const { setViewport, zoomIn, zoomOut } = useReactFlow<
     GeneratedDiagramNodeData,
-    ElkFlowEdgeData
+    StraightFlowEdgeData
   >();
   const connectedIds = useMemo(
     () => relatedNodeIds(diagram, selectedId),
@@ -324,7 +325,7 @@ function GeneratedDiagramCanvas({
     [connectedIds, layout.nodes, orientation, selectedId],
   );
 
-  const edges = useMemo<Edge<ElkFlowEdgeData>[]>(
+  const edges = useMemo<Edge<StraightFlowEdgeData>[]>(
     () =>
       layout.edges.map((layoutEdge) => {
         const highlighted = Boolean(
@@ -336,7 +337,7 @@ function GeneratedDiagramCanvas({
           id: layoutEdge.id,
           source: layoutEdge.source,
           target: layoutEdge.target,
-          type: "elkOrthogonal",
+          type: "straight",
           data: {
             points: layoutEdge.points,
             label: layoutEdge.label,
@@ -454,6 +455,16 @@ function GeneratedDiagramCanvas({
           proOptions={{ hideAttribution: true }}
         >
           <Background color="#d8d6cc" gap={28} size={1} />
+          <SemanticColumnHeadings
+            orientation={orientation}
+            columns={layout.lanes.map((lane) => ({
+              key: lane.stage,
+              title: lane.label,
+              nodeIds: lane.nodeIds,
+              bounds: lane.bounds,
+              headingPosition: lane.headingPosition,
+            }))}
+          />
         </ReactFlow>
 
         {layout.warning ? (

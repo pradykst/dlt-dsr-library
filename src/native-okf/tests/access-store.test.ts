@@ -461,7 +461,7 @@ test("moderation-only release consumes no paid question or diagram quota", () =>
   assert.equal(quota.diagramsUsedTotal, 0);
 });
 
-test("diagram exhaustion still permits text-only reservations", () => {
+test("diagram quota is consumed only when includeDiagram is true", () => {
   const store = new MemoryNativeOkfOperationalStore();
   store.createInvitation(invitation());
   store.reservePaidRequest(reservation("r-diagram", { includeDiagram: true }));

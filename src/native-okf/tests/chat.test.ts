@@ -661,9 +661,10 @@ test("an uncited answer receives one bounded citation repair attempt only", asyn
   );
 });
 
-test("diagram requests suppress ASCII and Mermaid duplication only for diagram answers", async () => {
+test("diagram requests suppress textual diagram syntax on both answer paths", async () => {
   for (const includeDiagram of [true, false]) {
     const requests: Array<{ instructions?: unknown }> = [];
+    let diagramCalls = 0;
     const client = {
       responses: {
         create: async (request: { instructions?: unknown }) => {
@@ -676,25 +677,35 @@ test("diagram requests suppress ASCII and Mermaid duplication only for diagram a
 
     await answerNativeOkfChat(
       {
-        question: "Explain the grounded fixture paper",
+        question: "Generate a flow showing the grounded fixture paper",
         includeDiagram,
       },
       {
         retrieve: async () => retrievalFixture(),
         environment: CONFIG,
         client,
-        generateDiagram: async () => ({ warnings: [] }),
+        generateDiagram: async () => {
+          diagramCalls += 1;
+          return { warnings: [] };
+        },
       },
     );
 
     assert.equal(requests.length, 1);
+    assert.equal(diagramCalls, includeDiagram ? 1 : 0);
     const instructions = String(requests[0]?.instructions);
     if (includeDiagram) {
       assert.match(instructions, /ASCII-art flowchart/);
       assert.match(instructions, /Mermaid/);
       assert.match(instructions, /Do not repeat every visual node/);
     } else {
-      assert.doesNotMatch(instructions, /ASCII-art flowchart|Mermaid/);
+      assert.match(instructions, /text-only answer/);
+      assert.match(instructions, /Mermaid/);
+      assert.match(instructions, /ASCII or Unicode diagram/);
+      assert.match(instructions, /Graphviz or DOT/);
+      assert.match(instructions, /pseudo-flowchart/);
+      assert.match(instructions, /code-block diagram syntax/);
+      assert.match(instructions, /grounded diagram option must be enabled/);
     }
   }
 });
