@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { NATIVE_OKF_PUBLIC_ROUTES } from "@/src/native-okf/shared/routes";
+
 export default function NativeOkfNotFound() {
   return (
     <div className="mx-auto flex min-h-[55vh] max-w-3xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
@@ -13,7 +15,7 @@ export default function NativeOkfNotFound() {
         No concept document matches this bundle-relative path in the canonical native bundle.
       </p>
       <Link
-        href="/native-okf"
+        href={NATIVE_OKF_PUBLIC_ROUTES.library}
         className="mt-7 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
       >
         Return to the paper library

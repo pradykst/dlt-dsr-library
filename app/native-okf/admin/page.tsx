@@ -9,6 +9,7 @@ import {
   NATIVE_OKF_ADMIN_COOKIE,
   verifyAdminSessionCookie,
 } from "@/src/native-okf/server/access/sessions";
+import { NATIVE_OKF_PUBLIC_ROUTES } from "@/src/native-okf/shared/routes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,11 +29,11 @@ export default async function NativeOkfAdminPage() {
   try {
     config = readNativeOkfAccessRuntimeConfig();
   } catch {
-    redirect("/native-okf/admin/access");
+    redirect(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
   }
 
   if (!config.adminConfigured || !config.adminSessionSecret) {
-    redirect("/native-okf/admin/access");
+    redirect(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
   }
 
   const cookieStore = await cookies();
@@ -48,7 +49,7 @@ export default async function NativeOkfAdminPage() {
   }
 
   if (!authenticated) {
-    redirect("/native-okf/admin/access");
+    redirect(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
   }
 
   return (

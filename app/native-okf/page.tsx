@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
+
 import { PaperLibrary } from "@/src/native-okf/components/PaperLibrary";
 import { getLibraryViewModel } from "@/src/native-okf/server/workbench";
 
 export const runtime = "nodejs";
+export const metadata: Metadata = {
+  title: "Design knowledge library",
+  description:
+    "Browse papers and linked native design-knowledge concepts in the DSR Knowledge Library.",
+  alternates: { canonical: "/library" },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function NativeOkfLibraryPage() {

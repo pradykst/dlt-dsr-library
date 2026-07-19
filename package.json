@@ -27,6 +27,8 @@
     "test:native-okf:coverage": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/coverage-audit.test.ts",
     "test:native-okf:access": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/access-store.test.ts src/native-okf/tests/access-usage.test.ts src/native-okf/tests/access-security.test.ts src/native-okf/tests/access-chat.test.ts src/native-okf/tests/access-cli.test.ts src/native-okf/tests/access-api.test.ts src/native-okf/tests/access-ui.test.ts",
     "native-okf:invite:create": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts create",
+    "test:native-okf:release": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/release-shell.test.ts src/native-okf/tests/release-readiness.test.ts",
+    "native-okf:release:check": "node --conditions=react-server --experimental-strip-types src/native-okf/server/release-readiness-cli.ts",
     "native-okf:invite:list": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts list",
     "native-okf:invite:update": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts update",
     "native-okf:invite:revoke": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts revoke",

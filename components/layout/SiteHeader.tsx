@@ -1,21 +1,41 @@
 ﻿"use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { ClipboardCheck, Menu, Network, PanelsTopLeft, Sparkles, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { BookOpen, Home, KeyRound, Menu, MessageSquareText, Network, X } from "lucide-react";
+
+import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 
 const nav = [
-  { label: "Explore", href: "/explore" },
-  { label: "Patterns", href: "/patterns" },
-  { label: "Workbench", href: "/workbench", icon: PanelsTopLeft, isNew: true },
-  { label: "OKF Chat", href: "/okf-chat", icon: Network, isNew: true },
-  { label: "Feedback", href: "/desrist-evaluation", icon: ClipboardCheck, isNew: true },
-  { label: "Flow Builder", href: "/flow-builder" },
-  // Methodology route intentionally remains implemented but hidden from navigation for the conference demo.
+  { label: "Home", href: CANONICAL_ROUTES.home, icon: Home },
+  { label: "Library", href: CANONICAL_ROUTES.library, icon: BookOpen },
+  { label: "Grounded Chat", href: CANONICAL_ROUTES.chat, icon: MessageSquareText },
+  { label: "Evaluation Access", href: CANONICAL_ROUTES.access, icon: KeyRound },
 ];
+
+function isActiveRoute(pathname: string, href: string): boolean {
+  if (href === CANONICAL_ROUTES.home) return pathname === href;
+  if (href === CANONICAL_ROUTES.library) {
+    return pathname === href ||
+      pathname.startsWith("/papers/") ||
+      pathname.startsWith("/concepts/");
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/92 backdrop-blur">
@@ -25,55 +45,75 @@ export function SiteHeader() {
             <Network className="h-4 w-4 text-blue" />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold tracking-[0.16em] text-ink">DLT Design Library</span>
-            <span className="hidden text-xs text-muted sm:block">Reusable DSR grids and flows</span>
+            <span className="block truncate text-sm font-semibold tracking-[0.12em] text-ink">DSR Knowledge Library</span>
+            <span className="hidden text-xs text-muted lg:block">Reusable design knowledge and grounded research support</span>
           </span>
         </Link>
         
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 text-sm text-muted md:flex">
-          {nav.map(({ label, href, icon: Icon, isNew }) => (
-            <Link key={href} href={href} className="inline-flex shrink-0 items-center gap-1.5 border border-transparent px-3 py-2 transition hover:border-line hover:bg-white hover:text-ink">
-              {Icon && <Icon className="h-3.5 w-3.5" />}
-              <span className="leading-5">{label}</span>
-              {isNew && (
-                <sup className="-ml-1 inline-flex items-center gap-0.5 border border-blue/20 bg-blue/10 px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-[0.08em] text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
-                  <Sparkles className="h-2 w-2" />
-                  New
-                </sup>
-              )}
-            </Link>
-          ))}
+          {nav.map(({ label, href, icon: Icon }) => {
+            const active = isActiveRoute(pathname, href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`inline-flex shrink-0 items-center gap-1.5 border px-3 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 ${
+                  active
+                    ? "border-blue/25 bg-white text-ink"
+                    : "border-transparent hover:border-line hover:bg-white hover:text-ink"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="leading-5">{label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Mobile Toggle */}
-        <button type="button" className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink md:hidden transition hover:border-blue" onClick={() => setIsOpen(true)}>
-          <Menu className="h-5 w-5" />
+        <button
+          type="button"
+          className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink transition hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 md:hidden"
+          aria-label={isOpen ? "Close navigation" : "Open navigation"}
+          aria-controls="public-mobile-navigation"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {/* Mobile Nav */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 border-b border-line bg-paper shadow-2xl md:hidden">
+        <div id="public-mobile-navigation" className="absolute left-0 right-0 top-full z-50 border-b border-line bg-paper shadow-2xl md:hidden">
           <div className="flex h-12 items-center justify-between border-b border-line px-4">
             <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Navigation</span>
-            <button type="button" className="flex h-9 w-9 items-center justify-center border border-line bg-white text-ink transition hover:border-blue" onClick={() => setIsOpen(false)}>
+            <button type="button" aria-label="Close navigation" className="flex h-9 w-9 items-center justify-center border border-line bg-white text-ink transition hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue" onClick={() => setIsOpen(false)}>
               <X className="h-4 w-4" />
             </button>
           </div>
           <nav className="grid gap-1 p-3 text-sm text-muted">
-            {nav.map(({ label, href, icon: Icon, isNew }) => (
-              <Link key={href} href={href} onClick={() => setIsOpen(false)} className="flex items-center gap-2.5 border border-transparent px-3 py-2.5 transition hover:border-line hover:bg-white hover:text-ink">
-                {Icon && <Icon className="h-4 w-4" />}
-                <span className="leading-5">{label}</span>
-                {isNew && (
-                  <sup className="ml-auto inline-flex items-center gap-0.5 border border-blue/20 bg-blue/10 px-1 py-0.5 text-[8px] font-semibold uppercase leading-none tracking-[0.08em] text-blue shadow-[0_0_12px_rgba(79,111,145,0.28)]">
-                    <Sparkles className="h-2 w-2" />
-                    New
-                  </sup>
-                )}
-              </Link>
-            ))}
+            {nav.map(({ label, href, icon: Icon }) => {
+              const active = isActiveRoute(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-2.5 border px-3 py-2.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue ${
+                    active
+                      ? "border-blue/25 bg-white text-ink"
+                      : "border-transparent hover:border-line hover:bg-white hover:text-ink"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="leading-5">{label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
       )}

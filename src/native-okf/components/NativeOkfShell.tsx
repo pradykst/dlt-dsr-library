@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { NATIVE_OKF_ROOT } from "../shared/links.ts";
+import { NATIVE_OKF_PUBLIC_ROUTES } from "../shared/routes.ts";
 
 export interface NativeOkfBreadcrumb {
   label: string;
@@ -31,7 +31,10 @@ export function NativeOkfShell({
     <main className="research-grid min-h-[70vh] border-b border-line">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-7 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
-          <Link className="transition-colors hover:text-blue" href={NATIVE_OKF_ROOT}>
+          <Link
+            className="transition-colors hover:text-blue"
+            href={NATIVE_OKF_PUBLIC_ROUTES.library}
+          >
             OKF library
           </Link>
           {breadcrumbs.map((item) => (

@@ -1,4 +1,9 @@
-const NATIVE_OKF_ROOT = "/native-okf";
+import {
+  conceptRouteHref,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "./routes.ts";
+
+const NATIVE_OKF_ROOT = NATIVE_OKF_PUBLIC_ROUTES.library;
 const SAFE_EXTERNAL_SCHEMES = new Set(["http", "https", "mailto"]);
 const RESERVED_DOCUMENT_IDS = new Set([
   "index",
@@ -63,14 +68,7 @@ function sourceDirectory(sourceFilePath: string): string | undefined {
   return slashIndex === -1 ? "" : normalized.slice(0, slashIndex);
 }
 
-function encodeConceptId(conceptId: string): string {
-  return conceptId
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
-
-/** Return the native route for a normalized OKF concept ID. */
+/** Return the canonical public route for a normalized OKF concept ID. */
 export function conceptHref(conceptIdOrPath: string): string {
   const { path: rawPath } = splitSuffix(conceptIdOrPath.trim());
   const normalized = normalizeBundlePath(
@@ -85,11 +83,7 @@ export function conceptHref(conceptIdOrPath: string): string {
     return NATIVE_OKF_ROOT;
   }
 
-  const encodedId = encodeConceptId(conceptId);
-  const paperMatch = /^papers\/([^/]+)$/u.exec(conceptId);
-  return paperMatch
-    ? `${NATIVE_OKF_ROOT}/papers/${encodeURIComponent(paperMatch[1])}`
-    : `${NATIVE_OKF_ROOT}/concepts/${encodedId}`;
+  return conceptRouteHref(conceptId);
 }
 
 export function isSafeExternalHref(value: string): boolean {

@@ -61,14 +61,14 @@ test("catch-all normalization rejects traversal and encoded separators", () => {
   }
 });
 
-test("internal Markdown destinations rewrite to native paper and concept routes", () => {
+test("internal Markdown destinations rewrite to canonical paper and concept routes", () => {
   assert.deepEqual(
     resolveOkfMarkdownHref(
       "../papers/blockchain-iot-sensor-data.md#summary",
       "design-knowledge/blockchain-iot-sensor-data-dp1.md",
     ),
     {
-      href: "/native-okf/papers/blockchain-iot-sensor-data#summary",
+      href: "/papers/blockchain-iot-sensor-data#summary",
       external: false,
     },
   );
@@ -78,7 +78,7 @@ test("internal Markdown destinations rewrite to native paper and concept routes"
       "design-knowledge/blockchain-iot-sensor-data-dp1.md",
     ),
     {
-      href: "/native-okf/concepts/design-knowledge/blockchain-iot-sensor-data-dr1?view=compact",
+      href: "/concepts/design-knowledge/blockchain-iot-sensor-data-dr1?view=compact",
       external: false,
     },
   );
@@ -87,9 +87,9 @@ test("internal Markdown destinations rewrite to native paper and concept routes"
     { href: "#addresses", external: false },
   );
   assert.equal(conceptHref("papers/blockchain-iot-sensor-data.md"),
-    "/native-okf/papers/blockchain-iot-sensor-data");
+    "/papers/blockchain-iot-sensor-data");
   assert.equal(conceptHref("design-knowledge/example.md"),
-    "/native-okf/concepts/design-knowledge/example");
+    "/concepts/design-knowledge/example");
   assert.equal(conceptHref("papers/index.md"), NATIVE_OKF_ROOT);
 });
 

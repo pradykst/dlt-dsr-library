@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { conceptHref, isSafeExternalHref, NATIVE_OKF_ROOT } from "../shared/links.ts";
+import { conceptHref, isSafeExternalHref } from "../shared/links.ts";
+import { NATIVE_OKF_PUBLIC_ROUTES } from "../shared/routes.ts";
 import type { JsonValue, WorkbenchViewModel } from "../shared/types.ts";
 import { ConceptCard } from "./ConceptCard.tsx";
 import { EmptyState } from "./EmptyState.tsx";
@@ -46,7 +47,12 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
       eyebrow={isPaper ? "Paper Workbench" : concept.typeLabel}
       description={concept.description}
       breadcrumbs={[
-        ...(isPaper ? [{ label: "Papers", href: `${NATIVE_OKF_ROOT}#papers` }] : []),
+        ...(isPaper
+          ? [{
+              label: "Papers",
+              href: `${NATIVE_OKF_PUBLIC_ROUTES.library}#papers`,
+            }]
+          : []),
         { label: concept.title },
       ]}
       actions={

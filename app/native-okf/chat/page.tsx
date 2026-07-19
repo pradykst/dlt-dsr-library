@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { ChatWorkbench } from "@/src/native-okf/components/chat/ChatWorkbench";
 import { NativeOkfShell } from "@/src/native-okf/components/NativeOkfShell";
-import { NATIVE_OKF_ROOT } from "@/src/native-okf/shared/links";
+import { NATIVE_OKF_PUBLIC_ROUTES } from "@/src/native-okf/shared/routes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Grounded chat",
   description:
-    "Ask grounded questions across the isolated native Open Knowledge Format library.",
+    "Ask source-grounded questions across the DSR Knowledge Library.",
+  alternates: { canonical: "/chat" },
 };
 
 export default function NativeOkfChatPage() {
@@ -23,7 +24,7 @@ export default function NativeOkfChatPage() {
       breadcrumbs={[{ label: "Chat" }]}
       actions={
         <Link
-          href={NATIVE_OKF_ROOT}
+          href={NATIVE_OKF_PUBLIC_ROUTES.library}
           className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-blue/40 hover:text-blue"
         >
           Browse papers

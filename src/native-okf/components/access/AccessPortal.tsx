@@ -4,6 +4,11 @@ import Link from "next/link";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  NATIVE_OKF_API_ROUTES,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "../../shared/routes.ts";
+
 type AccessMode = "disabled" | "test" | "invite";
 
 interface AccessQuota {
@@ -120,7 +125,7 @@ export function AccessPortal() {
   const loadAccess = useCallback(async (signal?: AbortSignal) => {
 
     try {
-      const response = await fetch("/api/native-okf/access", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.access, {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store",
@@ -168,7 +173,7 @@ export function AccessPortal() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/access", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.access, {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
@@ -198,7 +203,7 @@ export function AccessPortal() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/access", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.access, {
         method: "DELETE",
         credentials: "same-origin",
         cache: "no-store",
@@ -263,7 +268,7 @@ export function AccessPortal() {
         {access?.authenticated && access.chatEnabled ? (
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href="/native-okf/chat"
+              href={NATIVE_OKF_PUBLIC_ROUTES.chat}
               className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
             >
               Open grounded chat

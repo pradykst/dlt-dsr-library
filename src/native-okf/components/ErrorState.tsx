@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { NATIVE_OKF_ROOT } from "../shared/links.ts";
+import { NATIVE_OKF_PUBLIC_ROUTES } from "../shared/routes.ts";
 
 export interface ErrorStateProps {
   title?: string;
@@ -12,7 +12,7 @@ export interface ErrorStateProps {
 export function ErrorState({
   title = "This OKF view could not be loaded",
   message,
-  actionHref = NATIVE_OKF_ROOT,
+  actionHref = NATIVE_OKF_PUBLIC_ROUTES.library,
   actionLabel = "Return to the OKF library",
 }: ErrorStateProps) {
   return (

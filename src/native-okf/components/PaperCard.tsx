@@ -1,19 +1,7 @@
 import Link from "next/link";
 
+import { paperHref } from "../shared/routes.ts";
 import type { PaperCardDto } from "../shared/types.ts";
-
-function paperHref(paperId: string): string {
-  const prefix = "papers/";
-  const remainder = paperId.startsWith(prefix) ? paperId.slice(prefix.length) : "";
-  if (remainder && !remainder.includes("/")) {
-    return `/native-okf/papers/${encodeURIComponent(remainder)}`;
-  }
-
-  return `/native-okf/concepts/${paperId
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/")}`;
-}
 
 export function PaperCard({ paper }: { paper: PaperCardDto }) {
   return (

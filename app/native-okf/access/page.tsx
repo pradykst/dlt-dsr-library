@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Research access",
   description:
-    "Enter a private evaluation code for the isolated native OKF grounded assistant.",
+    "Enter a private evaluation code for the source-grounded DSR research assistant.",
+  alternates: { canonical: "/access" },
 };
 
 export default function NativeOkfAccessPage() {

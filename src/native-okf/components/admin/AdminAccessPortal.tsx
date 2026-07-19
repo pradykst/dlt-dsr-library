@@ -4,6 +4,11 @@ import Link from "next/link";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  NATIVE_OKF_API_ROUTES,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "../../shared/routes.ts";
+
 interface AdminSessionResponse {
   authenticated: boolean;
   status?: string;
@@ -18,7 +23,7 @@ export function AdminAccessPortal() {
   const loadSession = useCallback(async (signal?: AbortSignal) => {
 
     try {
-      const response = await fetch("/api/native-okf/admin/session", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminSession, {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store",
@@ -66,7 +71,7 @@ export function AdminAccessPortal() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/admin/session", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminSession, {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
@@ -81,7 +86,7 @@ export function AdminAccessPortal() {
         return;
       }
 
-      window.location.assign("/native-okf/admin");
+      window.location.assign(NATIVE_OKF_PUBLIC_ROUTES.admin);
     } catch {
       setCode("");
       setNotice("Administrator access could not be updated.");
@@ -95,7 +100,7 @@ export function AdminAccessPortal() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/admin/session", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminSession, {
         method: "DELETE",
         credentials: "same-origin",
         cache: "no-store",
@@ -151,7 +156,7 @@ export function AdminAccessPortal() {
       {session?.authenticated ? (
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            href="/native-okf/admin"
+            href={NATIVE_OKF_PUBLIC_ROUTES.admin}
             className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
           >
             Open dashboard

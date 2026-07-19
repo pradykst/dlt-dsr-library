@@ -20,6 +20,10 @@ import {
   reconcileDiagramIntentToggle,
 } from "../../shared/diagram-intent.ts";
 import {
+  NATIVE_OKF_API_ROUTES,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "../../shared/routes.ts";
+import {
   formatNativeOkfQuotaTime,
   nativeOkfChatErrorMessage,
   nativeOkfDiagramQuotaExhausted,
@@ -135,7 +139,7 @@ export function ChatWorkbench() {
 
     void (async () => {
       try {
-        const response = await fetch("/api/native-okf/access", {
+        const response = await fetch(NATIVE_OKF_API_ROUTES.access, {
           method: "GET",
           cache: "no-store",
           credentials: "same-origin",
@@ -211,7 +215,7 @@ export function ChatWorkbench() {
     requestController.current = controller;
 
     try {
-      const result = await fetch("/api/native-okf/chat", {
+      const result = await fetch(NATIVE_OKF_API_ROUTES.chat, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(request),
@@ -392,7 +396,7 @@ export function ChatWorkbench() {
             accessState === "expired" ||
             accessState === "revoked" ? (
               <a
-                href="/native-okf/access"
+                href={NATIVE_OKF_PUBLIC_ROUTES.access}
                 className="font-semibold text-blue underline underline-offset-4"
               >
                 Enter access code
@@ -495,7 +499,7 @@ export function ChatWorkbench() {
                   <p className="mt-1 text-sm leading-6 text-slate-700">{error}</p>
                   {errorStatus === 401 || errorStatus === 403 ? (
                     <a
-                      href="/native-okf/access"
+                      href={NATIVE_OKF_PUBLIC_ROUTES.access}
                       className="mt-2 inline-block text-xs font-semibold text-rose-800 underline underline-offset-4"
                     >
                       Enter access code

@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
 import "reactflow/dist/style.css";
 
-import { NativeOkfRouteShell } from "@/src/native-okf/components/NativeOkfRouteShell";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: "Native OKF Library",
-    template: "%s · Native OKF Library",
+    default: "DSR Knowledge Library",
+    template: "%s · DSR Knowledge Library",
   },
-  description: "The isolated native Open Knowledge Format Workbench.",
+  description:
+    "A research prototype for exploring and reusing source-grounded design knowledge from Design Science Research publications.",
 };
 
 export default function NativeOkfLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <NativeOkfRouteShell>{children}</NativeOkfRouteShell>;
+  return children;
 }

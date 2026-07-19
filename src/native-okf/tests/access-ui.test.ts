@@ -125,8 +125,10 @@ test("chat workbench fetches server access and renders quota controls without cr
     "utf8",
   );
 
-  assert.match(source, /fetch\("\/api\/native-okf\/access"/u);
-  assert.match(source, /href="\/native-okf\/access"/u);
+  assert.match(source, /fetch\(NATIVE_OKF_API_ROUTES\.access/u);
+  assert.match(source, /NATIVE_OKF_API_ROUTES\.chat/u);
+  assert.match(source, /href=\{NATIVE_OKF_PUBLIC_ROUTES\.access\}/u);
+  assert.doesNotMatch(source, /href="\/native-okf\/access"/u);
   assert.match(source, /disabled=\{pending \|\| diagramQuotaExhausted\}/u);
   assert.match(source, /Text-only questions remain available/u);
   assert.match(source, /setDiagramQuotaBlocked\(true\)/u);

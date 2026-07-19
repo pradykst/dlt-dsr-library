@@ -833,6 +833,7 @@ test("private admin page verifies the independent server cookie before rendering
   const verification = source.indexOf("verifyAdminSessionCookie(");
   const dashboard = source.indexOf("<AdminDashboard");
   assert.equal(source.includes("await cookies()"), true);
-  assert.equal(source.includes("redirect(\"/native-okf/admin/access\")"), true);
+  assert.equal(source.includes("redirect(NATIVE_OKF_PUBLIC_ROUTES.adminAccess)"), true);
+  assert.equal(source.includes('redirect("/native-okf/admin/access")'), false);
   assert.equal(verification >= 0 && dashboard > verification, true);
 });

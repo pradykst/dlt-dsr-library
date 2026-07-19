@@ -3,6 +3,11 @@
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  NATIVE_OKF_API_ROUTES,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "../../shared/routes.ts";
+
 interface DailyUsage {
   utcDay: string;
   questions: number;
@@ -231,7 +236,7 @@ export function AdminDashboard() {
   const loadDashboard = useCallback(async (signal?: AbortSignal) => {
 
     try {
-      const response = await fetch("/api/native-okf/admin/dashboard", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminDashboard, {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store",
@@ -239,7 +244,7 @@ export function AdminDashboard() {
       });
 
       if (response.status === 401 || response.status === 403) {
-        window.location.replace("/native-okf/admin/access");
+        window.location.replace(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
         return;
       }
 
@@ -295,7 +300,7 @@ export function AdminDashboard() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/admin/mutations", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminMutations, {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
@@ -304,7 +309,7 @@ export function AdminDashboard() {
       });
 
       if (response.status === 401 || response.status === 403) {
-        window.location.replace("/native-okf/admin/access");
+        window.location.replace(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
         return;
       }
 
@@ -328,7 +333,7 @@ export function AdminDashboard() {
     setNotice(null);
 
     try {
-      const response = await fetch("/api/native-okf/admin/session", {
+      const response = await fetch(NATIVE_OKF_API_ROUTES.adminSession, {
         method: "DELETE",
         credentials: "same-origin",
         cache: "no-store",
@@ -338,7 +343,7 @@ export function AdminDashboard() {
         throw new Error("Administrator logout failed.");
       }
 
-      window.location.assign("/native-okf/admin/access");
+      window.location.assign(NATIVE_OKF_PUBLIC_ROUTES.adminAccess);
     } catch {
       setNotice("The administrator session could not be ended.");
       setBusyAction(null);
