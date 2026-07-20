@@ -8,12 +8,22 @@ import {
   useState,
 } from "react";
 
-import type {
-  NativeOkfChatHistoryMessage,
-  NativeOkfChatRequest,
-  NativeOkfChatResponse,
-  NativeOkfPersonalQuotaMetadata,
+import {
+  createInitialNativeOkfConversationState,
+  type NativeOkfChatHistoryMessage,
+  type NativeOkfChatRequest,
+  type NativeOkfChatResponse,
+  type NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
+import {
+  clearNativeOkfChatSession,
+  createNativeOkfLocalConversationId,
+  readNativeOkfChatSession,
+  writeNativeOkfChatSession,
+} from "../../shared/chat-session.ts";
+import {
+  parseNativeOkfConversationState,
+} from "../../shared/conversation-state.ts";
 import {
   applyManualDiagramToggle,
   INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
@@ -57,6 +67,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isChatResponse(value: unknown): value is NativeOkfChatResponse {
   if (!isRecord(value)) return false;
+  if (
+    (value.kind !== "answer" && value.kind !== "clarification") ||
+    parseNativeOkfConversationState(value.conversationState) === null ||
+    (value.kind === "clarification" &&
+      (!isRecord(value.clarification) ||
+        typeof value.clarification.question !== "string" ||
+        typeof value.clarification.kind !== "string"))
+  ) {
+    return false;
+  }
+
   return (
     typeof value.answerMarkdown === "string" &&
     Array.isArray(value.sources) &&
@@ -99,6 +120,11 @@ export function ChatWorkbench() {
   const [diagramIntentToggle, setDiagramIntentToggle] = useState(
     INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
   );
+  const [conversationState, setConversationState] = useState(
+    createInitialNativeOkfConversationState,
+  );
+  const [conversationId, setConversationId] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -110,6 +136,7 @@ export function ChatWorkbench() {
   const nextId = useRef(1);
   const requestController = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const skipNextSessionWrite = useRef(false);
 
   const trimmedQuestion = question.trim();
   const invalidLength =
@@ -133,6 +160,71 @@ export function ChatWorkbench() {
       ),
     );
   }
+
+  useEffect(() => {
+    const restoreTimer = window.setTimeout(() => {
+      let restored = null;
+      try {
+        restored = readNativeOkfChatSession(window.sessionStorage);
+      } catch {
+        // The tab remains usable when browser storage is unavailable.
+      }
+      if (restored) {
+        const restoredEntries = restored.messages.map((message) => {
+          const candidate = message.response
+            ? {
+                ...message.response,
+                conversationState: restored.conversationState,
+              }
+            : undefined;
+          return {
+            id: message.id,
+            role: message.role,
+            content: message.content,
+            ...(candidate &&
+              candidate.kind === "answer" &&
+              isChatResponse(candidate)
+              ? { response: candidate }
+              : {}),
+          } satisfies ChatEntry;
+        });
+        setEntries(restoredEntries);
+        setConversationState(restored.conversationState);
+        setDiagramIntentToggle(restored.diagramPreference);
+        setConversationId(restored.conversationId);
+        nextId.current = restoredEntries.length + 1;
+      } else {
+        setConversationId(createNativeOkfLocalConversationId());
+      }
+      setSessionReady(true);
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionReady || conversationId === "") return;
+    if (skipNextSessionWrite.current) {
+      skipNextSessionWrite.current = false;
+      return;
+    }
+    try {
+      writeNativeOkfChatSession(window.sessionStorage, {
+        version: 1,
+        conversationId,
+        messages: entries,
+        conversationState,
+        diagramPreference: diagramIntentToggle,
+      });
+    } catch {
+      // In-memory conversation remains available when storage is blocked.
+    }
+  }, [
+    conversationId,
+    conversationState,
+    diagramIntentToggle,
+    entries,
+    sessionReady,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,6 +295,7 @@ export function ChatWorkbench() {
       question: submittedQuestion,
       history: historyFromEntries(priorEntries),
       includeDiagram,
+      conversationState,
     };
 
     setEntries((current) => [...current, userEntry]);
@@ -245,12 +338,21 @@ export function ChatWorkbench() {
       if (!isChatResponse(payload)) {
         throw new Error("The assistant returned an invalid response.");
       }
+      const nextConversationState = parseNativeOkfConversationState(
+        payload.conversationState,
+      );
+      if (!nextConversationState) {
+        throw new Error("The assistant returned invalid conversation state.");
+      }
+      setConversationState(nextConversationState);
 
       const assistantEntry: ChatEntry = {
         id: makeId("assistant"),
         role: "assistant",
         content: payload.answerMarkdown,
-        response: payload,
+        ...(payload.kind === "answer"
+          ? { response: payload }
+          : {}),
       };
       const nextQuota = readNativeOkfPersonalQuota(payload.quota);
       if (nextQuota) {
@@ -310,6 +412,16 @@ export function ChatWorkbench() {
   function clearConversation() {
     requestController.current?.abort();
     requestController.current = null;
+    skipNextSessionWrite.current = true;
+    try {
+      clearNativeOkfChatSession(window.sessionStorage);
+    } catch {
+      // In-memory reset still succeeds when browser storage is blocked.
+    }
+    setConversationState(createInitialNativeOkfConversationState());
+    setDiagramIntentToggle(INITIAL_DIAGRAM_INTENT_TOGGLE_STATE);
+    setConversationId(createNativeOkfLocalConversationId());
+    nextId.current = 1;
     setEntries([]);
     updateComposerQuestion("");
     setError(null);
@@ -322,7 +434,6 @@ export function ChatWorkbench() {
     updateComposerQuestion(questionText);
     inputRef.current?.focus();
   }
-
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-research">
@@ -340,10 +451,11 @@ export function ChatWorkbench() {
           <button
             type="button"
             onClick={clearConversation}
+            aria-label="Start a new chat"
             disabled={entries.length === 0 && !pending && !error}
             className="rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
           >
-            Clear conversation
+            New chat
           </button>
         </div>
 
@@ -618,8 +730,9 @@ export function ChatWorkbench() {
           ) : (
             <p className="mt-2 text-xs leading-5 text-muted">
               Press Enter to send or Shift+Enter for a new line. Questions,
-              answers, conversation history, and retrieved context are not
-              stored. Only access, quota, and safe usage counters are persisted.
+              answers, and conversation focus are kept only in this tab session;
+              they are not stored by the server or quota
+              system.
             </p>
           )}
         </form>

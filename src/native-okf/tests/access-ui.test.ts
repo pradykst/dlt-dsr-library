@@ -135,7 +135,10 @@ test("chat workbench fetches server access and renders quota controls without cr
   assert.match(source, /questionsRemainingToday/u);
   assert.match(source, /diagramsRemainingTotal/u);
   assert.match(source, /Questions,[\s\S]*answers,[\s\S]*not[\s\S]*stored/u);
-  assert.doesNotMatch(source, /localStorage|sessionStorage/u);
+  assert.match(source, /window\.sessionStorage/u);
+  assert.match(source, /New chat/u);
+  assert.match(source, /Start a new chat/u);
+  assert.doesNotMatch(source, /localStorage/u);
 });
 
 test("native access route fallbacks remain server-only and nosniff", async () => {

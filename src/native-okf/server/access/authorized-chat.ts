@@ -3,11 +3,13 @@ import "server-only";
 import { createHmac, randomUUID } from "node:crypto";
 
 import type {
-  NativeOkfChatRequest,
   NativeOkfChatResponse,
   NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
-import { inferDiagramIntent } from "../../shared/diagram-intent.ts";
+import {
+  prepareNativeOkfChatRequest,
+  type NativeOkfConversationCatalog,
+} from "../conversation.ts";
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
@@ -64,6 +66,7 @@ export interface AuthorizedNativeOkfChatDependencies {
   ipSubject: string;
   now?: () => number;
   retrieve?: RetrieveNativeOkfContext;
+  conversationCatalog?: NativeOkfConversationCatalog;
   answer?: AnswerNativeOkfChat;
   loadOpenAiEnvironment?: () => NativeOpenAiEnvironment;
   getOpenAiClient?: (
@@ -119,13 +122,6 @@ export function createNativeOkfTestSubjectId(
   return `test:${digest}`;
 }
 
-function includeDiagramFor(request: NativeOkfChatRequest): boolean {
-  return (
-    request.includeDiagram === true ||
-    (request.includeDiagram === undefined &&
-      inferDiagramIntent(request.question))
-  );
-}
 
 function safeQuota(
   quota: SubjectQuotaSnapshot,
@@ -337,13 +333,23 @@ export async function answerAuthorizedNativeOkfChat(
     );
   }
 
+  const prepared = await prepareNativeOkfChatRequest(
+    request,
+    dependencies.conversationCatalog,
+  );
+  if (prepared.clarification) {
+    const response = await answerNativeOkfChat(request, { prepared });
+    return withoutRetrievalDebug(response);
+  }
+
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
-  const retrieval = await retrieve(request.question);
+  const retrieval = await retrieve(prepared.retrievalQuestion);
   const answer = dependencies.answer ?? answerNativeOkfChat;
 
   if (retrieval.noMatch) {
     const response = await answer(request, {
       retrieve: async () => retrieval,
+      prepared,
     });
     return withoutRetrievalDebug(response);
   }
@@ -354,7 +360,7 @@ export async function answerAuthorizedNativeOkfChat(
     store,
     reservationNowMs,
   );
-  const includeDiagram = includeDiagramFor(request);
+  const includeDiagram = prepared.includeDiagram;
   const configuredReservationMicrodollars = includeDiagram
     ? dependencies.config.diagramRequestReserveMicrodollars
     : dependencies.config.textRequestReserveMicrodollars;
@@ -450,6 +456,7 @@ export async function answerAuthorizedNativeOkfChat(
 
     const response = await answer(request, {
       retrieve: async () => retrieval,
+      prepared,
       environment,
       client: tracked.client,
     });

@@ -695,16 +695,17 @@ test("diagram requests suppress textual diagram syntax on both answer paths", as
     assert.equal(diagramCalls, includeDiagram ? 1 : 0);
     const instructions = String(requests[0]?.instructions);
     if (includeDiagram) {
-      assert.match(instructions, /ASCII-art flowchart/);
+      assert.match(instructions, /ASCII diagrams/);
       assert.match(instructions, /Mermaid/);
-      assert.match(instructions, /Do not repeat every visual node/);
+      assert.match(instructions, /repeat every visual node/);
+      assert.match(instructions, /validated structured diagram pipeline/);
     } else {
       assert.match(instructions, /text-only answer/);
       assert.match(instructions, /Mermaid/);
-      assert.match(instructions, /ASCII or Unicode diagram/);
-      assert.match(instructions, /Graphviz or DOT/);
-      assert.match(instructions, /pseudo-flowchart/);
-      assert.match(instructions, /code-block diagram syntax/);
+      assert.match(instructions, /ASCII diagrams/);
+      assert.match(instructions, /Graphviz, DOT/);
+      assert.match(instructions, /pseudo-tables used as diagrams/);
+      assert.match(instructions, /code-block flowcharts/);
       assert.match(instructions, /grounded diagram option must be enabled/);
     }
   }

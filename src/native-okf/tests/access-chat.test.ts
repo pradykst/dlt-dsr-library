@@ -856,3 +856,72 @@ test("usage above the declared envelope is charged, alerted and pauses future ca
   );
 });
 
+test("deterministic clarification consumes no question, diagram, or model quota", async () => {
+  const currentConfig = config();
+  const currentStore = store();
+  const counters = { responses: 0, moderations: 0 };
+  let retrievalCalls = 0;
+
+  const response = await answerAuthorizedNativeOkfChat(
+    { question: "What implements it?" },
+    dependencies(
+      currentConfig,
+      currentStore,
+      mockClient({ counters }),
+      {
+        conversationCatalog: { papers: [], concepts: [] },
+        retrieve: async () => {
+          retrievalCalls += 1;
+          return retrievalFixture();
+        },
+      },
+    ),
+  );
+
+  assert.equal(response.kind, "clarification");
+  assert.equal(retrievalCalls, 0);
+  assert.equal(counters.responses, 0);
+  const report = currentStore.getUsageReport(NOW);
+  assert.equal(report.questionsToday, 0);
+  assert.equal(report.diagramsToday, 0);
+  assert.equal(report.modelCallsToday, 0);
+  assert.equal(report.activeReservations, 0);
+});
+
+test("one text repair is reconciled inside the original question reservation", async () => {
+  const currentConfig = config();
+  const currentStore = store();
+  const overlong =
+    `${Array.from({ length: 360 }, () => "grounded").join(" ")} [[S1]].`;
+  const outputs = [
+    overlong,
+    "Concise repaired answer [[S1]].",
+  ];
+  let cursor = 0;
+  const client: NativeOpenAiClient = {
+    responses: {
+      create: async () => ({
+        ...responseWithUsage(),
+        output_text: outputs[cursor++] ?? "",
+      }) as Response,
+    },
+    moderations: {
+      create: async () => ({ results: [{ flagged: false }] }) as never,
+    },
+  };
+
+  const response = await answerAuthorizedNativeOkfChat(
+    { question: "Explain the grounded paper" },
+    dependencies(currentConfig, currentStore, client, {
+      createReservationId: () => "reservation:text-repair",
+    }),
+  );
+
+  assert.equal(response.answerMarkdown, "Concise repaired answer [[S1]].");
+  const report = currentStore.getUsageReport(NOW);
+  assert.equal(report.questionsToday, 1);
+  assert.equal(report.diagramsToday, 0);
+  assert.equal(report.modelCallsToday, 2);
+  assert.equal(report.estimatedMicrodollarsToday, 540);
+  assert.equal(report.activeReservations, 0);
+});

@@ -2,15 +2,25 @@ import "server-only";
 
 import type { Response } from "openai/resources/responses/responses";
 
-import type {
-  GeneratedDiagram,
-  NativeOkfChatHistoryMessage,
-  NativeOkfChatRequest,
-  NativeOkfChatResponse,
+import {
+  MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+  type GeneratedDiagram,
+  type NativeOkfChatHistoryMessage,
+  type NativeOkfChatRequest,
+  type NativeOkfChatResponse,
 } from "../../shared/chat-types.ts";
-import { inferDiagramIntent } from "../../shared/diagram-intent.ts";
+import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
+import type {
+  NativeOkfConversationCatalog,
+  PreparedNativeOkfChatRequest,
+} from "../conversation.ts";
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
+import {
+  clarificationConversationState,
+  completedConversationState,
+  prepareNativeOkfChatRequest,
+} from "../conversation.ts";
 import {
   type NativeOpenAiClient,
   getOpenAiClient,
@@ -21,6 +31,7 @@ import {
   type NativeOkfGroundedContext,
 } from "./context.ts";
 import { validateAnswerCitations } from "./citations.ts";
+import { validateNativeOkfAnswerPolicy } from "./answer-policy.ts";
 import {
   type NativeOpenAiEnvironment,
   readOpenAiEnvironment,
@@ -34,8 +45,12 @@ import {
 import { moderateNativeOkfText } from "./moderation.ts";
 import {
   NATIVE_OKF_CITATION_REPAIR_INSTRUCTION,
+  NATIVE_OKF_COMPARISON_ANSWER_INSTRUCTION,
   NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION,
+  NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION,
   NATIVE_OKF_SYSTEM_PROMPT,
+  NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION,
+  NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import { buildGroundedStoredSourceMap } from "./stored-source-map.ts";
@@ -46,7 +61,12 @@ export const MAX_NATIVE_OKF_HISTORY_MESSAGE_CHARACTERS = 2_000;
 export const MAX_NATIVE_OKF_REQUEST_BYTES = 32_000;
 
 const MIN_MEANINGFUL_QUESTION_CHARACTERS = 3;
-const ALLOWED_REQUEST_KEYS = new Set(["question", "history", "includeDiagram"]);
+const ALLOWED_REQUEST_KEYS = new Set([
+  "question",
+  "history",
+  "includeDiagram",
+  "conversationState",
+]);
 const ALLOWED_HISTORY_KEYS = new Set(["role", "content"]);
 
 export interface NativeOkfDiagramGenerationResult {
@@ -64,6 +84,8 @@ export type NativeOkfDiagramGenerator = (input: {
 
 export interface NativeOkfChatDependencies {
   retrieve?: (question: string) => Promise<RetrievalResult>;
+  conversationCatalog?: NativeOkfConversationCatalog;
+  prepared?: PreparedNativeOkfChatRequest;
   environment?: NativeOpenAiEnvironment;
   client?: NativeOpenAiClient;
   generateDiagram?: NativeOkfDiagramGenerator;
@@ -151,12 +173,40 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
     throw new NativeOkfRequestError("includeDiagram must be a boolean.");
   }
 
+  let conversationState;
+  if (input.conversationState !== undefined) {
+    const parsedState = parseNativeOkfConversationState(
+      input.conversationState,
+    );
+    if (!parsedState) {
+      throw new NativeOkfRequestError(
+        "Conversation state is invalid or uses an unsupported version.",
+      );
+    }
+    const pendingOriginal =
+      parsedState.pendingClarification?.originalQuestion;
+    const pendingMatchesHistory = pendingOriginal === undefined ||
+      recentHistory.some(
+        (message) =>
+          message.role === "user" &&
+          message.content.slice(
+            0,
+            MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+          ) === pendingOriginal,
+      );
+    conversationState = pendingMatchesHistory
+      ? parsedState
+      : { ...parsedState, pendingClarification: null };
+  }
   return {
     question,
     ...(recentHistory.length > 0 ? { history: recentHistory } : {}),
     ...(input.includeDiagram === undefined
       ? {}
       : { includeDiagram: input.includeDiagram }),
+    ...(conversationState === undefined
+      ? {}
+      : { conversationState }),
   };
 }
 
@@ -238,44 +288,111 @@ async function defaultDiagramGenerator(
 
 const INSUFFICIENT_CONTEXT_ANSWER =
   "The native OKF retrieval did not find enough grounded library context to answer this question. Try naming a paper, concept, mechanism, or design-knowledge topic represented in the library.";
+function answerModeInstruction(
+  mode: PreparedNativeOkfChatRequest["answerMode"],
+): string {
+  if (mode === "comparison") {
+    return NATIVE_OKF_COMPARISON_ANSWER_INSTRUCTION;
+  }
+  if (mode === "detailed") {
+    return NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION;
+  }
+  return NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION;
+}
+
+function mergeSourceCards(
+  ...groups: ReadonlyArray<NativeOkfChatResponse["sources"]>
+): NativeOkfChatResponse["sources"] {
+  const merged: NativeOkfChatResponse["sources"] = [];
+  const seen = new Set<string>();
+  for (const source of groups.flat()) {
+    if (seen.has(source.conceptId)) continue;
+    seen.add(source.conceptId);
+    merged.push(source);
+  }
+  return merged;
+}
+
+const SAFE_PRESENTATION_ERROR =
+  "The grounded answer could not be presented safely. The validated retrieved source cards remain available below.";
 
 export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
 ): Promise<NativeOkfChatResponse> {
   const request = validateNativeOkfChatRequest(input);
-  const includeDiagram = request.includeDiagram === true ||
-    (request.includeDiagram === undefined &&
-      inferDiagramIntent(request.question));
-  const answerInstructions = includeDiagram
-    ? `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION}`
-    : `${NATIVE_OKF_SYSTEM_PROMPT}\n\n${NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION}`;
+  const prepared =
+    dependencies.prepared ??
+    (await prepareNativeOkfChatRequest(
+      request,
+      dependencies.conversationCatalog,
+    ));
+
+  if (prepared.clarification) {
+    return {
+      kind: "clarification",
+      answerMarkdown: prepared.clarification.question,
+      sources: [],
+      insufficientContext: false,
+      clarification: prepared.clarification,
+      conversationState: clarificationConversationState(prepared),
+    };
+  }
+
+  const includeDiagram = prepared.includeDiagram;
+  const answerInstructions = [
+    NATIVE_OKF_SYSTEM_PROMPT,
+    answerModeInstruction(prepared.answerMode),
+    includeDiagram
+      ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
+      : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
+  ].join("\n\n");
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
-  const retrieval = await retrieve(request.question);
+  const retrieval = await retrieve(prepared.retrievalQuestion);
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
   // This branch deliberately occurs before configuration, moderation, or SDK access.
   if (retrieval.noMatch || retrieval.finalConcepts.length === 0) {
     return {
+      kind: "answer",
       answerMarkdown: INSUFFICIENT_CONTEXT_ANSWER,
       sources: [],
       insufficientContext: true,
-      warnings: [...retrieval.warnings, "No model request was made."],
+      conversationState: completedConversationState(
+        prepared,
+        retrieval,
+        [],
+      ),
+      warnings: [
+        ...retrieval.warnings,
+        "No model request was made.",
+      ],
       ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
     };
   }
 
-  const environment = dependencies.environment ?? readOpenAiEnvironment();
-  const client = dependencies.client ?? getOpenAiClient(environment);
+  const environment =
+    dependencies.environment ?? readOpenAiEnvironment();
+  const client =
+    dependencies.client ?? getOpenAiClient(environment);
   const history = request.history ?? [];
   const userConversation = [
-    ...history.map((message) => `${message.role}: ${message.content}`),
+    ...history.map(
+      (message) => `${message.role}: ${message.content}`,
+    ),
     `user: ${request.question}`,
   ].join("\n");
-  await moderateNativeOkfText(userConversation, environment, client);
+  await moderateNativeOkfText(
+    userConversation,
+    environment,
+    client,
+  );
 
-  const context = buildNativeOkfGroundedContext(retrieval, request.question);
+  const context = buildNativeOkfGroundedContext(
+    retrieval,
+    prepared.effectiveQuestion,
+  );
   const modelInput = buildNativeOkfModelInput(history, context);
   const draftAnswer = await createTextResponse(
     client,
@@ -284,40 +401,103 @@ export async function answerNativeOkfChat(
     modelInput,
   );
 
-  let citationResult = validateAnswerCitations(draftAnswer, context);
+  let citationResult = validateAnswerCitations(
+    draftAnswer,
+    context,
+  );
+  let answerMarkdown = citationResult.answerMarkdown;
+  let sourceCards = citationResult.sources;
+  let presentationSafe = true;
+  const draftPolicy = validateNativeOkfAnswerPolicy(
+    answerMarkdown,
+    prepared.answerMode,
+  );
+  const validationErrors = [
+    ...(citationResult.needsRepair
+      ? ["The draft has no valid current-turn source citation."]
+      : []),
+    ...draftPolicy.errors,
+  ];
   const warnings = [...retrieval.warnings];
-  if (citationResult.needsRepair) {
+
+  if (validationErrors.length > 0) {
     const repairInput = [
       {
         role: "user" as const,
-        content: `${context.prompt}\n\n<DRAFT_ANSWER>\n${escapePromptData(citationResult.answerMarkdown)}\n</DRAFT_ANSWER>`,
+        content: `${context.prompt}\n\n<DRAFT_ANSWER>\n${escapePromptData(
+          answerMarkdown,
+        )}\n</DRAFT_ANSWER>\n\n<VALIDATION_ERRORS>\n${escapePromptData(
+          validationErrors
+            .map((error) => `- ${error}`)
+            .join("\n"),
+        )}\n</VALIDATION_ERRORS>`,
       },
     ];
     try {
       const repairedAnswer = await createTextResponse(
         client,
         environment,
-        `${answerInstructions}\n\n${NATIVE_OKF_CITATION_REPAIR_INSTRUCTION}`,
+        [
+          answerInstructions,
+          NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
+          ...(citationResult.needsRepair
+            ? [NATIVE_OKF_CITATION_REPAIR_INSTRUCTION]
+            : []),
+        ].join("\n\n"),
         repairInput,
       );
-      const repairedCitations = validateAnswerCitations(repairedAnswer, context);
-      if (repairedCitations.needsRepair) {
-        warnings.push(...citationResult.warnings);
-        warnings.push("The bounded citation repair did not produce a valid citation.");
+      const repairedCitations = validateAnswerCitations(
+        repairedAnswer,
+        context,
+      );
+      const repairedPolicy = validateNativeOkfAnswerPolicy(
+        repairedCitations.answerMarkdown,
+        prepared.answerMode,
+      );
+      sourceCards = mergeSourceCards(
+        citationResult.sources,
+        repairedCitations.sources,
+      );
+      if (!repairedPolicy.valid) {
+        answerMarkdown = SAFE_PRESENTATION_ERROR;
+        presentationSafe = false;
+        warnings.push(
+          "The bounded prose repair remained outside the safe presentation policy; invalid text was withheld.",
+        );
       } else {
         citationResult = repairedCitations;
-        warnings.push("A bounded citation repair was applied.");
+        answerMarkdown = repairedCitations.answerMarkdown;
+        warnings.push("A bounded answer repair was applied.");
+        if (repairedCitations.needsRepair) {
+          warnings.push(
+            "The bounded citation repair did not produce a valid current-turn citation.",
+          );
+        }
         warnings.push(...repairedCitations.warnings);
       }
     } catch {
-      warnings.push(...citationResult.warnings);
-      warnings.push("The bounded citation repair could not be completed.");
+      if (!draftPolicy.valid) {
+        answerMarkdown = SAFE_PRESENTATION_ERROR;
+        presentationSafe = false;
+        warnings.push(
+          "The bounded prose repair could not be completed; invalid text was withheld.",
+        );
+      } else {
+        warnings.push(...citationResult.warnings);
+        warnings.push(
+          "The bounded citation repair could not be completed.",
+        );
+      }
     }
   } else {
     warnings.push(...citationResult.warnings);
   }
 
-  await moderateNativeOkfText(citationResult.answerMarkdown, environment, client);
+  await moderateNativeOkfText(
+    answerMarkdown,
+    environment,
+    client,
+  );
 
   let diagram: GeneratedDiagram | undefined;
   if (includeDiagram) {
@@ -328,13 +508,15 @@ export async function answerNativeOkfChat(
         client,
         environment,
         context,
-        question: request.question,
-        answerMarkdown: citationResult.answerMarkdown,
+        question: prepared.effectiveQuestion,
+        answerMarkdown,
       });
       diagram = diagramResult.diagram;
       warnings.push(...diagramResult.warnings);
     } catch {
-      warnings.push("The diagram request could not be completed; the grounded text answer is still available.");
+      warnings.push(
+        "The diagram request could not be completed; the grounded text answer is still available.",
+      );
     }
     if (!diagram) {
       try {
@@ -347,18 +529,34 @@ export async function answerNativeOkfChat(
       } catch {
         // The existing safe text-only behavior remains the final fallback.
       }
-    if (diagram) {
     }
-      await moderateNativeOkfText(JSON.stringify(diagram), environment, client);
+    if (diagram) {
+      await moderateNativeOkfText(
+        JSON.stringify(diagram),
+        environment,
+        client,
+      );
     }
   }
 
+  if (presentationSafe) {
+    sourceCards = citationResult.sources;
+  }
+  const conversationState = completedConversationState(
+    prepared,
+    retrieval,
+    sourceCards,
+  );
   return {
-    answerMarkdown: citationResult.answerMarkdown,
-    sources: citationResult.sources,
+    kind: "answer",
+    answerMarkdown,
+    sources: sourceCards,
     ...(diagram ? { diagram } : {}),
     insufficientContext: false,
-    ...(warnings.length > 0 ? { warnings: [...new Set(warnings)] } : {}),
+    conversationState,
+    ...(warnings.length > 0
+      ? { warnings: [...new Set(warnings)] }
+      : {}),
     ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
   };
 }
