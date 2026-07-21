@@ -48,6 +48,9 @@ function validDiagram(): GeneratedDiagram {
         order: 20,
         group: null,
         sourcePaths: [PRINCIPLE_ID],
+        provenance: "stored",
+        supportConceptIds: [],
+        synthesisRationale: null,
         synthesis: false,
       },
       {
@@ -59,10 +62,13 @@ function validDiagram(): GeneratedDiagram {
         stage: "artifact",
         order: 60,
         group: null,
+        provenance: "synthesized",
+        supportConceptIds: [],
+        synthesisRationale: null,
         synthesis: true,
       },
     ],
-    edges: [{ source: "stored", target: "proposal", label: "informs" }],
+    edges: [{ source: "stored", target: "proposal", label: "informs", provenance: "synthesized", supportConceptIds: [] }],
   };
 }
 
@@ -83,6 +89,9 @@ function validTwelveNodeDiagram(): GeneratedDiagram {
     order,
     group,
     sourcePaths: [synthesis ? PAPER_ID : PRINCIPLE_ID],
+    provenance: synthesis ? "synthesized" : "stored",
+    supportConceptIds: [],
+    synthesisRationale: null,
     synthesis,
   });
 
@@ -104,19 +113,19 @@ function validTwelveNodeDiagram(): GeneratedDiagram {
       node("outcome", "Assess outcome", "outcome", 90, null, true),
     ],
     edges: [
-      { source: "problem", target: "requirements", label: "requires" },
-      { source: "requirements", target: "principle-a", label: "addresses" },
-      { source: "requirements", target: "principle-b", label: "addresses" },
-      { source: "requirements", target: "principle-c", label: "addresses" },
-      { source: "principle-a", target: "feature-a", label: "enables" },
-      { source: "principle-b", target: "feature-b", label: "enables" },
-      { source: "principle-c", target: "feature-c", label: "enables" },
-      { source: "feature-a", target: "artifact", label: "implements" },
-      { source: "feature-b", target: "artifact", label: "implements" },
-      { source: "feature-c", target: "artifact", label: "implements" },
-      { source: "artifact", target: "governance", label: "requires" },
-      { source: "governance", target: "evaluation", label: "enables" },
-      { source: "evaluation", target: "outcome", label: "validates" },
+      { source: "problem", target: "requirements", label: "requires", provenance: "synthesized", supportConceptIds: [] },
+      { source: "requirements", target: "principle-a", label: "addresses", provenance: "synthesized", supportConceptIds: [] },
+      { source: "requirements", target: "principle-b", label: "addresses", provenance: "synthesized", supportConceptIds: [] },
+      { source: "requirements", target: "principle-c", label: "addresses", provenance: "synthesized", supportConceptIds: [] },
+      { source: "principle-a", target: "feature-a", label: "enables", provenance: "synthesized", supportConceptIds: [] },
+      { source: "principle-b", target: "feature-b", label: "enables", provenance: "synthesized", supportConceptIds: [] },
+      { source: "principle-c", target: "feature-c", label: "enables", provenance: "synthesized", supportConceptIds: [] },
+      { source: "feature-a", target: "artifact", label: "implements", provenance: "synthesized", supportConceptIds: [] },
+      { source: "feature-b", target: "artifact", label: "implements", provenance: "synthesized", supportConceptIds: [] },
+      { source: "feature-c", target: "artifact", label: "implements", provenance: "synthesized", supportConceptIds: [] },
+      { source: "artifact", target: "governance", label: "requires", provenance: "synthesized", supportConceptIds: [] },
+      { source: "governance", target: "evaluation", label: "enables", provenance: "synthesized", supportConceptIds: [] },
+      { source: "evaluation", target: "outcome", label: "validates", provenance: "synthesized", supportConceptIds: [] },
     ],
   };
 }
@@ -251,6 +260,9 @@ test("rejects isolated and duplicate-semantic nodes", () => {
     order: 50,
     group: null,
     sourcePaths: [PAPER_ID],
+    provenance: "synthesized",
+    supportConceptIds: [],
+    synthesisRationale: null,
     synthesis: true,
   });
   const isolatedResult = validateGeneratedDiagram(isolated, ALLOWLIST);
@@ -292,6 +304,9 @@ test("rejects deterministic weakly disconnected flow components", () => {
       order: 70,
       group: null,
       sourcePaths: [PAPER_ID],
+      provenance: "stored",
+      supportConceptIds: [],
+      synthesisRationale: null,
       synthesis: false,
     },
     {
@@ -303,6 +318,9 @@ test("rejects deterministic weakly disconnected flow components", () => {
       order: 80,
       group: null,
       sourcePaths: [PAPER_ID],
+      provenance: "stored",
+      supportConceptIds: [],
+      synthesisRationale: null,
       synthesis: false,
     },
   );
@@ -310,6 +328,8 @@ test("rejects deterministic weakly disconnected flow components", () => {
     source: "component-a",
     target: "component-b",
     label: "enables",
+    provenance: "synthesized",
+    supportConceptIds: [],
   });
 
   const result = validateGeneratedDiagram(diagram, ALLOWLIST);
@@ -387,6 +407,9 @@ test("enforces diagram node and edge bounds", () => {
       order: index,
       group: null,
       sourcePaths: [PAPER_ID],
+      provenance: "stored",
+      supportConceptIds: [],
+      synthesisRationale: null,
       synthesis: false,
     }),
   );
@@ -399,6 +422,8 @@ test("enforces diagram node and edge bounds", () => {
       source: "stored",
       target: "proposal",
       label: `informs-${index}`,
+      provenance: "synthesized",
+      supportConceptIds: [],
     }),
   );
   assert.equal(validateGeneratedDiagram(tooManyEdges, ALLOWLIST).ok, false);

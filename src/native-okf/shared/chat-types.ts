@@ -17,11 +17,17 @@ export const MAX_NATIVE_OKF_ACTIVE_PAPERS = 3;
 export const MAX_NATIVE_OKF_ACTIVE_CONCEPTS = 8;
 export const MAX_NATIVE_OKF_ACTIVE_SOURCES = 12;
 export const MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS = 500;
+export const MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS = 800;
+export const MAX_NATIVE_OKF_SYNTHESIS_DOMAIN_CHARACTERS = 120;
+export const MAX_NATIVE_OKF_SYNTHESIS_OBJECTIVE_CHARACTERS = 300;
+export const MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINTS = 6;
+export const MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINT_CHARACTERS = 200;
 
 export const NATIVE_OKF_CONVERSATION_INTENTS = [
   "answer",
   "comparison",
   "stored-diagram",
+  "synthesized-flow",
   "clarification",
 ] as const;
 
@@ -51,6 +57,7 @@ export interface NativeOkfConversationState {
   lastIntent: NativeOkfConversationIntent;
   lastDiagramRequested: boolean;
   pendingClarification: NativeOkfPendingClarification | null;
+  synthesisDraft: SynthesisDraftState | null;
 }
 
 export interface NativeOkfClarification {
@@ -67,6 +74,7 @@ export function createInitialNativeOkfConversationState(): NativeOkfConversation
     lastIntent: "answer",
     lastDiagramRequested: false,
     pendingClarification: null,
+    synthesisDraft: null,
   };
 }
 
@@ -82,8 +90,14 @@ export interface NativeOkfSourceCard {
 
 export const GENERATED_DIAGRAM_STAGES = [
   "problem",
+  "design-goal",
+  "design-objective",
+  "meta-requirement",
+  "design-requirement",
   "requirements",
+  "design-principle",
   "principles",
+  "design-feature",
   "features",
   "artifact",
   "governance",
@@ -94,6 +108,18 @@ export const GENERATED_DIAGRAM_STAGES = [
 
 export type DiagramStage = (typeof GENERATED_DIAGRAM_STAGES)[number];
 
+export const DIAGRAM_NODE_PROVENANCE = [
+  "user-provided",
+  "stored",
+  "synthesized",
+] as const;
+export type DiagramNodeProvenance =
+  (typeof DIAGRAM_NODE_PROVENANCE)[number];
+
+export const DIAGRAM_EDGE_PROVENANCE = ["stored", "synthesized"] as const;
+export type DiagramEdgeProvenance =
+  (typeof DIAGRAM_EDGE_PROVENANCE)[number];
+
 export interface GeneratedDiagramNode {
   id: string;
   label: string;
@@ -102,7 +128,11 @@ export interface GeneratedDiagramNode {
   stage: DiagramStage;
   order: number;
   group: string | null;
+  provenance: DiagramNodeProvenance;
   sourcePaths: string[];
+  supportConceptIds: string[];
+  synthesisRationale: string | null;
+  /** Retained for the accepted renderer contract; provenance is authoritative. */
   synthesis: boolean;
 }
 
@@ -110,6 +140,8 @@ export interface GeneratedDiagramEdge {
   source: string;
   target: string;
   label: string;
+  provenance: DiagramEdgeProvenance;
+  supportConceptIds: string[];
 }
 
 export interface GeneratedDiagram {
@@ -118,6 +150,18 @@ export interface GeneratedDiagram {
   nodes: GeneratedDiagramNode[];
   edges: GeneratedDiagramEdge[];
 }
+
+export interface SynthesisDraftState {
+  version: 1;
+  problemStatement: string;
+  domain: string | null;
+  objective: string | null;
+  constraints: string[];
+  nodes: GeneratedDiagramNode[];
+  edges: GeneratedDiagramEdge[];
+}
+
+export type NativeOkfDiagramMode = "stored" | "synthesized";
 
 export interface NativeOkfPersonalQuotaMetadata {
   questionsRemainingToday: number;
@@ -133,6 +177,8 @@ export interface NativeOkfChatResponse {
   answerMarkdown: string;
   sources: NativeOkfSourceCard[];
   diagram?: GeneratedDiagram;
+  diagramMode?: NativeOkfDiagramMode | null;
+  synthesisDraft?: SynthesisDraftState;
   clarification?: NativeOkfClarification;
   conversationState?: NativeOkfConversationState;
   insufficientContext: boolean;

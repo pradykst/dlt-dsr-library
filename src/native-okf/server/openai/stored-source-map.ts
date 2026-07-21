@@ -12,17 +12,18 @@ import { projectSemanticLink } from "../paper-design-map.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import type { OkfBundle, OkfConcept, OkfLink } from "../types.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
+import { buildNativeOkfDiagramGrounding } from "./diagram-grounding.ts";
 
 const MAX_FALLBACK_NODES = 14;
 const MAX_FALLBACK_EDGES = 20;
 
 const STAGE_BY_TYPE: Readonly<Record<string, DiagramStage>> = {
-  "design-goal": "requirements",
-  "design-objective": "requirements",
-  "meta-requirement": "requirements",
-  "design-requirement": "requirements",
-  "design-principle": "principles",
-  "design-feature": "features",
+  "design-goal": "design-goal",
+  "design-objective": "design-objective",
+  "meta-requirement": "meta-requirement",
+  "design-requirement": "design-requirement",
+  "design-principle": "design-principle",
+  "design-feature": "design-feature",
   artifact: "artifact",
   evaluation: "evaluation",
   outcome: "outcome",
@@ -282,14 +283,23 @@ export async function buildGroundedStoredSourceMap(
     stage: stageFor(concept),
     order: numericOrder(concept, index),
     group: null,
+    provenance: "stored",
     sourcePaths: [concept.id],
+    supportConceptIds: [concept.id],
+    synthesisRationale: null,
     synthesis: false,
   }));
   const edges: GeneratedDiagramEdge[] = selectedEdges.flatMap((edge) => {
     const source = nodeIdByConceptId.get(edge.sourceId);
     const target = nodeIdByConceptId.get(edge.targetId);
     return source && target
-      ? [{ source, target, label: boundedText(edge.label, 32) }]
+      ? [{
+          source,
+          target,
+          label: boundedText(edge.label, 32),
+          provenance: "stored",
+          supportConceptIds: [edge.sourceId, edge.targetId],
+        }]
       : [];
   });
 
@@ -300,7 +310,12 @@ export async function buildGroundedStoredSourceMap(
     nodes,
     edges,
   };
-  const validation = validateGeneratedDiagram(candidate, allowlist);
+  const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+  const validation = validateGeneratedDiagram(
+    candidate,
+    grounding,
+    { mode: "stored" },
+  );
   return validation.ok ? validation.diagram : undefined;
 }
 

@@ -254,6 +254,7 @@ function establishedState(): NativeOkfConversationState {
     lastIntent: "answer",
     lastDiagramRequested: false,
     pendingClarification: null,
+    synthesisDraft: null,
   };
 }
 

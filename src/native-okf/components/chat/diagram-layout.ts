@@ -49,6 +49,7 @@ export interface DiagramLayoutEdge {
   points: [LayoutPoint, LayoutPoint];
   labelPosition: LayoutPoint;
   showLabel: boolean;
+  provenance: GeneratedDiagram["edges"][number]["provenance"];
 }
 
 export interface DiagramStageLane {
@@ -174,6 +175,7 @@ export async function layoutGeneratedDiagram(
       points: edge.points,
       labelPosition: edge.labelPosition,
       showLabel: edgeLabelsVisible && edge.label.trim() !== "",
+      provenance: edge.value.provenance,
     })),
     bounds: semantic.bounds,
     lanes: semantic.columns.map((column) => ({

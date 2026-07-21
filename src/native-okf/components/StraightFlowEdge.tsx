@@ -20,6 +20,7 @@ export interface StraightFlowEdgeData {
   showLabel: boolean;
   highlighted: boolean;
   dimmed: boolean;
+  dashed?: boolean;
 }
 
 
@@ -46,6 +47,7 @@ export function StraightFlowEdge({
           stroke,
           strokeWidth: data.highlighted ? 2.25 : 1.5,
           strokeLinecap: "round",
+          strokeDasharray: data.dashed ? "7 5" : undefined,
           opacity,
         }}
       />

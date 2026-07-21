@@ -1,12 +1,17 @@
 import "server-only";
 
 import {
+  DIAGRAM_EDGE_PROVENANCE,
+  DIAGRAM_NODE_PROVENANCE,
   GENERATED_DIAGRAM_STAGES,
+  type DiagramEdgeProvenance,
+  type DiagramNodeProvenance,
   type DiagramStage,
   type GeneratedDiagram,
   type GeneratedDiagramEdge,
   type GeneratedDiagramNode,
 } from "../../shared/chat-types.ts";
+import type { NativeOkfDiagramGrounding } from "./diagram-grounding.ts";
 import { DIAGRAM_LIMITS } from "./diagram-schema.ts";
 
 export interface ValidDiagramResult {
@@ -25,8 +30,27 @@ export type DiagramValidationResult =
   | ValidDiagramResult
   | InvalidDiagramResult;
 
+export interface DiagramValidationOptions {
+  mode?: "stored" | "synthesized";
+  requireRpfPath?: boolean;
+}
+
 const DIAGRAM_KEYS = new Set(["title", "explanation", "nodes", "edges"]);
 const NODE_KEYS = new Set([
+  "id",
+  "label",
+  "description",
+  "category",
+  "stage",
+  "order",
+  "group",
+  "provenance",
+  "sourcePaths",
+  "supportConceptIds",
+  "synthesisRationale",
+  "synthesis",
+]);
+const LEGACY_NODE_KEYS = new Set([
   "id",
   "label",
   "description",
@@ -37,8 +61,23 @@ const NODE_KEYS = new Set([
   "sourcePaths",
   "synthesis",
 ]);
-const EDGE_KEYS = new Set(["source", "target", "label"]);
-const DIAGRAM_STAGE_SET: ReadonlySet<string> = new Set(GENERATED_DIAGRAM_STAGES);
+const EDGE_KEYS = new Set([
+  "source",
+  "target",
+  "label",
+  "provenance",
+  "supportConceptIds",
+]);
+const LEGACY_EDGE_KEYS = new Set(["source", "target", "label"]);
+const STAGES = new Set<string>(GENERATED_DIAGRAM_STAGES);
+const NODE_PROVENANCE = new Set<string>(DIAGRAM_NODE_PROVENANCE);
+const EDGE_PROVENANCE = new Set<string>(DIAGRAM_EDGE_PROVENANCE);
+
+interface ValidationContext {
+  grounding: NativeOkfDiagramGrounding;
+  strictProvenance: boolean;
+  options: DiagramValidationOptions;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,205 +85,325 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function rejectUnknownKeys(
   value: Record<string, unknown>,
-  allowedKeys: ReadonlySet<string>,
+  keys: ReadonlySet<string>,
   path: string,
   errors: string[],
 ): void {
   for (const key of Object.keys(value)) {
-    if (!allowedKeys.has(key)) errors.push(`${path}.${key} is not allowed.`);
+    if (!keys.has(key)) {
+      errors.push(path + " contains an unsupported field.");
+    }
   }
 }
 
-function readBoundedString(
+function bounded(
   value: unknown,
   path: string,
   maximum: number,
   errors: string[],
+  allowEmpty = false,
 ): string | undefined {
   if (typeof value !== "string") {
-    errors.push(`${path} must be a string.`);
+    errors.push(path + " must be a string.");
     return undefined;
   }
-
   const normalized = value.trim();
-  if (normalized.length === 0) {
-    errors.push(`${path} must not be empty.`);
-    return undefined;
-  }
-  if (normalized.length > maximum) {
-    errors.push(`${path} must not exceed ${maximum} characters.`);
+  if ((!allowEmpty && normalized === "") || normalized.length > maximum) {
+    errors.push(
+      path + (normalized === ""
+        ? " must not be empty."
+        : " must not exceed " + maximum + " characters."),
+    );
     return undefined;
   }
   return normalized;
 }
 
-function readPossiblyEmptyBoundedString(
+function nullableBounded(
   value: unknown,
   path: string,
   maximum: number,
   errors: string[],
-): string | undefined {
-  if (typeof value !== "string") {
-    errors.push(`${path} must be a string.`);
-    return undefined;
-  }
-  const normalized = value.trim();
-  if (normalized.length > maximum) {
-    errors.push(`${path} must not exceed ${maximum} characters.`);
-    return undefined;
-  }
-  return normalized;
+): string | null | undefined {
+  if (value === null) return null;
+  return bounded(value, path, maximum, errors);
 }
 
-function validateStage(
+function stringIds(
+  value: unknown,
+  path: string,
+  maximumItems: number,
+  maximumCharacters: number,
+  errors: string[],
+): string[] {
+  if (!Array.isArray(value)) {
+    errors.push(path + " must be an array.");
+    return [];
+  }
+  if (value.length > maximumItems) {
+    errors.push(path + " must contain at most " + maximumItems + " entries.");
+  }
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < value.length; index += 1) {
+    const item = bounded(
+      value[index],
+      path + "[" + index + "]",
+      maximumCharacters,
+      errors,
+    );
+    if (item && !seen.has(item)) {
+      seen.add(item);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+function normalizeLabel(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/gu, " ");
+}
+
+function faithfulStoredLabel(label: string, storedTitle: string): boolean {
+  const normalizedLabel = normalizeLabel(label);
+  const normalizedTitle = normalizeLabel(storedTitle);
+  if (
+    normalizedLabel === normalizedTitle ||
+    normalizedTitle.includes(normalizedLabel)
+  ) {
+    return true;
+  }
+  const titleTerms = new Set(normalizedTitle.split(" "));
+  const labelTerms = normalizedLabel.split(" ").filter(Boolean);
+  return labelTerms.length > 0 &&
+    labelTerms.every((term) => titleTerms.has(term));
+}
+
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return [...left].sort().join("\0") === [...right].sort().join("\0");
+}
+
+function legacyGrounding(
+  allowed: ReadonlySet<string> | readonly string[],
+): NativeOkfDiagramGrounding {
+  const ids = allowed instanceof Set ? allowed : new Set(allowed);
+  return {
+    allowedConceptIds: ids,
+    eligibleStoredConceptIds: ids,
+    conceptsById: new Map(),
+    storedRelations: [],
+  };
+}
+
+function validationContext(
+  value: NativeOkfDiagramGrounding | ReadonlySet<string> | readonly string[],
+  options: DiagramValidationOptions,
+): ValidationContext {
+  const strictProvenance = !(
+    value instanceof Set ||
+    Array.isArray(value)
+  );
+  return {
+    grounding: strictProvenance
+      ? value as NativeOkfDiagramGrounding
+      : legacyGrounding(value as ReadonlySet<string> | readonly string[]),
+    strictProvenance,
+    options,
+  };
+}
+
+function stageValue(
   value: unknown,
   path: string,
   errors: string[],
 ): DiagramStage | undefined {
-  if (typeof value !== "string" || !DIAGRAM_STAGE_SET.has(value)) {
+  if (typeof value !== "string" || !STAGES.has(value)) {
     errors.push(
-      `${path} must be one of: ${GENERATED_DIAGRAM_STAGES.join(", ")}.`,
+      path + " must be one of: " + GENERATED_DIAGRAM_STAGES.join(", ") + ".",
     );
     return undefined;
   }
   return value as DiagramStage;
 }
 
-function validateOrder(
-  value: unknown,
+function nodeProvenance(
+  value: Record<string, unknown>,
   path: string,
+  context: ValidationContext,
   errors: string[],
-): number | undefined {
+): DiagramNodeProvenance | undefined {
+  if (!context.strictProvenance && value.provenance === undefined) {
+    return value.synthesis === true ? "synthesized" : "stored";
+  }
   if (
-    !Number.isInteger(value) ||
-    (value as number) < DIAGRAM_LIMITS.minOrder ||
-    (value as number) > DIAGRAM_LIMITS.maxOrder
+    typeof value.provenance !== "string" ||
+    !NODE_PROVENANCE.has(value.provenance)
   ) {
-    errors.push(
-      `${path} must be an integer from ${DIAGRAM_LIMITS.minOrder} to ${DIAGRAM_LIMITS.maxOrder}.`,
-    );
+    errors.push(path + ".provenance is invalid.");
     return undefined;
   }
-  return value as number;
-}
-
-function validateGroup(
-  value: unknown,
-  path: string,
-  errors: string[],
-): string | null | undefined {
-  if (value === null) return null;
-  return readBoundedString(
-    value,
-    path,
-    DIAGRAM_LIMITS.maxGroupCharacters,
-    errors,
-  );
-}
-
-function validateSourcePaths(
-  value: unknown,
-  nodeIndex: number,
-  synthesis: boolean | undefined,
-  allowlist: ReadonlySet<string>,
-  errors: string[],
-): string[] {
-  const path = `nodes[${nodeIndex}].sourcePaths`;
-  if (!Array.isArray(value)) {
-    errors.push(`${path} must be an array.`);
-    return [];
-  }
-  if (value.length === 0) {
-    errors.push(
-      synthesis
-        ? `${path} must ground a synthesis node in at least one retrieved concept.`
-        : `${path} must ground a stored-knowledge node in at least one retrieved concept.`,
-    );
-  }
-  if (value.length > DIAGRAM_LIMITS.maxSourcePathsPerNode) {
-    errors.push(
-      `${path} must contain at most ${DIAGRAM_LIMITS.maxSourcePathsPerNode} entries.`,
-    );
-  }
-
-  const sourcePaths: string[] = [];
-  const seen = new Set<string>();
-  for (let index = 0; index < value.length; index += 1) {
-    const sourcePath = readBoundedString(
-      value[index],
-      `${path}[${index}]`,
-      DIAGRAM_LIMITS.maxSourcePathCharacters,
-      errors,
-    );
-    if (!sourcePath) continue;
-    if (!allowlist.has(sourcePath)) {
-      errors.push(
-        `${path}[${index}] is not in the retrieved concept allowlist.`,
-      );
-      continue;
-    }
-    if (!seen.has(sourcePath)) {
-      seen.add(sourcePath);
-      sourcePaths.push(sourcePath);
-    }
-  }
-  return sourcePaths;
+  return value.provenance as DiagramNodeProvenance;
 }
 
 function validateNode(
   value: unknown,
   index: number,
-  allowlist: ReadonlySet<string>,
+  context: ValidationContext,
   errors: string[],
 ): GeneratedDiagramNode | undefined {
-  const path = `nodes[${index}]`;
+  const path = "nodes[" + index + "]";
   if (!isRecord(value)) {
-    errors.push(`${path} must be an object.`);
+    errors.push(path + " must be an object.");
     return undefined;
   }
-  rejectUnknownKeys(value, NODE_KEYS, path, errors);
-
-  const id = readBoundedString(
+  rejectUnknownKeys(
+    value,
+    context.strictProvenance ? NODE_KEYS : new Set([...NODE_KEYS, ...LEGACY_NODE_KEYS]),
+    path,
+    errors,
+  );
+  const id = bounded(
     value.id,
-    `${path}.id`,
+    path + ".id",
     DIAGRAM_LIMITS.maxNodeIdCharacters,
     errors,
   );
-  const label = readBoundedString(
+  const label = bounded(
     value.label,
-    `${path}.label`,
+    path + ".label",
     DIAGRAM_LIMITS.maxNodeLabelCharacters,
     errors,
   );
-  const description = readBoundedString(
+  const description = bounded(
     value.description,
-    `${path}.description`,
+    path + ".description",
     DIAGRAM_LIMITS.maxNodeDescriptionCharacters,
     errors,
   );
-
-  const category = readBoundedString(
+  const category = bounded(
     value.category,
-    `${path}.category`,
+    path + ".category",
     DIAGRAM_LIMITS.maxCategoryCharacters,
     errors,
   );
-  const stage = validateStage(value.stage, `${path}.stage`, errors);
-  const order = validateOrder(value.order, `${path}.order`, errors);
-  const group = validateGroup(value.group, `${path}.group`, errors);
-
-  const synthesis =
-    typeof value.synthesis === "boolean" ? value.synthesis : undefined;
-  if (synthesis === undefined) {
-    errors.push(`${path}.synthesis must be a boolean.`);
+  const stage = stageValue(value.stage, path + ".stage", errors);
+  const order = value.order;
+  if (
+    !Number.isInteger(order) ||
+    (order as number) < DIAGRAM_LIMITS.minOrder ||
+    (order as number) > DIAGRAM_LIMITS.maxOrder
+  ) {
+    errors.push(path + ".order must be an integer from 0 to 100.");
   }
-  const sourcePaths = validateSourcePaths(
-    value.sourcePaths,
-    index,
-    synthesis,
-    allowlist,
+  const group = nullableBounded(
+    value.group,
+    path + ".group",
+    DIAGRAM_LIMITS.maxGroupCharacters,
     errors,
   );
+  const provenance = nodeProvenance(value, path, context, errors);
+  const sourcePaths = stringIds(
+    value.sourcePaths,
+    path + ".sourcePaths",
+    context.strictProvenance
+      ? DIAGRAM_LIMITS.maxSourcePathsPerNode
+      : 20,
+    DIAGRAM_LIMITS.maxSourcePathCharacters,
+    errors,
+  );
+  const supportConceptIds = context.strictProvenance
+    ? stringIds(
+        value.supportConceptIds,
+        path + ".supportConceptIds",
+        DIAGRAM_LIMITS.maxSupportConceptIds,
+        DIAGRAM_LIMITS.maxSourcePathCharacters,
+        errors,
+      )
+    : [...sourcePaths].slice(0, DIAGRAM_LIMITS.maxSupportConceptIds);
+  const rationale = context.strictProvenance
+    ? nullableBounded(
+        value.synthesisRationale,
+        path + ".synthesisRationale",
+        DIAGRAM_LIMITS.maxSynthesisRationaleCharacters,
+        errors,
+      )
+    : null;
+  const synthesis = value.synthesis;
+  if (
+    typeof synthesis !== "boolean" ||
+    (provenance && synthesis !== (provenance === "synthesized"))
+  ) {
+    errors.push(path + ".synthesis must agree with provenance.");
+  }
+
+  for (const sourcePath of sourcePaths) {
+    if (!context.grounding.allowedConceptIds.has(sourcePath)) {
+      errors.push(path + ".sourcePaths contains a non-allowlisted concept.");
+    }
+  }
+  for (const supportId of supportConceptIds) {
+    if (!context.grounding.eligibleStoredConceptIds.has(supportId)) {
+      errors.push(path + ".supportConceptIds contains unsupported concept " + JSON.stringify(supportId) + ".");
+    }
+  }
+
+  if (provenance === "user-provided") {
+    if (sourcePaths.length > 0 || supportConceptIds.length > 0) {
+      errors.push(path + " is user-provided and must not claim native sources.");
+    }
+    if (
+      stage &&
+      !["problem", "design-goal", "design-objective"].includes(stage)
+    ) {
+      errors.push(path + " is user-provided and must occupy an initial problem or goal stage.");
+    }
+  } else if (provenance === "stored") {
+    if (
+      sourcePaths.length !== 1 ||
+      supportConceptIds.length !== 1 ||
+      sourcePaths[0] !== supportConceptIds[0]
+    ) {
+      errors.push(path + " must identify exactly one matching stored concept.");
+    } else if (
+      context.strictProvenance &&
+      !context.grounding.eligibleStoredConceptIds.has(sourcePaths[0]!)
+    ) {
+      errors.push(path + " does not identify an eligible retrieved stored concept.");
+    } else if (context.strictProvenance) {
+      const concept = context.grounding.conceptsById.get(sourcePaths[0]!);
+      if (!concept || (label && !faithfulStoredLabel(label, concept.title))) {
+        errors.push(path + ".label does not faithfully identify its stored concept.");
+      }
+      if (concept && stage !== concept.stage) {
+        errors.push(path + ".stage does not match the stored concept type.");
+      }
+    }
+  } else if (provenance === "synthesized") {
+    if (
+      context.strictProvenance &&
+      (
+        supportConceptIds.length === 0 ||
+        !sameIds(sourcePaths, supportConceptIds)
+      )
+    ) {
+      errors.push(path + " must use one to three matching allowlisted support IDs and source paths.");
+    } else if (!context.strictProvenance && sourcePaths.length === 0) {
+      errors.push(path + " must be grounded in at least one retrieved concept.");
+    }
+    if (label && context.strictProvenance) {
+      for (const concept of context.grounding.conceptsById.values()) {
+        if (normalizeLabel(label) === normalizeLabel(concept.title)) {
+          errors.push(path + " duplicates an exact stored concept while marked synthesized.");
+          break;
+        }
+      }
+    }
+  }
 
   if (
     !id ||
@@ -252,9 +411,11 @@ function validateNode(
     !description ||
     !category ||
     !stage ||
-    order === undefined ||
+    !Number.isInteger(order) ||
     group === undefined ||
-    synthesis === undefined
+    !provenance ||
+    rationale === undefined ||
+    typeof synthesis !== "boolean"
   ) {
     return undefined;
   }
@@ -264,274 +425,422 @@ function validateNode(
     description,
     category,
     stage,
-    order,
+    order: order as number,
     group,
+    provenance,
     sourcePaths,
+    supportConceptIds,
+    synthesisRationale: rationale,
     synthesis,
   };
+}
+
+function edgeProvenance(
+  value: Record<string, unknown>,
+  sourceNode: GeneratedDiagramNode | undefined,
+  targetNode: GeneratedDiagramNode | undefined,
+  context: ValidationContext,
+  path: string,
+  errors: string[],
+): DiagramEdgeProvenance | undefined {
+  if (!context.strictProvenance && value.provenance === undefined) {
+    return sourceNode?.provenance === "stored" &&
+        targetNode?.provenance === "stored"
+      ? "stored"
+      : "synthesized";
+  }
+  if (
+    typeof value.provenance !== "string" ||
+    !EDGE_PROVENANCE.has(value.provenance)
+  ) {
+    errors.push(path + ".provenance is invalid.");
+    return undefined;
+  }
+  return value.provenance as DiagramEdgeProvenance;
 }
 
 function validateEdge(
   value: unknown,
   index: number,
-  nodeIds: ReadonlySet<string>,
+  nodesById: ReadonlyMap<string, GeneratedDiagramNode>,
+  context: ValidationContext,
   errors: string[],
 ): GeneratedDiagramEdge | undefined {
-  const path = `edges[${index}]`;
+  const path = "edges[" + index + "]";
   if (!isRecord(value)) {
-    errors.push(`${path} must be an object.`);
+    errors.push(path + " must be an object.");
     return undefined;
   }
-  rejectUnknownKeys(value, EDGE_KEYS, path, errors);
-
-  const source = readBoundedString(
+  rejectUnknownKeys(
+    value,
+    context.strictProvenance ? EDGE_KEYS : new Set([...EDGE_KEYS, ...LEGACY_EDGE_KEYS]),
+    path,
+    errors,
+  );
+  const source = bounded(
     value.source,
-    `${path}.source`,
+    path + ".source",
     DIAGRAM_LIMITS.maxNodeIdCharacters,
     errors,
   );
-  const target = readBoundedString(
+  const target = bounded(
     value.target,
-    `${path}.target`,
+    path + ".target",
     DIAGRAM_LIMITS.maxNodeIdCharacters,
     errors,
   );
-  const label = readPossiblyEmptyBoundedString(
+  const label = bounded(
     value.label,
-    `${path}.label`,
+    path + ".label",
     DIAGRAM_LIMITS.maxEdgeLabelCharacters,
     errors,
+    true,
   );
-  if (source && !nodeIds.has(source)) {
-    errors.push(`${path}.source does not identify an existing node.`);
+  const sourceNode = source ? nodesById.get(source) : undefined;
+  const targetNode = target ? nodesById.get(target) : undefined;
+  if (source && !sourceNode) {
+    errors.push(path + ".source does not identify an existing node.");
   }
-  if (target && !nodeIds.has(target)) {
-    errors.push(`${path}.target does not identify an existing node.`);
+  if (target && !targetNode) {
+    errors.push(path + ".target does not identify an existing node.");
   }
   if (source && target && source === target) {
-    errors.push(`${path} must not connect a node to itself.`);
+    errors.push(path + " must not be a self-loop.");
   }
-  if (!source || !target || label === undefined) return undefined;
-  return { source, target, label };
+  const provenance = edgeProvenance(
+    value,
+    sourceNode,
+    targetNode,
+    context,
+    path,
+    errors,
+  );
+  const legacySupport = [
+    ...(sourceNode?.supportConceptIds ?? []),
+    ...(targetNode?.supportConceptIds ?? []),
+  ].filter((id, position, all) => all.indexOf(id) === position).slice(0, 3);
+  const supportConceptIds = context.strictProvenance
+    ? stringIds(
+        value.supportConceptIds,
+        path + ".supportConceptIds",
+        DIAGRAM_LIMITS.maxSupportConceptIds,
+        DIAGRAM_LIMITS.maxSourcePathCharacters,
+        errors,
+      )
+    : legacySupport;
+  for (const supportId of supportConceptIds) {
+    if (!context.grounding.eligibleStoredConceptIds.has(supportId)) {
+      errors.push(path + " has a non-allowlisted support concept.");
+    }
+  }
+  if (provenance === "stored" && context.strictProvenance) {
+    if (
+      sourceNode?.provenance !== "stored" ||
+      targetNode?.provenance !== "stored"
+    ) {
+      errors.push(path + " marks a relation stored without two stored endpoint nodes.");
+    } else {
+      const expectedSupport = [
+        sourceNode.supportConceptIds[0]!,
+        targetNode.supportConceptIds[0]!,
+      ];
+      if (!sameIds(supportConceptIds, expectedSupport)) {
+        errors.push(path + " stored support IDs must agree with its endpoint concepts.");
+      }
+      const exists = context.grounding.storedRelations.some((relation) =>
+        relation.sourceId === expectedSupport[0] &&
+        relation.targetId === expectedSupport[1] &&
+        normalizeLabel(relation.label) === normalizeLabel(label ?? "")
+      );
+      if (!exists) errors.push(path + " does not match an exact resolved native relation.");
+    }
+  }
+  if (provenance === "synthesized" && supportConceptIds.length === 0) {
+    errors.push(path + " synthesized relation requires allowlisted support.");
+  }
+  if (!source || !target || label === undefined || !provenance) return undefined;
+  return { source, target, label, provenance, supportConceptIds };
 }
 
-function stemSemanticToken(token: string): string {
-  if (token.length >= 9 && token.endsWith("ication")) return token.slice(0, -7);
+function semanticStem(token: string): string {
+  if (token.length >= 9 && token.endsWith("ification")) {
+    return token.slice(0, -7) + "y";
+  }
   if (token.length >= 8 && token.endsWith("ation")) return token.slice(0, -5);
   if (token.length >= 7 && token.endsWith("ment")) return token.slice(0, -4);
   if (token.length >= 6 && token.endsWith("ing")) return token.slice(0, -3);
-  if (token.length >= 6 && token.endsWith("ate")) return token.slice(0, -3);
   if (token.length >= 5 && token.endsWith("ed")) return token.slice(0, -2);
-  if (token.length >= 5 && token.endsWith("y")) return token.slice(0, -1);
   return token;
 }
 
-function semanticLabelTokens(value: string): string[] {
+function semanticTokens(value: string): string[] {
   return [
     ...new Set(
-      value
-        .normalize("NFKC")
-        .toLocaleLowerCase("en")
-        .match(/[\p{L}\p{N}]+/gu)
-        ?.map(stemSemanticToken) ?? [],
+      normalizeLabel(value)
+        .split(" ")
+        .filter(Boolean)
+        .map(semanticStem),
     ),
   ].sort((left, right) => left.localeCompare(right, "en"));
 }
 
-function semanticLabelsOverlap(
+function semanticOverlap(
   left: readonly string[],
   right: readonly string[],
 ): boolean {
   if (left.join(" ") === right.join(" ")) return true;
-  const rightTokens = new Set(right);
-  const intersection = left.filter((token) => rightTokens.has(token)).length;
-  return (
-    intersection >= 2 &&
-    (2 * intersection) / (left.length + right.length) >= 0.8
-  );
+  const rightSet = new Set(right);
+  const intersection = left.filter((token) => rightSet.has(token)).length;
+  return intersection >= 2 &&
+    (2 * intersection) / (left.length + right.length) >= 0.8;
 }
 
-function validateCompactStructure(
+function validateGraph(
   nodes: readonly GeneratedDiagramNode[],
   edges: readonly GeneratedDiagramEdge[],
+  context: ValidationContext,
   errors: string[],
+  warnings: string[],
 ): void {
-  const semanticLabels: Array<{ nodeId: string; tokens: string[] }> = [];
-  for (let index = 0; index < nodes.length; index += 1) {
-    const node = nodes[index]!;
-    const tokens = semanticLabelTokens(node.label);
-    const previous = semanticLabels.find((candidate) =>
-      semanticLabelsOverlap(tokens, candidate.tokens),
+  const labels: Array<{ nodeId: string; tokens: string[] }> = [];
+  for (const node of nodes) {
+    const tokens = semanticTokens(node.label);
+    const prior = labels.find((candidate) =>
+      semanticOverlap(tokens, candidate.tokens)
     );
-    if (previous) {
+    if (prior) {
       errors.push(
-        `nodes[${index}].label near-duplicates the semantic label of node ${JSON.stringify(previous.nodeId)}.`,
+        "Node " +
+          JSON.stringify(node.id) +
+          " near-duplicates the semantic label of node " +
+          JSON.stringify(prior.nodeId) +
+          ".",
       );
     }
-    semanticLabels.push({ nodeId: node.id, tokens });
+    labels.push({ nodeId: node.id, tokens });
   }
-
-  const groups = new Set(
-    nodes
-      .map((node) => node.group)
-      .filter((group): group is string => group !== null),
-  );
-  if (groups.size > DIAGRAM_LIMITS.maxParallelBranches) {
-    errors.push(
-      `nodes use ${groups.size} groups; consolidate them into at most ${DIAGRAM_LIMITS.maxParallelBranches} major branches.`,
+  const userNodes = nodes.filter((node) => node.provenance === "user-provided");
+  if (userNodes.length > 2) errors.push("At most two user-provided nodes are allowed.");
+  if (context.options.mode === "stored") {
+    if (nodes.some((node) => node.provenance !== "stored")) {
+      errors.push("Stored source maps may contain only stored nodes.");
+    }
+    if (edges.some((edge) => edge.provenance !== "stored")) {
+      errors.push("Stored source maps may contain only stored edges.");
+    }
+  }
+  if (context.options.mode === "synthesized") {
+    const storedNodes = nodes.filter((node) => node.provenance === "stored");
+    if (storedNodes.length < 2) {
+      errors.push("A grounded synthesis flow requires at least two displayed stored concepts.");
+    }
+    const displayedStoredConceptIds = new Set(
+      storedNodes.flatMap((node) => node.supportConceptIds),
     );
+    const synthesizedStages = new Set(
+      nodes
+        .filter((node) => node.provenance === "synthesized")
+        .map((node) => node.stage),
+    );
+    for (const stage of synthesizedStages) {
+      const stageSupported = nodes
+        .filter(
+          (node) =>
+            node.provenance === "synthesized" && node.stage === stage,
+        )
+        .some((node) =>
+          node.supportConceptIds.some((id) =>
+            displayedStoredConceptIds.has(id)
+          )
+        );
+      if (!stageSupported) {
+        errors.push(
+          "Synthesized stage " +
+            JSON.stringify(stage) +
+            " lacks a displayed stored support concept.",
+        );
+      }
+    }
   }
-
   if (nodes.length <= 1) return;
 
-  const nodeIds = [...new Set(nodes.map((node) => node.id))].sort((left, right) =>
-    left.localeCompare(right, "en"),
-  );
-  const degreeByNode = new Map(nodeIds.map((nodeId) => [nodeId, 0]));
-  const adjacencyByNode = new Map(
-    nodeIds.map((nodeId) => [nodeId, new Set<string>()]),
-  );
-  const targetsBySource = new Map<string, Set<string>>();
-
+  const adjacency = new Map(nodes.map((node) => [node.id, new Set<string>()]));
+  const outgoing = new Map(nodes.map((node) => [node.id, new Set<string>()]));
   for (const edge of edges) {
-    if (!degreeByNode.has(edge.source) || !degreeByNode.has(edge.target)) {
-      continue;
-    }
-    degreeByNode.set(edge.source, (degreeByNode.get(edge.source) ?? 0) + 1);
-    degreeByNode.set(edge.target, (degreeByNode.get(edge.target) ?? 0) + 1);
-    adjacencyByNode.get(edge.source)?.add(edge.target);
-    adjacencyByNode.get(edge.target)?.add(edge.source);
-
-    const targets = targetsBySource.get(edge.source) ?? new Set<string>();
-    targets.add(edge.target);
-    targetsBySource.set(edge.source, targets);
+    adjacency.get(edge.source)?.add(edge.target);
+    adjacency.get(edge.target)?.add(edge.source);
+    outgoing.get(edge.source)?.add(edge.target);
   }
-
-  for (const [nodeId, degree] of degreeByNode) {
-    if (degree === 0) {
-      errors.push(
-        `Node ${JSON.stringify(nodeId)} is isolated; connect it or consolidate it into a decision-relevant node.`,
-      );
+  for (const [nodeId, neighbors] of adjacency) {
+    if (neighbors.size === 0) {
+      errors.push("Node " + JSON.stringify(nodeId) + " is isolated and orphaned.");
     }
   }
-
-  const startNodeId = nodeIds[0]!;
-  const visited = new Set([startNodeId]);
-  const queue = [startNodeId];
+  const start = [...adjacency.keys()].sort((left, right) =>
+    left.localeCompare(right, "en")
+  )[0]!;
+  const visited = new Set([start]);
+  const queue = [start];
   for (let cursor = 0; cursor < queue.length; cursor += 1) {
-    const nodeId = queue[cursor]!;
-    const neighbors = [...(adjacencyByNode.get(nodeId) ?? [])].sort(
-      (left, right) => left.localeCompare(right, "en"),
-    );
-    for (const neighbor of neighbors) {
-      if (visited.has(neighbor)) continue;
-      visited.add(neighbor);
-      queue.push(neighbor);
+    for (const neighbor of adjacency.get(queue[cursor]!) ?? []) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
     }
   }
-  const disconnectedNodeIds = nodeIds.filter((nodeId) => !visited.has(nodeId));
-  if (disconnectedNodeIds.length > 0) {
+  if (visited.size !== nodes.length) {
+    const disconnected = nodes
+      .map((node) => node.id)
+      .filter((nodeId) => !visited.has(nodeId))
+      .sort((left, right) => left.localeCompare(right, "en"));
     errors.push(
-      `Diagram contains disconnected flow components; connect these nodes to the main flow: ${disconnectedNodeIds
-        .map((nodeId) => JSON.stringify(nodeId))
-        .join(", ")}.`,
+      "Diagram contains disconnected flow components; connect these nodes to the main flow: " +
+        disconnected.map((nodeId) => JSON.stringify(nodeId)).join(", ") +
+        ".",
     );
   }
 
-  for (const [nodeId, targets] of targetsBySource) {
-    if (targets.size > DIAGRAM_LIMITS.maxParallelBranches) {
-      errors.push(
-        `Node ${JSON.stringify(nodeId)} creates ${targets.size} parallel branches; consolidate them into at most ${DIAGRAM_LIMITS.maxParallelBranches}.`,
-      );
+  if (context.options.mode === "synthesized") {
+    const visiting = new Set<string>();
+    const complete = new Set<string>();
+    const hasCycle = (nodeId: string): boolean => {
+      if (visiting.has(nodeId)) return true;
+      if (complete.has(nodeId)) return false;
+      visiting.add(nodeId);
+      for (const target of outgoing.get(nodeId) ?? []) {
+        if (hasCycle(target)) return true;
+      }
+      visiting.delete(nodeId);
+      complete.add(nodeId);
+      return false;
+    };
+    if (nodes.some((node) => hasCycle(node.id))) {
+      errors.push("Synthesis flow must not contain cycles.");
     }
+  }
+
+  for (const [source, targets] of outgoing) {
+    if (targets.size > DIAGRAM_LIMITS.maxParallelBranches) {
+      errors.push("Node " + JSON.stringify(source) + " has too many parallel branches.");
+    }
+  }
+
+  if (context.options.requireRpfPath) {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const isProblem = (stage: DiagramStage) =>
+      ["problem", "design-goal", "design-objective"].includes(stage);
+    const isRequirement = (stage: DiagramStage) =>
+      ["meta-requirement", "design-requirement", "requirements"].includes(stage);
+    const isPrinciple = (stage: DiagramStage) =>
+      ["design-principle", "principles"].includes(stage);
+    const isFeature = (stage: DiagramStage) =>
+      ["design-feature", "features"].includes(stage);
+    const completePath = nodes.some((problem) =>
+      isProblem(problem.stage) &&
+      [...(outgoing.get(problem.id) ?? [])].some((requirementId) => {
+        const requirement = byId.get(requirementId);
+        return Boolean(
+          requirement &&
+          isRequirement(requirement.stage) &&
+          [...(outgoing.get(requirement.id) ?? [])].some((principleId) => {
+            const principle = byId.get(principleId);
+            return Boolean(
+              principle &&
+              isPrinciple(principle.stage) &&
+              [...(outgoing.get(principle.id) ?? [])].some((featureId) => {
+                const feature = byId.get(featureId);
+                return Boolean(feature && isFeature(feature.stage));
+              })
+            );
+          })
+        );
+      })
+    );
+    if (!completePath) {
+      errors.push("The requested design solution requires a complete problem -> requirement -> principle -> feature path.");
+    }
+  }
+
+  if (!context.strictProvenance && edges.length === 0) {
+    warnings.push("Legacy diagram has no directed relationships.");
   }
 }
 
 export function validateGeneratedDiagram(
   value: unknown,
-  allowedSourcePaths: ReadonlySet<string> | readonly string[],
+  groundingOrAllowlist:
+    | NativeOkfDiagramGrounding
+    | ReadonlySet<string>
+    | readonly string[],
+  options: DiagramValidationOptions = {},
 ): DiagramValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const allowlist =
-    allowedSourcePaths instanceof Set
-      ? allowedSourcePaths
-      : new Set(allowedSourcePaths);
-
+  const context = validationContext(groundingOrAllowlist, options);
   if (!isRecord(value)) {
-    return {
-      ok: false,
-      errors: ["The generated diagram must be an object."],
-      warnings,
-    };
+    return { ok: false, errors: ["The generated diagram must be an object."], warnings };
   }
   rejectUnknownKeys(value, DIAGRAM_KEYS, "diagram", errors);
-
-  const title = readBoundedString(
-    value.title,
-    "title",
-    DIAGRAM_LIMITS.maxTitleCharacters,
-    errors,
-  );
-  const explanation = readBoundedString(
+  const title = bounded(value.title, "title", DIAGRAM_LIMITS.maxTitleCharacters, errors);
+  const explanation = bounded(
     value.explanation,
     "explanation",
     DIAGRAM_LIMITS.maxExplanationCharacters,
     errors,
   );
-
-  const rawNodes = value.nodes;
   const nodes: GeneratedDiagramNode[] = [];
-  if (!Array.isArray(rawNodes)) {
+  if (!Array.isArray(value.nodes)) {
     errors.push("nodes must be an array.");
   } else {
-    if (rawNodes.length === 0) errors.push("nodes must not be empty.");
-    if (rawNodes.length > DIAGRAM_LIMITS.maxNodes) {
-      errors.push(`nodes must contain at most ${DIAGRAM_LIMITS.maxNodes} entries.`);
+    if (value.nodes.length === 0) errors.push("nodes must not be empty.");
+    if (value.nodes.length > DIAGRAM_LIMITS.maxNodes) {
+      errors.push("nodes must contain at most " + DIAGRAM_LIMITS.maxNodes + " entries.");
     }
-    for (let index = 0; index < rawNodes.length; index += 1) {
-      const node = validateNode(rawNodes[index], index, allowlist, errors);
-      if (node) nodes.push(node);
-    }
+    value.nodes.forEach((node, index) => {
+      const parsed = validateNode(node, index, context, errors);
+      if (parsed) nodes.push(parsed);
+    });
   }
-
-  const nodeIds = new Set<string>();
-  for (let index = 0; index < nodes.length; index += 1) {
-    const nodeId = nodes[index]?.id;
-    if (!nodeId) continue;
-    if (nodeIds.has(nodeId)) {
-      errors.push(`nodes[${index}].id duplicates the node ID ${JSON.stringify(nodeId)}.`);
+  const nodesById = new Map<string, GeneratedDiagramNode>();
+  for (const node of nodes) {
+    if (nodesById.has(node.id)) {
+      errors.push("Node duplicates the node ID " + JSON.stringify(node.id) + ".");
     }
-    nodeIds.add(nodeId);
+    nodesById.set(node.id, node);
   }
-
-  const rawEdges = value.edges;
   const edges: GeneratedDiagramEdge[] = [];
-  if (!Array.isArray(rawEdges)) {
+  if (!Array.isArray(value.edges)) {
     errors.push("edges must be an array.");
   } else {
-    if (rawEdges.length > DIAGRAM_LIMITS.maxEdges) {
-      errors.push(`edges must contain at most ${DIAGRAM_LIMITS.maxEdges} entries.`);
+    if (value.edges.length > DIAGRAM_LIMITS.maxEdges) {
+      errors.push("edges must contain at most " + DIAGRAM_LIMITS.maxEdges + " entries.");
     }
-    const seenEdges = new Set<string>();
-    for (let index = 0; index < rawEdges.length; index += 1) {
-      const edge = validateEdge(rawEdges[index], index, nodeIds, errors);
-      if (!edge) continue;
-      const edgeKey = JSON.stringify([edge.source, edge.target, edge.label]);
-      if (seenEdges.has(edgeKey)) {
-        warnings.push(`Removed duplicate edge at edges[${index}].`);
-        continue;
+    const seen = new Set<string>();
+    value.edges.forEach((edge, index) => {
+      const parsed = validateEdge(edge, index, nodesById, context, errors);
+      if (!parsed) return;
+      const key = JSON.stringify([
+        parsed.source,
+        parsed.target,
+        normalizeLabel(parsed.label),
+      ]);
+      if (seen.has(key)) {
+        if (context.strictProvenance) {
+          errors.push("edges[" + index + "] duplicates an existing edge.");
+        } else {
+          warnings.push("Removed duplicate edge at edges[" + index + "].");
+        }
+        return;
       }
-      seenEdges.add(edgeKey);
-      edges.push(edge);
-    }
+      seen.add(key);
+      edges.push(parsed);
+    });
   }
-  validateCompactStructure(nodes, edges, errors);
-
+  validateGraph(nodes, edges, context, errors, warnings);
   if (errors.length > 0 || !title || !explanation) {
     return { ok: false, errors, warnings };
   }
-
   return {
     ok: true,
     diagram: { title, explanation, nodes, edges },

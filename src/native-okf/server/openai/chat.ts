@@ -8,6 +8,8 @@ import {
   type NativeOkfChatHistoryMessage,
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
+  type NativeOkfDiagramMode,
+  type SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
 import type {
@@ -17,8 +19,11 @@ import type {
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
+  applyNativeOkfPaperRestriction,
   clarificationConversationState,
   completedConversationState,
+  hasSufficientNativeOkfSynthesisGrounding,
+  nativeOkfSynthesisRequiresRpfPath,
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
 import {
@@ -31,6 +36,10 @@ import {
   type NativeOkfGroundedContext,
 } from "./context.ts";
 import { validateAnswerCitations } from "./citations.ts";
+import {
+  buildNativeOkfDiagramGrounding,
+  type NativeOkfDiagramGrounding,
+} from "./diagram-grounding.ts";
 import { validateNativeOkfAnswerPolicy } from "./answer-policy.ts";
 import {
   type NativeOpenAiEnvironment,
@@ -51,6 +60,7 @@ import {
   NATIVE_OKF_SYSTEM_PROMPT,
   NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION,
   NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
+  NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import { buildGroundedStoredSourceMap } from "./stored-source-map.ts";
@@ -80,6 +90,10 @@ export type NativeOkfDiagramGenerator = (input: {
   context: NativeOkfGroundedContext;
   question: string;
   answerMarkdown: string;
+  mode: NativeOkfDiagramMode;
+  grounding: NativeOkfDiagramGrounding;
+  priorDraft: SynthesisDraftState | null;
+  requireRpfPath: boolean;
 }) => Promise<NativeOkfDiagramGenerationResult>;
 
 export interface NativeOkfChatDependencies {
@@ -316,6 +330,26 @@ function mergeSourceCards(
 const SAFE_PRESENTATION_ERROR =
   "The grounded answer could not be presented safely. The validated retrieved source cards remain available below.";
 
+function synthesisDraftFromDiagram(
+  prepared: PreparedNativeOkfChatRequest,
+  diagram: GeneratedDiagram,
+): SynthesisDraftState {
+  return {
+    version: 1,
+    problemStatement:
+      prepared.synthesisProblem ??
+      prepared.effectiveQuestion.slice(0, 800),
+    domain:
+      prepared.synthesisDomain ??
+      prepared.priorSynthesisDraft?.domain ??
+      null,
+    objective: prepared.priorSynthesisDraft?.objective ?? null,
+    constraints: prepared.priorSynthesisDraft?.constraints ?? [],
+    nodes: diagram.nodes,
+    edges: diagram.edges,
+  };
+}
+
 export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
@@ -336,6 +370,7 @@ export async function answerNativeOkfChat(
       insufficientContext: false,
       clarification: prepared.clarification,
       conversationState: clarificationConversationState(prepared),
+      diagramMode: null,
     };
   }
 
@@ -343,22 +378,37 @@ export async function answerNativeOkfChat(
   const answerInstructions = [
     NATIVE_OKF_SYSTEM_PROMPT,
     answerModeInstruction(prepared.answerMode),
+    ...(prepared.intent === "synthesized-flow"
+      ? [NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION]
+      : []),
     includeDiagram
       ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
       : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
   ].join("\n\n");
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
-  const retrieval = await retrieve(prepared.retrievalQuestion);
+  const rawRetrieval = await retrieve(prepared.retrievalQuestion);
+  const retrieval = applyNativeOkfPaperRestriction(
+    prepared,
+    rawRetrieval,
+  );
+  const insufficientSynthesisGrounding =
+    prepared.intent === "synthesized-flow" &&
+    !hasSufficientNativeOkfSynthesisGrounding(retrieval);
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
   // This branch deliberately occurs before configuration, moderation, or SDK access.
-  if (retrieval.noMatch || retrieval.finalConcepts.length === 0) {
+  if (
+    retrieval.noMatch ||
+    retrieval.finalConcepts.length === 0 ||
+    insufficientSynthesisGrounding
+  ) {
     return {
       kind: "answer",
       answerMarkdown: INSUFFICIENT_CONTEXT_ANSWER,
       sources: [],
       insufficientContext: true,
+      diagramMode: null,
       conversationState: completedConversationState(
         prepared,
         retrieval,
@@ -366,6 +416,9 @@ export async function answerNativeOkfChat(
       ),
       warnings: [
         ...retrieval.warnings,
+        ...(insufficientSynthesisGrounding
+          ? ["At least two relevant stored native concepts are required for synthesis."]
+          : []),
         "No model request was made.",
       ],
       ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
@@ -500,8 +553,12 @@ export async function answerNativeOkfChat(
   );
 
   let diagram: GeneratedDiagram | undefined;
-  if (includeDiagram) {
+  let responseDiagramMode: NativeOkfDiagramMode | null = null;
+  let synthesisDraft: SynthesisDraftState | null =
+    prepared.validatedState.synthesisDraft;
+  if (includeDiagram && prepared.diagramMode) {
     try {
+      const grounding = await buildNativeOkfDiagramGrounding(retrieval);
       const diagramResult = await (
         dependencies.generateDiagram ?? defaultDiagramGenerator
       )({
@@ -510,9 +567,19 @@ export async function answerNativeOkfChat(
         context,
         question: prepared.effectiveQuestion,
         answerMarkdown,
+        mode: prepared.diagramMode,
+        grounding,
+        priorDraft: prepared.priorSynthesisDraft,
+        requireRpfPath:
+          prepared.diagramMode === "synthesized" &&
+          nativeOkfSynthesisRequiresRpfPath(prepared.effectiveQuestion),
       });
       diagram = diagramResult.diagram;
+      responseDiagramMode = diagram ? prepared.diagramMode : null;
       warnings.push(...diagramResult.warnings);
+      if (diagram && prepared.diagramMode === "synthesized") {
+        synthesisDraft = synthesisDraftFromDiagram(prepared, diagram);
+      }
     } catch {
       warnings.push(
         "The diagram request could not be completed; the grounded text answer is still available.",
@@ -522,6 +589,7 @@ export async function answerNativeOkfChat(
       try {
         diagram = await buildGroundedStoredSourceMap(retrieval);
         if (diagram) {
+          responseDiagramMode = "stored";
           warnings.push(
             "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead.",
           );
@@ -546,12 +614,17 @@ export async function answerNativeOkfChat(
     prepared,
     retrieval,
     sourceCards,
+    synthesisDraft,
   );
   return {
     kind: "answer",
     answerMarkdown,
     sources: sourceCards,
     ...(diagram ? { diagram } : {}),
+    diagramMode: responseDiagramMode,
+    ...(prepared.intent === "synthesized-flow" && synthesisDraft
+      ? { synthesisDraft }
+      : {}),
     insufficientContext: false,
     conversationState,
     ...(warnings.length > 0

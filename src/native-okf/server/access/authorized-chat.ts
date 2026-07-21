@@ -7,6 +7,8 @@ import type {
   NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
 import {
+  applyNativeOkfPaperRestriction,
+  hasSufficientNativeOkfSynthesisGrounding,
   prepareNativeOkfChatRequest,
   type NativeOkfConversationCatalog,
 } from "../conversation.ts";
@@ -343,7 +345,24 @@ export async function answerAuthorizedNativeOkfChat(
   }
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
-  const retrieval = await retrieve(prepared.retrievalQuestion);
+  const rawRetrieval = await retrieve(prepared.retrievalQuestion);
+  const restrictedRetrieval = applyNativeOkfPaperRestriction(
+    prepared,
+    rawRetrieval,
+  );
+  const synthesisGroundingMissing =
+    prepared.intent === "synthesized-flow" &&
+    !hasSufficientNativeOkfSynthesisGrounding(restrictedRetrieval);
+  const retrieval: RetrievalResult = synthesisGroundingMissing
+    ? {
+        ...restrictedRetrieval,
+        noMatch: true,
+        warnings: [
+          ...restrictedRetrieval.warnings,
+          "At least two relevant stored native concepts are required for synthesis.",
+        ],
+      }
+    : restrictedRetrieval;
   const answer = dependencies.answer ?? answerNativeOkfChat;
 
   if (retrieval.noMatch) {

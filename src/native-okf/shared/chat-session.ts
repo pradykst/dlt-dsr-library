@@ -149,6 +149,8 @@ function compactResponse(
   delete safe.quota;
   delete safe.retrievalDebug;
   delete safe.conversationState;
+  // The validated latest draft is stored once in the session conversation state.
+  delete safe.synthesisDraft;
   return safe;
 }
 

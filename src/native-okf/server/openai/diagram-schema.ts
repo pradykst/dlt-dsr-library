@@ -17,8 +17,10 @@ export const DIAGRAM_LIMITS = Object.freeze({
   maxGroupCharacters: 40,
   minOrder: 0,
   maxOrder: 100,
-  maxSourcePathsPerNode: 20,
+  maxSourcePathsPerNode: 3,
   maxSourcePathCharacters: 320,
+  maxSupportConceptIds: 3,
+  maxSynthesisRationaleCharacters: 240,
   maxEdgeLabelCharacters: 32,
 });
 
@@ -57,7 +59,10 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
           "stage",
           "order",
           "group",
+          "provenance",
           "sourcePaths",
+          "supportConceptIds",
+          "synthesisRationale",
           "synthesis",
         ],
         properties: {
@@ -100,15 +105,39 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
               },
             ],
           },
+          provenance: {
+            type: "string",
+            enum: ["user-provided", "stored", "synthesized"],
+          },
           sourcePaths: {
             type: "array",
-            minItems: 1,
+            minItems: 0,
             maxItems: DIAGRAM_LIMITS.maxSourcePathsPerNode,
             items: {
               type: "string",
               minLength: 1,
               maxLength: DIAGRAM_LIMITS.maxSourcePathCharacters,
             },
+          },
+          supportConceptIds: {
+            type: "array",
+            minItems: 0,
+            maxItems: DIAGRAM_LIMITS.maxSupportConceptIds,
+            items: {
+              type: "string",
+              minLength: 1,
+              maxLength: DIAGRAM_LIMITS.maxSourcePathCharacters,
+            },
+          },
+          synthesisRationale: {
+            anyOf: [
+              { type: "null" },
+              {
+                type: "string",
+                minLength: 1,
+                maxLength: DIAGRAM_LIMITS.maxSynthesisRationaleCharacters,
+              },
+            ],
           },
           synthesis: { type: "boolean" },
         },
@@ -120,7 +149,13 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["source", "target", "label"],
+        required: [
+          "source",
+          "target",
+          "label",
+          "provenance",
+          "supportConceptIds",
+        ],
         properties: {
           source: {
             type: "string",
@@ -136,6 +171,20 @@ export const GENERATED_DIAGRAM_JSON_SCHEMA = {
             type: "string",
             minLength: 0,
             maxLength: DIAGRAM_LIMITS.maxEdgeLabelCharacters,
+          },
+          provenance: {
+            type: "string",
+            enum: ["stored", "synthesized"],
+          },
+          supportConceptIds: {
+            type: "array",
+            minItems: 1,
+            maxItems: DIAGRAM_LIMITS.maxSupportConceptIds,
+            items: {
+              type: "string",
+              minLength: 1,
+              maxLength: DIAGRAM_LIMITS.maxSourcePathCharacters,
+            },
           },
         },
       },

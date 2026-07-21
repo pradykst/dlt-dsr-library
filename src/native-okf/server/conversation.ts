@@ -5,7 +5,9 @@ import type {
   NativeOkfClarification,
   NativeOkfConversationIntent,
   NativeOkfConversationState,
+  NativeOkfDiagramMode,
   NativeOkfSourceCard,
+  SynthesisDraftState,
 } from "../shared/chat-types.ts";
 import {
   createInitialNativeOkfConversationState,
@@ -38,6 +40,22 @@ const PRINCIPLE_REFERENCE_PATTERN = /\b(?:this|that)\s+principle\b/iu;
 const FEATURES_REFERENCE_PATTERN = /\bthose\s+features\b/iu;
 const GENERIC_DIAGRAM_PATTERN =
   /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:a\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
+const SYNTHESIS_ACTION_PATTERN =
+  /\b(?:design|propose|create|generate|construct|develop|formulate|build|combine)\b/iu;
+const SYNTHESIS_OUTPUT_PATTERN =
+  /\b(?:framework|solution|architecture|flow|theory|artifact|approach|design)\b/iu;
+const SYNTHESIS_NOVELTY_PATTERN =
+  /\b(?:new|my problem|this (?:new )?(?:idea|problem|use case)|problem-specific|how should .+ be solved|across|fragmented|privacy-preserving)\b/iu;
+const SYNTHESIS_REFINEMENT_PATTERN =
+  /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
+const STORED_DIAGRAM_REQUEST_PATTERN =
+  /\b(?:from|in)\s+(?:this|that|the|a named)\s+paper\b|\bstored\s+(?:map|relations?|knowledge)|\bsource\s+map\b|\brequirements?\s*,?\s*principles?\s*(?:and|&)\s*features?\s+from\b|\b(?:show|visuali[sz]e|diagram|flow)\b[^.!?]{0,120}\bpaper\b/iu;
+const OUTPUT_MISSING_PATTERN = /\b(?:something|anything)\b/iu;
+const EXPLICIT_NON_RPF_STRUCTURE_PATTERN =
+  /\b(?:explanatory\s+theory|causal\s+(?:model|theory)|conceptual\s+model|taxonomy|evaluation\s+framework|methodological\s+framework|theoretical\s+framework)\b/iu;
+const ONLY_PAPER_PATTERN =
+  /\b(?:use|show|keep|base\s+(?:it|the revision)\s+on)?\s*only\s+(?:the\s+)?(?:first|second|this|that|these two|[\p{L}\p{N}][^.!?]{0,160})\s+papers?\b/iu;
+const EXCLUDE_PAPER_PATTERN = /\bexclude\b[^.!?]{0,180}\bpaper\b/iu;
 
 const STOP_WORDS = new Set([
   "a",
@@ -86,10 +104,15 @@ export interface PreparedNativeOkfChatRequest {
   retrievalQuestion: string;
   explicitPaperSlugs: string[];
   focusedPaperSlugs: string[];
+  restrictedPaperSlugs: string[];
   focusedConceptIds: string[];
   includeDiagram: boolean;
+  diagramMode: NativeOkfDiagramMode | null;
   answerMode: NativeOkfAnswerMode;
   intent: NativeOkfConversationIntent;
+  synthesisProblem: string | null;
+  synthesisDomain: string | null;
+  priorSynthesisDraft: SynthesisDraftState | null;
   clarification: NativeOkfClarification | null;
 }
 
@@ -100,6 +123,10 @@ function normalize(value: string): string {
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .replace(/\s+/gu, " ");
+}
+
+export function nativeOkfSynthesisRequiresRpfPath(question: string): boolean {
+  return !EXPLICIT_NON_RPF_STRUCTURE_PATTERN.test(question);
 }
 
 function uniqueBounded(values: Iterable<string>, maximum: number): string[] {
@@ -188,6 +215,66 @@ export async function loadNativeOkfConversationCatalog(): Promise<NativeOkfConve
   return { papers, concepts };
 }
 
+function validateSynthesisDraftAgainstCatalog(
+  draft: SynthesisDraftState | null,
+  catalog: NativeOkfConversationCatalog,
+): SynthesisDraftState | null {
+  if (!draft) return null;
+  const conceptIds = new Set(
+    catalog.concepts.map((concept) => concept.conceptId),
+  );
+  const nodes = draft.nodes.flatMap((node) => {
+    if (node.provenance === "user-provided") {
+      return node.sourcePaths.length === 0 &&
+          node.supportConceptIds.length === 0
+        ? [node]
+        : [];
+    }
+    const sourcePaths = uniqueBounded(
+      node.sourcePaths.filter((id) => conceptIds.has(id)),
+      3,
+    );
+    const supportConceptIds = uniqueBounded(
+      node.supportConceptIds.filter((id) => conceptIds.has(id)),
+      3,
+    );
+    if (
+      sourcePaths.length === 0 ||
+      supportConceptIds.length === 0 ||
+      sourcePaths.some((id) => !supportConceptIds.includes(id))
+    ) {
+      return [];
+    }
+    if (
+      node.provenance === "stored" &&
+      (sourcePaths.length !== 1 ||
+        supportConceptIds.length !== 1 ||
+        sourcePaths[0] !== supportConceptIds[0])
+    ) {
+      return [];
+    }
+    return [{ ...node, sourcePaths, supportConceptIds }];
+  });
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = draft.edges.flatMap((edge) => {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) return [];
+    const supportConceptIds = uniqueBounded(
+      edge.supportConceptIds.filter((id) => conceptIds.has(id)),
+      3,
+    );
+    if (
+      (edge.provenance === "stored" && supportConceptIds.length !== 2) ||
+      (edge.provenance === "synthesized" &&
+        supportConceptIds.length === 0)
+    ) {
+      return [];
+    }
+    return [{ ...edge, supportConceptIds }];
+  });
+  return nodes.length > 0 ? { ...draft, nodes, edges } : null;
+}
+
+
 export function validateNativeOkfConversationState(
   state: NativeOkfConversationState | undefined,
   catalog: NativeOkfConversationCatalog,
@@ -215,6 +302,10 @@ export function validateNativeOkfConversationState(
     lastIntent: state.lastIntent,
     lastDiagramRequested: state.lastDiagramRequested,
     pendingClarification: state.pendingClarification,
+    synthesisDraft: validateSynthesisDraftAgainstCatalog(
+      state.synthesisDraft,
+      catalog,
+    ),
   };
 }
 
@@ -418,12 +509,143 @@ function resolvePaperFocus(
   return [...state.activePaperSlugs];
 }
 
+export function inferNativeOkfSynthesisIntent(
+  question: string,
+  state: NativeOkfConversationState,
+): boolean {
+  if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
+  if (/\bhow should .+ be solved\b/iu.test(question)) return true;
+  if (state.synthesisDraft && SYNTHESIS_REFINEMENT_PATTERN.test(question)) {
+    return true;
+  }
+  return SYNTHESIS_ACTION_PATTERN.test(question) &&
+    (
+      SYNTHESIS_OUTPUT_PATTERN.test(question) ||
+      SYNTHESIS_NOVELTY_PATTERN.test(question) ||
+      OUTPUT_MISSING_PATTERN.test(question)
+    );
+}
+
+function meaningfulDomainTerms(value: string): string[] {
+  return normalize(value)
+    .split(" ")
+    .filter((term) =>
+      term.length >= 3 &&
+      !STOP_WORDS.has(term) &&
+      ![
+        "build",
+        "combine",
+        "construct",
+        "create",
+        "develop",
+        "diagram",
+        "flow",
+        "formulate",
+        "framework",
+        "generate",
+        "propose",
+        "solution",
+        "something",
+        "theory",
+      ].includes(term)
+    );
+}
+
+function inferredSynthesisDomain(
+  question: string,
+  draft: SynthesisDraftState | null,
+): string | null {
+  const match = question.match(/\bfor\s+([^.!?]{1,160})/iu);
+  if (match?.[1] && meaningfulDomainTerms(match[1]).length >= 2) {
+    return match[1].trim().slice(0, 120);
+  }
+  if (
+    /\b(?:across|within|fragmented|privacy-preserving|cross[\s-])\b/iu.test(
+      question,
+    ) &&
+    meaningfulDomainTerms(question).length >= 2
+  ) {
+    return question.trim().slice(0, 120);
+  }
+  return draft?.domain ?? null;
+}
+
+function hasConcreteSynthesisProblem(
+  question: string,
+  draft: SynthesisDraftState | null,
+): boolean {
+  return inferredSynthesisDomain(question, draft) !== null ||
+    meaningfulDomainTerms(question).length >= 3 ||
+    Boolean(draft?.problemStatement);
+}
+
+function resolvedPaperRestriction(
+  question: string,
+  explicitPaperSlugs: readonly string[],
+  focusedPaperSlugs: readonly string[],
+  state: NativeOkfConversationState,
+): string[] {
+  if (EXCLUDE_PAPER_PATTERN.test(question)) {
+    const excluded = new Set(explicitPaperSlugs);
+    return state.activePaperSlugs.filter((slug) => !excluded.has(slug));
+  }
+  if (ONLY_PAPER_PATTERN.test(question)) return [...focusedPaperSlugs];
+  if (
+    /\bbase\b[^.!?]{0,80}\b(?:this|these|two|first|second)\s+papers?\b/iu.test(
+      question,
+    )
+  ) {
+    return [...focusedPaperSlugs];
+  }
+  return [];
+}
+
+
+function priorDraftForRequest(
+  question: string,
+  draft: SynthesisDraftState | null,
+  restrictedPaperSlugs: readonly string[],
+  catalog: NativeOkfConversationCatalog,
+): SynthesisDraftState | null {
+  if (!draft) return null;
+  const allowedPapers = new Set(restrictedPaperSlugs);
+  const paperByConceptId = new Map(
+    catalog.concepts.map((concept) => [
+      concept.conceptId,
+      concept.paperSlug,
+    ]),
+  );
+  let nodes = draft.nodes.filter((node) => {
+    if (node.provenance === "user-provided") return true;
+    if (allowedPapers.size === 0) return true;
+    return node.supportConceptIds.some((id) => {
+      const paperSlug = paperByConceptId.get(id);
+      return typeof paperSlug === "string" && allowedPapers.has(paperSlug);
+    });
+  });
+  if (/\bremove\s+(?:the\s+)?second\s+(?:design\s+)?feature\b/iu.test(question)) {
+    const features = [...nodes]
+      .filter((node) =>
+        node.stage === "design-feature" || node.stage === "features"
+      )
+      .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+    const removeId = features[1]?.id;
+    if (removeId) nodes = nodes.filter((node) => node.id !== removeId);
+  }
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = draft.edges.filter(
+    (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
+  );
+  return { ...draft, nodes, edges };
+}
+
 function clarificationFor(
   question: string,
   explicitPaperSlugs: readonly string[],
   explicitConceptIds: readonly string[],
   focusedConceptIds: readonly string[],
   state: NativeOkfConversationState,
+  synthesisIntent: boolean,
 ): NativeOkfClarification | null {
   if (
     SECOND_PAPER_PATTERN.test(question) &&
@@ -435,6 +657,34 @@ function clarificationFor(
       question: "Which of the two papers should remain in the diagram?",
     };
   }
+  if (synthesisIntent && OUTPUT_MISSING_PATTERN.test(question)) {
+    return {
+      kind: "missing-output-type",
+      question:
+        "Should the result be an explanatory theory or a design solution?",
+    };
+  }
+  if (
+    synthesisIntent &&
+    !SYNTHESIS_OUTPUT_PATTERN.test(question) &&
+    !/\bhow should .+ be solved\b/iu.test(question)
+  ) {
+    return {
+      kind: "missing-output-type",
+      question:
+        "Should the result be an explanatory theory or a design solution?",
+    };
+  }
+  if (
+    synthesisIntent &&
+    !hasConcreteSynthesisProblem(question, state.synthesisDraft)
+  ) {
+    return {
+      kind: "missing-domain",
+      question: "Which application domain should the proposed flow address?",
+    };
+  }
+
   if (
     (IMPLEMENTS_REFERENCE_PATTERN.test(question) ||
       GENERIC_IMPLEMENTATION_REFERENCE_PATTERN.test(question)) &&
@@ -498,6 +748,62 @@ function contextualRetrievalQuestion(
   return `${question}\nContextual native OKF focus: ${focus.join("; ")}`;
 }
 
+export function applyNativeOkfPaperRestriction(
+  prepared: PreparedNativeOkfChatRequest,
+  retrieval: RetrievalResult,
+): RetrievalResult {
+  if (prepared.restrictedPaperSlugs.length === 0) return retrieval;
+  const allowedPapers = new Set(prepared.restrictedPaperSlugs);
+  const paperByConceptId = new Map(
+    prepared.catalog.concepts.map((concept) => [
+      concept.conceptId,
+      concept.paperSlug,
+    ]),
+  );
+  for (const paper of prepared.catalog.papers) {
+    paperByConceptId.set(paper.conceptId, paper.slug);
+  }
+  const allowedConcept = (conceptId: string): boolean => {
+    const paperSlug = paperByConceptId.get(conceptId);
+    return typeof paperSlug === "string" && allowedPapers.has(paperSlug);
+  };
+  const finalConcepts = retrieval.finalConcepts.filter((concept) =>
+    allowedConcept(concept.conceptId)
+  );
+  const finalIds = new Set(finalConcepts.map((concept) => concept.conceptId));
+  return {
+    ...retrieval,
+    seedResults: retrieval.seedResults.filter((result) =>
+      allowedConcept(result.conceptId)
+    ),
+    expandedResults: retrieval.expandedResults.filter((result) =>
+      allowedConcept(result.conceptId)
+    ),
+    finalConcepts,
+    corpusOverview: {
+      ...retrieval.corpusOverview,
+      papers: retrieval.corpusOverview.papers.filter((paper) =>
+        allowedConcept(paper.conceptId)
+      ),
+    },
+    noMatch: retrieval.noMatch || finalConcepts.length === 0,
+    debug: {
+      ...retrieval.debug,
+      expansionPaths: retrieval.debug.expansionPaths.filter((path) =>
+        finalIds.has(path.sourceId) && finalIds.has(path.targetId)
+      ),
+    },
+  };
+}
+
+export function hasSufficientNativeOkfSynthesisGrounding(
+  retrieval: RetrievalResult,
+): boolean {
+  return retrieval.finalConcepts.filter(
+    (concept) => concept.type !== "paper" && concept.type !== "reference",
+  ).length >= 2;
+}
+
 export async function prepareNativeOkfChatRequest(
   request: NativeOkfChatRequest,
   catalogInput?: NativeOkfConversationCatalog,
@@ -542,7 +848,8 @@ export async function prepareNativeOkfChatRequest(
     catalog,
   );
   const contextBase =
-    explicitPaperSlugs.length > 0
+    explicitPaperSlugs.length > 0 &&
+      !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion)
       ? {
           ...validatedState,
           activePaperSlugs: [],
@@ -559,10 +866,35 @@ export async function prepareNativeOkfChatRequest(
     explicitConceptIds.length > 0
       ? explicitConceptIds
       : selectConceptIds(effectiveQuestion, contextBase, catalog);
+  const synthesisIntent = inferNativeOkfSynthesisIntent(
+    effectiveQuestion,
+    contextBase,
+  );
+  const restrictedPaperSlugs = resolvedPaperRestriction(
+    effectiveQuestion,
+    explicitPaperSlugs,
+    focusedPaperSlugs,
+    validatedState,
+  );
+  const retrievalPaperSlugs = restrictedPaperSlugs.length > 0
+    ? restrictedPaperSlugs
+    : focusedPaperSlugs;
+  const priorSynthesisDraft = synthesisIntent
+    ? priorDraftForRequest(
+        effectiveQuestion,
+        contextBase.synthesisDraft,
+        restrictedPaperSlugs,
+        catalog,
+      )
+    : null;
+
   const includeDiagram =
     request.includeDiagram === true ||
     (request.includeDiagram === undefined &&
-      inferDiagramIntent(effectiveQuestion));
+      (
+        inferDiagramIntent(effectiveQuestion) ||
+        (synthesisIntent && contextBase.lastDiagramRequested)
+      ));
   const answerMode: NativeOkfAnswerMode = DETAIL_PATTERN.test(
     effectiveQuestion,
   )
@@ -570,17 +902,25 @@ export async function prepareNativeOkfChatRequest(
     : COMPARISON_PATTERN.test(effectiveQuestion)
       ? "comparison"
       : "normal";
-  const intent: NativeOkfConversationIntent = includeDiagram
-    ? "stored-diagram"
-    : answerMode === "comparison"
-      ? "comparison"
-      : "answer";
+  const intent: NativeOkfConversationIntent = synthesisIntent
+    ? "synthesized-flow"
+    : includeDiagram
+      ? "stored-diagram"
+      : answerMode === "comparison"
+        ? "comparison"
+        : "answer";
+  const diagramMode: NativeOkfDiagramMode | null = includeDiagram
+    ? synthesisIntent
+      ? "synthesized"
+      : "stored"
+    : null;
   const clarification = clarificationFor(
     effectiveQuestion,
     explicitPaperSlugs,
     explicitConceptIds,
     focusedConceptIds,
     contextBase,
+    synthesisIntent,
   );
   return {
     request,
@@ -589,16 +929,26 @@ export async function prepareNativeOkfChatRequest(
     effectiveQuestion,
     retrievalQuestion: contextualRetrievalQuestion(
       effectiveQuestion,
-      focusedPaperSlugs,
+      retrievalPaperSlugs,
       focusedConceptIds,
       catalog,
     ),
     explicitPaperSlugs,
     focusedPaperSlugs,
+    restrictedPaperSlugs,
     focusedConceptIds,
     includeDiagram,
+    diagramMode,
     answerMode,
     intent,
+    synthesisProblem: synthesisIntent
+      ? priorSynthesisDraft?.problemStatement ??
+        effectiveQuestion.slice(0, 800)
+      : null,
+    synthesisDomain: synthesisIntent
+      ? inferredSynthesisDomain(effectiveQuestion, priorSynthesisDraft)
+      : null,
+    priorSynthesisDraft,
     clarification,
   };
 }
@@ -659,10 +1009,16 @@ export function completedConversationState(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
   sources: readonly NativeOkfSourceCard[],
+  synthesisDraft: SynthesisDraftState | null =
+    prepared.validatedState.synthesisDraft,
 ): NativeOkfConversationState {
-  const explicitTopic = prepared.explicitPaperSlugs.length > 0;
-  const papers = explicitTopic
-    ? prepared.focusedPaperSlugs
+  const explicitTopic =
+    prepared.explicitPaperSlugs.length > 0 &&
+    !EXCLUDE_PAPER_PATTERN.test(prepared.effectiveQuestion);
+  const papers = prepared.restrictedPaperSlugs.length > 0
+    ? prepared.restrictedPaperSlugs
+    : explicitTopic
+      ? prepared.focusedPaperSlugs
     : uniqueBounded(
         [
           ...prepared.focusedPaperSlugs,
@@ -702,5 +1058,6 @@ export function completedConversationState(
     lastIntent: prepared.intent,
     lastDiagramRequested: prepared.includeDiagram,
     pendingClarification: null,
+    synthesisDraft,
   };
 }

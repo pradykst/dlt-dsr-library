@@ -10,6 +10,7 @@ import {
   type NativeOkfConversationIntent,
   type NativeOkfConversationState,
 } from "./chat-types.ts";
+import { parseSynthesisDraftState } from "./synthesis-draft.ts";
 
 const STATE_KEYS = new Set([
   "version",
@@ -19,6 +20,7 @@ const STATE_KEYS = new Set([
   "lastIntent",
   "lastDiagramRequested",
   "pendingClarification",
+  "synthesisDraft",
 ]);
 const PENDING_KEYS = new Set(["kind", "originalQuestion"]);
 const MAX_IDENTIFIER_CHARACTERS = 256;
@@ -153,6 +155,10 @@ export function parseNativeOkfConversationState(
     lastIntent: value.lastIntent,
     lastDiagramRequested: value.lastDiagramRequested,
     pendingClarification,
+    synthesisDraft:
+      value.synthesisDraft === undefined || value.synthesisDraft === null
+        ? null
+        : parseSynthesisDraftState(value.synthesisDraft),
   };
 }
 

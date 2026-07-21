@@ -26,6 +26,8 @@ export const NATIVE_OKF_COMPARISON_ANSWER_INSTRUCTION = `Comparison answer targe
 
 export const NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION = `The user explicitly requested detail. Provide the requested depth without filler, repeated source descriptions, or unsupported background. Stay below 900 words.`;
 
+export const NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION = `Synthesis answer target: approximately 80 to 180 words. State the problem addressed, distinguish exact stored knowledge from problem-specific synthesized proposals, and give at most one important limitation or assumption. Do not enumerate every diagram node or repeat all source titles. Grounding does not make the proposal a validated design theory.`;
+
 export const NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION = `A separate validated structured visual may accompany this answer. Do not output any textual diagram syntax or repeat every visual node in prose. Explain only the key grounded decisions, stored knowledge versus inference, and supported limitations.`;
 
 export const NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION = `This request is configured for a text-only answer. Do not output a visual representation in text. If the user asks for a visual flow while the grounded diagram option is disabled, give concise prose and state that the grounded diagram option must be enabled for a visual flow.`;

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import {
@@ -58,7 +58,19 @@ const MANUAL_MAX_ZOOM = 1.7;
 type EdgeLabelMode = "decision" | "all" | "none";
 
 function formatStage(stage: DiagramNode["stage"]): string {
-  return stage.charAt(0).toUpperCase() + stage.slice(1);
+  return stage
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatProvenance(node: DiagramNode): string {
+  if (node.provenance === "user-provided") {
+    return "Provided in the research question";
+  }
+  return node.provenance === "synthesized"
+    ? "Synthesized proposal"
+    : "Stored knowledge";
 }
 
 function relatedNodeIds(
@@ -119,29 +131,70 @@ export function GeneratedDiagramDetailsPanel({
             <dd className="break-words font-semibold text-ink">{node.group}</dd>
           </>
         ) : null}
-        <dt className="font-bold uppercase tracking-wide text-muted">Grounding</dt>
-        <dd className="font-semibold text-ink">
-          {node.synthesis ? "New synthesis" : "Stored knowledge"}
-        </dd>
-        <dt className="font-bold uppercase tracking-wide text-muted">Sources</dt>
-        <dd className="font-semibold text-ink">{node.sourcePaths.length}</dd>
+        <dt className="font-bold uppercase tracking-wide text-muted">Provenance</dt>
+        <dd className="font-semibold text-ink">{formatProvenance(node)}</dd>
+        {node.provenance !== "user-provided" ? (
+          <>
+            <dt className="font-bold uppercase tracking-wide text-muted">Sources</dt>
+            <dd className="font-semibold text-ink">{node.sourcePaths.length}</dd>
+          </>
+        ) : null}
       </dl>
 
-      <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-        Grounding source paths
-      </p>
-      <ul className="mt-2 space-y-2">
-        {node.sourcePaths.map((sourcePath) => (
-          <li key={sourcePath}>
-            <Link
-              href={conceptHref(sourcePath)}
-              className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
-            >
-              {sourcePath}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {node.provenance === "user-provided" ? (
+        <p className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+          Provided in the research question; no paper source is claimed.
+        </p>
+      ) : (
+        <>
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+            {node.provenance === "stored"
+              ? "Exact source path"
+              : "Grounding source paths"}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {node.sourcePaths.map((sourcePath) => (
+              <li key={sourcePath}>
+                <Link
+                  href={conceptHref(sourcePath)}
+                  className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
+                >
+                  {sourcePath}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {node.provenance === "synthesized" ? (
+        <>
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+            Supporting stored concepts
+          </p>
+          <ul className="mt-2 space-y-2">
+            {node.supportConceptIds.map((conceptId) => (
+              <li key={conceptId}>
+                <Link
+                  href={conceptHref(conceptId)}
+                  className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
+                >
+                  {conceptId}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {node.synthesisRationale ? (
+            <>
+              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                Synthesis rationale
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-700">
+                {node.synthesisRationale}
+              </p>
+            </>
+          ) : null}
+        </>
+      ) : null}
     </aside>
   );
 }
@@ -348,6 +401,7 @@ function GeneratedDiagramCanvas({
                 /^(?:yes|no)$/iu.test(layoutEdge.label.trim())),
             highlighted,
             dimmed,
+            dashed: layoutEdge.provenance === "synthesized",
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -602,12 +656,18 @@ export function GeneratedDiagramPresentation({
               {diagram.title}
             </h3>
           </div>
-          <div className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide">
+          <div
+            aria-label="Diagram provenance legend"
+            className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide"
+          >
+            <span className="rounded-full border-2 border-double border-slate-500 bg-slate-100 px-2.5 py-1 text-slate-700">
+              Double: user-provided
+            </span>
             <span className="rounded-full border border-blue/30 bg-blue/10 px-2.5 py-1 text-blue">
               Solid: stored knowledge
             </span>
             <span className="rounded-full border border-dashed border-purple/40 bg-purple/10 px-2.5 py-1 text-purple">
-              Dashed: synthesis
+              Dashed: synthesized proposal
             </span>
           </div>
         </div>
