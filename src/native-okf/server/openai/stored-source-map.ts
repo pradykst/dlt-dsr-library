@@ -8,7 +8,10 @@ import type {
 } from "../../shared/chat-types.ts";
 import { fallbackTitleFromId, formatConceptType } from "../../shared/presentation.ts";
 import { getOkfBundle } from "../cache.ts";
-import { projectSemanticLink } from "../paper-design-map.ts";
+import {
+  buildPaperDesignMapFromBundle,
+  projectSemanticLink,
+} from "../paper-design-map.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import type { OkfBundle, OkfConcept, OkfLink } from "../types.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
@@ -228,6 +231,72 @@ function selectConnectedNodes(
   return ordered.filter((concept) => selected.has(concept.id));
 }
 
+/**
+ * Converts the repository's deterministic paper semantic-map projection into
+ * the accepted chat diagram contract. This path contains no model-produced
+ * node, edge, provenance value, or relationship.
+ */
+export async function buildStoredPaperDesignMap(
+  paperConceptId: string,
+): Promise<GeneratedDiagram | undefined> {
+  const bundle = await getOkfBundle();
+  const paper = bundle.conceptsById.get(paperConceptId);
+  if (!paper || paper.type !== "paper") return undefined;
+  const map = buildPaperDesignMapFromBundle(bundle, paper);
+  if (map.nodes.length === 0) return undefined;
+
+  const nodeIds = new Set(map.nodes.map((node) => node.id));
+  if (
+    nodeIds.size !== map.nodes.length ||
+    map.edges.some(
+      (edge) =>
+        !nodeIds.has(edge.sourceId) || !nodeIds.has(edge.targetId),
+    )
+  ) {
+    return undefined;
+  }
+
+  const nodes: GeneratedDiagramNode[] = map.nodes.flatMap((node, index) => {
+    const concept = bundle.conceptsById.get(node.id);
+    if (!concept || concept.type === "paper" || concept.type === "reference") {
+      return [];
+    }
+    return [{
+      id: concept.id,
+      label: boundedText(displayTitle(concept), 72),
+      description: boundedText(
+        node.description ?? node.markdownSummary ?? displayTitle(concept),
+        280,
+      ),
+      category: boundedText(node.typeLabel, 40),
+      stage: stageFor(concept),
+      order: numericOrder(concept, index),
+      group: null,
+      provenance: "stored",
+      sourcePaths: [concept.id],
+      supportConceptIds: [concept.id],
+      synthesisRationale: null,
+      synthesis: false,
+    }];
+  });
+  if (nodes.length !== map.nodes.length) return undefined;
+
+  const edges: GeneratedDiagramEdge[] = map.edges.map((edge) => ({
+    source: edge.sourceId,
+    target: edge.targetId,
+    label: boundedText(edge.label, 32),
+    provenance: "stored",
+    supportConceptIds: [edge.sourceId, edge.targetId],
+  }));
+
+  return {
+    title: `${displayTitle(paper)} design map`,
+    explanation:
+      "An exact deterministic projection of the stored requirements, principles, features, and canonical native relationships for this paper.",
+    nodes,
+    edges,
+  };
+}
 export async function buildGroundedStoredSourceMap(
   retrieval: RetrievalResult,
 ): Promise<GeneratedDiagram | undefined> {

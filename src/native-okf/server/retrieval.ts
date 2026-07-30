@@ -7,6 +7,12 @@ import {
   MAX_SEARCH_RESULTS,
   MAX_RETRIEVAL_LIMITS,
 } from "./retrieval-config.ts";
+import {
+  associatedConceptsForPaper,
+  compareSemanticConcepts,
+  projectSemanticEdges,
+  semanticTypeRank,
+} from "./paper-design-map.ts";
 import { searchOkf } from "./search.ts";
 import type {
   DroppedConcept,
@@ -54,6 +60,18 @@ interface ExpansionCandidate {
   concept: OkfConcept;
   result: ExpandedResult;
   path: RetrievalExpansionPath;
+}
+
+export type NativeOkfRequestedConceptKind =
+  | "goal"
+  | "objective"
+  | "meta-requirement"
+  | "requirement"
+  | "principle"
+  | "feature";
+export interface NativeOkfExplicitPaperContextFocus {
+  paperConceptIds: readonly string[];
+  requestedConceptKinds: readonly NativeOkfRequestedConceptKind[];
 }
 
 interface ContextCandidate {
@@ -584,6 +602,284 @@ function fitContextConcept(
   return { concept: best, truncated: true };
 }
 
+const REQUESTED_CONTEXT_MARKDOWN_CHARACTERS = 1_200;
+const CONNECTED_CONTEXT_MARKDOWN_CHARACTERS = 700;
+const PAPER_CONTEXT_MARKDOWN_CHARACTERS = 300;
+const BROAD_CONTEXT_MARKDOWN_CHARACTERS = 400;
+
+export function nativeOkfRequestedKindForType(
+  type: string,
+): NativeOkfRequestedConceptKind | null {
+  const normalized = type.toLocaleLowerCase("en");
+  if (normalized.includes("goal")) return "goal";
+  if (normalized.includes("objective")) return "objective";
+  if (normalized.includes("meta-requirement")) return "meta-requirement";
+  if (normalized.includes("requirement")) return "requirement";
+  if (normalized.includes("principle")) return "principle";
+  if (normalized.includes("feature")) return "feature";
+  return null;
+}
+function compactMarkdownWithLinks(body: string, maximum: number): string {
+  if (body.length <= maximum) return body;
+  const linkLines = body
+    .split(/\r?\n/gu)
+    .filter((line) => /\[[^\]]+\]\([^)]+\)/u.test(line))
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const links = [...new Set(linkLines)].join("\n");
+  if (links.length === 0) return truncatedBody(body, maximum);
+  const boundedLinks = truncatedBody(links, Math.floor(maximum * 0.55));
+  const prefixBudget = Math.max(0, maximum - boundedLinks.length - 22);
+  const prefix = truncatedBody(body, prefixBudget);
+  return `${prefix}\n\nRelevant native links:\n${boundedLinks}`.slice(0, maximum);
+}
+
+function compactContextConcept(
+  concept: OkfConcept,
+  markdownLimit: number,
+): { concept: OkfConcept; truncated: boolean } {
+  const markdownBody = compactMarkdownWithLinks(
+    concept.markdownBody,
+    markdownLimit,
+  );
+  return {
+    concept: { ...concept, markdownBody },
+    truncated: markdownBody.length < concept.markdownBody.length,
+  };
+}
+
+function comparePaperContextConcepts(
+  left: OkfConcept,
+  right: OkfConcept,
+): number {
+  return semanticTypeRank(left.type) - semanticTypeRank(right.type) ||
+    compareSemanticConcepts(left, right);
+}
+
+/**
+ * Re-packs explicit paper/category context after normal lexical retrieval.
+ * Exact associated records are deterministic current-turn evidence; ranking
+ * weights, graph depth, candidate limits, and the global context cap remain
+ * unchanged.
+ */
+export async function prioritizeExplicitPaperCategoryContext(
+  retrieval: RetrievalResult,
+  focus: NativeOkfExplicitPaperContextFocus,
+): Promise<RetrievalResult> {
+  const requestedKinds = new Set(focus.requestedConceptKinds);
+  if (focus.paperConceptIds.length === 0 || requestedKinds.size === 0) {
+    return retrieval;
+  }
+
+  const bundle = await getOkfBundle();
+  const papers = focus.paperConceptIds.flatMap((id) => {
+    const paper = bundle.conceptsById.get(id);
+    return paper?.type === "paper" ? [paper] : [];
+  });
+  if (papers.length === 0) return retrieval;
+
+  const paperByAssociatedId = new Map<string, OkfConcept>();
+  const associatedByPaper = new Map<string, OkfConcept[]>();
+  for (const paper of papers) {
+    const associated = associatedConceptsForPaper(bundle, paper);
+    associatedByPaper.set(paper.id, associated);
+    for (const concept of associated) {
+      if (!paperByAssociatedId.has(concept.id)) {
+        paperByAssociatedId.set(concept.id, paper);
+      }
+    }
+  }
+
+  const requested = [...paperByAssociatedId.keys()]
+    .flatMap((id) => {
+      const concept = bundle.conceptsById.get(id);
+      const kind = concept ? nativeOkfRequestedKindForType(concept.type) : null;
+      return concept && kind && requestedKinds.has(kind) ? [concept] : [];
+    })
+    .sort(comparePaperContextConcepts);
+  if (requested.length === 0) return retrieval;
+
+  const requestedIds = new Set(requested.map((concept) => concept.id));
+  const connectedIds = new Set<string>();
+  for (const [paperId, associated] of associatedByPaper) {
+    for (const edge of projectSemanticEdges(bundle, associated)) {
+      if (requestedIds.has(edge.sourceId)) connectedIds.add(edge.targetId);
+      if (requestedIds.has(edge.targetId)) connectedIds.add(edge.sourceId);
+    }
+    connectedIds.delete(paperId);
+  }
+  for (const id of requestedIds) connectedIds.delete(id);
+  const connected = [...connectedIds]
+    .flatMap((id) => {
+      const concept = bundle.conceptsById.get(id);
+      return concept ? [concept] : [];
+    })
+    .sort(comparePaperContextConcepts);
+
+  const existingFinal = new Map(
+    retrieval.finalConcepts.map((concept) => [concept.conceptId, concept]),
+  );
+  const existingExpanded = new Map(
+    retrieval.expandedResults.map((result) => [result.conceptId, result]),
+  );
+  const existingSeed = new Map(
+    retrieval.seedResults.map((result) => [result.conceptId, result]),
+  );
+  const scoreFor = (id: string): number =>
+    existingFinal.get(id)?.score ??
+    existingExpanded.get(id)?.score ??
+    existingSeed.get(id)?.score ??
+    0;
+
+  interface PrioritizedCandidate {
+    candidate: ContextCandidate;
+    required: boolean;
+    compacted: boolean;
+  }
+  const prioritized: PrioritizedCandidate[] = [];
+  const queued = new Set<string>();
+  const queueConcept = (
+    concept: OkfConcept,
+    markdownLimit: number,
+    required: boolean,
+    paper?: OkfConcept,
+  ): void => {
+    if (queued.has(concept.id)) return;
+    queued.add(concept.id);
+    const compact = compactContextConcept(concept, markdownLimit);
+    const existing = existingFinal.get(concept.id);
+    const expansion = existingExpanded.get(concept.id) ??
+      (paper && concept.id !== paper.id
+        ? {
+            conceptId: concept.id,
+            type: concept.type,
+            ...(concept.title ? { title: concept.title } : {}),
+            ...(concept.description ? { description: concept.description } : {}),
+            path: concept.filePath,
+            score: scoreFor(concept.id),
+            depth: 1 as const,
+            discoveredFrom: paper.id,
+            direction: "incoming" as const,
+            relationHint: "Source paper",
+            ...(sourcePaper(concept) ? { sourcePaper: sourcePaper(concept) } : {}),
+            priority: 1,
+          }
+        : undefined);
+    prioritized.push({
+      candidate: {
+        concept: compact.concept,
+        score: scoreFor(concept.id),
+        depth: existing?.expansionDepth ?? expansion?.depth ?? 0,
+        ...(existing?.seedRank === undefined
+          ? {}
+          : { seedRank: existing.seedRank }),
+        ...(expansion ? { expansion } : {}),
+      },
+      required,
+      compacted: compact.truncated,
+    });
+  };
+
+  for (const concept of requested) {
+    queueConcept(
+      concept,
+      REQUESTED_CONTEXT_MARKDOWN_CHARACTERS,
+      true,
+      paperByAssociatedId.get(concept.id),
+    );
+  }
+  for (const paper of papers) {
+    queueConcept(paper, PAPER_CONTEXT_MARKDOWN_CHARACTERS, true);
+  }
+  for (const concept of connected) {
+    queueConcept(
+      concept,
+      CONNECTED_CONTEXT_MARKDOWN_CHARACTERS,
+      false,
+      paperByAssociatedId.get(concept.id),
+    );
+  }
+  for (const existing of retrieval.finalConcepts) {
+    const concept = bundle.conceptsById.get(existing.conceptId);
+    if (concept) queueConcept(concept, BROAD_CONTEXT_MARKDOWN_CHARACTERS, false);
+  }
+
+  const limits = retrieval.debug.limits;
+  const finalConcepts: FinalContextConcept[] = [];
+  let contextCharacterEstimate = 0;
+  let contextWasTruncated = false;
+  const dropped = retrieval.debug.droppedConcepts.filter(
+    (item) => !queued.has(item.conceptId),
+  );
+  const droppedKeys = new Set(
+    dropped.map((item) => `${item.conceptId}\0${item.reason}`),
+  );
+
+  const emptyEstimates = prioritized.map(({ candidate }) =>
+    stabilizeEstimate(contextBase(candidate, "")).characterEstimate
+  );
+  for (const [index, item] of prioritized.entries()) {
+    if (finalConcepts.length >= limits.maxConcepts) {
+      addDropped(
+        dropped,
+        droppedKeys,
+        item.candidate.concept.id,
+        "concept-limit",
+      );
+      continue;
+    }
+    const remaining = limits.maxContextCharacters - contextCharacterEstimate;
+    const requiredMinimumAfter = prioritized
+      .slice(index + 1)
+      .reduce(
+        (sum, candidate, offset) =>
+          sum + (candidate.required ? emptyEstimates[index + 1 + offset]! : 0),
+        0,
+      );
+    const available = Math.max(0, remaining - requiredMinimumAfter);
+    const fitted = fitContextConcept(item.candidate, available);
+    if (!fitted) {
+      addDropped(
+        dropped,
+        droppedKeys,
+        item.candidate.concept.id,
+        "context-limit",
+      );
+      continue;
+    }
+    finalConcepts.push(fitted.concept);
+    contextCharacterEstimate += fitted.concept.characterEstimate;
+    contextWasTruncated ||= item.compacted || fitted.truncated;
+  }
+
+  const finalIds = new Set(finalConcepts.map((concept) => concept.conceptId));
+  const repairedDropped = dropped
+    .filter((item) => !finalIds.has(item.conceptId))
+    .sort(compareDropped);
+  const warnings = retrieval.warnings.filter(
+    (warning) =>
+      warning !== "One or more Markdown bodies were truncated to fit the context limit." &&
+      warning !== "One or more concepts were omitted because the context limit was exhausted.",
+  );
+  if (contextWasTruncated) {
+    warnings.push("One or more Markdown bodies were truncated to fit the context limit.");
+  }
+  if (repairedDropped.some((item) => item.reason === "context-limit")) {
+    warnings.push("One or more concepts were omitted because the context limit was exhausted.");
+  }
+
+  return {
+    ...retrieval,
+    finalConcepts,
+    warnings: [...new Set(warnings)],
+    noMatch: false,
+    contextCharacterEstimate,
+    debug: {
+      ...retrieval.debug,
+      droppedConcepts: repairedDropped,
+    },
+  };
+}
 function confidenceSignals(
   meaningfulTermCount: number,
   overlapRatio: number,

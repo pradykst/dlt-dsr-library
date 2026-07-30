@@ -7,7 +7,7 @@ import type {
   NativeOkfPersonalQuotaMetadata,
 } from "../../shared/chat-types.ts";
 import {
-  applyNativeOkfPaperRestriction,
+  assembleNativeOkfContextualRetrieval,
   hasSufficientNativeOkfSynthesisGrounding,
   prepareNativeOkfChatRequest,
   type NativeOkfConversationCatalog,
@@ -269,6 +269,7 @@ function reconcile(
   reservedMicrodollars: number,
   completedAtMs: number,
   latencyMs: number,
+  diagramDelivered: boolean,
   error: unknown | null,
 ): void {
   const reconciliation = reconcileTrackedUsage(
@@ -287,6 +288,7 @@ function reconcile(
       completedAtMs,
       usage: reconciliation.usage,
       diagramModelCalls: reconciliation.diagramModelCalls,
+      diagramDelivered,
       actualMicrodollars: reconciliation.actualMicrodollars,
       usageUnreconciled: reconciliation.usageUnreconciled,
       latencyMs,
@@ -346,7 +348,7 @@ export async function answerAuthorizedNativeOkfChat(
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const rawRetrieval = await retrieve(prepared.retrievalQuestion);
-  const restrictedRetrieval = applyNativeOkfPaperRestriction(
+  const restrictedRetrieval = await assembleNativeOkfContextualRetrieval(
     prepared,
     rawRetrieval,
   );
@@ -488,6 +490,7 @@ export async function answerAuthorizedNativeOkfChat(
       reservedMicrodollars,
       completedAtMs,
       Math.max(0, completedAtMs - reservationNowMs),
+      response.diagram !== undefined,
       null,
     );
     settled = true;
@@ -516,6 +519,7 @@ export async function answerAuthorizedNativeOkfChat(
         reservedMicrodollars,
         completedAtMs,
         Math.max(0, completedAtMs - reservationNowMs),
+        false,
         error,
       );
       settled = true;

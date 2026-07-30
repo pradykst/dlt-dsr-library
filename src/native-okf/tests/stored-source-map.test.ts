@@ -83,7 +83,7 @@ test("chat returns the grounded source map after synthesized diagram failure", a
           created_at: 0,
           model: "mock-model",
           output: [],
-          output_text: "The retrieved design knowledge identifies stored implementation relationships [[S1]].",
+          output_text: "The retrieved design knowledge identifies stored implementation relationships [[S2]].",
           status: "completed",
         };
       },

@@ -53,6 +53,14 @@ export function validateAnswerCitations(
     },
   );
 
+  const requiredConceptIds = context.requiredConceptIds ?? new Set<string>();
+  const hasRequiredCitation = requiredConceptIds.size === 0 ||
+    citedSourceIds.some((sourceId) => {
+      const source = context.sourceById.get(sourceId);
+      return source !== undefined &&
+        requiredConceptIds.has(source.conceptId);
+    });
+
   const warnings: string[] = [];
   if (unknownSourceIds.length > 0) {
     warnings.push(
@@ -61,6 +69,11 @@ export function validateAnswerCitations(
   }
   if (citedSourceIds.length === 0) {
     warnings.push("The generated answer did not contain a valid native OKF citation.");
+  }
+  if (citedSourceIds.length > 0 && !hasRequiredCitation) {
+    warnings.push(
+      "The generated answer did not cite a directly requested native OKF concept.",
+    );
   }
 
   return {
@@ -71,7 +84,7 @@ export function validateAnswerCitations(
       return source ? [source.card] : [];
     }),
     unknownSourceIds,
-    needsRepair: citedSourceIds.length === 0,
+    needsRepair: unknownSourceIds.length > 0 || citedSourceIds.length === 0 || !hasRequiredCitation,
     warnings,
   };
 }

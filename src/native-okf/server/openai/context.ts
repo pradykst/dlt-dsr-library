@@ -21,6 +21,7 @@ export interface NativeOkfGroundedContext {
   sources: NativeOkfGroundedSource[];
   sourceById: ReadonlyMap<string, NativeOkfGroundedSource>;
   allowedConceptIds: ReadonlySet<string>;
+  requiredConceptIds?: ReadonlySet<string>;
   prompt: string;
 }
 
@@ -118,6 +119,7 @@ function overviewLine(paper: CorpusPaperOverview): string {
 export function buildNativeOkfGroundedContext(
   retrieval: RetrievalResult,
   question: string,
+  requiredConceptIds: readonly string[] = [],
 ): NativeOkfGroundedContext {
   const sources = retrieval.finalConcepts.map((concept, index) => {
     const sourceId = `S${index + 1}`;
@@ -140,6 +142,7 @@ export function buildNativeOkfGroundedContext(
     sources,
     sourceById: new Map(sources.map((source) => [source.sourceId, source])),
     allowedConceptIds: new Set(sources.map((source) => source.conceptId)),
+    requiredConceptIds: new Set(requiredConceptIds),
     prompt,
   };
 }

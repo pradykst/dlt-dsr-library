@@ -1,6 +1,9 @@
 const DIAGRAM_INTENT_PATTERN =
   /\b(?:decision[\s-]+support[\s-]+flow|flowchart|diagram|flow|graph|architecture|visuali[sz]e)\b/iu;
 
+const STORED_PAPER_MAP_INTENT_PATTERN =
+  /\b(?:show|display|visuali[sz]e|generate|create)\b[^.!?]{0,140}\b(?:requirements?\s*,?\s*principles?\s*,?\s*(?:and\s+)?features?|paper(?:'s)?\s+(?:design\s+)?map|stored\s+relations?)\b/iu;
+
 const DIAGRAM_INTENT_WORDS = new Set([
   "architecture",
   "decision",
@@ -26,8 +29,14 @@ export const INITIAL_DIAGRAM_INTENT_TOGGLE_STATE: DiagramIntentToggleState = {
 };
 
 /** Detects only generic requests for a visual representation. */
+export function inferStoredPaperMapIntent(question: string): boolean {
+  return STORED_PAPER_MAP_INTENT_PATTERN.test(question.normalize("NFKC"));
+}
+
 export function inferDiagramIntent(question: string): boolean {
-  return DIAGRAM_INTENT_PATTERN.test(question.normalize("NFKC"));
+  const normalized = question.normalize("NFKC");
+  return DIAGRAM_INTENT_PATTERN.test(normalized) ||
+    inferStoredPaperMapIntent(normalized);
 }
 
 function normalizeQuestion(question: string): string {

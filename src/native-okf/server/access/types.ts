@@ -168,6 +168,8 @@ export interface ReservationReconciliation {
   usage: TokenUsageTotals;
   /** Responses calls made for diagram generation or diagram repair only. */
   diagramModelCalls: number;
+  /** Server-authoritative feature delivery signal; independent of model calls. */
+  diagramDelivered: boolean;
   actualMicrodollars: number;
   usageUnreconciled: boolean;
   latencyMs: number;

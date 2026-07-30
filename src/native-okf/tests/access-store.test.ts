@@ -102,6 +102,7 @@ function completeReservation(
       modelCalls: 1,
     },
     diagramModelCalls: options.diagramModelCalls ?? 0,
+    diagramDelivered: options.diagramModelCalls === 1,
     actualMicrodollars: options.microdollars ?? 0,
     usageUnreconciled: false,
     latencyMs: 0,
@@ -393,7 +394,7 @@ test("global anonymous RPM blocks deterministically", () => {
   assert.equal(store.getUsageReport(NOW + 1).activeReservations, 0);
 });
 
-test("diagram reservation is released when no diagram Responses call occurred", () => {
+test("diagram reservation is released when no diagram is delivered", () => {
   const store = new MemoryNativeOkfOperationalStore();
   store.createInvitation(invitation());
   assert.equal(
@@ -412,6 +413,7 @@ test("diagram reservation is released when no diagram Responses call occurred", 
       modelCalls: 1,
     },
     diagramModelCalls: 0,
+    diagramDelivered: false,
     actualMicrodollars: 250,
     usageUnreconciled: false,
     latencyMs: 1_000,
@@ -445,6 +447,7 @@ test("moderation-only release consumes no paid question or diagram quota", () =>
       modelCalls: 0,
     },
     diagramModelCalls: 0,
+    diagramDelivered: false,
     actualMicrodollars: 0,
     usageUnreconciled: false,
     latencyMs: 500,
@@ -470,6 +473,7 @@ test("diagram quota is consumed only when includeDiagram is true", () => {
     completedAtMs: NOW + 100,
     usage: { inputTokens: 10, cachedInputTokens: 0, outputTokens: 10, modelCalls: 2 },
     diagramModelCalls: 1,
+    diagramDelivered: true,
     actualMicrodollars: 100,
     usageUnreconciled: false,
     latencyMs: 100,
@@ -681,6 +685,7 @@ test("unreconciled usage charges the complete reservation conservatively", () =>
     completedAtMs: NOW + 2_000,
     usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, modelCalls: 1 },
     diagramModelCalls: 0,
+    diagramDelivered: false,
     actualMicrodollars: 0,
     usageUnreconciled: true,
     latencyMs: 2_000,

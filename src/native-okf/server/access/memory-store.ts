@@ -533,6 +533,9 @@ export class MemoryNativeOkfOperationalStore implements NativeOkfOperationalStor
       assertNonNegativeSafeInteger(value, name);
     }
     assertNonNegativeSafeInteger(input.diagramModelCalls, "diagramModelCalls");
+    if (typeof input.diagramDelivered !== "boolean") {
+      throw new Error("diagramDelivered must be a boolean.");
+    }
     if (input.diagramModelCalls > input.usage.modelCalls) {
       throw new Error("Diagram model calls cannot exceed total model calls.");
     }
@@ -544,7 +547,7 @@ export class MemoryNativeOkfOperationalStore implements NativeOkfOperationalStor
     this.decrementReservedQuota(
       reservation,
       input.usage.modelCalls === 0,
-      input.diagramModelCalls === 0,
+      !input.diagramDelivered,
     );
     reservation.status = "settled";
     const chargedMicrodollars = input.usageUnreconciled

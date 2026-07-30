@@ -16,8 +16,15 @@ import {
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
 } from "../shared/chat-types.ts";
-import { inferDiagramIntent } from "../shared/diagram-intent.ts";
+import {
+  inferDiagramIntent,
+  inferStoredPaperMapIntent,
+} from "../shared/diagram-intent.ts";
 import { getAllConcepts, getAllPapers } from "./repository.ts";
+import {
+  prioritizeExplicitPaperCategoryContext,
+  type NativeOkfRequestedConceptKind,
+} from "./retrieval.ts";
 import type { RetrievalResult } from "./retrieval-types.ts";
 import type { OkfConcept } from "./types.ts";
 
@@ -76,6 +83,18 @@ const STOP_WORDS = new Set([
   "with",
 ]);
 
+const PAPER_TITLE_MATCH_STOP_WORDS = new Set([
+  ...STOP_WORDS,
+  "application",
+  "applications",
+  "feature",
+  "features",
+  "principle",
+  "principles",
+  "requirement",
+  "requirements",
+]);
+
 export type NativeOkfAnswerMode = "normal" | "comparison" | "detailed";
 
 export interface NativeOkfConversationPaper {
@@ -106,8 +125,10 @@ export interface PreparedNativeOkfChatRequest {
   focusedPaperSlugs: string[];
   restrictedPaperSlugs: string[];
   focusedConceptIds: string[];
+  requestedConceptKinds: NativeOkfRequestedConceptKind[];
   includeDiagram: boolean;
   diagramMode: NativeOkfDiagramMode | null;
+  preferDeterministicPaperMap: boolean;
   answerMode: NativeOkfAnswerMode;
   intent: NativeOkfConversationIntent;
   synthesisProblem: string | null;
@@ -312,7 +333,9 @@ export function validateNativeOkfConversationState(
 function titleTerms(title: string): string[] {
   return normalize(title)
     .split(" ")
-    .filter((term) => term.length >= 3 && !STOP_WORDS.has(term));
+    .filter(
+      (term) => term.length >= 3 && !PAPER_TITLE_MATCH_STOP_WORDS.has(term),
+    );
 }
 
 function paperMentionScore(
@@ -341,34 +364,80 @@ function paperMentionScore(
     matches.reduce((sum, term) => sum + term.length, 0);
 }
 
-export function findExplicitNativeOkfPaperSlugs(
+const MULTI_PAPER_MENTION_PATTERN =
+  /\b(?:compare|comparison|between|versus|vs\.?)\b/iu;
+
+function hasExplicitLoosePaperPhrase(
+  question: string,
+  paper: NativeOkfConversationPaper,
+): boolean {
+  const normalizedQuestion = normalize(question);
+  const terms = titleTerms(paper.title);
+  return terms.some((term, index) =>
+    index > 0 && normalizedQuestion.includes(`${terms[index - 1]} ${term}`)
+  );
+}
+interface RankedPaperMention {
+  paper: NativeOkfConversationPaper;
+  score: number;
+  position: number;
+}
+
+function rankedPaperMentions(
   question: string,
   catalog: NativeOkfConversationCatalog,
-): string[] {
-  return catalog.papers
+): RankedPaperMention[] {
+  const mentions = catalog.papers
     .map((paper) => ({
       paper,
       score: paperMentionScore(question, paper),
       position: orderedPaperMentionPosition(question, paper),
     }))
-    .filter(({ score }) => score > 0)
-    .sort((left, right) => {
-      if (
-        left.position >= 0 &&
-        right.position >= 0 &&
-        left.position !== right.position
-      ) {
-        return left.position - right.position;
-      }
-      if (left.position >= 0) return -1;
-      if (right.position >= 0) return 1;
-      return (
-        right.score - left.score ||
-        left.paper.slug.localeCompare(right.paper.slug, "en")
-      );
-    })
+    .filter(({ score }) => score > 0);
+  const anchored = mentions.filter(({ score }) => score >= 8_000);
+  const candidates = anchored.length === 0
+    ? mentions
+    : MULTI_PAPER_MENTION_PATTERN.test(question)
+      ? mentions.filter(({ paper, score }) =>
+          score >= 8_000 || hasExplicitLoosePaperPhrase(question, paper)
+        )
+      : anchored;
+  return candidates.sort((left, right) => {
+    if (
+      anchored.length > 0 &&
+      left.position >= 0 &&
+      right.position >= 0 &&
+      left.position !== right.position
+    ) {
+      return left.position - right.position;
+    }
+    return (
+      right.score - left.score ||
+      (left.position < 0 ? Number.MAX_SAFE_INTEGER : left.position) -
+        (right.position < 0 ? Number.MAX_SAFE_INTEGER : right.position) ||
+      left.paper.slug.localeCompare(right.paper.slug, "en")
+    );
+  });
+}
+export function findExplicitNativeOkfPaperSlugs(
+  question: string,
+  catalog: NativeOkfConversationCatalog,
+): string[] {
+  return rankedPaperMentions(question, catalog)
     .map(({ paper }) => paper.slug)
     .slice(0, MAX_NATIVE_OKF_ACTIVE_PAPERS);
+}
+
+function hasAmbiguousPaperReference(
+  question: string,
+  catalog: NativeOkfConversationCatalog,
+): boolean {
+  const [first, second] = rankedPaperMentions(question, catalog);
+  return first !== undefined &&
+    second !== undefined &&
+    first.position >= 0 &&
+    first.position === second.position &&
+    first.score === second.score;
 }
 function orderedPaperMentionPosition(
   question: string,
@@ -411,23 +480,67 @@ function findExplicitConceptIds(
 
 function conceptKind(
   type: string,
-): "principle" | "feature" | "requirement" | "other" {
+): NativeOkfRequestedConceptKind | "other" {
   const normalizedType = normalize(type);
+  if (normalizedType.includes("goal")) return "goal";
+  if (normalizedType.includes("objective")) return "objective";
+  if (normalizedType.includes("meta requirement")) return "meta-requirement";
+  if (normalizedType.includes("requirement")) return "requirement";
   if (normalizedType.includes("principle")) return "principle";
   if (normalizedType.includes("feature")) return "feature";
-  if (normalizedType.includes("requirement")) return "requirement";
   return "other";
 }
+
+const REQUESTED_CATEGORY_PATTERNS: ReadonlyArray<
+  readonly [NativeOkfRequestedConceptKind, RegExp]
+> = [
+  ["goal", /\b(?:design\s+)?goals?\b/iu],
+  ["objective", /\b(?:design\s+)?objectives?\b/iu],
+  ["meta-requirement", /\bmeta[\s-]+requirements?\b/iu],
+  ["requirement", /(?<!meta[\s-])\brequirements?\b/iu],
+  ["principle", /\b(?:design\s+)?principles?\b/iu],
+  ["feature", /\b(?:design\s+)?features?\b/iu],
+];
 
 function requestedConceptKind(
   question: string,
 ): ReturnType<typeof conceptKind> | null {
-  if (/\bprinciples?\b/iu.test(question)) return "principle";
-  if (/\bfeatures?\b/iu.test(question)) return "feature";
-  if (/\brequirements?\b/iu.test(question)) return "requirement";
-  return null;
+  return requestedConceptKinds(question)[0] ?? null;
 }
 
+function categoryResolutionQuestion(
+  question: string,
+  paperSlugs: readonly string[],
+  catalog: NativeOkfConversationCatalog,
+): string {
+  let normalizedQuestion = normalize(question);
+  const paperBySlug = new Map(
+    catalog.papers.map((paper) => [paper.slug, paper]),
+  );
+  const mentions = paperSlugs.flatMap((slug) => {
+    const paper = paperBySlug.get(slug);
+    if (!paper) return [];
+    return [paper.title, paper.title.split(":", 1)[0] ?? "", paper.slug]
+      .map(normalize)
+      .filter((candidate) => candidate.length >= 3);
+  });
+  for (const mention of [...new Set(mentions)].sort(
+    (left, right) => right.length - left.length,
+  )) {
+    normalizedQuestion = normalizedQuestion.replaceAll(mention, " ");
+  }
+  return normalize(normalizedQuestion);
+}
+function requestedConceptKinds(
+  question: string,
+): NativeOkfRequestedConceptKind[] {
+  return REQUESTED_CATEGORY_PATTERNS.flatMap(([kind, pattern]) => {
+    const match = pattern.exec(question);
+    return match?.index === undefined ? [] : [{ kind, position: match.index }];
+  })
+    .sort((left, right) => left.position - right.position)
+    .map((match) => match.kind);
+}
 function selectConceptIds(
   question: string,
   state: NativeOkfConversationState,
@@ -641,12 +754,19 @@ function priorDraftForRequest(
 
 function clarificationFor(
   question: string,
+  ambiguousPaperReference: boolean,
   explicitPaperSlugs: readonly string[],
   explicitConceptIds: readonly string[],
   focusedConceptIds: readonly string[],
   state: NativeOkfConversationState,
   synthesisIntent: boolean,
 ): NativeOkfClarification | null {
+  if (ambiguousPaperReference) {
+    return {
+      kind: "ambiguous-reference",
+      question: "Which paper are you referring to?",
+    };
+  }
   if (
     SECOND_PAPER_PATTERN.test(question) &&
     explicitPaperSlugs.length === 0 &&
@@ -748,12 +868,47 @@ function contextualRetrievalQuestion(
   return `${question}\nContextual native OKF focus: ${focus.join("; ")}`;
 }
 
-export function applyNativeOkfPaperRestriction(
+export async function assembleNativeOkfContextualRetrieval(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
+): Promise<RetrievalResult> {
+  const paperSlugs = prepared.explicitPaperSlugs.length > 0
+    ? prepared.explicitPaperSlugs
+    : prepared.restrictedPaperSlugs;
+  const paperBySlug = new Map(
+    prepared.catalog.papers.map((paper) => [paper.slug, paper]),
+  );
+  const paperConceptIds = paperSlugs.flatMap((slug) => {
+    const paper = paperBySlug.get(slug);
+    return paper ? [paper.conceptId] : [];
+  });
+  const prioritized = await prioritizeExplicitPaperCategoryContext(
+    retrieval,
+    {
+      paperConceptIds,
+      requestedConceptKinds: prepared.requestedConceptKinds,
+    },
+  );
+  const evidencePaperSlugs = prepared.restrictedPaperSlugs.length > 0
+    ? prepared.restrictedPaperSlugs
+    : prepared.explicitPaperSlugs.length > 0 &&
+        prepared.requestedConceptKinds.length > 0
+      ? prepared.explicitPaperSlugs
+      : [];
+  return restrictNativeOkfRetrievalToPaperSlugs(
+    prepared,
+    prioritized,
+    evidencePaperSlugs,
+  );
+}
+
+function restrictNativeOkfRetrievalToPaperSlugs(
+  prepared: PreparedNativeOkfChatRequest,
+  retrieval: RetrievalResult,
+  paperSlugs: readonly string[],
 ): RetrievalResult {
-  if (prepared.restrictedPaperSlugs.length === 0) return retrieval;
-  const allowedPapers = new Set(prepared.restrictedPaperSlugs);
+  if (paperSlugs.length === 0) return retrieval;
+  const allowedPapers = new Set(paperSlugs);
   const paperByConceptId = new Map(
     prepared.catalog.concepts.map((concept) => [
       concept.conceptId,
@@ -796,6 +951,16 @@ export function applyNativeOkfPaperRestriction(
   };
 }
 
+export function applyNativeOkfPaperRestriction(
+  prepared: PreparedNativeOkfChatRequest,
+  retrieval: RetrievalResult,
+): RetrievalResult {
+  return restrictNativeOkfRetrievalToPaperSlugs(
+    prepared,
+    retrieval,
+    prepared.restrictedPaperSlugs,
+  );
+}
 export function hasSufficientNativeOkfSynthesisGrounding(
   retrieval: RetrievalResult,
 ): boolean {
@@ -820,6 +985,10 @@ export async function prepareNativeOkfChatRequest(
     ? `${pendingOriginal}\nClarification response: ${request.question}`
     : request.question;
   const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
+    effectiveQuestion,
+    catalog,
+  );
+  const ambiguousPaperReference = hasAmbiguousPaperReference(
     effectiveQuestion,
     catalog,
   );
@@ -866,6 +1035,13 @@ export async function prepareNativeOkfChatRequest(
     explicitConceptIds.length > 0
       ? explicitConceptIds
       : selectConceptIds(effectiveQuestion, contextBase, catalog);
+  const requestedKinds = requestedConceptKinds(
+    categoryResolutionQuestion(
+      effectiveQuestion,
+      explicitPaperSlugs,
+      catalog,
+    ),
+  );
   const synthesisIntent = inferNativeOkfSynthesisIntent(
     effectiveQuestion,
     contextBase,
@@ -914,8 +1090,13 @@ export async function prepareNativeOkfChatRequest(
       ? "synthesized"
       : "stored"
     : null;
+  const preferDeterministicPaperMap =
+    diagramMode === "stored" &&
+    focusedPaperSlugs.length === 1 &&
+    inferStoredPaperMapIntent(effectiveQuestion);
   const clarification = clarificationFor(
     effectiveQuestion,
+    ambiguousPaperReference,
     explicitPaperSlugs,
     explicitConceptIds,
     focusedConceptIds,
@@ -937,8 +1118,10 @@ export async function prepareNativeOkfChatRequest(
     focusedPaperSlugs,
     restrictedPaperSlugs,
     focusedConceptIds,
+    requestedConceptKinds: requestedKinds,
     includeDiagram,
     diagramMode,
+    preferDeterministicPaperMap,
     answerMode,
     intent,
     synthesisProblem: synthesisIntent
@@ -991,20 +1174,19 @@ function paperSlugsFromRetrieval(
 }
 
 function relevantConceptIds(
-  question: string,
+  requestedKinds: readonly NativeOkfRequestedConceptKind[],
   retrieval: RetrievalResult,
 ): string[] {
-  const requestedKind = requestedConceptKind(question);
-  const concepts = requestedKind
-    ? retrieval.finalConcepts.filter(
-        (concept) => conceptKind(concept.type) === requestedKind,
+  const requested = new Set(requestedKinds);
+  const concepts = requested.size > 0
+    ? retrieval.finalConcepts.filter((concept) =>
+        requested.has(conceptKind(concept.type) as NativeOkfRequestedConceptKind)
       )
     : retrieval.finalConcepts.filter(
         (concept) => concept.type !== "paper",
       );
   return concepts.map((concept) => concept.conceptId);
 }
-
 export function completedConversationState(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
@@ -1028,7 +1210,7 @@ export function completedConversationState(
       );
   const concepts = uniqueBounded(
     [
-      ...relevantConceptIds(prepared.effectiveQuestion, retrieval),
+      ...relevantConceptIds(prepared.requestedConceptKinds, retrieval),
       ...prepared.focusedConceptIds,
     ],
     MAX_NATIVE_OKF_ACTIVE_CONCEPTS,

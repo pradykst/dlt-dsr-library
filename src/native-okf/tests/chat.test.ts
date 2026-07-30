@@ -557,7 +557,10 @@ test("the mocked chatbot returns only valid cited source cards", async () => {
       retrieve: async () => retrievalFixture(),
       environment: CONFIG,
       client: responseClient(
-        [completedResponse("Grounded claim [[S1]]. Invented claim [[S77]].")],
+        [
+          completedResponse("Grounded claim [[S1]]. Invented claim [[S77]]."),
+          completedResponse("Repaired grounded claim [[S1]]."),
+        ],
         counters,
       ),
     },
@@ -566,7 +569,7 @@ test("the mocked chatbot returns only valid cited source cards", async () => {
   assert.equal(result.insufficientContext, false);
   assert.equal(result.answerMarkdown.includes("[[S77]]"), false);
   assert.deepEqual(result.sources.map((source) => source.sourceId), ["S1"]);
-  assert.equal(counters.responses, 1);
+  assert.equal(counters.responses, 2);
 });
 
 test("a moderation flag stops generation before the Responses API call", async () => {

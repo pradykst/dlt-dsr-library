@@ -16,10 +16,13 @@ import type {
   NativeOkfConversationCatalog,
   PreparedNativeOkfChatRequest,
 } from "../conversation.ts";
-import { retrieveOkfContext } from "../retrieval.ts";
+import {
+  nativeOkfRequestedKindForType,
+  retrieveOkfContext,
+} from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
-  applyNativeOkfPaperRestriction,
+  assembleNativeOkfContextualRetrieval,
   clarificationConversationState,
   completedConversationState,
   hasSufficientNativeOkfSynthesisGrounding,
@@ -40,7 +43,10 @@ import {
   buildNativeOkfDiagramGrounding,
   type NativeOkfDiagramGrounding,
 } from "./diagram-grounding.ts";
-import { validateNativeOkfAnswerPolicy } from "./answer-policy.ts";
+import {
+  NATIVE_OKF_INTERNAL_SOURCE_REQUEST_ERROR,
+  validateNativeOkfAnswerPolicy,
+} from "./answer-policy.ts";
 import {
   type NativeOpenAiEnvironment,
   readOpenAiEnvironment,
@@ -63,7 +69,10 @@ import {
   NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
-import { buildGroundedStoredSourceMap } from "./stored-source-map.ts";
+import {
+  buildGroundedStoredSourceMap,
+  buildStoredPaperDesignMap,
+} from "./stored-source-map.ts";
 
 export const MAX_NATIVE_OKF_QUESTION_CHARACTERS = 2_000;
 export const MAX_NATIVE_OKF_HISTORY_MESSAGES = 8;
@@ -103,6 +112,9 @@ export interface NativeOkfChatDependencies {
   environment?: NativeOpenAiEnvironment;
   client?: NativeOpenAiClient;
   generateDiagram?: NativeOkfDiagramGenerator;
+  buildStoredPaperMap?: (
+    paperConceptId: string,
+  ) => Promise<GeneratedDiagram | undefined>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -329,6 +341,14 @@ function mergeSourceCards(
 
 const SAFE_PRESENTATION_ERROR =
   "The grounded answer could not be presented safely. The validated retrieved source cards remain available below.";
+const SAFE_INTERNAL_GROUNDING_FAILURE =
+  "The relevant library records could not be assembled for this request.";
+
+function safeAnswerPolicyFailure(errors: readonly string[]): string {
+  return errors.includes(NATIVE_OKF_INTERNAL_SOURCE_REQUEST_ERROR)
+    ? SAFE_INTERNAL_GROUNDING_FAILURE
+    : SAFE_PRESENTATION_ERROR;
+}
 
 function synthesisDraftFromDiagram(
   prepared: PreparedNativeOkfChatRequest,
@@ -388,7 +408,7 @@ export async function answerNativeOkfChat(
 
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const rawRetrieval = await retrieve(prepared.retrievalQuestion);
-  const retrieval = applyNativeOkfPaperRestriction(
+  const retrieval = await assembleNativeOkfContextualRetrieval(
     prepared,
     rawRetrieval,
   );
@@ -442,9 +462,17 @@ export async function answerNativeOkfChat(
     client,
   );
 
+  const requestedKinds = new Set(prepared.requestedConceptKinds);
+  const requiredConceptIds = retrieval.finalConcepts
+    .filter((concept) => {
+      const kind = nativeOkfRequestedKindForType(concept.type);
+      return kind !== null && requestedKinds.has(kind);
+    })
+    .map((concept) => concept.conceptId);
   const context = buildNativeOkfGroundedContext(
     retrieval,
     prepared.effectiveQuestion,
+    requiredConceptIds,
   );
   const modelInput = buildNativeOkfModelInput(history, context);
   const draftAnswer = await createTextResponse(
@@ -467,7 +495,7 @@ export async function answerNativeOkfChat(
   );
   const validationErrors = [
     ...(citationResult.needsRepair
-      ? ["The draft has no valid current-turn source citation."]
+      ? ["The draft has no valid required current-turn source citation."]
       : []),
     ...draftPolicy.errors,
   ];
@@ -512,7 +540,7 @@ export async function answerNativeOkfChat(
         repairedCitations.sources,
       );
       if (!repairedPolicy.valid) {
-        answerMarkdown = SAFE_PRESENTATION_ERROR;
+        answerMarkdown = safeAnswerPolicyFailure(repairedPolicy.errors);
         presentationSafe = false;
         warnings.push(
           "The bounded prose repair remained outside the safe presentation policy; invalid text was withheld.",
@@ -530,7 +558,7 @@ export async function answerNativeOkfChat(
       }
     } catch {
       if (!draftPolicy.valid) {
-        answerMarkdown = SAFE_PRESENTATION_ERROR;
+        answerMarkdown = safeAnswerPolicyFailure(draftPolicy.errors);
         presentationSafe = false;
         warnings.push(
           "The bounded prose repair could not be completed; invalid text was withheld.",
@@ -557,41 +585,65 @@ export async function answerNativeOkfChat(
   let synthesisDraft: SynthesisDraftState | null =
     prepared.validatedState.synthesisDraft;
   if (includeDiagram && prepared.diagramMode) {
-    try {
-      const grounding = await buildNativeOkfDiagramGrounding(retrieval);
-      const diagramResult = await (
-        dependencies.generateDiagram ?? defaultDiagramGenerator
-      )({
-        client,
-        environment,
-        context,
-        question: prepared.effectiveQuestion,
-        answerMarkdown,
-        mode: prepared.diagramMode,
-        grounding,
-        priorDraft: prepared.priorSynthesisDraft,
-        requireRpfPath:
-          prepared.diagramMode === "synthesized" &&
-          nativeOkfSynthesisRequiresRpfPath(prepared.effectiveQuestion),
-      });
-      diagram = diagramResult.diagram;
-      responseDiagramMode = diagram ? prepared.diagramMode : null;
-      warnings.push(...diagramResult.warnings);
-      if (diagram && prepared.diagramMode === "synthesized") {
-        synthesisDraft = synthesisDraftFromDiagram(prepared, diagram);
-      }
-    } catch {
-      warnings.push(
-        "The diagram request could not be completed; the grounded text answer is still available.",
+    if (prepared.preferDeterministicPaperMap) {
+      const focusedSlug = prepared.focusedPaperSlugs[0];
+      const focusedPaper = prepared.catalog.papers.find(
+        (paper) => paper.slug === focusedSlug,
       );
+      if (focusedPaper) {
+        try {
+          diagram = await (
+            dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
+          )(focusedPaper.conceptId);
+          if (diagram) responseDiagramMode = "stored";
+        } catch {
+          warnings.push(
+            "The exact stored paper map could not be assembled; the bounded structured diagram path was used instead.",
+          );
+        }
+      }
     }
+
+    if (!diagram) {
+      try {
+        const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+        const diagramResult = await (
+          dependencies.generateDiagram ?? defaultDiagramGenerator
+        )({
+          client,
+          environment,
+          context,
+          question: prepared.effectiveQuestion,
+          answerMarkdown,
+          mode: prepared.diagramMode,
+          grounding,
+          priorDraft: prepared.priorSynthesisDraft,
+          requireRpfPath:
+            prepared.diagramMode === "synthesized" &&
+            nativeOkfSynthesisRequiresRpfPath(prepared.effectiveQuestion),
+        });
+        diagram = diagramResult.diagram;
+        responseDiagramMode = diagram ? prepared.diagramMode : null;
+        warnings.push(...diagramResult.warnings);
+        if (diagram && prepared.diagramMode === "synthesized") {
+          synthesisDraft = synthesisDraftFromDiagram(prepared, diagram);
+        }
+      } catch {
+        warnings.push(
+          "The diagram request could not be completed; the grounded text answer is still available.",
+        );
+      }
+    }
+
     if (!diagram) {
       try {
         diagram = await buildGroundedStoredSourceMap(retrieval);
         if (diagram) {
           responseDiagramMode = "stored";
           warnings.push(
-            "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead.",
+            prepared.diagramMode === "synthesized"
+              ? "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead."
+              : "The requested stored diagram was unavailable, so a connected grounded source map is shown instead.",
           );
         }
       } catch {
@@ -606,7 +658,6 @@ export async function answerNativeOkfChat(
       );
     }
   }
-
   if (presentationSafe) {
     sourceCards = citationResult.sources;
   }

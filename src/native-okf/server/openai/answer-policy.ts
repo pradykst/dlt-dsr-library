@@ -18,6 +18,11 @@ const TEXTUAL_NODE_EDGE_LINE =
   /^\s*(?:node|edge)\s+[\w.-]+\s*(?::|->|-->)\s*\S+/gimu;
 const BULLET_LINE = /^\s*(?:[-*+] |\d+[.)] )/gmu;
 const HEADING_LINE = /^#{1,6}\s+(.+)$/gmu;
+const INTERNAL_SOURCE_REQUEST =
+  /\b(?:provide|paste)\b[^.!?]{0,120}\b(?:retrieved\s+source\s+text|internal\s+(?:source\s+records?|concept\s+ids?)|native\s+source\s+records?)\b|\bretrieve\b[^.!?]{0,120}\bnative\s+source\s+records?\b|\bupload\b[^.!?]{0,120}\bpaper\b/iu;
+
+export const NATIVE_OKF_INTERNAL_SOURCE_REQUEST_ERROR =
+  "The answer asks the user to supply internal library source material.";
 
 export interface NativeOkfAnswerPolicyResult {
   valid: boolean;
@@ -98,6 +103,9 @@ export function validateNativeOkfAnswerPolicy(
   const boxDrawingCharacters =
     answerMarkdown.match(/[\u2500-\u257f]/gu)?.length ?? 0;
 
+  if (INTERNAL_SOURCE_REQUEST.test(answerMarkdown)) {
+    errors.push(NATIVE_OKF_INTERNAL_SOURCE_REQUEST_ERROR);
+  }
   if (FENCED_DIAGRAM_BLOCK.test(answerMarkdown)) {
     errors.push(
       "The answer contains a fenced diagram-language block.",
