@@ -178,6 +178,7 @@ function settle(
   id: string,
   options: {
     diagramDelivered: boolean;
+    questionConsumed?: boolean;
     diagramModelCalls: number;
     modelCalls: number;
   },
@@ -191,6 +192,7 @@ function settle(
       outputTokens: options.modelCalls * 10,
       modelCalls: options.modelCalls,
     },
+    questionConsumed: options.questionConsumed ?? true,
     diagramModelCalls: options.diagramModelCalls,
     diagramDelivered: options.diagramDelivered,
     actualMicrodollars: options.modelCalls * 270,
@@ -297,8 +299,12 @@ test("deterministic stored-map delivery decrements once for three dynamically se
     assert.ok(response.diagram, row.entry.title);
     assert.equal(response.diagram.nodes.length, expected.nodes.length, row.entry.title);
     assert.equal(response.diagram.edges.length, expected.edges.length, row.entry.title);
+    assert.equal(response.quota?.questionsRemainingToday, 19, row.entry.title);
+    assert.equal(response.quota?.questionsRemainingTotal, 99, row.entry.title);
     assert.equal(response.quota?.diagramsRemainingToday, 4, row.entry.title);
     assert.equal(response.quota?.diagramsRemainingTotal, 24, row.entry.title);
+    assert.equal(quota(store).questionsRemainingToday, 19, row.entry.title);
+    assert.equal(quota(store).questionsRemainingTotal, 99, row.entry.title);
     assert.equal(quota(store).diagramsRemainingToday, 4, row.entry.title);
     assert.equal(quota(store).diagramsRemainingTotal, 24, row.entry.title);
     assert.equal(counter.calls, 0, row.entry.title);
@@ -323,9 +329,12 @@ test("every validated delivered diagram mode consumes exactly one unit regardles
     });
     const first = quota(store);
     const reloaded = quota(store);
+    assert.equal(first.questionsRemainingToday, 19, scenario.name);
+    assert.equal(first.questionsRemainingTotal, 99, scenario.name);
     assert.equal(first.diagramsRemainingToday, 4, scenario.name);
     assert.equal(first.diagramsRemainingTotal, 24, scenario.name);
     assert.deepEqual(reloaded, first, scenario.name);
+    assert.equal(store.getUsageReport(NOW).questionsToday, 1, scenario.name);
     assert.equal(store.getUsageReport(NOW).diagramsToday, 1, scenario.name);
     assert.equal(store.getUsageReport(NOW).modelCallsToday, scenario.modelCalls, scenario.name);
   }
@@ -336,6 +345,7 @@ test("responses without a delivered diagram and manual disable consume zero diag
   assert.equal(nondelivery.reservePaidRequest(reservation("no-diagram", true)).allowed, true);
   settle(nondelivery, "no-diagram", {
     diagramDelivered: false,
+    questionConsumed: true,
     diagramModelCalls: 2,
     modelCalls: 3,
   });

@@ -304,6 +304,7 @@ function settle(
     diagramDelivered?: boolean;
     modelCalls?: number;
     diagramModelCalls?: number;
+    questionConsumed?: boolean;
     microdollars?: number;
     nowMs?: number;
   } = {},
@@ -318,6 +319,7 @@ function settle(
       outputTokens: modelCalls * 10,
       modelCalls,
     },
+    questionConsumed: options.questionConsumed ?? true,
     diagramModelCalls: options.diagramModelCalls ?? 0,
     diagramDelivered: options.diagramDelivered ?? false,
     actualMicrodollars: options.microdollars ?? modelCalls * 270,
@@ -460,9 +462,20 @@ test("28 a deterministic stored map consumes one delivery unit with zero diagram
     }),
   );
   assert.equal(response.diagram?.nodes.length, 17);
+  assert.equal(response.quota?.questionsRemainingToday, 19);
+  assert.equal(response.quota?.questionsRemainingTotal, 99);
   assert.equal(response.quota?.diagramsRemainingToday, 4);
   assert.equal(response.quota?.diagramsRemainingTotal, 24);
-  assert.equal(store.getUsageReport(NOW).modelCallsToday, 0);
+  const persisted = quota(store);
+  assert.equal(persisted.questionsRemainingToday, 19);
+  assert.equal(persisted.questionsRemainingTotal, 99);
+  const report = store.getUsageReport(NOW);
+  assert.equal(report.questionsToday, 1);
+  assert.equal(report.diagramsToday, 1);
+  assert.equal(report.modelCallsToday, 0);
+  assert.equal(report.estimatedMicrodollarsToday, 0);
+  assert.equal(report.daily[0]?.inputTokens, 0);
+  assert.equal(report.daily[0]?.outputTokens, 0);
 });
 
 test("29 a second successful synthesized diagram leaves 3 daily and 23 total", async () => {
@@ -498,6 +511,9 @@ test("31 structured-output repair consumes only one diagram unit", async () => {
   });
   assert.equal(response.quota?.diagramsRemainingToday, 4);
   assert.equal(response.quota?.diagramsRemainingTotal, 24);
+  assert.equal(response.quota?.questionsRemainingToday, 19);
+  assert.equal(response.quota?.questionsRemainingTotal, 99);
+  assert.equal(store.getUsageReport(NOW).questionsToday, 1);
   assert.equal(store.getUsageReport(NOW).modelCallsToday, 3);
 });
 
@@ -572,6 +588,7 @@ test("37 one response diagram cannot decrement quota twice", () => {
   settle(store, "quota-37", {
     diagramDelivered: true,
     modelCalls: 3,
+    questionConsumed: true,
     diagramModelCalls: 2,
   });
   assert.equal(quota(store).diagramsRemainingToday, 4);
@@ -593,6 +610,8 @@ test("39 duplicate reconciliation cannot double-finalize", () => {
   store.reservePaidRequest(reservation("quota-39", true));
   settle(store, "quota-39", { diagramDelivered: true });
   assert.throws(() => settle(store, "quota-39", { diagramDelivered: true }));
+  assert.equal(quota(store).questionsRemainingToday, 19);
+  assert.equal(quota(store).questionsRemainingTotal, 99);
   assert.equal(quota(store).diagramsRemainingToday, 4);
   assert.equal(quota(store).diagramsRemainingTotal, 24);
 });
@@ -614,6 +633,8 @@ test("41 a fresh session for the same test identity sees persisted quota", async
   const second = await handleResearchAccessGet(getRequest(cookie(NOW + 1_000)), accessDependencies(store, NOW + 1_000));
   const firstBody = await first.json() as ResearchAccessPayload;
   const secondBody = await second.json() as ResearchAccessPayload;
+  assert.equal(firstBody.quota?.questionsRemainingTotal, 99);
+  assert.equal(secondBody.quota?.questionsRemainingTotal, 99);
   assert.equal(firstBody.quota?.diagramsRemainingTotal, 24);
   assert.equal(secondBody.quota?.diagramsRemainingTotal, 24);
 });
@@ -624,6 +645,8 @@ test("42 access-status returns the updated persisted diagram count", async () =>
   settle(store, "quota-42", { diagramDelivered: true });
   const response = await handleResearchAccessGet(getRequest(cookie()), accessDependencies(store));
   const body = await response.json() as ResearchAccessPayload;
+  assert.equal(body.quota?.questionsUsedToday, 1);
+  assert.equal(body.quota?.questionsRemainingToday, 19);
   assert.equal(body.quota?.diagramsUsedToday, 1);
   assert.equal(body.quota?.diagramsRemainingToday, 4);
   assert.equal(body.quota?.diagramsRemainingTotal, 24);
@@ -693,6 +716,8 @@ test("48 reopening the same temporary SQLite store preserves diagram usage", () 
     first.close();
     const reopened = new SqliteNativeOkfOperationalStore(databasePath);
     reopened.initialize();
+    assert.equal(quota(reopened).questionsRemainingToday, 19);
+    assert.equal(quota(reopened).questionsRemainingTotal, 99);
     assert.equal(quota(reopened).diagramsRemainingToday, 4);
     assert.equal(quota(reopened).diagramsRemainingTotal, 24);
     reopened.close();
@@ -877,8 +902,55 @@ test("Phase 6C3 deterministic stored map decrements once without loading a model
   assert.equal(response.diagramStatus, "success");
   assert.equal(response.diagramMode, "stored");
   assert.equal(response.diagram?.nodes.length, 17);
+  assert.equal(response.quota?.questionsRemainingToday, QUOTAS.dailyQuestions - 1);
+  assert.equal(response.quota?.questionsRemainingTotal, QUOTAS.totalQuestions - 1);
   assert.equal(response.quota?.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
   assert.equal(response.quota?.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
+  assert.equal(persisted.questionsRemainingToday, QUOTAS.dailyQuestions - 1);
+  assert.equal(persisted.questionsRemainingTotal, QUOTAS.totalQuestions - 1);
   assert.equal(persisted.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
   assert.equal(persisted.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
+  const report = store.getUsageReport(NOW);
+  assert.equal(report.questionsToday, 1);
+  assert.equal(report.diagramsToday, 1);
+  assert.equal(report.modelCallsToday, 0);
+  assert.equal(report.estimatedMicrodollarsToday, 0);
+  const accessResponse = await handleResearchAccessGet(
+    getRequest(cookie()),
+    accessDependencies(store),
+  );
+  const accessBody = await accessResponse.json() as ResearchAccessPayload;
+  assert.equal(accessBody.quota?.questionsRemainingToday, QUOTAS.dailyQuestions - 1);
+  assert.equal(accessBody.quota?.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
+});
+test("Phase 6C3.1 release sequence records four questions and three diagrams independently of model calls", () => {
+  const store = memoryStore();
+  const substantiveSteps = [
+    { id: "release-stored-map", includeDiagram: true, diagramDelivered: true, modelCalls: 0 },
+    { id: "release-synthesis", includeDiagram: true, diagramDelivered: true, modelCalls: 1 },
+    { id: "release-refinement", includeDiagram: true, diagramDelivered: true, modelCalls: 1 },
+    { id: "release-trust-text", includeDiagram: false, diagramDelivered: false, modelCalls: 1 },
+  ] as const;
+  for (const step of substantiveSteps) {
+    assert.equal(
+      store.reservePaidRequest(reservation(step.id, step.includeDiagram)).allowed,
+      true,
+    );
+    settle(store, step.id, {
+      diagramDelivered: step.diagramDelivered,
+      diagramModelCalls: step.modelCalls > 0 && step.diagramDelivered ? 1 : 0,
+      modelCalls: step.modelCalls,
+      questionConsumed: true,
+    });
+  }
+  // Deterministic clarification and current-data rejection never reserve quota.
+  const snapshot = quota(store);
+  const report = store.getUsageReport(NOW);
+  assert.equal(snapshot.questionsRemainingToday, QUOTAS.dailyQuestions - 4);
+  assert.equal(snapshot.questionsRemainingTotal, QUOTAS.totalQuestions - 4);
+  assert.equal(snapshot.diagramsRemainingToday, QUOTAS.dailyDiagrams - 3);
+  assert.equal(snapshot.diagramsRemainingTotal, QUOTAS.totalDiagrams - 3);
+  assert.equal(report.questionsToday, 4);
+  assert.equal(report.diagramsToday, 3);
+  assert.equal(report.modelCallsToday, 3);
 });

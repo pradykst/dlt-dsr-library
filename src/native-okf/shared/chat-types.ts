@@ -172,6 +172,8 @@ export interface SynthesisDraftState {
 export interface SynthesisProblemState {
   version: 1;
   problemStatement: string;
+  /** Deterministic researcher-facing form; never used as retrieval evidence. */
+  displayProblem?: string;
   domain: string | null;
   objective: string | null;
   outputType: "design-solution" | "explanatory-theory" | null;

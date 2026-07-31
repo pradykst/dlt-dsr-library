@@ -379,7 +379,7 @@ test("plan generation uses the small schema, makes no answer call, and repairs o
   });
   assert.equal(calls.length, 2);
   assert.ok(result.diagram);
-  assert.equal(result.diagram?.nodes[0]?.label, "Validated fragmented identity problem.");
+  assert.equal(result.diagram?.nodes[0]?.label, "Validated fragmented identity problem");
   assert.equal((calls[0]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(JSON.stringify(calls[0]).includes("native_okf_generated_diagram"), false);
   assert.equal(JSON.stringify(calls[1]).includes(marker), false);
@@ -463,7 +463,10 @@ test("successful synthesis skips the normal answer model and returns used suppor
       environment: ENVIRONMENT,
       client,
       generateDiagram: async (input) => {
-        const plan = planForGrounding(input.grounding);
+        const plan = {
+          ...planForGrounding(input.grounding),
+          problemSummary: input.synthesisProblem ?? input.question,
+        };
         const converted = convertNativeOkfSynthesisPlan(
           plan,
           input.grounding,
@@ -483,8 +486,24 @@ test("successful synthesis skips the normal answer model and returns used suppor
   assert.equal(result.presentationMode, "diagram-primary");
   assert.equal(result.diagramMode, "synthesized");
   assert.equal(result.diagramStatus, "success");
+  assert.match(result.diagram?.title ?? "", /^Grounded proposal: Fragmented product identity/iu);
+  const problemNode = result.diagram?.nodes.find((node) => node.id === "user-problem");
+  assert.equal(
+    problemNode?.label,
+    "Fragmented product identity and lost review continuity across e-commerce marketplaces",
+  );
+  assert.equal(
+    problemNode?.description,
+    "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
+  );
+  assert.match(result.answerMarkdown, /^This grounded proposal addresses fragmented product identity/iu);
+  assert.doesNotMatch(result.answerMarkdown, /addresses Generate|\.\./iu);
   assert.ok(result.synthesisDraft);
   assert.ok(result.conversationState?.lastSynthesisProblem);
+  assert.equal(
+    result.conversationState?.lastSynthesisProblem?.displayProblem,
+    "Fragmented product identity and lost review continuity across e-commerce marketplaces",
+  );
   assert.ok(result.conversationState?.latestValidatedSynthesisDraft);
   assert.ok(result.sources.length > 0 && result.sources.length <= 12);
   assert.ok(result.answerMarkdown.trim().split(/\s+/u).length < 100);

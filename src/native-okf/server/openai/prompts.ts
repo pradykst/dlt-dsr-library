@@ -32,6 +32,8 @@ export const NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION = `Synthesis answer target:
 
 export const NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION = `A separate validated structured visual may accompany this answer. Do not output any textual diagram syntax or repeat every visual node in prose. Explain only the key grounded decisions, stored knowledge versus inference, and supported limitations.`;
 
+export const NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION = `Text-only grounded synthesis outline target: approximately 120 to 220 words; never exceed 280 words. Begin with one direct framing sentence, then give three to five concise design statements with explicit current-turn stored-grounding citations. Add at most one short privacy or limitation paragraph when material. State clearly that the result is a grounded proposal rather than a validated theory. Do not add a long introduction, repeat a conclusion, enumerate every retrieved source, or produce a textual flowchart, ASCII, Mermaid, DOT, Graphviz, PlantUML, or JSON diagram payload.`;
+
 export const NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION = `This request is configured for a text-only answer. Do not output a visual representation in text. If the user asks for a visual flow while the grounded diagram option is disabled, give concise prose and state that the grounded diagram option must be enabled for a visual flow.`;
 
 export const NATIVE_OKF_CITATION_REPAIR_INSTRUCTION = `Add valid current-turn citations in the exact [[S1]] form wherever the validation errors require them. Cite only source IDs present in the supplied OKF_SOURCE blocks. Remove unsupported claims rather than inventing support.`;

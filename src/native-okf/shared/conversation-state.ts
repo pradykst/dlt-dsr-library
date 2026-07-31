@@ -14,6 +14,7 @@ import {
   parseSynthesisDraftState,
   parseSynthesisProblemState,
 } from "./synthesis-draft.ts";
+import { normalizeSynthesisProblemDisplay } from "./synthesis-problem-display.ts";
 
 const STATE_KEYS = new Set([
   "version",
@@ -170,6 +171,9 @@ export function parseNativeOkfConversationState(
       ? {
           version: 1 as const,
           problemStatement: latestValidatedSynthesisDraft.problemStatement,
+          displayProblem: normalizeSynthesisProblemDisplay(
+            latestValidatedSynthesisDraft.problemStatement,
+          ),
           domain: latestValidatedSynthesisDraft.domain,
           objective: latestValidatedSynthesisDraft.objective,
           outputType: "design-solution",

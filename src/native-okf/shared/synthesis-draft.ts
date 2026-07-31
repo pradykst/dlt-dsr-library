@@ -15,6 +15,7 @@ import {
   type SynthesisDraftState,
   type SynthesisProblemState,
 } from "./chat-types.ts";
+import { normalizeSynthesisProblemDisplay } from "./synthesis-problem-display.ts";
 
 const DRAFT_KEYS = new Set([
   "version",
@@ -244,6 +245,7 @@ export function parseSynthesisProblemState(
   const allowed = new Set([
     "version",
     "problemStatement",
+    "displayProblem",
     "domain",
     "objective",
     "outputType",
@@ -254,6 +256,9 @@ export function parseSynthesisProblemState(
   const problemStatement = boundedString(
     value.problemStatement,
     MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS,
+  );
+  const displayProblem = normalizeSynthesisProblemDisplay(
+    problemStatement ?? "",
   );
   const domain = nullableBoundedString(
     value.domain,
@@ -280,6 +285,7 @@ export function parseSynthesisProblemState(
     : boundedStrings(value.sourcePaperSlugs, 3, 256, true);
   if (
     !problemStatement ||
+    !displayProblem ||
     domain === undefined ||
     objective === undefined ||
     constraints === null ||
@@ -291,6 +297,7 @@ export function parseSynthesisProblemState(
   return {
     version: 1,
     problemStatement,
+    displayProblem,
     domain,
     objective,
     outputType,

@@ -13,6 +13,7 @@ import {
   type SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
+import { synthesisProblemSummaryPhrase } from "../../shared/synthesis-problem-display.ts";
 import type {
   NativeOkfConversationCatalog,
   PreparedNativeOkfChatRequest,
@@ -70,6 +71,7 @@ import {
   NATIVE_OKF_SYSTEM_PROMPT,
   NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION,
   NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
+  NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import {
@@ -673,7 +675,7 @@ export async function answerNativeOkfChat(
         diagramResult.diagram,
       );
       const deterministicSummary = diagramResult.deterministicSummary ??
-        `This grounded proposal addresses ${prepared.synthesisProblem ?? prepared.effectiveQuestion}. It presents one validated problem-specific flow derived from current-turn native OKF evidence. Solid elements reuse exact stored knowledge; dashed elements are synthesized adaptations supported by the listed sources and are not claims of stored theory.`;
+        `This grounded proposal addresses ${synthesisProblemSummaryPhrase(prepared.synthesisProblem ?? prepared.effectiveQuestion)}. It presents one validated problem-specific flow derived from current-turn native OKF evidence. Solid elements reuse exact stored knowledge; dashed elements are synthesized adaptations supported by the listed sources and are not claims of stored theory.`;
       return {
         kind: "answer",
         presentationMode: "diagram-primary",
@@ -740,9 +742,18 @@ export async function answerNativeOkfChat(
     };
   }
 
+  const textOnlySynthesisOutline =
+    prepared.intent === "synthesized-flow" &&
+    !includeDiagram &&
+    prepared.answerMode !== "detailed";
+  const answerPolicyMode = textOnlySynthesisOutline
+    ? "synthesis-outline" as const
+    : prepared.answerMode;
   const answerInstructions = [
     NATIVE_OKF_SYSTEM_PROMPT,
-    answerModeInstruction(prepared.answerMode),
+    textOnlySynthesisOutline
+      ? NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION
+      : answerModeInstruction(prepared.answerMode),
     includeDiagram
       ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
       : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
@@ -764,7 +775,7 @@ export async function answerNativeOkfChat(
   let presentationSafe = true;
   const draftPolicy = validateNativeOkfAnswerPolicy(
     answerMarkdown,
-    prepared.answerMode,
+    answerPolicyMode,
   );
   const validationErrors = [
     ...(citationResult.needsRepair
@@ -809,7 +820,7 @@ export async function answerNativeOkfChat(
       );
       const repairedPolicy = validateNativeOkfAnswerPolicy(
         repairedCitations.answerMarkdown,
-        prepared.answerMode,
+        answerPolicyMode,
       );
       sourceCards = mergeSourceCards(
         citationResult.sources,

@@ -166,6 +166,8 @@ export interface ReservationReconciliation {
   reservationId: string;
   completedAtMs: number;
   usage: TokenUsageTotals;
+  /** Server-authoritative substantive-turn signal; independent of model calls. */
+  questionConsumed: boolean;
   /** Responses calls made for diagram generation or diagram repair only. */
   diagramModelCalls: number;
   /** Server-authoritative feature delivery signal; independent of model calls. */

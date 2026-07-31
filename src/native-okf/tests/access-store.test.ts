@@ -89,6 +89,7 @@ function completeReservation(
   options: {
     microdollars?: number;
     diagramModelCalls?: 0 | 1;
+    questionConsumed?: boolean;
     errorCategory?: string | null;
   } = {},
 ): void {
@@ -101,6 +102,7 @@ function completeReservation(
       outputTokens: 0,
       modelCalls: 1,
     },
+    questionConsumed: options.questionConsumed ?? true,
     diagramModelCalls: options.diagramModelCalls ?? 0,
     diagramDelivered: options.diagramModelCalls === 1,
     actualMicrodollars: options.microdollars ?? 0,
@@ -412,6 +414,7 @@ test("diagram reservation is released when no diagram is delivered", () => {
       outputTokens: 20,
       modelCalls: 1,
     },
+    questionConsumed: true,
     diagramModelCalls: 0,
     diagramDelivered: false,
     actualMicrodollars: 250,
@@ -446,6 +449,7 @@ test("moderation-only release consumes no paid question or diagram quota", () =>
       outputTokens: 0,
       modelCalls: 0,
     },
+    questionConsumed: false,
     diagramModelCalls: 0,
     diagramDelivered: false,
     actualMicrodollars: 0,
@@ -472,6 +476,7 @@ test("diagram quota is consumed only when includeDiagram is true", () => {
     reservationId: "r-diagram",
     completedAtMs: NOW + 100,
     usage: { inputTokens: 10, cachedInputTokens: 0, outputTokens: 10, modelCalls: 2 },
+    questionConsumed: true,
     diagramModelCalls: 1,
     diagramDelivered: true,
     actualMicrodollars: 100,
@@ -550,6 +555,7 @@ test("lifetime diagram quota blocks after the UTC daily window resets", () => {
     true,
   );
   completeReservation(store, "r-total-diagram-1", NOW + 1, {
+    questionConsumed: true,
     diagramModelCalls: 1,
   });
 
@@ -684,6 +690,7 @@ test("unreconciled usage charges the complete reservation conservatively", () =>
     reservationId: "r-unreconciled",
     completedAtMs: NOW + 2_000,
     usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, modelCalls: 1 },
+    questionConsumed: true,
     diagramModelCalls: 0,
     diagramDelivered: false,
     actualMicrodollars: 0,

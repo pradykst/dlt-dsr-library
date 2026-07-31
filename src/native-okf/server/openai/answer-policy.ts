@@ -33,13 +33,18 @@ export interface NativeOkfAnswerPolicyResult {
   maximumWords: number;
 }
 
+export type NativeOkfAnswerPolicyMode =
+  | NativeOkfAnswerMode
+  | "synthesis-outline";
+
 export const NATIVE_OKF_ANSWER_HARD_WORD_LIMITS: Record<
-  NativeOkfAnswerMode,
+  NativeOkfAnswerPolicyMode,
   number
 > = {
   normal: 350,
   comparison: 450,
   detailed: 900,
+  "synthesis-outline": 280,
 };
 
 function matchCount(value: string, pattern: RegExp): number {
@@ -91,7 +96,7 @@ function repeatedHeadings(value: string): string[] {
 
 export function validateNativeOkfAnswerPolicy(
   answerMarkdown: string,
-  mode: NativeOkfAnswerMode,
+  mode: NativeOkfAnswerPolicyMode,
 ): NativeOkfAnswerPolicyResult {
   const errors: string[] = [];
   const words = countWords(answerMarkdown);
@@ -162,7 +167,11 @@ export function validateNativeOkfAnswerPolicy(
     );
   }
   const paragraphLimit =
-    mode === "normal" ? 8 : mode === "comparison" ? 10 : 24;
+    mode === "normal" || mode === "synthesis-outline"
+      ? 8
+      : mode === "comparison"
+        ? 10
+        : 24;
   if (paragraphs > paragraphLimit) {
     errors.push(
       `The answer has ${paragraphs} paragraphs; the limit is ${paragraphLimit}.`,

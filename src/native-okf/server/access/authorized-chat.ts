@@ -273,8 +273,9 @@ function reconcile(
   diagramDelivered: boolean,
   error: unknown | null,
 ): void {
+  const trackedUsage = collector.snapshot();
   const reconciliation = reconcileTrackedUsage(
-    collector.snapshot(),
+    trackedUsage,
     config.pricing,
     reservedMicrodollars,
   );
@@ -288,6 +289,7 @@ function reconcile(
       reservationId,
       completedAtMs,
       usage: reconciliation.usage,
+      questionConsumed: error === null || trackedUsage.modelCalls > 0,
       diagramModelCalls: reconciliation.diagramModelCalls,
       diagramDelivered,
       actualMicrodollars: reconciliation.actualMicrodollars,

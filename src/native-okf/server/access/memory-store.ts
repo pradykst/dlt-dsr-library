@@ -533,6 +533,9 @@ export class MemoryNativeOkfOperationalStore implements NativeOkfOperationalStor
       assertNonNegativeSafeInteger(value, name);
     }
     assertNonNegativeSafeInteger(input.diagramModelCalls, "diagramModelCalls");
+    if (typeof input.questionConsumed !== "boolean") {
+      throw new Error("questionConsumed must be a boolean.");
+    }
     if (typeof input.diagramDelivered !== "boolean") {
       throw new Error("diagramDelivered must be a boolean.");
     }
@@ -546,7 +549,7 @@ export class MemoryNativeOkfOperationalStore implements NativeOkfOperationalStor
 
     this.decrementReservedQuota(
       reservation,
-      input.usage.modelCalls === 0,
+      !input.questionConsumed,
       !input.diagramDelivered,
     );
     reservation.status = "settled";

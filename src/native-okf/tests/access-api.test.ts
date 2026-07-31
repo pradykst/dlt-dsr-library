@@ -466,7 +466,7 @@ test("research access POST cookie is accepted by the paid-chat authorization pat
     },
   );
   assert.equal(response.insufficientContext, false);
-  assert.equal(response.quota?.questionsRemainingTotal, QUOTAS.totalQuestions);
+  assert.equal(response.quota?.questionsRemainingTotal, QUOTAS.totalQuestions - 1);
 });
 
 test("admin authentication is independent, generic and production-cookie hardened", async () => {

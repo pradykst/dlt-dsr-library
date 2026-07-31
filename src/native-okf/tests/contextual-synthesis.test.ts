@@ -3,6 +3,7 @@ import "server-only";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import type { Response } from "openai/resources/responses/responses";
 
 import {
   applyNativeOkfPaperRestriction,
@@ -13,6 +14,7 @@ import {
   type NativeOkfConversationCatalog,
 } from "../server/conversation.ts";
 import type { RetrievalResult } from "../server/retrieval-types.ts";
+import { answerNativeOkfChat } from "../server/openai/chat.ts";
 import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import type { NativeOkfGroundedContext } from "../server/openai/context.ts";
 import type { NativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
@@ -22,7 +24,11 @@ import {
 } from "../server/openai/synthesis-plan.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
-import { NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION } from "../server/openai/prompts.ts";
+import {
+  NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION,
+  NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION,
+  NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION,
+} from "../server/openai/prompts.ts";
 import {
   createInitialNativeOkfConversationState,
   type GeneratedDiagram,
@@ -324,6 +330,80 @@ test("manual diagram disable returns synthesis intent without diagram mode", asy
   assert.equal(prepared.diagramMode, null);
 });
 
+test("text-only synthesis uses the concise outline policy while explicit detail retains the larger bound", async () => {
+  const calls: Array<Record<string, unknown>> = [];
+  const client: NativeOpenAiClient = {
+    responses: {
+      create: async (request) => {
+        calls.push(request as unknown as Record<string, unknown>);
+        return {
+          id: "mock-text-outline",
+          object: "response",
+          created_at: 0,
+          model: "mock",
+          output: [],
+          output_text: "Use a bounded identity-continuity proposal grounded in the retrieved design knowledge [[S1]].\n\n- Preserve continuity as a requirement [[S1]].\n- Minimize disclosure through the stored principle [[S2]].\n- Implement signed review records as the feature [[S3]].\n\nThis is a grounded proposal, not a validated theory.",
+          status: "completed",
+          error: null,
+          incomplete_details: null,
+          usage: {
+            input_tokens: 20,
+            input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+            output_tokens: 30,
+            output_tokens_details: { reasoning_tokens: 0 },
+            total_tokens: 50,
+          },
+        } as unknown as Response;
+      },
+    },
+    moderations: {
+      create: async () => ({ results: [{ flagged: false }] }) as never,
+    },
+  };
+  const environment: NativeOpenAiEnvironment = {
+    apiKey: "mock-disabled-key",
+    model: "mock",
+    reasoningEffort: "low",
+    moderationEnabled: false,
+    maxOutputTokens: 900,
+    diagramMaxOutputTokens: 1_500,
+  };
+  const question = "Create a design solution for fragmented identity across marketplaces.";
+  const prepared = await prepareNativeOkfChatRequest(
+    { question, includeDiagram: false },
+    catalog,
+  );
+  const response = await answerNativeOkfChat(
+    { question, includeDiagram: false },
+    { prepared, retrieve: async () => retrieval(), environment, client },
+  );
+  assert.equal(response.kind, "answer");
+  assert.equal(calls.length, 1);
+  assert.match(String(calls[0]?.instructions), /120 to 220 words/iu);
+  assert.match(String(calls[0]?.instructions), /never exceed 280 words/iu);
+  assert.match(String(calls[0]?.instructions), /three to five concise design statements/iu);
+
+  const detailedQuestion = "Create a detailed design solution for fragmented identity across marketplaces.";
+  const detailedPrepared = await prepareNativeOkfChatRequest(
+    { question: detailedQuestion, includeDiagram: false },
+    catalog,
+  );
+  await answerNativeOkfChat(
+    { question: detailedQuestion, includeDiagram: false },
+    {
+      prepared: detailedPrepared,
+      retrieve: async () => retrieval(),
+      environment,
+      client,
+    },
+  );
+  assert.equal(calls.length, 2);
+  assert.match(String(calls[1]?.instructions), /below 900 words/iu);
+  assert.doesNotMatch(String(calls[1]?.instructions), /never exceed 280 words/iu);
+  assert.equal(detailedPrepared.answerMode, "detailed");
+  assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /120 to 220 words/iu);
+  assert.match(NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION, /below 900 words/iu);
+});
 test("vague synthesis asks one deterministic question and a concrete problem proceeds", async () => {
   const vague = await prepareNativeOkfChatRequest(
     { question: "Create a theory for trust." },

@@ -17,6 +17,7 @@ import {
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
 } from "../shared/chat-types.ts";
+import { normalizeSynthesisProblemDisplay } from "../shared/synthesis-problem-display.ts";
 import {
   inferDiagramIntent,
   inferStoredPaperMapIntent,
@@ -133,6 +134,7 @@ export interface PreparedNativeOkfChatRequest {
   answerMode: NativeOkfAnswerMode;
   intent: NativeOkfConversationIntent;
   synthesisProblem: string | null;
+  synthesisDisplayProblem: string | null;
   synthesisDomain: string | null;
   priorSynthesisDraft: SynthesisDraftState | null;
   clarification: NativeOkfClarification | null;
@@ -316,6 +318,9 @@ export function validateNativeOkfConversationState(
       ? {
           version: 1 as const,
           problemStatement: latestValidatedSynthesisDraft.problemStatement,
+          displayProblem: normalizeSynthesisProblemDisplay(
+            latestValidatedSynthesisDraft.problemStatement,
+          ),
           domain: latestValidatedSynthesisDraft.domain,
           objective: latestValidatedSynthesisDraft.objective,
           outputType: "design-solution",
@@ -1129,6 +1134,11 @@ export async function prepareNativeOkfChatRequest(
     contextBase,
     synthesisIntent,
   );
+  const synthesisProblem = synthesisIntent
+    ? priorSynthesisDraft?.problemStatement ??
+      contextBase.lastSynthesisProblem?.problemStatement ??
+      effectiveQuestion.slice(0, 800)
+    : null;
   return {
     request,
     catalog,
@@ -1150,10 +1160,9 @@ export async function prepareNativeOkfChatRequest(
     preferDeterministicPaperMap,
     answerMode,
     intent,
-    synthesisProblem: synthesisIntent
-      ? priorSynthesisDraft?.problemStatement ??
-        contextBase.lastSynthesisProblem?.problemStatement ??
-        effectiveQuestion.slice(0, 800)
+    synthesisProblem,
+    synthesisDisplayProblem: synthesisProblem
+      ? normalizeSynthesisProblemDisplay(synthesisProblem)
       : null,
     synthesisDomain: synthesisIntent
       ? inferredSynthesisDomain(
@@ -1275,6 +1284,10 @@ export function completedConversationState(
           version: 1,
           problemStatement: prepared.synthesisProblem ??
             prepared.effectiveQuestion.slice(0, 800),
+          displayProblem: prepared.synthesisDisplayProblem ??
+            normalizeSynthesisProblemDisplay(
+              prepared.synthesisProblem ?? prepared.effectiveQuestion,
+            ),
           domain: prepared.synthesisDomain,
           objective: prepared.priorSynthesisDraft?.objective ??
             prepared.validatedState.lastSynthesisProblem?.objective ?? null,

@@ -10,6 +10,10 @@ import type {
   SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import { formatConceptType } from "../../shared/presentation.ts";
+import {
+  synthesisProblemNodeDisplay,
+  synthesisProblemSummaryPhrase,
+} from "../../shared/synthesis-problem-display.ts";
 import type { NativeOpenAiClient } from "./client.ts";
 import type {
   NativeOkfDiagramGrounding,
@@ -670,15 +674,14 @@ function uniqueSupport(...groups: readonly string[][]): string[] {
   return [...new Set(groups.flat())].slice(0, SYNTHESIS_PLAN_LIMITS.maxSupportConceptIds);
 }
 
-export function convertNativeOkfSynthesisPlan(
-  plan: SynthesisPlan,
-  grounding: NativeOkfDiagramGrounding,
-  validatedProblemStatement: string = plan.problemSummary,
-): { diagram: GeneratedDiagram; usedSupportConceptIds: string[] } | null {
-  const problem: GeneratedDiagramNode = {
+export function createNativeOkfSynthesisProblemNode(
+  validatedProblemStatement: string,
+): GeneratedDiagramNode {
+  const display = synthesisProblemNodeDisplay(validatedProblemStatement);
+  return {
     id: "user-problem",
-    label: truncate(validatedProblemStatement, 90),
-    description: truncate(validatedProblemStatement, 300),
+    label: display.label,
+    description: display.description,
     category: "User problem",
     stage: "problem",
     order: 0,
@@ -689,6 +692,19 @@ export function convertNativeOkfSynthesisPlan(
     synthesisRationale: null,
     synthesis: false,
   };
+}
+
+export function convertNativeOkfSynthesisPlan(
+  plan: SynthesisPlan,
+  grounding: NativeOkfDiagramGrounding,
+  validatedProblemStatement: string = plan.problemSummary,
+): { diagram: GeneratedDiagram; usedSupportConceptIds: string[] } | null {
+  const problem = createNativeOkfSynthesisProblemNode(
+    validatedProblemStatement,
+  );
+  const problemDisplay = synthesisProblemNodeDisplay(
+    validatedProblemStatement,
+  );
   const nodes = [problem, ...planNodes(plan).map((entry) => convertedNode(entry, grounding))];
   const byKey = new Map<string, GeneratedDiagramNode>([["problem", problem]]);
   planNodes(plan).forEach((entry, index) => byKey.set(entry.node.key, nodes[index + 1]!));
@@ -721,7 +737,7 @@ export function convertNativeOkfSynthesisPlan(
     }];
   });
   const candidate: GeneratedDiagram = {
-    title: plan.title,
+    title: `Grounded proposal: ${problemDisplay.label}`,
     explanation:
       "A problem-specific grounded synthesis. Dashed elements are proposed adaptations; solid elements are exact stored native OKF knowledge.",
     nodes,
@@ -757,7 +773,10 @@ export function deterministicNativeOkfSynthesisSummary(
     diagram.nodes.flatMap((node) => node.supportConceptIds),
   ).size;
   const optional = [plan.artifact, plan.evaluation, plan.outcome].filter(Boolean).length;
-  const boundedProblem = plan.problemSummary.split(/\s+/u).slice(0, 20).join(" ");
+  const boundedProblem = synthesisProblemSummaryPhrase(plan.problemSummary)
+    .split(/\s+/u)
+    .slice(0, 20)
+    .join(" ");
   return `This grounded proposal addresses ${boundedProblem}. It connects ${plan.requirements.length} requirements, ${plan.principles.length} principles, and ${plan.features.length} features${optional > 0 ? ` with ${optional} downstream artifact, evaluation, or outcome element${optional === 1 ? "" : "s"}` : ""}. ${stored} element${stored === 1 ? " reuses" : "s reuse"} exact stored knowledge; ${proposed} ${proposed === 1 ? "is a synthesized adaptation" : "are synthesized adaptations"}. Dashed elements are proposals supported by the listed sources, not claims of stored theory. The flow uses ${supportCount} current-turn stored support concept${supportCount === 1 ? "" : "s"}.`;
 }
 
