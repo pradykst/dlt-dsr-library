@@ -25,13 +25,6 @@ Use only these normalized stages: problem, design-goal, design-objective, meta-r
 
 export const NATIVE_OKF_STORED_DIAGRAM_INSTRUCTIONS = `Create a stored source map for knowledge already represented in the retrieved native OKF context. Every node must use provenance "stored", synthesis false, one exact sourcePaths concept ID, the same one-item supportConceptIds, and a faithful stored label, description, and normalized stage. Every edge must use provenance "stored", identify its two endpoint concept IDs as supportConceptIds, and reproduce an exact supplied resolved native relationship. Create no proposed, user-provided, adapted, or synthesized design knowledge.`;
 
-export const NATIVE_OKF_SYNTHESIS_DIAGRAM_INSTRUCTIONS = `Create a grounded problem-specific synthesis flow beginning from the validated user problem and constraints. Inspect only the supplied current-turn retrieved native OKF context. Reuse exact stored concepts when directly applicable and add synthesized nodes only where adaptation is necessary.
-
-Every node must declare provenance as "user-provided", "stored", or "synthesized". User-provided nodes represent only the stated problem, goal, or constraint, have no sourcePaths or supportConceptIds, use synthesis false, and number at most two. Stored nodes must exactly follow the stored-node rules. Synthesized nodes use synthesis true, one to three matching allowlisted sourcePaths and supportConceptIds, and may include one short user-visible synthesisRationale explaining the adaptation without hidden reasoning.
-
-Every edge must declare provenance as "stored" or "synthesized". Stored edges must be exact supplied native relations. Synthesized edges are proposed design relations, use one to three allowlisted supportConceptIds, and must never be presented as relations extracted from a paper.
-
-Prefer a complete problem -> design-requirement -> design-principle -> design-feature path, then optional artifact, evaluation, or outcome. Do not convert analogy into stored fact, claim synthesis appears in a paper, repeat a concept across stages, or add generic mechanisms without relevant support. The previous draft, when supplied, is design context only and never scholarly evidence.`;
 
 export interface GenerateNativeOkfDiagramOptions {
   client: NativeOpenAiClient;
@@ -43,11 +36,16 @@ export interface GenerateNativeOkfDiagramOptions {
   grounding?: NativeOkfDiagramGrounding;
   priorDraft?: SynthesisDraftState | null;
   requireRpfPath?: boolean;
+  synthesisProblem?: string | null;
+  synthesisDomain?: string | null;
 }
 
 export interface GenerateNativeOkfDiagramResult {
   diagram?: GeneratedDiagram;
   warnings: string[];
+  usedSupportConceptIds?: string[];
+  deterministicSummary?: string;
+  diagnosticCode?: "synthesis-plan-repair-failed";
 }
 
 interface InvalidStructuredDiagram {
@@ -180,9 +178,7 @@ async function createResponse(
   options: GenerateNativeOkfDiagramOptions,
   repair?: InvalidStructuredDiagram,
 ): Promise<Response> {
-  const modeInstructions = options.mode === "synthesized"
-    ? NATIVE_OKF_SYNTHESIS_DIAGRAM_INSTRUCTIONS
-    : NATIVE_OKF_STORED_DIAGRAM_INSTRUCTIONS;
+  const modeInstructions = NATIVE_OKF_STORED_DIAGRAM_INSTRUCTIONS;
   return options.client.responses.create({
     model: options.environment.model,
     instructions: [
@@ -204,6 +200,31 @@ async function createResponse(
 export async function generateNativeOkfDiagram(
   options: GenerateNativeOkfDiagramOptions,
 ): Promise<GenerateNativeOkfDiagramResult> {
+  if (options.mode === "synthesized") {
+    if (!options.grounding) {
+      return {
+        warnings: [],
+        diagnosticCode: "synthesis-plan-repair-failed",
+      };
+    }
+    const { generateNativeOkfSynthesisPlan } = await import(
+      "./synthesis-plan.ts"
+    );
+    return generateNativeOkfSynthesisPlan({
+      client: options.client,
+      environment: options.environment,
+      problemStatement: options.synthesisProblem ??
+        options.priorDraft?.problemStatement ??
+        options.question,
+      refinementRequest: options.question,
+      domain: options.synthesisDomain ?? options.priorDraft?.domain ?? null,
+      objective: options.priorDraft?.objective ?? null,
+      constraints: options.priorDraft?.constraints ?? [],
+      grounding: options.grounding,
+      priorDraft: options.priorDraft ?? null,
+    });
+  }
+
   const first = parseAndValidate(
     await createResponse(options),
     options,

@@ -40,6 +40,8 @@ class MemorySessionStorage {
 function answerResponse(): NativeOkfChatResponse {
   return {
     kind: "answer",
+    presentationMode: "text-primary",
+    diagramStatus: null,
     answerMarkdown: "Grounded answer [[S1]].",
     sources: [
       {

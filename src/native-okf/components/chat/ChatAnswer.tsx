@@ -208,6 +208,56 @@ function SourceCard({
   );
 }
 
+function SourceCollection({
+  sources,
+  anchorPrefix,
+  collapsed,
+}: {
+  sources: readonly NativeOkfSourceCard[];
+  anchorPrefix: string;
+  collapsed: boolean;
+}) {
+  const content = (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {sources.map((source) => (
+        <SourceCard
+          key={source.sourceId}
+          source={source}
+          anchorPrefix={anchorPrefix}
+        />
+      ))}
+    </div>
+  );
+  if (collapsed) {
+    return (
+      <details className="rounded-xl border border-line bg-paper">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+          View {sources.length} grounding source{sources.length === 1 ? "" : "s"}
+        </summary>
+        <div className="border-t border-line p-4">{content}</div>
+      </details>
+    );
+  }
+  return (
+    <section aria-label="Cited native OKF sources">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
+            Sources
+          </p>
+          <h3 className="mt-1 font-serif text-xl font-semibold text-ink">
+            Cited native concepts
+          </h3>
+        </div>
+        <p className="text-xs text-muted">
+          {sources.length} validated citation{sources.length === 1 ? "" : "s"}
+        </p>
+      </div>
+      {content}
+    </section>
+  );
+}
+
 function diagnosticText(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
@@ -224,11 +274,15 @@ export function ChatAnswer({
   messageId: string;
 }) {
   const anchorPrefix = `chat-${messageId}`;
+  const primaryMarkdown = response.deterministicSummary ?? response.answerMarkdown;
   const markdown = citationMarkdown(
-    response.answerMarkdown,
+    primaryMarkdown,
     response.sources,
     anchorPrefix,
   );
+  const diagramPrimary = response.presentationMode === "diagram-primary";
+  const evidenceFallback = response.diagramStatus === "evidence-fallback";
+  const diagramFailed = response.diagramStatus === "failed";
   const showDiagnostics = response.retrievalDebug !== undefined;
 
   return (
@@ -259,6 +313,31 @@ export function ChatAnswer({
         </ReactMarkdown>
       </article>
 
+      {response.diagram ? (
+        <div className="space-y-3">
+          <GeneratedDiagramView diagram={response.diagram} />
+          {evidenceFallback ? (
+            <div
+              role="status"
+              className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3 text-sm leading-6 text-slate-700"
+            >
+              <strong className="text-ink">
+                Supporting evidence map — not the requested synthesized flow.
+              </strong>{" "}
+              Only deterministic stored relationships are shown.
+            </div>
+          ) : null}
+        </div>
+      ) : diagramFailed ? (
+        <div
+          role="status"
+          className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3 text-sm leading-6 text-slate-700"
+        >
+          No unvalidated diagram was displayed. Refine the problem or constraints
+          before retrying synthesis.
+        </div>
+      ) : null}
+
       {response.warnings?.length ? (
         <div
           role="status"
@@ -275,38 +354,20 @@ export function ChatAnswer({
         </div>
       ) : null}
 
+      {response.diagnosticCode &&
+      (response.presentationMode === "safe-error" || diagramFailed) ? (
+        <p className="text-xs text-muted">
+          Diagnostic code: <code>{response.diagnosticCode}</code>
+        </p>
+      ) : null}
+
       {response.sources.length > 0 ? (
-        <section aria-label="Cited native OKF sources">
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
-                Sources
-              </p>
-              <h3 className="mt-1 font-serif text-xl font-semibold text-ink">
-                Cited native concepts
-              </h3>
-            </div>
-            <p className="text-xs text-muted">
-              {response.sources.length} validated citation
-              {response.sources.length === 1 ? "" : "s"}
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {response.sources.map((source) => (
-              <SourceCard
-                key={source.sourceId}
-                source={source}
-                anchorPrefix={anchorPrefix}
-              />
-            ))}
-          </div>
-        </section>
+        <SourceCollection
+          sources={response.sources}
+          anchorPrefix={anchorPrefix}
+          collapsed={diagramPrimary}
+        />
       ) : null}
-
-      {response.diagram ? (
-        <GeneratedDiagramView diagram={response.diagram} />
-      ) : null}
-
       {showDiagnostics ? (
         <details className="rounded-xl border border-line bg-slate-950 text-slate-100">
           <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-300">

@@ -546,7 +546,8 @@ test("a no-match retrieval returns insufficient context without an OpenAI call",
   assert.deepEqual(result.sources, []);
   assert.equal(counters.responses, 0);
   assert.equal(counters.moderations, 0);
-  assert.ok(result.warnings?.includes("No model request was made."));
+  assert.equal(result.presentationMode, "no-match");
+  assert.equal(result.warnings, undefined);
 });
 
 test("the mocked chatbot returns only valid cited source cards", async () => {
@@ -660,7 +661,7 @@ test("an uncited answer receives one bounded citation repair attempt only", asyn
   assert.deepEqual(result.sources, []);
   assert.ok(
     result.warnings?.some((warning) =>
-      warning.includes("bounded citation repair did not produce")),
+      warning.includes("could not attach every required current-turn citation")),
   );
 });
 
@@ -712,4 +713,124 @@ test("diagram requests suppress textual diagram syntax on both answer paths", as
       assert.match(instructions, /grounded diagram option must be enabled/);
     }
   }
+});
+
+function categoryRetrievalFixture(includeEveryRequestedRecord: boolean): RetrievalResult {
+  const base = retrievalFixture();
+  const principles = [
+    {
+      conceptId: "principles/example-p1",
+      type: "design-principle",
+      title: "Example principle one",
+      description: "The first directly requested stored principle.",
+      path: "principles/example-p1.md",
+      tags: ["fixture"],
+      headings: ["Summary"],
+      markdownBody: "Grounded principle one evidence.",
+      selectedMetadata: { sourcePaper: "papers/example-paper" },
+      score: 9,
+      expansionDepth: 1 as const,
+      characterEstimate: 120,
+    },
+    {
+      conceptId: "principles/example-p2",
+      type: "design-principle",
+      title: "Example principle two",
+      description: "The second directly requested stored principle.",
+      path: "principles/example-p2.md",
+      tags: ["fixture"],
+      headings: ["Summary"],
+      markdownBody: "Grounded principle two evidence.",
+      selectedMetadata: { sourcePaper: "papers/example-paper" },
+      score: 8,
+      expansionDepth: 1 as const,
+      characterEstimate: 120,
+    },
+  ];
+  const selectedPrinciples = includeEveryRequestedRecord
+    ? principles
+    : principles.slice(0, 1);
+  return {
+    ...base,
+    finalConcepts: [...selectedPrinciples, ...base.finalConcepts],
+    warnings: [
+      "One or more Markdown bodies were truncated to fit the context limit.",
+      "One or more concepts were omitted because the context limit was exhausted.",
+    ],
+    debug: {
+      ...base.debug,
+      droppedConcepts: includeEveryRequestedRecord
+        ? [{ conceptId: "broad/example-context", reason: "context-limit" }]
+        : [{ conceptId: "principles/example-p2", reason: "context-limit" }],
+    },
+    contextCharacterEstimate: 120 * (selectedPrinciples.length + 1),
+  };
+}
+
+test("requested-category packing exposes only actionable context limitations", async () => {
+  const conversationCatalog = {
+    papers: [
+      {
+        slug: "example-paper",
+        conceptId: "papers/example-paper",
+        title: "Example paper",
+      },
+    ],
+    concepts: [
+      {
+        conceptId: "papers/example-paper",
+        title: "Example paper",
+        type: "paper",
+        paperSlug: "example-paper",
+      },
+      {
+        conceptId: "principles/example-p1",
+        title: "Example principle one",
+        type: "design-principle",
+        paperSlug: "example-paper",
+      },
+      {
+        conceptId: "principles/example-p2",
+        title: "Example principle two",
+        type: "design-principle",
+        paperSlug: "example-paper",
+      },
+    ],
+  };
+  const question = "Which principles are represented in Example paper?";
+
+  const completeCounters = { responses: 0, moderations: 0 };
+  const complete = await answerNativeOkfChat(
+    { question },
+    {
+      conversationCatalog,
+      retrieve: async () => categoryRetrievalFixture(true),
+      environment: CONFIG,
+      client: responseClient(
+        [completedResponse("Both stored principles are represented [[S1]] [[S2]] [[S3]].")],
+        completeCounters,
+      ),
+    },
+  );
+  assert.equal(completeCounters.responses, 1);
+  assert.equal(complete.warnings, undefined);
+
+  const limitedCounters = { responses: 0, moderations: 0 };
+  const limited = await answerNativeOkfChat(
+    { question },
+    {
+      conversationCatalog,
+      retrieve: async () => categoryRetrievalFixture(false),
+      environment: CONFIG,
+      client: responseClient(
+        [completedResponse("The retained stored principle is represented [[S1]] [[S2]].")],
+        limitedCounters,
+      ),
+    },
+  );
+  assert.equal(limitedCounters.responses, 1);
+  assert.deepEqual(limited.warnings, [
+    "Some directly requested stored records could not fit within the bounded answer context; narrow the paper or concept category and try again.",
+  ]);
+  assert.doesNotMatch(limited.warnings?.[0] ?? "", /Markdown|context limit was exhausted/u);
 });

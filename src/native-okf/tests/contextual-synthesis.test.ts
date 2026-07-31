@@ -16,10 +16,10 @@ import type { RetrievalResult } from "../server/retrieval-types.ts";
 import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import type { NativeOkfGroundedContext } from "../server/openai/context.ts";
 import type { NativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
+import { generateNativeOkfDiagram } from "../server/openai/diagram.ts";
 import {
-  generateNativeOkfDiagram,
-  NATIVE_OKF_SYNTHESIS_DIAGRAM_INSTRUCTIONS,
-} from "../server/openai/diagram.ts";
+  NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS,
+} from "../server/openai/synthesis-plan.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
 import { NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION } from "../server/openai/prompts.ts";
@@ -469,7 +469,7 @@ test("malformed client draft elements and unknown IDs are discarded", async () =
     catalog,
   );
   assert.equal(
-    prepared.validatedState.synthesisDraft?.nodes.some((node) =>
+    prepared.validatedState.latestValidatedSynthesisDraft?.nodes.some((node) =>
       node.supportConceptIds.includes("unknown")
     ),
     false,
@@ -520,15 +520,15 @@ test("same-tab session round-trips a bounded synthesis draft and New chat clears
   });
   assert.ok(payload);
   const restored = parseNativeOkfChatSession(payload);
-  assert.equal(restored?.conversationState.synthesisDraft?.version, 1);
+  assert.equal(restored?.conversationState.latestValidatedSynthesisDraft?.version, 1);
   assert.equal(createInitialNativeOkfConversationState().synthesisDraft, null);
 });
 
 test("synthesis prompts are concise, provenance-aware, and never use prior draft as evidence", () => {
   assert.match(NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION, /80 to 180 words/);
   assert.match(NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION, /not make the proposal a validated design theory/);
-  assert.match(NATIVE_OKF_SYNTHESIS_DIAGRAM_INSTRUCTIONS, /previous draft[\s\S]*design context only[\s\S]*never scholarly evidence/i);
-  assert.match(NATIVE_OKF_SYNTHESIS_DIAGRAM_INSTRUCTIONS, /provenance/);
+  assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /supportConceptIds/);
+  assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /Do not emit diagram coordinates, layout[\s\S]*provenance, renderer fields/iu);
 });
 
 test("invalid strict structured output receives one repair without replaying raw output", async () => {

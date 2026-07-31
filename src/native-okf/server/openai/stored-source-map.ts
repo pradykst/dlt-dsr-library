@@ -5,6 +5,7 @@ import type {
   GeneratedDiagram,
   GeneratedDiagramEdge,
   GeneratedDiagramNode,
+  NativeOkfSourceCard,
 } from "../../shared/chat-types.ts";
 import { fallbackTitleFromId, formatConceptType } from "../../shared/presentation.ts";
 import { getOkfBundle } from "../cache.ts";
@@ -297,6 +298,53 @@ export async function buildStoredPaperDesignMap(
     edges,
   };
 }
+export async function storedPaperMapPresentation(
+  paperConceptId: string,
+  diagram: GeneratedDiagram,
+): Promise<{ summary: string; sources: NativeOkfSourceCard[] }> {
+  const bundle = await getOkfBundle();
+  const paper = bundle.conceptsById.get(paperConceptId);
+  const paperTitle = paper ? displayTitle(paper) : fallbackTitleFromId(paperConceptId);
+  const stageCounts = new Map<string, number>();
+  for (const node of [...diagram.nodes].sort((left, right) =>
+    left.order - right.order || left.id.localeCompare(right.id, "en")
+  )) {
+    const stage = formatConceptType(node.stage);
+    stageCounts.set(stage, (stageCounts.get(stage) ?? 0) + 1);
+  }
+  const representedStages = [...stageCounts]
+    .map(([stage, count]) =>
+      `${count} ${stage}${count === 1 ? "" : "s"}`
+    )
+    .join(", ");
+  const relationshipText = diagram.edges.length === 0
+    ? "no canonical stored relationships"
+    : `${diagram.edges.length} canonical stored relationship${diagram.edges.length === 1 ? "" : "s"}`;
+  const summary =
+    `This exact stored map for **${paperTitle}** contains ${diagram.nodes.length} native design concept${diagram.nodes.length === 1 ? "" : "s"} across ${representedStages} and ${relationshipText}. It is a deterministic repository projection: all shown nodes and edges have stored provenance, and no synthesized design knowledge was added.`;
+  const conceptIds = [
+    ...new Set(
+      diagram.nodes.flatMap((node) => node.supportConceptIds),
+    ),
+  ];
+  const sources = conceptIds.flatMap((conceptId, index) => {
+    const concept = bundle.conceptsById.get(conceptId);
+    if (!concept || concept.type === "paper" || concept.type === "reference") {
+      return [];
+    }
+    return [{
+      sourceId: `S${index + 1}`,
+      conceptId: concept.id,
+      title: displayTitle(concept),
+      type: concept.type,
+      ...(concept.description ? { description: concept.description } : {}),
+      sourcePaper: paperTitle,
+      ...(concept.resource ? { resource: concept.resource } : {}),
+    } satisfies NativeOkfSourceCard];
+  });
+  return { summary, sources };
+}
+
 export async function buildGroundedStoredSourceMap(
   retrieval: RetrievalResult,
 ): Promise<GeneratedDiagram | undefined> {

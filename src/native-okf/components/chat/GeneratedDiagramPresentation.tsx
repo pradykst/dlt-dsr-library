@@ -463,17 +463,39 @@ function GeneratedDiagramCanvas({
     return () => window.cancelAnimationFrame(frame);
   }, [fitDiagram, flowReady, layout]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === "undefined") return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        fitDiagram();
+      });
+    });
+    observer.observe(canvas);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [fitDiagram]);
+
   const selectedNode = selectedId
     ? diagram.nodes.find((node) => node.id === selectedId)
     : undefined;
+  const responsiveHeight = Math.max(
+    480,
+    Math.min(720, Math.ceil(layout.bounds.height + 150)),
+  );
 
   return (
     <div
       className={`relative flex w-full flex-col overflow-hidden bg-paper research-grid ${
         fullscreen
           ? "h-[calc(100vh-10rem)] min-h-[26rem]"
-          : "h-[min(68vh,620px)] min-h-[30rem]"
+          : "min-h-[30rem]"
       }`}
+      style={fullscreen ? undefined : { height: responsiveHeight }}
     >
       <DiagramToolbar
         orientation={orientation}

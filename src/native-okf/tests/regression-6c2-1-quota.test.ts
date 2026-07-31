@@ -388,6 +388,8 @@ function scenarioAnswer(
     }
     return {
       kind: "answer",
+      presentationMode: options.diagramDelivered ? "diagram-primary" : "text-primary",
+      diagramStatus: options.diagramDelivered ? "success" : null,
       answerMarkdown: "Grounded answer [[S1]].",
       sources: [],
       insufficientContext: false,
@@ -460,7 +462,7 @@ test("28 a deterministic stored map consumes one delivery unit with zero diagram
   assert.equal(response.diagram?.nodes.length, 17);
   assert.equal(response.quota?.diagramsRemainingToday, 4);
   assert.equal(response.quota?.diagramsRemainingTotal, 24);
-  assert.equal(store.getUsageReport(NOW).modelCallsToday, 1);
+  assert.equal(store.getUsageReport(NOW).modelCallsToday, 0);
 });
 
 test("29 a second successful synthesized diagram leaves 3 daily and 23 total", async () => {
@@ -718,4 +720,165 @@ test("50 repair-call cost is reconciled independently of one feature unit", asyn
   assert.equal(report.modelCallsToday, 3);
   assert.equal(report.diagramsToday, 1);
   assert.ok(report.estimatedMicrodollarsToday > 0);
+});
+
+test("Phase 6C3 live-data gate consumes no question or diagram quota", async () => {
+  const store = memoryStore();
+  let retrievalCalls = 0;
+  let environmentLoads = 0;
+  const before = quota(store);
+  const response = await answerAuthorizedNativeOkfChat(
+    { question: "What are today's cryptocurrency prices?", includeDiagram: true },
+    authorizedDependencies(store, "phase-6c3-live-gate", {
+      retrieve: async () => {
+        retrievalCalls += 1;
+        throw new Error("live-data gate must precede retrieval");
+      },
+      loadOpenAiEnvironment: () => {
+        environmentLoads += 1;
+        throw new Error("live-data gate must precede model setup");
+      },
+    }),
+  );
+  const after = quota(store);
+  assert.equal(response.presentationMode, "no-match");
+  assert.equal(response.diagramStatus, null);
+  assert.deepEqual(response.sources, []);
+  assert.equal(retrievalCalls, 0);
+  assert.equal(environmentLoads, 0);
+  assert.deepEqual(after, before);
+});
+
+test("Phase 6C3 evidence fallback releases diagram quota while reconciling model cost", async () => {
+  const store = memoryStore();
+  const answer: NonNullable<AuthorizedNativeOkfChatDependencies["answer"]> =
+    async (_input, dependencies) => {
+      const client = dependencies?.client;
+      if (!client) throw new Error("Expected tracked mock client.");
+      await client.responses.create({
+        model: "mock-model",
+        input: "initial bounded synthesis plan",
+        max_output_tokens: 256,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "mock_synthesis_plan",
+            strict: true,
+            schema: { type: "object", additionalProperties: false },
+          },
+        },
+      } as never);
+      await client.responses.create({
+        model: "mock-model",
+        input: "bounded repair without raw output",
+        max_output_tokens: 256,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "mock_synthesis_plan",
+            strict: true,
+            schema: { type: "object", additionalProperties: false },
+          },
+        },
+      } as never);
+      return {
+        kind: "answer",
+        presentationMode: "diagram-primary",
+        answerMarkdown: "A valid proposal could not be generated.",
+        sources: [],
+        diagram: validatedDiagram(),
+        diagramMode: "synthesized",
+        diagramStatus: "evidence-fallback",
+        diagnosticCode: "synthesis-plan-repair-failed",
+        insufficientContext: false,
+      };
+    };
+  const response = await answerAuthorizedNativeOkfChat(
+    {
+      question: "Generate a design flow for fragmented identity across marketplaces.",
+      includeDiagram: true,
+    },
+    authorizedDependencies(store, "phase-6c3-evidence-fallback", { answer }),
+  );
+  const persisted = quota(store);
+  assert.equal(response.diagramStatus, "evidence-fallback");
+  assert.equal(response.quota?.questionsRemainingToday, QUOTAS.dailyQuestions - 1);
+  assert.equal(response.quota?.diagramsRemainingToday, QUOTAS.dailyDiagrams);
+  assert.equal(response.quota?.diagramsRemainingTotal, QUOTAS.totalDiagrams);
+  assert.equal(persisted.diagramsRemainingToday, QUOTAS.dailyDiagrams);
+  assert.equal(persisted.diagramsRemainingTotal, QUOTAS.totalDiagrams);
+  const report = store.getUsageReport(NOW);
+  assert.equal(report.modelCallsToday, 2);
+});
+
+test("Phase 6C3 successful synthesized delivery decrements diagram quota exactly once", async () => {
+  const store = memoryStore();
+  const answer: NonNullable<AuthorizedNativeOkfChatDependencies["answer"]> =
+    async (_input, dependencies) => {
+      const client = dependencies?.client;
+      if (!client) throw new Error("Expected tracked mock client.");
+      await client.responses.create({
+        model: "mock-model",
+        input: "valid bounded synthesis plan",
+        max_output_tokens: 256,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "mock_synthesis_plan",
+            strict: true,
+            schema: { type: "object", additionalProperties: false },
+          },
+        },
+      } as never);
+      return {
+        kind: "answer",
+        presentationMode: "diagram-primary",
+        answerMarkdown: "A deterministic synthesis summary.",
+        sources: [],
+        diagram: validatedDiagram(),
+        diagramMode: "synthesized",
+        diagramStatus: "success",
+        insufficientContext: false,
+      };
+    };
+  const response = await answerAuthorizedNativeOkfChat(
+    {
+      question: "Generate a design flow for fragmented identity across marketplaces.",
+      includeDiagram: true,
+    },
+    authorizedDependencies(store, "phase-6c3-synthesis-success", { answer }),
+  );
+  const persisted = quota(store);
+  assert.equal(response.quota?.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
+  assert.equal(response.quota?.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
+  assert.equal(persisted.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
+  assert.equal(persisted.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
+});
+
+test("Phase 6C3 deterministic stored map decrements once without loading a model", async () => {
+  const store = memoryStore();
+  let environmentLoads = 0;
+  const response = await answerAuthorizedNativeOkfChat(
+    {
+      question: "Show the requirements, principles and features from Blockchain for the IoT.",
+      includeDiagram: true,
+    },
+    authorizedDependencies(store, "phase-6c3-stored-map", {
+      retrieve: retrieveOkfContext,
+      loadOpenAiEnvironment: () => {
+        environmentLoads += 1;
+        throw new Error("deterministic stored map must not load model configuration");
+      },
+      answer: undefined,
+    }),
+  );
+  const persisted = quota(store);
+  assert.equal(environmentLoads, 0);
+  assert.equal(response.diagramStatus, "success");
+  assert.equal(response.diagramMode, "stored");
+  assert.equal(response.diagram?.nodes.length, 17);
+  assert.equal(response.quota?.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
+  assert.equal(response.quota?.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
+  assert.equal(persisted.diagramsRemainingToday, QUOTAS.dailyDiagrams - 1);
+  assert.equal(persisted.diagramsRemainingTotal, QUOTAS.totalDiagrams - 1);
 });

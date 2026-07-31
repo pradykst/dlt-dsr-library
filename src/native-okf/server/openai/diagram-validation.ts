@@ -33,6 +33,7 @@ export type DiagramValidationResult =
 export interface DiagramValidationOptions {
   mode?: "stored" | "synthesized";
   requireRpfPath?: boolean;
+  requireDisplayedStoredSupport?: boolean;
 }
 
 const DIAGRAM_KEYS = new Set(["title", "explanation", "nodes", "edges"]);
@@ -629,7 +630,10 @@ function validateGraph(
       errors.push("Stored source maps may contain only stored edges.");
     }
   }
-  if (context.options.mode === "synthesized") {
+  if (
+    context.options.mode === "synthesized" &&
+    context.options.requireDisplayedStoredSupport !== false
+  ) {
     const storedNodes = nodes.filter((node) => node.provenance === "stored");
     if (storedNodes.length < 2) {
       errors.push("A grounded synthesis flow requires at least two displayed stored concepts.");

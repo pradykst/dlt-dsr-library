@@ -5,7 +5,7 @@ export const GENERATED_DIAGRAM_FIT_MIN_ZOOM = 0.4;
 export const GENERATED_DIAGRAM_FIT_MAX_ZOOM = 1.08;
 
 /** Screen-space clearance retained around fitted generated diagrams. */
-export const GENERATED_DIAGRAM_FIT_SCREEN_PADDING = 32;
+export const GENERATED_DIAGRAM_FIT_SCREEN_PADDING = 36;
 
 export interface DiagramViewportBounds {
   x: number;

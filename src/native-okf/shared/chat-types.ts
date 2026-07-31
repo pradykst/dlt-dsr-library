@@ -57,6 +57,12 @@ export interface NativeOkfConversationState {
   lastIntent: NativeOkfConversationIntent;
   lastDiagramRequested: boolean;
   pendingClarification: NativeOkfPendingClarification | null;
+  lastSynthesisProblem?: SynthesisProblemState | null;
+  latestValidatedSynthesisDraft?: SynthesisDraftState | null;
+  /**
+   * Accepted only as a session-contract migration placeholder. New responses
+   * never place a draft here; validated drafts live in the field above.
+   */
   synthesisDraft: SynthesisDraftState | null;
 }
 
@@ -74,6 +80,8 @@ export function createInitialNativeOkfConversationState(): NativeOkfConversation
     lastIntent: "answer",
     lastDiagramRequested: false,
     pendingClarification: null,
+    lastSynthesisProblem: null,
+    latestValidatedSynthesisDraft: null,
     synthesisDraft: null,
   };
 }
@@ -161,7 +169,33 @@ export interface SynthesisDraftState {
   edges: GeneratedDiagramEdge[];
 }
 
+export interface SynthesisProblemState {
+  version: 1;
+  problemStatement: string;
+  domain: string | null;
+  objective: string | null;
+  outputType: "design-solution" | "explanatory-theory" | null;
+  constraints: string[];
+  sourcePaperSlugs: string[];
+}
+
 export type NativeOkfDiagramMode = "stored" | "synthesized";
+export type NativeOkfPresentationMode =
+  | "text-primary"
+  | "diagram-primary"
+  | "clarification"
+  | "no-match"
+  | "safe-error";
+export type NativeOkfDiagramStatus =
+  | "success"
+  | "evidence-fallback"
+  | "failed"
+  | null;
+export type NativeOkfSafeDiagnosticCode =
+  | "answer-presentation-invalid"
+  | "stored-map-unavailable"
+  | "synthesis-plan-invalid"
+  | "synthesis-plan-repair-failed";
 
 export interface NativeOkfPersonalQuotaMetadata {
   questionsRemainingToday: number;
@@ -174,10 +208,14 @@ export interface NativeOkfPersonalQuotaMetadata {
 
 export interface NativeOkfChatResponse {
   kind?: "answer" | "clarification";
+  presentationMode: NativeOkfPresentationMode;
   answerMarkdown: string;
+  deterministicSummary?: string;
   sources: NativeOkfSourceCard[];
   diagram?: GeneratedDiagram;
   diagramMode?: NativeOkfDiagramMode | null;
+  diagramStatus: NativeOkfDiagramStatus;
+  diagnosticCode?: NativeOkfSafeDiagnosticCode;
   synthesisDraft?: SynthesisDraftState;
   clarification?: NativeOkfClarification;
   conversationState?: NativeOkfConversationState;

@@ -79,6 +79,19 @@ function isChatResponse(value: unknown): value is NativeOkfChatResponse {
   }
 
   return (
+    [
+      "text-primary",
+      "diagram-primary",
+      "clarification",
+      "no-match",
+      "safe-error",
+    ].includes(String(value.presentationMode)) &&
+    [
+      null,
+      "success",
+      "evidence-fallback",
+      "failed",
+    ].includes(value.diagramStatus as null | string) &&
     typeof value.answerMarkdown === "string" &&
     Array.isArray(value.sources) &&
     value.sources.every(
@@ -594,7 +607,7 @@ export function ChatWorkbench() {
                 aria-hidden="true"
                 className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue"
               />
-              Retrieving native OKF context and drafting a grounded answer...
+              Retrieving native OKF context and preparing a grounded response...
             </div>
           ) : null}
 

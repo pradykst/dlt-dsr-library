@@ -301,7 +301,7 @@ test("deterministic stored-map delivery decrements once for three dynamically se
     assert.equal(response.quota?.diagramsRemainingTotal, 24, row.entry.title);
     assert.equal(quota(store).diagramsRemainingToday, 4, row.entry.title);
     assert.equal(quota(store).diagramsRemainingTotal, 24, row.entry.title);
-    assert.equal(counter.calls, 1, row.entry.title);
+    assert.equal(counter.calls, 0, row.entry.title);
   }
 });
 

@@ -102,11 +102,93 @@ test("chat returns the grounded source map after synthesized diagram failure", a
     },
   );
 
-  assert.equal(responseCalls, 1);
+  assert.equal(responseCalls, 0);
   assert.equal(result.diagram?.title, "Grounded source map");
   assert.ok(result.diagram?.nodes.every((node) => !node.synthesis));
-  assert.ok(result.warnings?.includes(
-    "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead.",
-  ));
+  assert.equal(result.diagramMode, "synthesized");
+  assert.equal(result.diagramStatus, "evidence-fallback");
+  assert.equal(result.warnings, undefined);
 });
 
+
+test("failed synthesis without a connected evidence map retains grounding sources", async () => {
+  const base = await retrieveOkfContext("fragmented identity continuity design");
+  const retrieval = {
+    ...base,
+    noMatch: false,
+    finalConcepts: [
+      {
+        conceptId: "fixtures/unconnected-requirement",
+        type: "design-requirement",
+        title: "Fixture continuity requirement",
+        description: "A current-turn grounding record with no stored fixture relation.",
+        path: "fixtures/unconnected-requirement.md",
+        tags: ["fixture"],
+        headings: ["Summary"],
+        markdownBody: "Retain accountable continuity across channels.",
+        selectedMetadata: {},
+        score: 10,
+        expansionDepth: 0 as const,
+        characterEstimate: 120,
+      },
+      {
+        conceptId: "fixtures/unconnected-principle",
+        type: "design-principle",
+        title: "Fixture continuity principle",
+        description: "A second current-turn grounding record without a stored fixture relation.",
+        path: "fixtures/unconnected-principle.md",
+        tags: ["fixture"],
+        headings: ["Summary"],
+        markdownBody: "Keep review lineage verifiable across channels.",
+        selectedMetadata: {},
+        score: 9,
+        expansionDepth: 0 as const,
+        characterEstimate: 120,
+      },
+    ],
+    contextCharacterEstimate: 240,
+  };
+  const environment: NativeOpenAiEnvironment = {
+    apiKey: "mock-only",
+    model: "mock-model",
+    reasoningEffort: "low",
+    moderationEnabled: false,
+    maxOutputTokens: 500,
+    diagramMaxOutputTokens: 500,
+  };
+  const client = {
+    responses: {
+      create: async () => {
+        throw new Error("No model response should be requested by the injected failure.");
+      },
+    },
+  } as unknown as NativeOpenAiClient;
+
+  const result = await answerNativeOkfChat(
+    {
+      question:
+        "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
+      includeDiagram: true,
+    },
+    {
+      retrieve: async () => retrieval,
+      environment,
+      client,
+      generateDiagram: async () => ({
+        warnings: [],
+        diagnosticCode: "synthesis-plan-repair-failed",
+      }),
+    },
+  );
+
+  assert.equal(result.diagram, undefined);
+  assert.equal(result.diagramMode, "synthesized");
+  assert.equal(result.diagramStatus, "failed");
+  assert.deepEqual(
+    result.sources.map((source) => source.conceptId).sort(),
+    [
+      "fixtures/unconnected-principle",
+      "fixtures/unconnected-requirement",
+    ],
+  );
+});

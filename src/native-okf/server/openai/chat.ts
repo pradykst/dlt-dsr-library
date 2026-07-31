@@ -9,6 +9,7 @@ import {
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
   type NativeOkfDiagramMode,
+  type NativeOkfSafeDiagnosticCode,
   type SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
@@ -16,6 +17,10 @@ import type {
   NativeOkfConversationCatalog,
   PreparedNativeOkfChatRequest,
 } from "../conversation.ts";
+import {
+  isNativeOkfLiveDataRequest,
+  NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE,
+} from "../live-data-gate.ts";
 import {
   nativeOkfRequestedKindForType,
   retrieveOkfContext,
@@ -26,7 +31,6 @@ import {
   clarificationConversationState,
   completedConversationState,
   hasSufficientNativeOkfSynthesisGrounding,
-  nativeOkfSynthesisRequiresRpfPath,
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
 import {
@@ -66,12 +70,12 @@ import {
   NATIVE_OKF_SYSTEM_PROMPT,
   NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION,
   NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
-  NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import {
   buildGroundedStoredSourceMap,
   buildStoredPaperDesignMap,
+  storedPaperMapPresentation,
 } from "./stored-source-map.ts";
 
 export const MAX_NATIVE_OKF_QUESTION_CHARACTERS = 2_000;
@@ -91,6 +95,9 @@ const ALLOWED_HISTORY_KEYS = new Set(["role", "content"]);
 export interface NativeOkfDiagramGenerationResult {
   diagram?: GeneratedDiagram;
   warnings: string[];
+  usedSupportConceptIds?: string[];
+  deterministicSummary?: string;
+  diagnosticCode?: NativeOkfSafeDiagnosticCode;
 }
 
 export type NativeOkfDiagramGenerator = (input: {
@@ -103,6 +110,8 @@ export type NativeOkfDiagramGenerator = (input: {
   grounding: NativeOkfDiagramGrounding;
   priorDraft: SynthesisDraftState | null;
   requireRpfPath: boolean;
+  synthesisProblem: string | null;
+  synthesisDomain: string | null;
 }) => Promise<NativeOkfDiagramGenerationResult>;
 
 export interface NativeOkfChatDependencies {
@@ -370,6 +379,90 @@ function synthesisDraftFromDiagram(
   };
 }
 
+function sourceCardsForConceptIds(
+  context: NativeOkfGroundedContext,
+  conceptIds: readonly string[],
+): NativeOkfChatResponse["sources"] {
+  const byConceptId = new Map(
+    context.sources.map((source) => [source.conceptId, source.card]),
+  );
+  return [...new Set(conceptIds)]
+    .flatMap((conceptId) => {
+      const card = byConceptId.get(conceptId);
+      return card ? [card] : [];
+    })
+    .slice(0, 12);
+}
+
+const TECHNICAL_CONTEXT_WARNINGS = new Set([
+  "One or more Markdown bodies were truncated to fit the context limit.",
+  "One or more concepts were omitted because the context limit was exhausted.",
+]);
+
+const ACTIONABLE_CONTEXT_WARNING =
+  "The retrieved evidence exceeded the bounded answer context; narrow the paper or concept category for fuller coverage.";
+const ACTIONABLE_REQUESTED_CONTEXT_WARNING =
+  "Some directly requested stored records could not fit within the bounded answer context; narrow the paper or concept category and try again.";
+
+function directlyRequestedConceptIds(
+  prepared: PreparedNativeOkfChatRequest,
+): string[] {
+  const paperSlugs = prepared.explicitPaperSlugs.length > 0
+    ? prepared.explicitPaperSlugs
+    : prepared.restrictedPaperSlugs;
+  if (
+    paperSlugs.length === 0 ||
+    prepared.requestedConceptKinds.length === 0
+  ) {
+    return [];
+  }
+  const allowedPapers = new Set(paperSlugs);
+  const requestedKinds = new Set(prepared.requestedConceptKinds);
+  return prepared.catalog.concepts
+    .filter((concept) => {
+      const kind = nativeOkfRequestedKindForType(concept.type);
+      return (
+        concept.paperSlug !== undefined &&
+        allowedPapers.has(concept.paperSlug) &&
+        kind !== null &&
+        requestedKinds.has(kind)
+      );
+    })
+    .map((concept) => concept.conceptId);
+}
+
+function userFacingRetrievalWarnings(
+  retrieval: RetrievalResult,
+  requestedConceptIds: readonly string[],
+): string[] {
+  const present = new Set(
+    retrieval.finalConcepts.map((concept) => concept.conceptId),
+  );
+  const missingRequestedSources = requestedConceptIds.filter(
+    (conceptId) => !present.has(conceptId),
+  );
+  const technicalWarnings = retrieval.warnings.filter((warning) =>
+    TECHNICAL_CONTEXT_WARNINGS.has(warning)
+  );
+  const userFacing = retrieval.warnings.filter(
+    (warning) => !TECHNICAL_CONTEXT_WARNINGS.has(warning),
+  );
+  if (technicalWarnings.length === 0) return userFacing;
+  if (missingRequestedSources.length > 0) {
+    return [...userFacing, ACTIONABLE_REQUESTED_CONTEXT_WARNING];
+  }
+  if (requestedConceptIds.length === 0) {
+    return [...userFacing, ACTIONABLE_CONTEXT_WARNING];
+  }
+  return userFacing;
+}
+
+function deterministicSynthesisFailureSummary(hasEvidenceMap: boolean): string {
+  return hasEvidenceMap
+    ? "A validated synthesized flow could not be produced. The diagram below is a deterministic supporting evidence map, not the requested synthesized flow. Its solid nodes and relationships come from current-turn retrieved native OKF knowledge; no failed or unvalidated synthesis content is displayed."
+    : "A validated synthesized flow could not be produced from the current-turn native OKF evidence. No failed or unvalidated synthesis content is displayed. Refine the problem or constraints and try the synthesis request again.";
+}
+
 export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
@@ -385,27 +478,36 @@ export async function answerNativeOkfChat(
   if (prepared.clarification) {
     return {
       kind: "clarification",
+      presentationMode: "clarification",
       answerMarkdown: prepared.clarification.question,
       sources: [],
       insufficientContext: false,
       clarification: prepared.clarification,
       conversationState: clarificationConversationState(prepared),
       diagramMode: null,
+      diagramStatus: null,
+    };
+  }
+
+  if (isNativeOkfLiveDataRequest(prepared.effectiveQuestion)) {
+    return {
+      kind: "answer",
+      presentationMode: "no-match",
+      answerMarkdown: NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE,
+      sources: [],
+      insufficientContext: false,
+      diagramMode: null,
+      diagramStatus: null,
+      conversationState: {
+        ...prepared.validatedState,
+        lastIntent: "answer",
+        lastDiagramRequested: false,
+        pendingClarification: null,
+      },
     };
   }
 
   const includeDiagram = prepared.includeDiagram;
-  const answerInstructions = [
-    NATIVE_OKF_SYSTEM_PROMPT,
-    answerModeInstruction(prepared.answerMode),
-    ...(prepared.intent === "synthesized-flow"
-      ? [NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION]
-      : []),
-    includeDiagram
-      ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
-      : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
-  ].join("\n\n");
-
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const rawRetrieval = await retrieve(prepared.retrievalQuestion);
   const retrieval = await assembleNativeOkfContextualRetrieval(
@@ -417,7 +519,6 @@ export async function answerNativeOkfChat(
     !hasSufficientNativeOkfSynthesisGrounding(retrieval);
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
-  // This branch deliberately occurs before configuration, moderation, or SDK access.
   if (
     retrieval.noMatch ||
     retrieval.finalConcepts.length === 0 ||
@@ -425,22 +526,69 @@ export async function answerNativeOkfChat(
   ) {
     return {
       kind: "answer",
+      presentationMode: "no-match",
       answerMarkdown: INSUFFICIENT_CONTEXT_ANSWER,
       sources: [],
       insufficientContext: true,
       diagramMode: null,
+      diagramStatus: null,
       conversationState: completedConversationState(
         prepared,
         retrieval,
         [],
       ),
-      warnings: [
-        ...retrieval.warnings,
-        ...(insufficientSynthesisGrounding
-          ? ["At least two relevant stored native concepts are required for synthesis."]
-          : []),
-        "No model request was made.",
-      ],
+      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+    };
+  }
+
+  if (includeDiagram && prepared.preferDeterministicPaperMap) {
+    const focusedSlug = prepared.focusedPaperSlugs[0];
+    const focusedPaper = prepared.catalog.papers.find(
+      (paper) => paper.slug === focusedSlug,
+    );
+    if (focusedPaper) {
+      try {
+        const diagram = await (
+          dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
+        )(focusedPaper.conceptId);
+        if (diagram) {
+          const presentation = await storedPaperMapPresentation(
+            focusedPaper.conceptId,
+            diagram,
+          );
+          return {
+            kind: "answer",
+            presentationMode: "diagram-primary",
+            answerMarkdown: presentation.summary,
+            deterministicSummary: presentation.summary,
+            sources: presentation.sources,
+            diagram,
+            diagramMode: "stored",
+            diagramStatus: "success",
+            insufficientContext: false,
+            conversationState: completedConversationState(
+              prepared,
+              retrieval,
+              presentation.sources,
+            ),
+            ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+          };
+        }
+      } catch {
+        // The content-free diagnostic below is the only client-visible detail.
+      }
+    }
+    return {
+      kind: "answer",
+      presentationMode: "safe-error",
+      answerMarkdown:
+        "The exact stored paper map could not be assembled safely. No model-generated substitute was used.",
+      sources: [],
+      diagramMode: "stored",
+      diagramStatus: "failed",
+      diagnosticCode: "stored-map-unavailable",
+      insufficientContext: false,
+      conversationState: completedConversationState(prepared, retrieval, []),
       ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
     };
   }
@@ -462,9 +610,14 @@ export async function answerNativeOkfChat(
     client,
   );
 
+  const expectedRequestedConceptIds = directlyRequestedConceptIds(prepared);
   const requestedKinds = new Set(prepared.requestedConceptKinds);
+  const expectedRequestedConceptIdSet = new Set(expectedRequestedConceptIds);
   const requiredConceptIds = retrieval.finalConcepts
     .filter((concept) => {
+      if (expectedRequestedConceptIds.length > 0) {
+        return expectedRequestedConceptIdSet.has(concept.conceptId);
+      }
       const kind = nativeOkfRequestedKindForType(concept.type);
       return kind !== null && requestedKinds.has(kind);
     })
@@ -474,6 +627,126 @@ export async function answerNativeOkfChat(
     prepared.effectiveQuestion,
     requiredConceptIds,
   );
+
+  if (prepared.intent === "synthesized-flow" && prepared.diagramMode === "synthesized") {
+    const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+    let diagramResult: NativeOkfDiagramGenerationResult;
+    try {
+      diagramResult = await (
+        dependencies.generateDiagram ?? defaultDiagramGenerator
+      )({
+        client,
+        environment,
+        context,
+        question: prepared.effectiveQuestion,
+        answerMarkdown: "",
+        mode: "synthesized",
+        grounding,
+        priorDraft: prepared.priorSynthesisDraft,
+        requireRpfPath: true,
+        synthesisProblem: prepared.synthesisProblem,
+        synthesisDomain: prepared.synthesisDomain,
+      });
+    } catch {
+      diagramResult = {
+        warnings: [],
+        diagnosticCode: "synthesis-plan-repair-failed",
+      };
+    }
+
+    if (diagramResult.diagram) {
+      await moderateNativeOkfText(
+        JSON.stringify(diagramResult.diagram),
+        environment,
+        client,
+      );
+      const usedSupportConceptIds = diagramResult.usedSupportConceptIds ??
+        [...new Set(
+          diagramResult.diagram.nodes.flatMap((node) => node.supportConceptIds),
+        )].slice(0, 12);
+      const sourceCards = sourceCardsForConceptIds(
+        context,
+        usedSupportConceptIds,
+      );
+      const synthesisDraft = synthesisDraftFromDiagram(
+        prepared,
+        diagramResult.diagram,
+      );
+      const deterministicSummary = diagramResult.deterministicSummary ??
+        `This grounded proposal addresses ${prepared.synthesisProblem ?? prepared.effectiveQuestion}. It presents one validated problem-specific flow derived from current-turn native OKF evidence. Solid elements reuse exact stored knowledge; dashed elements are synthesized adaptations supported by the listed sources and are not claims of stored theory.`;
+      return {
+        kind: "answer",
+        presentationMode: "diagram-primary",
+        answerMarkdown: deterministicSummary,
+        deterministicSummary,
+        sources: sourceCards,
+        diagram: diagramResult.diagram,
+        diagramMode: "synthesized",
+        diagramStatus: "success",
+        synthesisDraft,
+        insufficientContext: false,
+        conversationState: completedConversationState(
+          prepared,
+          retrieval,
+          sourceCards,
+          synthesisDraft,
+        ),
+        ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+      };
+    }
+
+    let evidenceMap: GeneratedDiagram | undefined;
+    try {
+      evidenceMap = await buildGroundedStoredSourceMap(retrieval);
+    } catch {
+      evidenceMap = undefined;
+    }
+    const evidenceIds = evidenceMap
+      ? [...new Set(evidenceMap.nodes.flatMap((node) => node.supportConceptIds))]
+      : [];
+    const fallbackEvidenceIds = evidenceIds.length > 0
+      ? evidenceIds
+      : retrieval.finalConcepts
+          .filter(
+            (concept) =>
+              concept.type !== "paper" && concept.type !== "reference",
+          )
+          .map((concept) => concept.conceptId);
+    const sourceCards = sourceCardsForConceptIds(
+      context,
+      fallbackEvidenceIds,
+    );
+    const deterministicSummary = deterministicSynthesisFailureSummary(
+      evidenceMap !== undefined,
+    );
+    return {
+      kind: "answer",
+      presentationMode: "diagram-primary",
+      answerMarkdown: deterministicSummary,
+      deterministicSummary,
+      sources: sourceCards,
+      ...(evidenceMap ? { diagram: evidenceMap } : {}),
+      diagramMode: "synthesized",
+      diagramStatus: evidenceMap ? "evidence-fallback" : "failed",
+      diagnosticCode:
+        diagramResult.diagnosticCode ?? "synthesis-plan-repair-failed",
+      insufficientContext: false,
+      conversationState: completedConversationState(
+        prepared,
+        retrieval,
+        sourceCards,
+      ),
+      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+    };
+  }
+
+  const answerInstructions = [
+    NATIVE_OKF_SYSTEM_PROMPT,
+    answerModeInstruction(prepared.answerMode),
+    includeDiagram
+      ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
+      : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
+  ].join("\n\n");
   const modelInput = buildNativeOkfModelInput(history, context);
   const draftAnswer = await createTextResponse(
     client,
@@ -499,7 +772,10 @@ export async function answerNativeOkfChat(
       : []),
     ...draftPolicy.errors,
   ];
-  const warnings = [...retrieval.warnings];
+  const warnings = userFacingRetrievalWarnings(
+    retrieval,
+    expectedRequestedConceptIds,
+  );
 
   if (validationErrors.length > 0) {
     const repairInput = [
@@ -542,36 +818,25 @@ export async function answerNativeOkfChat(
       if (!repairedPolicy.valid) {
         answerMarkdown = safeAnswerPolicyFailure(repairedPolicy.errors);
         presentationSafe = false;
-        warnings.push(
-          "The bounded prose repair remained outside the safe presentation policy; invalid text was withheld.",
-        );
       } else {
         citationResult = repairedCitations;
         answerMarkdown = repairedCitations.answerMarkdown;
-        warnings.push("A bounded answer repair was applied.");
         if (repairedCitations.needsRepair) {
           warnings.push(
-            "The bounded citation repair did not produce a valid current-turn citation.",
+            "The answer could not attach every required current-turn citation; use the validated source cards below.",
           );
         }
-        warnings.push(...repairedCitations.warnings);
       }
     } catch {
       if (!draftPolicy.valid) {
         answerMarkdown = safeAnswerPolicyFailure(draftPolicy.errors);
         presentationSafe = false;
-        warnings.push(
-          "The bounded prose repair could not be completed; invalid text was withheld.",
-        );
       } else {
-        warnings.push(...citationResult.warnings);
         warnings.push(
-          "The bounded citation repair could not be completed.",
+          "The citation repair could not be completed; use the validated source cards below.",
         );
       }
     }
-  } else {
-    warnings.push(...citationResult.warnings);
   }
 
   await moderateNativeOkfText(
@@ -582,72 +847,42 @@ export async function answerNativeOkfChat(
 
   let diagram: GeneratedDiagram | undefined;
   let responseDiagramMode: NativeOkfDiagramMode | null = null;
-  let synthesisDraft: SynthesisDraftState | null =
-    prepared.validatedState.synthesisDraft;
-  if (includeDiagram && prepared.diagramMode) {
-    if (prepared.preferDeterministicPaperMap) {
-      const focusedSlug = prepared.focusedPaperSlugs[0];
-      const focusedPaper = prepared.catalog.papers.find(
-        (paper) => paper.slug === focusedSlug,
-      );
-      if (focusedPaper) {
-        try {
-          diagram = await (
-            dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
-          )(focusedPaper.conceptId);
-          if (diagram) responseDiagramMode = "stored";
-        } catch {
-          warnings.push(
-            "The exact stored paper map could not be assembled; the bounded structured diagram path was used instead.",
-          );
-        }
+  let diagramStatus: NativeOkfChatResponse["diagramStatus"] = null;
+  if (presentationSafe && includeDiagram && prepared.diagramMode === "stored") {
+    try {
+      const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+      const diagramResult = await (
+        dependencies.generateDiagram ?? defaultDiagramGenerator
+      )({
+        client,
+        environment,
+        context,
+        question: prepared.effectiveQuestion,
+        answerMarkdown,
+        mode: "stored",
+        grounding,
+        priorDraft: null,
+        requireRpfPath: false,
+        synthesisProblem: null,
+        synthesisDomain: null,
+      });
+      diagram = diagramResult.diagram;
+      if (diagram) {
+        responseDiagramMode = "stored";
+        diagramStatus = "success";
       }
+    } catch {
+      diagram = undefined;
     }
-
-    if (!diagram) {
-      try {
-        const grounding = await buildNativeOkfDiagramGrounding(retrieval);
-        const diagramResult = await (
-          dependencies.generateDiagram ?? defaultDiagramGenerator
-        )({
-          client,
-          environment,
-          context,
-          question: prepared.effectiveQuestion,
-          answerMarkdown,
-          mode: prepared.diagramMode,
-          grounding,
-          priorDraft: prepared.priorSynthesisDraft,
-          requireRpfPath:
-            prepared.diagramMode === "synthesized" &&
-            nativeOkfSynthesisRequiresRpfPath(prepared.effectiveQuestion),
-        });
-        diagram = diagramResult.diagram;
-        responseDiagramMode = diagram ? prepared.diagramMode : null;
-        warnings.push(...diagramResult.warnings);
-        if (diagram && prepared.diagramMode === "synthesized") {
-          synthesisDraft = synthesisDraftFromDiagram(prepared, diagram);
-        }
-      } catch {
-        warnings.push(
-          "The diagram request could not be completed; the grounded text answer is still available.",
-        );
-      }
-    }
-
     if (!diagram) {
       try {
         diagram = await buildGroundedStoredSourceMap(retrieval);
         if (diagram) {
           responseDiagramMode = "stored";
-          warnings.push(
-            prepared.diagramMode === "synthesized"
-              ? "The synthesized decision-support diagram was unavailable, so the stored source relationships are shown instead."
-              : "The requested stored diagram was unavailable, so a connected grounded source map is shown instead.",
-          );
+          diagramStatus = "success";
         }
       } catch {
-        // The existing safe text-only behavior remains the final fallback.
+        diagram = undefined;
       }
     }
     if (diagram) {
@@ -665,16 +900,22 @@ export async function answerNativeOkfChat(
     prepared,
     retrieval,
     sourceCards,
-    synthesisDraft,
   );
+  const presentationMode = presentationSafe
+    ? diagram
+      ? "diagram-primary" as const
+      : "text-primary" as const
+    : "safe-error" as const;
   return {
     kind: "answer",
+    presentationMode,
     answerMarkdown,
     sources: sourceCards,
     ...(diagram ? { diagram } : {}),
     diagramMode: responseDiagramMode,
-    ...(prepared.intent === "synthesized-flow" && synthesisDraft
-      ? { synthesisDraft }
+    diagramStatus,
+    ...(!presentationSafe
+      ? { diagnosticCode: "answer-presentation-invalid" as const }
       : {}),
     insufficientContext: false,
     conversationState,

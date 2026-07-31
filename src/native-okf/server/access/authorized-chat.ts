@@ -12,6 +12,7 @@ import {
   prepareNativeOkfChatRequest,
   type NativeOkfConversationCatalog,
 } from "../conversation.ts";
+import { isNativeOkfLiveDataRequest } from "../live-data-gate.ts";
 import { retrieveOkfContext } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
@@ -48,8 +49,8 @@ import {
 import {
   calculateResponseCallEnvelopeMicrodollars,
   createUsageTrackingClient,
+  NativeOkfUsageCollector,
   reconcileTrackedUsage,
-  type NativeOkfUsageCollector,
 } from "./usage.ts";
 
 type RetrieveNativeOkfContext = (
@@ -341,7 +342,10 @@ export async function answerAuthorizedNativeOkfChat(
     request,
     dependencies.conversationCatalog,
   );
-  if (prepared.clarification) {
+  if (
+    prepared.clarification ||
+    isNativeOkfLiveDataRequest(prepared.effectiveQuestion)
+  ) {
     const response = await answerNativeOkfChat(request, { prepared });
     return withoutRetrievalDebug(response);
   }
@@ -416,6 +420,39 @@ export async function answerAuthorizedNativeOkfChat(
   let settled = false;
   let executionError: unknown | null = null;
   try {
+    if (prepared.preferDeterministicPaperMap) {
+      collector = new NativeOkfUsageCollector();
+      const response = await answer(request, {
+        retrieve: async () => retrieval,
+        prepared,
+      });
+      const completedAtMs = clock();
+      reconcile(
+        store,
+        reservationId,
+        collector,
+        dependencies.config,
+        reservedMicrodollars,
+        completedAtMs,
+        Math.max(0, completedAtMs - reservationNowMs),
+        response.diagramStatus === "success" && response.diagram !== undefined,
+        null,
+      );
+      settled = true;
+      const quota = callStore(() =>
+        store.getSubjectQuotaSnapshot({
+          subjectId: subject.subjectId,
+          nowMs: completedAtMs,
+          limits: subject.limits,
+          accessExpiresAtMs: subject.accessExpiresAtMs,
+        }),
+      );
+      return {
+        ...withoutRetrievalDebug(response),
+        quota: safeQuota(quota),
+      };
+    }
+
     const environment = (
       dependencies.loadOpenAiEnvironment ?? readOpenAiEnvironment
     )();
@@ -490,7 +527,7 @@ export async function answerAuthorizedNativeOkfChat(
       reservedMicrodollars,
       completedAtMs,
       Math.max(0, completedAtMs - reservationNowMs),
-      response.diagram !== undefined,
+      response.diagramStatus === "success" && response.diagram !== undefined,
       null,
     );
     settled = true;

@@ -13,6 +13,7 @@ import {
   type GeneratedDiagramEdge,
   type GeneratedDiagramNode,
   type SynthesisDraftState,
+  type SynthesisProblemState,
 } from "./chat-types.ts";
 
 const DRAFT_KEYS = new Set([
@@ -233,6 +234,68 @@ function parseEdge(
     label,
     provenance: value.provenance,
     supportConceptIds,
+  };
+}
+
+export function parseSynthesisProblemState(
+  value: unknown,
+): SynthesisProblemState | null {
+  if (!isRecord(value) || value.version !== 1) return null;
+  const allowed = new Set([
+    "version",
+    "problemStatement",
+    "domain",
+    "objective",
+    "outputType",
+    "constraints",
+    "sourcePaperSlugs",
+  ]);
+  if (!hasOnlyKeys(value, allowed)) return null;
+  const problemStatement = boundedString(
+    value.problemStatement,
+    MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS,
+  );
+  const domain = nullableBoundedString(
+    value.domain,
+    MAX_NATIVE_OKF_SYNTHESIS_DOMAIN_CHARACTERS,
+  );
+  const objective = nullableBoundedString(
+    value.objective,
+    MAX_NATIVE_OKF_SYNTHESIS_OBJECTIVE_CHARACTERS,
+  );
+  const constraints = boundedStrings(
+    value.constraints,
+    MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINTS,
+    MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINT_CHARACTERS,
+    true,
+  );
+  const outputType = value.outputType === undefined || value.outputType === null
+    ? null
+    : value.outputType === "design-solution" ||
+        value.outputType === "explanatory-theory"
+      ? value.outputType
+      : undefined;
+  const sourcePaperSlugs = value.sourcePaperSlugs === undefined
+    ? []
+    : boundedStrings(value.sourcePaperSlugs, 3, 256, true);
+  if (
+    !problemStatement ||
+    domain === undefined ||
+    objective === undefined ||
+    constraints === null ||
+    outputType === undefined ||
+    sourcePaperSlugs === null
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    problemStatement,
+    domain,
+    objective,
+    outputType,
+    constraints,
+    sourcePaperSlugs,
   };
 }
 

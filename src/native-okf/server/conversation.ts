@@ -8,6 +8,7 @@ import type {
   NativeOkfDiagramMode,
   NativeOkfSourceCard,
   SynthesisDraftState,
+  SynthesisProblemState,
 } from "../shared/chat-types.ts";
 import {
   createInitialNativeOkfConversationState,
@@ -306,6 +307,22 @@ export function validateNativeOkfConversationState(
   const conceptIds = new Set(
     catalog.concepts.map((concept) => concept.conceptId),
   );
+  const latestValidatedSynthesisDraft = validateSynthesisDraftAgainstCatalog(
+    state.latestValidatedSynthesisDraft ?? state.synthesisDraft,
+    catalog,
+  );
+  const lastSynthesisProblem = state.lastSynthesisProblem ??
+    (latestValidatedSynthesisDraft
+      ? {
+          version: 1 as const,
+          problemStatement: latestValidatedSynthesisDraft.problemStatement,
+          domain: latestValidatedSynthesisDraft.domain,
+          objective: latestValidatedSynthesisDraft.objective,
+          outputType: "design-solution",
+          constraints: latestValidatedSynthesisDraft.constraints,
+          sourcePaperSlugs: [],
+        }
+      : null);
   return {
     version: 1,
     activePaperSlugs: uniqueBounded(
@@ -323,10 +340,9 @@ export function validateNativeOkfConversationState(
     lastIntent: state.lastIntent,
     lastDiagramRequested: state.lastDiagramRequested,
     pendingClarification: state.pendingClarification,
-    synthesisDraft: validateSynthesisDraftAgainstCatalog(
-      state.synthesisDraft,
-      catalog,
-    ),
+    lastSynthesisProblem,
+    latestValidatedSynthesisDraft,
+    synthesisDraft: null,
   };
 }
 
@@ -628,7 +644,7 @@ export function inferNativeOkfSynthesisIntent(
 ): boolean {
   if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
-  if (state.synthesisDraft && SYNTHESIS_REFINEMENT_PATTERN.test(question)) {
+  if (state.lastSynthesisProblem && SYNTHESIS_REFINEMENT_PATTERN.test(question)) {
     return true;
   }
   return SYNTHESIS_ACTION_PATTERN.test(question) &&
@@ -666,7 +682,7 @@ function meaningfulDomainTerms(value: string): string[] {
 
 function inferredSynthesisDomain(
   question: string,
-  draft: SynthesisDraftState | null,
+  draft: SynthesisProblemState | SynthesisDraftState | null,
 ): string | null {
   const match = question.match(/\bfor\s+([^.!?]{1,160})/iu);
   if (match?.[1] && meaningfulDomainTerms(match[1]).length >= 2) {
@@ -685,7 +701,7 @@ function inferredSynthesisDomain(
 
 function hasConcreteSynthesisProblem(
   question: string,
-  draft: SynthesisDraftState | null,
+  draft: SynthesisProblemState | SynthesisDraftState | null,
 ): boolean {
   return inferredSynthesisDomain(question, draft) !== null ||
     meaningfulDomainTerms(question).length >= 3 ||
@@ -761,6 +777,16 @@ function clarificationFor(
   state: NativeOkfConversationState,
   synthesisIntent: boolean,
 ): NativeOkfClarification | null {
+  if (
+    SYNTHESIS_REFINEMENT_PATTERN.test(question) &&
+    !state.lastSynthesisProblem &&
+    !state.latestValidatedSynthesisDraft
+  ) {
+    return {
+      kind: "missing-domain",
+      question: "What design problem should the synthesized flow address?",
+    };
+  }
   if (ambiguousPaperReference) {
     return {
       kind: "ambiguous-reference",
@@ -797,7 +823,7 @@ function clarificationFor(
   }
   if (
     synthesisIntent &&
-    !hasConcreteSynthesisProblem(question, state.synthesisDraft)
+    !hasConcreteSynthesisProblem(question, state.lastSynthesisProblem ?? null)
   ) {
     return {
       kind: "missing-domain",
@@ -1058,7 +1084,7 @@ export async function prepareNativeOkfChatRequest(
   const priorSynthesisDraft = synthesisIntent
     ? priorDraftForRequest(
         effectiveQuestion,
-        contextBase.synthesisDraft,
+        contextBase.latestValidatedSynthesisDraft ?? null,
         restrictedPaperSlugs,
         catalog,
       )
@@ -1126,10 +1152,14 @@ export async function prepareNativeOkfChatRequest(
     intent,
     synthesisProblem: synthesisIntent
       ? priorSynthesisDraft?.problemStatement ??
+        contextBase.lastSynthesisProblem?.problemStatement ??
         effectiveQuestion.slice(0, 800)
       : null,
     synthesisDomain: synthesisIntent
-      ? inferredSynthesisDomain(effectiveQuestion, priorSynthesisDraft)
+      ? inferredSynthesisDomain(
+          effectiveQuestion,
+          priorSynthesisDraft ?? contextBase.lastSynthesisProblem ?? null,
+        )
       : null,
     priorSynthesisDraft,
     clarification,
@@ -1191,8 +1221,8 @@ export function completedConversationState(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
   sources: readonly NativeOkfSourceCard[],
-  synthesisDraft: SynthesisDraftState | null =
-    prepared.validatedState.synthesisDraft,
+  latestValidatedSynthesisDraft: SynthesisDraftState | null =
+    prepared.validatedState.latestValidatedSynthesisDraft ?? null,
 ): NativeOkfConversationState {
   const explicitTopic =
     prepared.explicitPaperSlugs.length > 0 &&
@@ -1240,6 +1270,29 @@ export function completedConversationState(
     lastIntent: prepared.intent,
     lastDiagramRequested: prepared.includeDiagram,
     pendingClarification: null,
-    synthesisDraft,
+    lastSynthesisProblem: prepared.intent === "synthesized-flow"
+      ? {
+          version: 1,
+          problemStatement: prepared.synthesisProblem ??
+            prepared.effectiveQuestion.slice(0, 800),
+          domain: prepared.synthesisDomain,
+          objective: prepared.priorSynthesisDraft?.objective ??
+            prepared.validatedState.lastSynthesisProblem?.objective ?? null,
+          outputType: "design-solution",
+          constraints: uniqueBounded(
+            [
+              ...(prepared.priorSynthesisDraft?.constraints ??
+                prepared.validatedState.lastSynthesisProblem?.constraints ?? []),
+              ...(SYNTHESIS_REFINEMENT_PATTERN.test(prepared.effectiveQuestion)
+                ? [prepared.effectiveQuestion.slice(0, 200)]
+                : []),
+            ],
+            6,
+          ),
+          sourcePaperSlugs: prepared.restrictedPaperSlugs,
+        }
+      : prepared.validatedState.lastSynthesisProblem,
+    latestValidatedSynthesisDraft,
+    synthesisDraft: null,
   };
 }

@@ -10,7 +10,10 @@ import {
   type NativeOkfConversationIntent,
   type NativeOkfConversationState,
 } from "./chat-types.ts";
-import { parseSynthesisDraftState } from "./synthesis-draft.ts";
+import {
+  parseSynthesisDraftState,
+  parseSynthesisProblemState,
+} from "./synthesis-draft.ts";
 
 const STATE_KEYS = new Set([
   "version",
@@ -20,6 +23,8 @@ const STATE_KEYS = new Set([
   "lastIntent",
   "lastDiagramRequested",
   "pendingClarification",
+  "lastSynthesisProblem",
+  "latestValidatedSynthesisDraft",
   "synthesisDraft",
 ]);
 const PENDING_KEYS = new Set(["kind", "originalQuestion"]);
@@ -147,6 +152,43 @@ export function parseNativeOkfConversationState(
     };
   }
 
+  const legacyDraft =
+    value.synthesisDraft === undefined || value.synthesisDraft === null
+      ? null
+      : parseSynthesisDraftState(value.synthesisDraft);
+  const latestValidatedSynthesisDraft =
+    value.latestValidatedSynthesisDraft === undefined ||
+      value.latestValidatedSynthesisDraft === null
+      ? legacyDraft
+      : parseSynthesisDraftState(value.latestValidatedSynthesisDraft);
+  const explicitProblem =
+    value.lastSynthesisProblem === undefined || value.lastSynthesisProblem === null
+      ? null
+      : parseSynthesisProblemState(value.lastSynthesisProblem);
+  const lastSynthesisProblem = explicitProblem ??
+    (latestValidatedSynthesisDraft
+      ? {
+          version: 1 as const,
+          problemStatement: latestValidatedSynthesisDraft.problemStatement,
+          domain: latestValidatedSynthesisDraft.domain,
+          objective: latestValidatedSynthesisDraft.objective,
+          outputType: "design-solution",
+          constraints: latestValidatedSynthesisDraft.constraints,
+          sourcePaperSlugs: [],
+        }
+      : null);
+
+  if (
+    (value.latestValidatedSynthesisDraft !== undefined &&
+      value.latestValidatedSynthesisDraft !== null &&
+      latestValidatedSynthesisDraft === null) ||
+    (value.lastSynthesisProblem !== undefined &&
+      value.lastSynthesisProblem !== null &&
+      explicitProblem === null)
+  ) {
+    return null;
+  }
+
   return {
     version: 1,
     activePaperSlugs,
@@ -155,10 +197,9 @@ export function parseNativeOkfConversationState(
     lastIntent: value.lastIntent,
     lastDiagramRequested: value.lastDiagramRequested,
     pendingClarification,
-    synthesisDraft:
-      value.synthesisDraft === undefined || value.synthesisDraft === null
-        ? null
-        : parseSynthesisDraftState(value.synthesisDraft),
+    lastSynthesisProblem,
+    latestValidatedSynthesisDraft,
+    synthesisDraft: null,
   };
 }
 

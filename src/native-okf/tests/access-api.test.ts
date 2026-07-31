@@ -446,6 +446,8 @@ test("research access POST cookie is accepted by the paid-chat authorization pat
       now: () => NOW,
       retrieve: async () => retrieval,
       answer: async () => ({
+        presentationMode: "text-primary",
+        diagramStatus: null,
         answerMarkdown: "Grounded fixture answer.",
         sources: [],
         insufficientContext: false,
