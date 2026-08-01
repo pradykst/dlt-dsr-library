@@ -75,6 +75,9 @@ export async function buildReleaseHomeViewModel(): Promise<ReleaseHomeViewModel>
     ).length,
     0,
   );
+  const countsByType = new Map(
+    library.typeCounts.map(({ type, count }) => [type, count]),
+  );
   const metrics = {
     paperCount: library.paperCount,
     conceptCount: bundle.concepts.length,
@@ -86,9 +89,9 @@ export async function buildReleaseHomeViewModel(): Promise<ReleaseHomeViewModel>
     metrics,
     metricCards: [
       { label: "Papers", value: metrics.paperCount },
-      { label: "Linked concepts", value: metrics.conceptCount },
-      { label: "Resolved native links", value: metrics.resolvedNativeLinkCount },
-      { label: "Represented native concept types", value: metrics.representedTypeCount },
+      { label: "Requirements", value: countsByType.get("design-requirement") ?? 0 },
+      { label: "Principles", value: countsByType.get("design-principle") ?? 0 },
+      { label: "Features", value: countsByType.get("design-feature") ?? 0 },
     ],
     typeCounts: library.typeCounts,
     featuredPapers: selectRepresentativePapers(library.papers),

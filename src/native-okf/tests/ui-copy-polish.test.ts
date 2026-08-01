@@ -1,0 +1,234 @@
+import "server-only";
+
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import test from "node:test";
+
+import { getAllConcepts } from "../server/index.ts";
+import { buildReleaseHomeViewModel } from "../server/release-home.ts";
+import {
+  getLibraryViewModel,
+  getPaperWorkbenchViewModel,
+} from "../server/workbench.ts";
+import {
+  designKnowledgeStarterQuestion,
+  groundedSolutionStarterQuestion,
+  paperComparisonStarterQuestion,
+  paperMapStarterQuestion,
+} from "../shared/guided-starters.ts";
+import {
+  buildPaperPresentation,
+  MISSING_DSR_DIMENSION_COPY,
+  PAPER_DSR_DIMENSIONS,
+  publicPaperFrontmatter,
+} from "../shared/paper-presentation.ts";
+
+async function source(relativePath: string): Promise<string> {
+  return readFile(resolve(process.cwd(), relativePath), "utf8");
+}
+
+function compact(value: string): string {
+  return value.replace(/\s+/gu, " ").trim();
+}
+
+test("desktop, mobile, and footer navigation use the approved public labels", async () => {
+  const [header, footer] = await Promise.all([
+    source("components/layout/SiteHeader.tsx"),
+    source("components/layout/SiteFooter.tsx"),
+  ]);
+  for (const label of ["Home", "Library", "Chat", "Chat access"]) {
+    assert.match(header, new RegExp(`label: "${label}"`, "u"));
+  }
+  assert.doesNotMatch(header, /label: "Grounded Chat"|label: "Researcher Access"/u);
+  assert.match(header, /public-mobile-navigation/u);
+  assert.match(footer, /label: "Chat"/u);
+  assert.match(footer, /label: "Chat access"/u);
+  assert.doesNotMatch(footer, /Universität Leipzig research context/u);
+  for (const item of [header, footer]) {
+    assert.match(item, /target="_blank"/u);
+    assert.match(item, /rel="noopener noreferrer"/u);
+  }
+});
+
+test("homepage uses the approved hero and removes superseded public sections", async () => {
+  const [homepage, motif] = await Promise.all([
+    source("src/native-okf/components/release/ReleaseHomepage.tsx"),
+    source("src/native-okf/components/release/ReleaseSemanticMotif.tsx"),
+  ]);
+  assert.match(
+    compact(homepage),
+    /The DSR Knowledge Library represents design knowledge in the form of requirements, principles, features, and their relationships\. Researchers can inspect individual papers, compare reusable knowledge across studies, and interact with a source-grounded chatbot\./u,
+  );
+  assert.match(homepage, /Browse the library/u);
+  assert.match(homepage, /Open chat/u);
+  for (const removed of [
+    "Request evaluation access",
+    "How it works",
+    "Inspect the evidence behind a response.",
+    "Evaluate the research prototype",
+  ]) assert.equal(homepage.includes(removed), false);
+  assert.match(motif, /Illustrative design-knowledge structure/u);
+  assert.doesNotMatch(motif, /A visual motif, not a stored result/u);
+});
+
+test("homepage statistics are derived from canonical repository concept types", async () => {
+  const [view, concepts] = await Promise.all([
+    buildReleaseHomeViewModel(),
+    getAllConcepts(),
+  ]);
+  const expected = new Map<string, number>();
+  for (const concept of concepts) {
+    expected.set(concept.type, (expected.get(concept.type) ?? 0) + 1);
+  }
+  assert.deepEqual(
+    view.metricCards.map(({ label, value }) => [label, value]),
+    [
+      ["Papers", expected.get("paper") ?? 0],
+      ["Requirements", expected.get("design-requirement") ?? 0],
+      ["Principles", expected.get("design-principle") ?? 0],
+      ["Features", expected.get("design-feature") ?? 0],
+    ],
+  );
+});
+
+test("library page removes version, bundle, and concept-statistics presentation", async () => {
+  const libraryPage = await source("app/native-okf/page.tsx");
+  assert.match(libraryPage, /Research papers/u);
+  for (const removed of [
+    "Native Google OKF",
+    "Version {library.version}",
+    "Browse the canonical Markdown bundle directly",
+    "Paper concepts",
+    "Design-knowledge concepts",
+    "Native concept types",
+    "Concept counts by native type",
+  ]) assert.equal(libraryPage.includes(removed), false);
+  assert.doesNotMatch(libraryPage, /library\.typeCounts\.map/u);
+});
+
+test("each library paper card is one semantic link with no nested anchors", async () => {
+  const card = await source("src/native-okf/components/PaperCard.tsx");
+  assert.equal((card.match(/<Link\b/gu) ?? []).length, 1);
+  assert.equal((card.match(/<article\b/gu) ?? []).length, 1);
+  assert.match(card, /<article[\s\S]*?<Link[\s\S]*?Open paper[\s\S]*?<\/Link>[\s\S]*?<\/article>/u);
+  assert.doesNotMatch(card, /<a\b|Open paper Workbench/u);
+  assert.match(card, /cursor-pointer/u);
+  assert.match(card, /focus-visible:ring-2/u);
+  assert.match(card, /hover:-translate-y-0\.5/u);
+});
+
+test("paper presentation derives all six DSR dimensions and removes raw duplicates", async () => {
+  const library = await getLibraryViewModel();
+  assert.equal(library.papers.length, 34);
+  for (const paper of library.papers) {
+    const view = await getPaperWorkbenchViewModel(paper.id);
+    assert.ok(view);
+    const presentation = buildPaperPresentation(view.concept.markdownBody);
+    assert.deepEqual(
+      presentation.dsrDimensions.map(({ title }) => title),
+      PAPER_DSR_DIMENSIONS.map(({ title }) => title),
+    );
+    assert.equal(presentation.dsrDimensions.length, 6);
+    assert.equal(
+      presentation.dsrDimensions.every(({ content }) => content.trim().length > 0),
+      true,
+    );
+    assert.doesNotMatch(presentation.narrativeMarkdown, /^## DSR grid\s*$/imu);
+    assert.doesNotMatch(presentation.narrativeMarkdown, /^## Design knowledge\s*$/imu);
+  }
+});
+
+test("missing DSR dimensions use the restrained library-record fallback", () => {
+  const presentation = buildPaperPresentation("# Generic paper\n\n## Summary\n\nA summary.");
+  assert.equal(presentation.dsrDimensions.length, 6);
+  assert.equal(
+    presentation.dsrDimensions.every(
+      ({ content, represented }) =>
+        content === MISSING_DSR_DIMENSION_COPY && represented === false,
+    ),
+    true,
+  );
+});
+
+test("paper page keeps structured knowledge while hiding technical and relationship presentation", async () => {
+  const [workbench, grid] = await Promise.all([
+    source("src/native-okf/components/WorkbenchView.tsx"),
+    source("src/native-okf/components/PaperDsrGrid.tsx"),
+  ]);
+  const paperLinks = workbench.match(/const PAPER_SECTION_LINKS = \[[\s\S]*?\] as const;/u)?.[0] ?? "";
+  assert.doesNotMatch(paperLinks, /Relationships/u);
+  assert.match(workbench, /\{!isPaper \? \([\s\S]*?id="relationships"/u);
+  assert.match(workbench, /paperPresentation\?\.narrativeMarkdown/u);
+  assert.match(workbench, /title=\{isPaper \? "Design knowledge"/u);
+  assert.match(workbench, /publicPaperFrontmatter\(frontmatter\)/u);
+  assert.match(grid, /md:grid-cols-2 lg:grid-cols-3/u);
+  assert.match(grid, /String\(index \+ 1\)\.padStart\(2, "0"\)/u);
+  for (const dimension of PAPER_DSR_DIMENSIONS) {
+    assert.equal(workbench.includes(`title="${dimension.title}"`), false);
+  }
+
+  const filtered = publicPaperFrontmatter({
+    title: "Generic paper",
+    timestamp: "hidden",
+    bundle_path: "hidden",
+    filePath: "hidden",
+    methodology: "kept",
+  });
+  assert.deepEqual(filtered, { title: "Generic paper", methodology: "kept" });
+});
+
+test("chat page and assistant panel use concise researcher-facing copy", async () => {
+  const [page, workbench] = await Promise.all([
+    source("app/native-okf/chat/page.tsx"),
+    source("src/native-okf/components/chat/ChatWorkbench.tsx"),
+  ]);
+  assert.match(page, /Chat with the design knowledge library/u);
+  assert.match(
+    page,
+    /Ask about papers and represented design knowledge, compare studies, or build a source-grounded decision-support flow\./u,
+  );
+  assert.match(workbench, /Design knowledge assistant/u);
+  assert.match(
+    compact(workbench),
+    /Answers use retrieved library sources\. Conversation content remains in this browser tab; only access and usage counters are stored\./u,
+  );
+  assert.doesNotMatch(page, /Research library chat|Native OKF grounded assistant|Local retrieval selects/u);
+  assert.doesNotMatch(workbench, /Grounded native OKF assistant/u);
+});
+
+test("guided starter question generation remains unchanged", () => {
+  assert.equal(
+    paperMapStarterQuestion("Paper A"),
+    'Show the stored design map for "Paper A".',
+  );
+  assert.equal(
+    designKnowledgeStarterQuestion("Paper A", "design principles"),
+    'What design principles are represented in "Paper A", and how are they related?',
+  );
+  assert.equal(
+    paperComparisonStarterQuestion("Paper A", "Paper B"),
+    'Compare "Paper A" and "Paper B", focusing on their represented design knowledge, important differences, and reusable mechanisms.',
+  );
+  assert.equal(
+    groundedSolutionStarterQuestion("a generic coordination problem"),
+    "Generate a grounded decision-support flow for a generic coordination problem.",
+  );
+});
+
+test("access page and card use the approved concise copy without mode badges", async () => {
+  const [page, portal] = await Promise.all([
+    source("app/native-okf/access/page.tsx"),
+    source("src/native-okf/components/access/AccessPortal.tsx"),
+  ]);
+  assert.match(page, /title="Chat access"/u);
+  assert.match(page, /Enter your evaluation access code to use the design knowledge assistant\./u);
+  assert.match(page, /breadcrumbs=\{\[\{ label: "Chat access" \}\]\}/u);
+  assert.doesNotMatch(page, /Limited native OKF evaluation/u);
+  assert.match(portal, /Enter access code/u);
+  assert.match(portal, /The paper library remains available without chat access\./u);
+  assert.match(portal, />\s*Access code\s*</u);
+  assert.match(portal, /placeholder="Enter access code"/u);
+  assert.match(portal, /\{busy \? "Checking\.\.\." : "Continue"\}/u);
+  assert.doesNotMatch(portal, /Private test|Limited researcher evaluation|modeLabel/u);
+});

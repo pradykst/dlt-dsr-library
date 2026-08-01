@@ -7,19 +7,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Research access",
+  title: "Chat access",
   description:
-    "Enter a private evaluation code for the source-grounded DSR research assistant.",
+    "Enter an evaluation access code for the design knowledge assistant.",
   alternates: { canonical: "/access" },
 };
 
 export default function NativeOkfAccessPage() {
   return (
     <NativeOkfShell
-      title="Research access"
-      eyebrow="Limited native OKF evaluation"
-      description="Paid grounded chat is available only to authenticated evaluators and remains subject to application-owned quotas and budget controls."
-      breadcrumbs={[{ label: "Research access" }]}
+      title="Chat access"
+      eyebrow=""
+      description="Enter your evaluation access code to use the design knowledge assistant."
+      breadcrumbs={[{ label: "Chat access" }]}
     >
       <AccessPortal />
     </NativeOkfShell>

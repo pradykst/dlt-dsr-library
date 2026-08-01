@@ -29,13 +29,13 @@ interface AccessResponse {
 }
 
 const STATUS_COPY: Record<string, string> = {
-  authenticated: "Research access is active.",
-  available: "Enter your evaluation access code.",
-  disabled: "The grounded assistant is currently paused.",
+  authenticated: "Chat access is active.",
+  available: "Enter your access code.",
+  disabled: "The design knowledge assistant is currently paused.",
   exhausted: "The available evaluation quota has been used.",
-  expired: "This evaluation access has expired.",
-  revoked: "This evaluation access is no longer active.",
-  unauthenticated: "Enter your evaluation access code.",
+  expired: "This chat access has expired.",
+  revoked: "This chat access is no longer active.",
+  unauthenticated: "Enter your access code.",
 };
 
 function statusCopy(status: string, chatEnabled: boolean) {
@@ -43,19 +43,7 @@ function statusCopy(status: string, chatEnabled: boolean) {
     return STATUS_COPY.disabled;
   }
 
-  return STATUS_COPY[status] ?? "Research access is unavailable.";
-}
-
-function modeLabel(mode: AccessMode) {
-  if (mode === "test") {
-    return "Private test";
-  }
-
-  if (mode === "invite") {
-    return "Invitation";
-  }
-
-  return "Disabled";
+  return STATUS_COPY[status] ?? "Chat access is unavailable.";
 }
 
 function formatDate(value: number | null | undefined) {
@@ -143,7 +131,7 @@ export function AccessPortal() {
       }
 
       setAccess(null);
-      setNotice("Research access could not be checked. Please try again.");
+      setNotice("Chat access could not be checked. Please try again.");
     } finally {
       if (!signal?.aborted) {
         setBusy(false);
@@ -189,10 +177,10 @@ export function AccessPortal() {
       }
 
       await loadAccess();
-      setNotice("Research access status updated.");
+      setNotice("Chat access status updated.");
     } catch {
       setCode("");
-      setNotice("Research access could not be updated. Please try again.");
+      setNotice("Chat access could not be updated. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -214,35 +202,24 @@ export function AccessPortal() {
       }
 
       await loadAccess();
-      setNotice("Research access ended on this browser.");
+      setNotice("Chat access ended on this browser.");
     } catch {
-      setNotice("Research access could not be ended. Please try again.");
+      setNotice("Chat access could not be ended. Please try again.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <section className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue">
-              Limited researcher evaluation
-            </p>
-            <h2 className="mt-2 font-serif text-3xl font-semibold text-ink">
-              Grounded chat access
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Access controls apply only to the paid grounded assistant. The
-              native paper and concept library remains available separately.
-            </p>
-          </div>
-          {access ? (
-            <span className="rounded-full border border-line bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-              {modeLabel(access.accessMode)}
-            </span>
-          ) : null}
+        <div>
+          <h2 className="font-serif text-3xl font-semibold text-ink">
+            Enter access code
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+            The paper library remains available without chat access.
+          </p>
         </div>
 
         <div
@@ -250,10 +227,10 @@ export function AccessPortal() {
           className="mt-6 rounded-2xl border border-line bg-slate-50 px-4 py-3 text-sm text-slate-700"
         >
           {busy && !access
-            ? "Checking research access..."
+            ? "Checking chat access..."
             : access
               ? statusCopy(access.status, access.chatEnabled)
-              : "Research access status is unavailable."}
+              : "Chat access status is unavailable."}
         </div>
 
         {notice ? (
@@ -271,7 +248,7 @@ export function AccessPortal() {
               href={NATIVE_OKF_PUBLIC_ROUTES.chat}
               className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
             >
-              Open grounded chat
+              Open chat
             </Link>
             <button
               type="button"
@@ -289,7 +266,7 @@ export function AccessPortal() {
                 htmlFor="native-okf-access-code"
                 className="block text-sm font-semibold text-ink"
               >
-                Evaluation access code
+                Access code
               </label>
               <input
                 id="native-okf-access-code"
@@ -300,7 +277,7 @@ export function AccessPortal() {
                 onChange={(event) => setCode(event.target.value)}
                 disabled={busy}
                 className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink outline-none transition placeholder:text-slate-400 focus:border-blue focus:ring-2 focus:ring-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100"
-                placeholder="Enter your code"
+                placeholder="Enter access code"
               />
             </div>
             <button

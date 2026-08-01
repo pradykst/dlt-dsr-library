@@ -86,9 +86,9 @@ test("release homepage metrics are derived from the canonical native bundle", as
     viewModel.metricCards.map(({ label, value }) => [label, value]),
     [
       ["Papers", 34],
-      ["Linked concepts", 241],
-      ["Resolved native links", 585],
-      ["Represented native concept types", 8],
+      ["Requirements", 15],
+      ["Principles", 115],
+      ["Features", 42],
     ],
   );
 });
@@ -118,11 +118,10 @@ test("homepage presents the research hero, canonical actions, and notice", async
 
   assert.match(homepage, /Explore, connect, and reuse design knowledge from DSR papers\./u);
   assert.match(homepage, /Browse the library/u);
-  assert.match(homepage, /Open grounded chat/u);
-  assert.match(homepage, /Request evaluation access/u);
+  assert.match(homepage, /Open chat/u);
+  assert.doesNotMatch(homepage, /Request evaluation access/u);
   assert.match(homepage, /CANONICAL_ROUTES\.library/u);
   assert.match(homepage, /CANONICAL_ROUTES\.chat/u);
-  assert.match(homepage, /CANONICAL_ROUTES\.access/u);
   assert.match(
     homepage,
     /This research prototype is undergoing knowledge-curation and researcher evaluation\./u,
@@ -190,7 +189,7 @@ test("global header and footer expose only the intended public navigation", asyn
     source("components/layout/SiteFooter.tsx"),
   ]);
 
-  for (const label of ["Home", "Library", "Grounded Chat", "Researcher Access"]) {
+  for (const label of ["Home", "Library", "Chat", "Chat access"]) {
     assert.match(header, new RegExp(`label: "${label}"`, "u"));
   }
   assert.match(header, /Give feedback/u);

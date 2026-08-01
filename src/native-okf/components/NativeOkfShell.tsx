@@ -35,7 +35,7 @@ export function NativeOkfShell({
             className="transition-colors hover:text-blue"
             href={NATIVE_OKF_PUBLIC_ROUTES.library}
           >
-            OKF library
+            Library
           </Link>
           {breadcrumbs.map((item) => (
             <span key={`${item.href ?? "current"}-${item.label}`} className="contents">
@@ -58,9 +58,11 @@ export function NativeOkfShell({
         <header className="mb-8 border-b border-line pb-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div className="max-w-4xl">
-              <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-blue">
-                {eyebrow}
-              </p>
+              {eyebrow ? (
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-blue">
+                  {eyebrow}
+                </p>
+              ) : null}
               <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
                 {title}
               </h1>

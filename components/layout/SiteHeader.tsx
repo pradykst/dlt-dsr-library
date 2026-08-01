@@ -11,8 +11,8 @@ import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 const nav = [
   { label: "Home", href: CANONICAL_ROUTES.home, icon: Home },
   { label: "Library", href: CANONICAL_ROUTES.library, icon: BookOpen },
-  { label: "Grounded Chat", href: CANONICAL_ROUTES.chat, icon: MessageSquareText },
-  { label: "Researcher Access", href: CANONICAL_ROUTES.access, icon: KeyRound },
+  { label: "Chat", href: CANONICAL_ROUTES.chat, icon: MessageSquareText },
+  { label: "Chat access", href: CANONICAL_ROUTES.access, icon: KeyRound },
 ];
 
 function isActiveRoute(pathname: string, href: string): boolean {

@@ -416,7 +416,7 @@ export function ChatWorkbench({
       setError(
         caught instanceof Error
           ? caught.message
-          : "The native OKF assistant could not complete this request.",
+          : "The design knowledge assistant could not complete this request.",
       );
       updateComposerQuestion(submittedQuestion);
     } finally {
@@ -489,12 +489,11 @@ export function ChatWorkbench({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3 sm:px-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
-              Grounded native OKF assistant
+              Design knowledge assistant
             </p>
             <p className="mt-1 text-xs leading-5 text-muted">
-              Local retrieval supplies the only knowledge context. Conversation
-              content remains in this browser tab; only access, quota, and safe
-              operational usage counters are persisted.
+              Answers use retrieved library sources. Conversation content remains in this
+              browser tab; only access and usage counters are stored.
             </p>
           </div>
           <button
@@ -510,7 +509,7 @@ export function ChatWorkbench({
 
         {quota ? (
           <div
-            aria-label="Personal native OKF allowance"
+            aria-label="Personal chat allowance"
             className="border-b border-line bg-blue/5 px-4 py-3 sm:px-5"
           >
             <dl className="grid gap-2 text-xs text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
@@ -542,16 +541,16 @@ export function ChatWorkbench({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-slate-50 px-4 py-2.5 text-xs text-slate-700 sm:px-5">
             <p>
               {accessState === "checking"
-                ? "Checking researcher access..."
+                ? "Checking chat access..."
                 : accessState === "disabled"
-                  ? "Paid assistant access is disabled. The native library remains readable."
+                  ? "Chat is disabled. The paper library remains available."
                   : accessState === "unavailable"
-                    ? "Paid assistant access is temporarily unavailable."
+                    ? "Chat is temporarily unavailable."
                     : accessState === "expired"
-                      ? "Researcher access has expired."
+                      ? "Chat access has expired."
                       : accessState === "revoked"
-                        ? "Researcher access was revoked."
-                        : "Researcher access is required for grounded model answers."}
+                        ? "Chat access was revoked."
+                        : "Chat access is required for assistant answers."}
             </p>
             {accessState === "required" ||
             accessState === "expired" ||
@@ -579,12 +578,11 @@ export function ChatWorkbench({
                 OKF
               </div>
               <h2 className="mt-4 font-serif text-2xl font-semibold text-ink">
-                Ask across the native research library
+                Ask the design knowledge library
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted">
-                Answers are generated from locally retrieved papers and concepts.
-                Validated citations lead back to the canonical native OKF paths;
-                diagrams distinguish stored knowledge from new synthesis.
+                Answers use retrieved papers and concepts. Citations link to library
+                source records; diagrams distinguish stored knowledge from new synthesis.
               </p>
 
               <div className="mt-6 text-left">
@@ -639,7 +637,7 @@ export function ChatWorkbench({
                   ) : (
                     <article className="rounded-2xl rounded-tl-md border border-line bg-white px-5 py-5 shadow-sm sm:px-6">
                       <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-blue">
-                        Native OKF assistant
+                        Design knowledge assistant
                       </p>
                       {entry.response ? (
                         <ChatAnswer
@@ -671,7 +669,7 @@ export function ChatWorkbench({
                     Help evaluate the library
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-slate-700 sm:text-sm">
-                    After exploring the papers and grounded assistant, share your
+                    After exploring the papers and design knowledge assistant, share your
                     feedback in the anonymous 5–8 minute evaluation survey.
                   </p>
                   <a
@@ -705,7 +703,7 @@ export function ChatWorkbench({
                 aria-hidden="true"
                 className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue"
               />
-              Retrieving native OKF context and preparing a grounded response...
+              Retrieving library sources and preparing a response...
             </div>
           ) : null}
 

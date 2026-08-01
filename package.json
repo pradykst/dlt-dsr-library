@@ -30,6 +30,7 @@
     "native-okf:invite:create": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts create",
     "test:native-okf:release": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/release-shell.test.ts src/native-okf/tests/release-readiness.test.ts",
     "test:native-okf:onboarding": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/evaluation-onboarding.test.ts",
+    "test:native-okf:ui-copy": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/ui-copy-polish.test.ts",
     "native-okf:release:check": "node --conditions=react-server --experimental-strip-types src/native-okf/server/release-readiness-cli.ts",
     "native-okf:invite:list": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts list",
     "native-okf:invite:update": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts update",

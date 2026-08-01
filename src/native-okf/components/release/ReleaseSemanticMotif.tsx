@@ -29,9 +29,6 @@ export function ReleaseSemanticMotif() {
           className="border-amber-200 bg-amber-50 text-amber-950"
         />
       </div>
-      <p className="mt-5 text-xs leading-5 text-slate-500">
-        A visual motif, not a stored result from any individual paper.
-      </p>
     </figure>
   );
 }

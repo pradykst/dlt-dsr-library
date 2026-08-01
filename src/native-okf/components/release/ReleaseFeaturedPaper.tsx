@@ -19,7 +19,7 @@ export function ReleaseFeaturedPaper({ paper }: { paper: PaperCardDto }) {
           {paper.title}
         </Link>
       </h3>
-      <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Stored native concept counts">
+      <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Represented design-knowledge counts">
         {paper.linkedTypeCounts.map((entry) => (
           <span
             key={entry.type}

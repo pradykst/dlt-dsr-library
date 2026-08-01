@@ -2,6 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { conceptHref, isSafeExternalHref } from "../shared/links.ts";
+import {
+  buildPaperPresentation,
+  publicPaperFrontmatter,
+} from "../shared/paper-presentation.ts";
 import { NATIVE_OKF_PUBLIC_ROUTES } from "../shared/routes.ts";
 import type { JsonValue, WorkbenchViewModel } from "../shared/types.ts";
 import { ConceptCard } from "./ConceptCard.tsx";
@@ -9,12 +13,13 @@ import { EmptyState } from "./EmptyState.tsx";
 import { MarkdownDocument } from "./MarkdownDocument.tsx";
 import { MetadataGrid } from "./MetadataGrid.tsx";
 import { NativeOkfGraph } from "./NativeOkfGraph.tsx";
+import { PaperDsrGrid } from "./PaperDsrGrid.tsx";
 import { PaperGraphViews } from "./PaperGraphViews.tsx";
 import { NativeOkfShell } from "./NativeOkfShell.tsx";
 import { RelationshipList } from "./RelationshipList.tsx";
 import { TypeBadge } from "./TypeBadge.tsx";
 
-const SECTION_LINKS = [
+const CONCEPT_SECTION_LINKS = [
   ["overview", "Overview"],
   ["design-knowledge", "Design knowledge"],
   ["relationships", "Relationships"],
@@ -22,29 +27,53 @@ const SECTION_LINKS = [
   ["raw-metadata", "Raw metadata"],
 ] as const;
 
+const PAPER_SECTION_LINKS = [
+  ["overview", "Overview"],
+  ["dsr-grid", "DSR grid"],
+  ["design-knowledge", "Design knowledge"],
+  ["graph", "Paper design map"],
+  ["raw-metadata", "Publication metadata"],
+] as const;
+
 export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
   const { concept } = view;
   const isPaper = view.kind === "paper";
   const frontmatter = concept.frontmatter;
+  const paperPresentation = isPaper
+    ? buildPaperPresentation(concept.markdownBody)
+    : null;
+  const displayFrontmatter = isPaper
+    ? publicPaperFrontmatter(frontmatter)
+    : frontmatter;
   const resourceIsSafe = Boolean(
     concept.resource && isSafeExternalHref(concept.resource),
   );
 
-  const metadataItems = [
-    { label: "Authors", value: metadataValue(frontmatter.authors) },
-    { label: "Year", value: metadataValue(frontmatter.year) },
-    { label: "Venue", value: metadataValue(frontmatter.venue) },
-    { label: "Producer label", value: metadataValue(frontmatter.label) },
-    { label: "Source paper", value: metadataValue(frontmatter.source_paper) },
-    { label: "Methodology", value: metadataValue(frontmatter.methodology) },
-    { label: "Timestamp", value: concept.timestamp },
-    { label: "Bundle path", value: <code className="font-mono text-xs">{concept.filePath}</code> },
-  ];
+  const metadataItems = isPaper
+    ? [
+        { label: "Authors", value: metadataValue(frontmatter.authors) },
+        { label: "Year", value: metadataValue(frontmatter.year) },
+        { label: "Venue", value: metadataValue(frontmatter.venue) },
+        { label: "Methodology", value: metadataValue(frontmatter.methodology) },
+      ]
+    : [
+        { label: "Authors", value: metadataValue(frontmatter.authors) },
+        { label: "Year", value: metadataValue(frontmatter.year) },
+        { label: "Venue", value: metadataValue(frontmatter.venue) },
+        { label: "Producer label", value: metadataValue(frontmatter.label) },
+        { label: "Source paper", value: metadataValue(frontmatter.source_paper) },
+        { label: "Methodology", value: metadataValue(frontmatter.methodology) },
+        { label: "Timestamp", value: concept.timestamp },
+        {
+          label: "Bundle path",
+          value: <code className="font-mono text-xs">{concept.filePath}</code>,
+        },
+      ];
 
   return (
     <NativeOkfShell
       title={concept.title}
-      eyebrow={isPaper ? "Paper Workbench" : concept.typeLabel}
+      eyebrow={isPaper ? "Research paper" : concept.typeLabel}
       description={concept.description}
       breadcrumbs={[
         ...(isPaper
@@ -73,16 +102,16 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
     >
       <div className="space-y-12">
         <nav
-          aria-label="Workbench sections"
+          aria-label={isPaper ? "Paper sections" : "Concept sections"}
           className="sticky top-0 z-10 -mx-2 flex gap-1 overflow-x-auto border-y border-line bg-paper/95 px-2 py-3 backdrop-blur"
         >
-          {SECTION_LINKS.map(([id, label]) => (
+          {(isPaper ? PAPER_SECTION_LINKS : CONCEPT_SECTION_LINKS).map(([id, label]) => (
             <a
               key={id}
               href={`#${id}`}
               className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted transition hover:bg-white hover:text-ink"
             >
-              {isPaper || id !== "design-knowledge" ? label : "Linked concepts"}
+              {!isPaper && id === "design-knowledge" ? "Linked concepts" : label}
             </a>
           ))}
         </nav>
@@ -91,26 +120,32 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
           id="overview"
           eyebrow="01"
           title="Overview"
-          description="Producer metadata and the canonical Markdown concept document."
+          description={
+            isPaper
+              ? "Publication metadata and narrative from the current library record."
+              : "Producer metadata and the represented concept document."
+          }
         >
           <div className="space-y-7">
             <div className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                    Concept identity
-                  </p>
-                  <code className="mt-1 block break-all font-mono text-xs text-ink">
-                    {concept.id}
-                  </code>
+              {!isPaper ? (
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                      Concept identity
+                    </p>
+                    <code className="mt-1 block break-all font-mono text-xs text-ink">
+                      {concept.id}
+                    </code>
+                  </div>
+                  <Link
+                    href={conceptHref(concept.id)}
+                    className="text-xs font-semibold text-blue hover:underline"
+                  >
+                    Open concept record
+                  </Link>
                 </div>
-                <Link
-                  href={conceptHref(concept.id)}
-                  className="text-xs font-semibold text-blue hover:underline"
-                >
-                  Canonical native route
-                </Link>
-              </div>
+              ) : null}
               <MetadataGrid items={metadataItems} />
               {concept.tags.length > 0 ? (
                 <div className="mt-5 flex flex-wrap gap-2" aria-label="Concept tags">
@@ -128,20 +163,34 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
 
             <div className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-8">
               <MarkdownDocument
-                markdown={concept.markdownBody}
+                markdown={paperPresentation?.narrativeMarkdown ?? concept.markdownBody}
                 sourceFilePath={concept.filePath}
               />
             </div>
           </div>
         </WorkbenchSection>
 
+        {isPaper && paperPresentation ? (
+          <WorkbenchSection
+            id="dsr-grid"
+            eyebrow="02"
+            title="DSR grid"
+            description="Six dimensions represented in the current paper record."
+          >
+            <PaperDsrGrid
+              dimensions={paperPresentation.dsrDimensions}
+              sourceFilePath={concept.filePath}
+            />
+          </WorkbenchSection>
+        ) : null}
+
         <WorkbenchSection
           id="design-knowledge"
-          eyebrow="02"
+          eyebrow={isPaper ? "03" : "02"}
           title={isPaper ? "Design knowledge" : "Linked concepts"}
           description={
             isPaper
-              ? "Directly linked concepts, grouped only by their producer-declared native type."
+              ? "Directly linked concepts, grouped by their represented design-knowledge category."
               : "Concepts connected by incoming or outgoing native Markdown links."
           }
         >
@@ -170,30 +219,35 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
           ) : (
             <EmptyState
               title={isPaper ? "No linked design knowledge" : "No linked concepts"}
-              description="The native graph contains no directly connected concept documents for this item."
+              description={isPaper
+                ? "The current library record contains no directly linked design knowledge."
+                : "The graph contains no directly connected concept documents for this item."
+              }
             />
           )}
         </WorkbenchSection>
 
-        <WorkbenchSection
-          id="relationships"
-          eyebrow="03"
-          title="Relationships"
-          description="Directed links from Markdown. Heading context is displayed as derived metadata, not as a formal OKF predicate."
-        >
-          <div className="grid items-start gap-7 lg:grid-cols-2">
-            <RelationshipList
-              title="Outgoing links"
-              relationships={view.outgoing}
-              emptyMessage="This concept has no outgoing Markdown links."
-            />
-            <RelationshipList
-              title="Incoming backlinks"
-              relationships={view.incoming}
-              emptyMessage="No other concept links to this concept."
-            />
-          </div>
-        </WorkbenchSection>
+        {!isPaper ? (
+          <WorkbenchSection
+            id="relationships"
+            eyebrow="03"
+            title="Relationships"
+            description="Directed links from Markdown. Heading context is displayed as derived metadata, not as a formal OKF predicate."
+          >
+            <div className="grid items-start gap-7 lg:grid-cols-2">
+              <RelationshipList
+                title="Outgoing links"
+                relationships={view.outgoing}
+                emptyMessage="This concept has no outgoing Markdown links."
+              />
+              <RelationshipList
+                title="Incoming backlinks"
+                relationships={view.incoming}
+                emptyMessage="No other concept links to this concept."
+              />
+            </div>
+          </WorkbenchSection>
+        ) : null}
 
         <WorkbenchSection
           id="graph"
@@ -224,20 +278,24 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
         <WorkbenchSection
           id="raw-metadata"
           eyebrow="05"
-          title="Raw metadata"
-          description="The complete producer frontmatter, serialized without server paths or runtime data."
+          title={isPaper ? "Publication metadata" : "Raw metadata"}
+          description={
+            isPaper
+              ? "Additional metadata represented in the current library record."
+              : "The complete producer frontmatter, serialized without server paths or runtime data."
+          }
         >
           <details className="group rounded-2xl border border-line bg-white shadow-sm">
             <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-ink marker:hidden sm:px-6">
               <span className="flex items-center justify-between gap-4">
-                Show producer frontmatter
+                {isPaper ? "Show additional metadata" : "Show producer frontmatter"}
                 <span aria-hidden="true" className="text-lg text-muted transition group-open:rotate-45">
                   +
                 </span>
               </span>
             </summary>
             <pre className="max-h-[36rem] overflow-auto border-t border-line bg-slate-950 p-5 text-xs leading-6 text-slate-100 sm:p-6">
-              <code>{JSON.stringify(concept.frontmatter, null, 2)}</code>
+              <code>{JSON.stringify(displayFrontmatter, null, 2)}</code>
             </pre>
           </details>
         </WorkbenchSection>

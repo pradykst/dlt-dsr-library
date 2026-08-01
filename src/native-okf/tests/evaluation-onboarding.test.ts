@@ -239,8 +239,8 @@ test("public navigation and Method evaluation copy meet the release boundary", a
   for (const label of [
     "Home",
     "Library",
-    "Grounded Chat",
-    "Researcher Access",
+    "Chat",
+    "Chat access",
     "Give feedback",
   ]) assert.match(header, new RegExp(label, "u"));
   assert.doesNotMatch(header, />\s*Admin(?:istrator)?\s*</u);

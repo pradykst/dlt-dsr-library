@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Grounded chat",
+  title: "Chat",
   description:
     "Ask source-grounded questions across the DSR Knowledge Library.",
   alternates: { canonical: "/chat" },
@@ -20,9 +20,9 @@ export default async function NativeOkfChatPage() {
   const starterPapers = await getNativeOkfGuidedStarterPapers();
   return (
     <NativeOkfShell
-      title="Research library chat"
-      eyebrow="Native OKF grounded assistant"
-      description="Ask questions across the canonical papers and design-knowledge concepts. Local retrieval selects the context; generated answers cite only validated native OKF sources."
+      title="Chat with the design knowledge library"
+      eyebrow=""
+      description="Ask about papers and represented design knowledge, compare studies, or build a source-grounded decision-support flow."
       breadcrumbs={[{ label: "Chat" }]}
       actions={
         <Link

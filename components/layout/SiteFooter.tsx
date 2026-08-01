@@ -5,8 +5,8 @@ import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 
 const footerLinks = [
   { label: "Library", href: CANONICAL_ROUTES.library },
-  { label: "Grounded Chat", href: CANONICAL_ROUTES.chat },
-  { label: "Researcher Access", href: CANONICAL_ROUTES.access },
+  { label: "Chat", href: CANONICAL_ROUTES.chat },
+  { label: "Chat access", href: CANONICAL_ROUTES.access },
   { label: "Method and limitations", href: CANONICAL_ROUTES.method },
   { label: "Privacy note", href: `${CANONICAL_ROUTES.method}#privacy` },
 ];
@@ -18,7 +18,6 @@ export function SiteFooter() {
         <div className="space-y-1">
           <p className="font-semibold tracking-[0.08em] text-ink">DSR Knowledge Library</p>
           <p>Research prototype · Native Open Knowledge Format</p>
-          <p>Universität Leipzig research context</p>
         </div>
         <nav aria-label="Footer navigation" className="flex max-w-2xl flex-wrap gap-x-4 gap-y-2 md:justify-end">
           {footerLinks.map((link) => (
