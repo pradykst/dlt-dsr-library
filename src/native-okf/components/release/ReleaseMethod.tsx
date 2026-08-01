@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "../../shared/public-links.ts";
 import { NATIVE_OKF_PUBLIC_ROUTES as CANONICAL_ROUTES } from "../../shared/routes.ts";
 
 const METHOD_SECTIONS = [
@@ -41,12 +42,12 @@ const METHOD_SECTIONS = [
   {
     id: "evaluation",
     title: "Researcher-evaluation status",
-    body: "The prototype is being evaluated for retrieval relevance, grounded synthesis, diagram usefulness, and research workflow fit. Generated output remains non-authoritative and should be assessed against cited concepts and the original papers.",
+    body: "The prototype is being evaluated with researchers. Participants should explore the library and grounded assistant before responding in the external survey. Generated output remains non-authoritative, and generated synthesis remains subject to researcher review against cited concepts and the original papers.",
   },
   {
     id: "privacy",
     title: "Operational privacy",
-    body: "Evaluation access is invitation-controlled. The operational access and quota store records counters, token usage, estimated cost, safe outcomes, and privacy-preserving identifiers. It does not persist questions, answers, conversation history, retrieved source text, or credentials. Chat history remains in browser memory for the prototype session.",
+    body: "Evaluation access is invitation-controlled. The operational access and quota store records counters, token usage, estimated cost, safe outcomes, and privacy-preserving identifiers. It does not persist questions, answers, conversation history, retrieved source text, or credentials. Chat history remains in bounded browser session storage for the current tab.",
   },
 ] as const;
 
@@ -110,6 +111,17 @@ export function ReleaseMethod() {
                 {section.title}
               </h2>
               <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">{section.body}</p>
+              {section.id === "evaluation" ? (
+                <a
+                  href={NATIVE_OKF_EVALUATION_SURVEY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open the external evaluation survey in a new tab"
+                  className="mt-4 inline-block text-sm font-semibold text-blue underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                >
+                  Open evaluation survey {"\u2197"}
+                </a>
+              ) : null}
             </section>
           ))}
 

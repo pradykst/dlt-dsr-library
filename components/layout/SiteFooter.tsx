@@ -1,11 +1,12 @@
 import Link from "next/link";
 
+import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "@/src/native-okf/shared/public-links";
 import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 
 const footerLinks = [
   { label: "Library", href: CANONICAL_ROUTES.library },
   { label: "Grounded Chat", href: CANONICAL_ROUTES.chat },
-  { label: "Evaluation Access", href: CANONICAL_ROUTES.access },
+  { label: "Researcher Access", href: CANONICAL_ROUTES.access },
   { label: "Method and limitations", href: CANONICAL_ROUTES.method },
   { label: "Privacy note", href: `${CANONICAL_ROUTES.method}#privacy` },
 ];
@@ -29,6 +30,15 @@ export function SiteFooter() {
               {link.label}
             </Link>
           ))}
+          <a
+            href={NATIVE_OKF_EVALUATION_SURVEY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open the external evaluation survey in a new tab"
+            className="transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+          >
+            Evaluation survey {"\u2197"}
+          </a>
         </nav>
       </div>
     </footer>

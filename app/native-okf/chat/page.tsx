@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ChatWorkbench } from "@/src/native-okf/components/chat/ChatWorkbench";
 import { NativeOkfShell } from "@/src/native-okf/components/NativeOkfShell";
+import { getNativeOkfGuidedStarterPapers } from "@/src/native-okf/server/guided-starters";
 import { NATIVE_OKF_PUBLIC_ROUTES } from "@/src/native-okf/shared/routes";
 
 export const runtime = "nodejs";
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/chat" },
 };
 
-export default function NativeOkfChatPage() {
+export default async function NativeOkfChatPage() {
+  const starterPapers = await getNativeOkfGuidedStarterPapers();
   return (
     <NativeOkfShell
       title="Research library chat"
@@ -31,7 +33,7 @@ export default function NativeOkfChatPage() {
         </Link>
       }
     >
-      <ChatWorkbench />
+      <ChatWorkbench starterPapers={starterPapers} />
     </NativeOkfShell>
   );
 }

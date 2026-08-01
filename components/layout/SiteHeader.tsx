@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BookOpen, Home, KeyRound, Menu, MessageSquareText, Network, X } from "lucide-react";
 
+import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "@/src/native-okf/shared/public-links";
 import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 
 const nav = [
   { label: "Home", href: CANONICAL_ROUTES.home, icon: Home },
   { label: "Library", href: CANONICAL_ROUTES.library, icon: BookOpen },
   { label: "Grounded Chat", href: CANONICAL_ROUTES.chat, icon: MessageSquareText },
-  { label: "Evaluation Access", href: CANONICAL_ROUTES.access, icon: KeyRound },
+  { label: "Researcher Access", href: CANONICAL_ROUTES.access, icon: KeyRound },
 ];
 
 function isActiveRoute(pathname: string, href: string): boolean {
@@ -51,7 +52,7 @@ export function SiteHeader() {
         </Link>
         
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-1 text-sm text-muted md:flex">
+        <nav className="hidden items-center gap-1 text-sm text-muted xl:flex">
           {nav.map(({ label, href, icon: Icon }) => {
             const active = isActiveRoute(pathname, href);
             return (
@@ -70,12 +71,21 @@ export function SiteHeader() {
               </Link>
             );
           })}
+          <a
+            href={NATIVE_OKF_EVALUATION_SURVEY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Give feedback in the external evaluation survey; opens in a new tab"
+            className="inline-flex shrink-0 items-center gap-1.5 border border-transparent px-3 py-2 transition hover:border-line hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+          >
+            <span className="leading-5">Give feedback {"\u2197"}</span>
+          </a>
         </nav>
 
         {/* Mobile Toggle */}
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink transition hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 md:hidden"
+          className="flex h-10 w-10 items-center justify-center border border-line bg-white text-ink transition hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 xl:hidden"
           aria-label={isOpen ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={isOpen}
@@ -87,7 +97,7 @@ export function SiteHeader() {
 
       {/* Mobile Nav */}
       {isOpen && (
-        <div id="public-mobile-navigation" className="absolute left-0 right-0 top-full z-50 border-b border-line bg-paper shadow-2xl md:hidden">
+        <div id="public-mobile-navigation" className="absolute left-0 right-0 top-full z-50 border-b border-line bg-paper shadow-2xl xl:hidden">
           <div className="flex h-12 items-center justify-between border-b border-line px-4">
             <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Navigation</span>
             <button type="button" aria-label="Close navigation" className="flex h-9 w-9 items-center justify-center border border-line bg-white text-ink transition hover:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue" onClick={() => setIsOpen(false)}>
@@ -114,6 +124,16 @@ export function SiteHeader() {
                 </Link>
               );
             })}
+            <a
+              href={NATIVE_OKF_EVALUATION_SURVEY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Give feedback in the external evaluation survey; opens in a new tab"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 border border-transparent px-3 py-2.5 text-ink transition hover:border-line hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+            >
+              <span className="leading-5">Give feedback {"\u2197"}</span>
+            </a>
           </nav>
         </div>
       )}

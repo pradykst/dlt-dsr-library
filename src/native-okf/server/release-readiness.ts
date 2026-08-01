@@ -48,6 +48,10 @@ export const DEFAULT_RELEASE_CANONICAL_SOURCE_PATHS = [
   "components/layout/SiteHeader.tsx",
   "components/layout/SiteFooter.tsx",
   "src/native-okf/components",
+  "src/native-okf/server/guided-starters.ts",
+  "src/native-okf/shared/evaluation-onboarding.ts",
+  "src/native-okf/shared/guided-starters.ts",
+  "src/native-okf/shared/public-links.ts",
   "src/native-okf/shared/routes.ts",
 ] as const;
 
@@ -126,6 +130,7 @@ export interface ReleaseReadinessOptions {
   canonicalSourcePaths?: readonly string[];
   publicNavigationSourcePaths?: readonly string[];
   nextConfigPath?: string;
+  packageJsonPath?: string;
   retrievalDebugRoutePath?: string;
   /** Tests may disable directory creation and supply an already existing parent. */
   createUsageDirectory?: boolean;
@@ -350,6 +355,17 @@ export function nextConfigHasReleaseRouteGeneration(source: string): boolean {
   );
 }
 
+export function packageHasProductionStart(source: string): boolean {
+  try {
+    const parsed = JSON.parse(source) as {
+      scripts?: Record<string, unknown>;
+    };
+    return parsed.scripts?.start === "next start";
+  } catch {
+    return false;
+  }
+}
+
 export function validateRequiredReleaseRoutes(): string[] {
   const issues = validateNativeOkfRouteIntegrity();
   const compatibility = new Map(
@@ -429,8 +445,13 @@ export async function runNativeOkfReleaseReadiness(
   const publicNavigationSourcePaths =
     options.publicNavigationSourcePaths ??
     DEFAULT_PUBLIC_NAVIGATION_SOURCE_PATHS;
-  const [forbiddenImportFound, publicAdminLinkFound, nextConfigSource, debugSource] =
-    await Promise.all([
+  const [
+    forbiddenImportFound,
+    publicAdminLinkFound,
+    nextConfigSource,
+    packageJsonSource,
+    debugSource,
+  ] = await Promise.all([
       sourcesContainPattern(
         cwd,
         canonicalSourcePaths,
@@ -442,6 +463,7 @@ export async function runNativeOkfReleaseReadiness(
         sourceContainsPublicAdminNavigation,
       ),
       readFile(resolve(cwd, options.nextConfigPath ?? "next.config.ts"), "utf8"),
+      readFile(resolve(cwd, options.packageJsonPath ?? "package.json"), "utf8"),
       readFile(
         resolve(
           cwd,
@@ -492,6 +514,11 @@ export async function runNativeOkfReleaseReadiness(
       "route-generation",
       nextConfigHasReleaseRouteGeneration(nextConfigSource),
       "Next configuration uses shared release routes and traces native OKF data",
+    ),
+    check(
+      "production-start",
+      packageHasProductionStart(packageJsonSource),
+      "Package scripts provide the production Next.js start command",
     ),
     check(
       "public-admin-navigation",

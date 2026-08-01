@@ -24,6 +24,9 @@ import {
 import {
   parseNativeOkfConversationState,
 } from "../../shared/conversation-state.ts";
+import { shouldShowNativeOkfEvaluationCallout } from "../../shared/evaluation-onboarding.ts";
+import type { NativeOkfGuidedStarterPaper } from "../../shared/guided-starters.ts";
+import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "../../shared/public-links.ts";
 import {
   applyManualDiagramToggle,
   INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
@@ -42,17 +45,11 @@ import {
   type ResearcherAccessState,
 } from "./access-ui.ts";
 import { ChatAnswer } from "./ChatAnswer.tsx";
+import { GuidedChatStarters } from "./GuidedChatStarters.tsx";
 
 const MAX_QUESTION_LENGTH = 2_000;
 const MAX_CLIENT_HISTORY_CONTENT = 2_000;
 const HISTORY_LIMIT = 8;
-
-const STARTER_QUESTIONS = [
-  "Compare two papers and explain where their design knowledge differs.",
-  "Trace a design principle to the requirements and features linked to it.",
-  "Summarize the reusable design knowledge for a research problem.",
-  "Generate a grounded decision-support flow for a proposed artifact.",
-] as const;
 
 interface ChatEntry {
   id: string;
@@ -127,7 +124,11 @@ function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistory
     .slice(-HISTORY_LIMIT);
 }
 
-export function ChatWorkbench() {
+export function ChatWorkbench({
+  starterPapers,
+}: {
+  starterPapers: readonly NativeOkfGuidedStarterPaper[];
+}) {
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [question, setQuestion] = useState("");
   const [diagramIntentToggle, setDiagramIntentToggle] = useState(
@@ -146,6 +147,8 @@ export function ChatWorkbench() {
   const [accessState, setAccessState] =
     useState<ResearcherAccessState>("checking");
   const [diagramQuotaBlocked, setDiagramQuotaBlocked] = useState(false);
+  const [startersOpen, setStartersOpen] = useState(true);
+  const [surveyCalloutDismissed, setSurveyCalloutDismissed] = useState(false);
   const nextId = useRef(1);
   const requestController = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -202,6 +205,7 @@ export function ChatWorkbench() {
           } satisfies ChatEntry;
         });
         setEntries(restoredEntries);
+        if (restoredEntries.length > 0) setStartersOpen(false);
         setConversationState(restored.conversationState);
         setDiagramIntentToggle(restored.diagramPreference);
         setConversationId(restored.conversationId);
@@ -293,11 +297,19 @@ export function ChatWorkbench() {
     return id;
   }
 
-  async function submitQuestion(event?: FormEvent<HTMLFormElement>) {
+  async function submitQuestion(
+    event?: FormEvent<HTMLFormElement>,
+    guidedSubmission?: { question: string; includeDiagram: boolean },
+  ) {
     event?.preventDefault();
-    if (!canSubmit) return;
-
-    const submittedQuestion = trimmedQuestion;
+    const submittedQuestion = (
+      guidedSubmission?.question ?? trimmedQuestion
+    ).trim();
+    if (
+      pending ||
+      submittedQuestion.length < 3 ||
+      submittedQuestion.length > MAX_QUESTION_LENGTH
+    ) return;
     const priorEntries = entries;
     const userEntry: ChatEntry = {
       id: makeId("user"),
@@ -310,8 +322,12 @@ export function ChatWorkbench() {
       includeDiagram,
       conversationState,
     };
+    if (guidedSubmission) {
+      request.includeDiagram = guidedSubmission.includeDiagram;
+    }
 
     setEntries((current) => [...current, userEntry]);
+    setStartersOpen(false);
     updateComposerQuestion("");
     setError(null);
     setErrorStatus(null);
@@ -436,6 +452,8 @@ export function ChatWorkbench() {
     setConversationId(createNativeOkfLocalConversationId());
     nextId.current = 1;
     setEntries([]);
+    setStartersOpen(true);
+    setSurveyCalloutDismissed(false);
     updateComposerQuestion("");
     setError(null);
     setErrorStatus(null);
@@ -443,10 +461,28 @@ export function ChatWorkbench() {
     inputRef.current?.focus();
   }
 
-  function selectStarter(questionText: string) {
-    updateComposerQuestion(questionText);
-    inputRef.current?.focus();
+  function setGuidedDiagramDefault(enabled: boolean) {
+    setDiagramIntentToggle((current) =>
+      applyManualDiagramToggle(current, question, enabled),
+    );
   }
+
+  function askGuidedQuestion(
+    questionText: string,
+    requestedDiagram: boolean,
+  ) {
+    setDiagramIntentToggle((current) =>
+      applyManualDiagramToggle(current, questionText, requestedDiagram),
+    );
+    void submitQuestion(undefined, {
+      question: questionText,
+      includeDiagram: requestedDiagram,
+    });
+  }
+
+  const hasSubstantiveResponse = shouldShowNativeOkfEvaluationCallout(
+    entries.flatMap((entry) => entry.response ? [entry.response] : []),
+  );
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-research">
@@ -551,21 +587,44 @@ export function ChatWorkbench() {
                 diagrams distinguish stored knowledge from new synthesis.
               </p>
 
-              <div className="mt-6 grid gap-2 text-left sm:grid-cols-2">
-                {STARTER_QUESTIONS.map((starter) => (
-                  <button
-                    key={starter}
-                    type="button"
-                    onClick={() => selectStarter(starter)}
-                    className="rounded-xl border border-line bg-paper px-4 py-3 text-left text-sm font-medium leading-5 text-slate-700 transition hover:border-blue/35 hover:bg-blue/5 hover:text-ink"
-                  >
-                    {starter}
-                  </button>
-                ))}
+              <div className="mt-6 text-left">
+                <GuidedChatStarters
+                  papers={starterPapers}
+                  diagramQuotaExhausted={diagramQuotaExhausted}
+                  currentDiagramEnabled={includeDiagram}
+                  pending={pending}
+                  onDefaultDiagramIntent={setGuidedDiagramDefault}
+                  onAsk={askGuidedQuestion}
+                />
               </div>
             </div>
           ) : (
-            <ol className="space-y-7">
+            <>
+              <div className="rounded-xl border border-line bg-slate-50 px-4 py-3">
+                <button
+                  type="button"
+                  aria-expanded={startersOpen}
+                  aria-controls="native-okf-reopened-starters"
+                  disabled={pending}
+                  onClick={() => setStartersOpen((current) => !current)}
+                  className="text-sm font-semibold text-blue underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                >
+                  Guided starters
+                </button>
+                {startersOpen ? (
+                  <div id="native-okf-reopened-starters" className="mt-3 min-w-0 max-w-full">
+                    <GuidedChatStarters
+                      papers={starterPapers}
+                      diagramQuotaExhausted={diagramQuotaExhausted}
+                      currentDiagramEnabled={includeDiagram}
+                      pending={pending}
+                      onDefaultDiagramIntent={setGuidedDiagramDefault}
+                      onAsk={askGuidedQuestion}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <ol className="space-y-7">
               {entries.map((entry) => (
                 <li key={entry.id}>
                   {entry.role === "user" ? (
@@ -594,9 +653,48 @@ export function ChatWorkbench() {
                   )}
                 </li>
               ))}
-            </ol>
+              </ol>
+            </>
           )}
 
+          {hasSubstantiveResponse && !surveyCalloutDismissed ? (
+            <aside
+              aria-labelledby="native-okf-evaluation-callout-title"
+              className="rounded-xl border border-blue/20 bg-blue/5 px-4 py-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="max-w-3xl">
+                  <h2
+                    id="native-okf-evaluation-callout-title"
+                    className="text-sm font-semibold text-ink"
+                  >
+                    Help evaluate the library
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-700 sm:text-sm">
+                    After exploring the papers and grounded assistant, share your
+                    feedback in the anonymous 5–8 minute evaluation survey.
+                  </p>
+                  <a
+                    href={NATIVE_OKF_EVALUATION_SURVEY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open the anonymous evaluation survey in a new tab"
+                    className="mt-2 inline-block text-sm font-semibold text-blue underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                  >
+                    Open evaluation survey ↗
+                  </a>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSurveyCalloutDismissed(true)}
+                  aria-label="Dismiss evaluation survey invitation"
+                  className="text-xs font-semibold text-muted underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </aside>
+          ) : null}
           {pending ? (
             <div
               role="status"

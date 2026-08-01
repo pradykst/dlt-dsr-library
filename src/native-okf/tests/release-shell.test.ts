@@ -190,9 +190,10 @@ test("global header and footer expose only the intended public navigation", asyn
     source("components/layout/SiteFooter.tsx"),
   ]);
 
-  for (const label of ["Home", "Library", "Grounded Chat", "Evaluation Access"]) {
+  for (const label of ["Home", "Library", "Grounded Chat", "Researcher Access"]) {
     assert.match(header, new RegExp(`label: "${label}"`, "u"));
   }
+  assert.match(header, /Give feedback/u);
   assert.match(header, /aria-controls="public-mobile-navigation"/u);
   assert.match(header, /aria-expanded=\{isOpen\}/u);
   assert.match(footer, /Method and limitations/u);

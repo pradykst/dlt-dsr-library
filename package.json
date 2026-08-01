@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start",
     "lint": "eslint .",
     "okf:audit:coverage": "node --conditions=react-server --experimental-strip-types src/native-okf/server/coverage-audit-cli.ts",
     "okf:validate": "node --conditions=react-server --experimental-strip-types src/native-okf/server/validate-cli.ts",
@@ -28,6 +29,7 @@
     "test:native-okf:access": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/access-store.test.ts src/native-okf/tests/access-usage.test.ts src/native-okf/tests/access-security.test.ts src/native-okf/tests/access-chat.test.ts src/native-okf/tests/access-cli.test.ts src/native-okf/tests/access-api.test.ts src/native-okf/tests/access-ui.test.ts src/native-okf/tests/regression-6c2-1-quota.test.ts src/native-okf/tests/corpus-genericity-quota.test.ts",
     "native-okf:invite:create": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts create",
     "test:native-okf:release": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/release-shell.test.ts src/native-okf/tests/release-readiness.test.ts",
+    "test:native-okf:onboarding": "node --conditions=react-server --experimental-strip-types --test --test-concurrency=1 src/native-okf/tests/evaluation-onboarding.test.ts",
     "native-okf:release:check": "node --conditions=react-server --experimental-strip-types src/native-okf/server/release-readiness-cli.ts",
     "native-okf:invite:list": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts list",
     "native-okf:invite:update": "node --conditions=react-server --experimental-strip-types scripts/native-okf-access-admin.ts update",

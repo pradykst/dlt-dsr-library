@@ -9,6 +9,7 @@ import test from "node:test";
 import {
   checkUsageDatabaseWritable,
   nextConfigHasReleaseRouteGeneration,
+  packageHasProductionStart,
   retrievalDebugHasProductionGate,
   sourceContainsForbiddenRuntimeImport,
   sourceContainsPublicAdminNavigation,
@@ -106,4 +107,13 @@ test("retrieval debug and Next release configuration checks are conservative", (
     true,
   );
   assert.equal(nextConfigHasReleaseRouteGeneration("export default {}"), false);
+  assert.equal(
+    packageHasProductionStart('{"scripts":{"start":"next start"}}'),
+    true,
+  );
+  assert.equal(
+    packageHasProductionStart('{"scripts":{"start":"next dev"}}'),
+    false,
+  );
+  assert.equal(packageHasProductionStart("not JSON"), false);
 });
