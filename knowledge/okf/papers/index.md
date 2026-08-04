@@ -55,4 +55,4 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 * [Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity](trust-enabling-capacity-exchange.md) - Nick Grosse et al., 2024; 6 design-knowledge item(s).
 * [From ambivalence to trust: Using blockchain in customer loyalty programs](ambivalence-trust-loyalty.md) - Manuel Utz et al., 2023; 6 design-knowledge item(s).
 * [From Dissonance to Dialogue: A Token-Based Approach to Bridge the Gap Between Manufacturers and Customers](dissonance-dialogue-recall.md) - Norman Pytel et al., 2024; 11 design-knowledge item(s).
-* [Unchaining Social Businesses - Blockchain as the Basic Technology of a Crowdlending Platform](unchaining-social-crowdlending.md) - Andre Schweizer et al., 2017; 1 design-knowledge item(s).
+* [Unchaining Social Businesses - Blockchain as the Basic Technology of a Crowdlending Platform](unchaining-social-crowdlending.md) - Andre Schweizer et al., 2017; 17 design-knowledge item(s).

@@ -368,7 +368,23 @@ Source: [trading-green-bonds-dlt](../papers/trading-green-bonds-dlt.md)
 
 Source: [unchaining-social-crowdlending](../papers/unchaining-social-crowdlending.md)
 
-* [Design objective DO: Objectives of the blockchain crowdlending prototype](unchaining-social-crowdlending-do.md) - The 17 objectives guiding design and evaluation are:
+* [Design objective DO1: Financial sustainability](unchaining-social-crowdlending-do1.md) - Since the social business is not based on donations, it must support the recovery of costs (Yunus et al. 2010). Thus, a balanced profit equation between cost and revenue is needed (Boons and Lüdeke-Freund 2013).
+* [Design objective DO2: Social purpose](unchaining-social-crowdlending-do2.md) - Social businesses act as a change agent for the world and pursue the creation of social benefits (Yunus et al. 2010).
+* [Design objective DO3: Allow small amount investments](unchaining-social-crowdlending-do3.md) - The crowdlending platform needs to allow the investment of small financial amounts (Lins et al. 2016).
+* [Design objective DO4: Provide editable information about funding projects](unchaining-social-crowdlending-do4.md) - The crowdlending platform needs to provide details about projects in search for funding, as information is seen as a crucial factor of the funding success (Lins et al. 2016; Overby et al. 2010).
+* [Design objective DO5: Provide mechanism to establish and measure user reputation](unchaining-social-crowdlending-do5.md) - To address the market design parameter of user reputation the platform needs to provide a feedback function, enabling that a user can provide insights about their experience with a specific user after a transaction (Cabral; McDonald and Slawson 2002).
+* [Design objective DO6: Define and enforce platform rules](unchaining-social-crowdlending-do6.md) - The platform needs to be designed to act according to predefined rules (Agrawal et al. 2014).
+* [Design objective DO7: Crowd due diligence](unchaining-social-crowdlending-do7.md) - Research studies on the crowdfunding platform Kickstarter suggest that a greater number of perspectives available to recognize something amiss are a useful tool to detect fraud (Agrawal et al. 2014).
+* [Design objective DO8: Provision point mechanism](unchaining-social-crowdlending-do8.md) - The provision point mechanism is a common practice in crowdlending platforms to address the free-rider problem (Agrawal et al. 2014).
+* [Design objective DO9: Provide reporting functions](unchaining-social-crowdlending-do9.md) - For regularly reporting and statistics on the social business development, the prototype must provide the functionality to run reports on the transactions of a specific period.
+* [Design objective DO10: Transaction time](unchaining-social-crowdlending-do10.md) - As soon as the funding limit is reached, the subsequent transactions should be executed for student projects to start.
+* [Design objective DO11: Data persistency](unchaining-social-crowdlending-do11.md) - To ensure transparency, traceability, and archiving requirements, the prototype needs to store data persistently and immutably.
+* [Design objective DO12: Transaction volume](unchaining-social-crowdlending-do12.md) - Currently, the volume of funded projects is fairly low; thus, the number of transactions should be manageable without constraints.
+* [Design objective DO13: Trust and personal identification](unchaining-social-crowdlending-do13.md) - Trust and personal identification mechanisms should be seamless and should not represent an entry barrier for potential users.
+* [Design objective DO14: Reduction of manual activities](unchaining-social-crowdlending-do14.md) - The manual activities involved in the processing of the transactions and the management of project lifecycles should be further automated to reduce costs and the possibilities of fraud.
+* [Design objective DO15: Reliable and trustworthy transaction processing](unchaining-social-crowdlending-do15.md) - To avoid malicious changes of funding related data, the prototype must be able to process transactions in a reliable and trusted way.
+* [Design objective DO16: Stability of credit currency](unchaining-social-crowdlending-do16.md) - To ensure a stable and calculable payback amount, the credit currencies should not be subject to high fluctuations.
+* [Design objective DO17: Avoidance of complex interfaces](unchaining-social-crowdlending-do17.md) - To reduce the implementation efforts and system maintenance, and to increase independence from legacy applications, the prototype must be developed in a way that avoids complex interfaces.
 
 ## Using Blockchain to Sustainably Manage Containers in International Shipping
 
