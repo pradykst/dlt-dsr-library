@@ -23,7 +23,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 * [Designing a cross-organizational identity management system: Utilizing SSI for the certification of retailer attributes](cross-org-identity-ssi.md) - Tobias Guggenberger et al., 2023; 4 design-knowledge item(s).
 * [Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity](kyc-framework-ssi.md) - Vincent Schlatt et al., 2022; 3 design-knowledge item(s).
 * [Designing GDPR Compliant Credential Verification Using Blockchain: A Design Science Research Approach](gdpr-credential-verification.md) - Janne Parkkila et al., 2024; 7 design-knowledge item(s).
-* [Know-Your-Customer (KYC) Requirements for Initial Coin Offerings: Toward Designing a Compliant-by-Design KYC-System Based on Blockchain Technology](kyc-ico-requirements.md) - Nadine Kathrin Ostern et al., 2021; 1 design-knowledge item(s).
+* [Know-Your-Customer (KYC) Requirements for Initial Coin Offerings: Toward Designing a Compliant-by-Design KYC-System Based on Blockchain Technology](kyc-ico-requirements.md) - Nadine Kathrin Ostern et al., 2021; 10 design-knowledge item(s).
 
 ## Privacy, GDPR & compliance
 

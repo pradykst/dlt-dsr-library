@@ -307,7 +307,16 @@ Source: [gdpr-workflow-asylum](../papers/gdpr-workflow-asylum.md)
 
 Source: [kyc-ico-requirements](../papers/kyc-ico-requirements.md)
 
-* [Design objective DO: Design objectives for a compliant-by-design ICO KYC system](kyc-ico-requirements-do.md) - The KYC system's design objectives are derived from KYC and legal requirements and include, among others:
+* [Design objective DO1: Verified identity from German authorities](kyc-ico-requirements-do1.md) - Within the KYC-system, the initial recording of identity data must base on information that originates from a person's identity card that is demonstrably verified by German authorities.
+* [Design objective DO2: eIDAS-compliant identity verification scheme](kyc-ico-requirements-do2.md) - To ensure that all necessary identity data are collected, the KYC-system must be linked to an eIDAS compliant identity verification scheme.
+* [Design objective DO3: Source-of-funds field for high-value transactions](kyc-ico-requirements-do3.md) - An investor who transfers more than a pre-defined limit needs to fill in an additional data field during the KYC-process stating information on the source of funds.
+* [Design objective DO4: Five-year storage of transaction data](kyc-ico-requirements-do4.md) - Data on business relationships and transactions must be stored at least five years on the local database of one of the contracting parties or on the blockchain.
+* [Design objective DO5: Correction of inaccurate data](kyc-ico-requirements-do5.md) - An ICO investor must have the opportunity to ask for the correction of inaccurate data.
+* [Design objective DO6: Erasure of personal data after storage obligation](kyc-ico-requirements-do6.md) - An ICO investor must have the opportunity to ask the KYC-provider and emitter to delete any records of investment progress once the five-year storage obligation is over.
+* [Design objective DO7: Prevent transaction flow analysis](kyc-ico-requirements-do7.md) - The KYC-system must prevent transaction flow analysis through proper technical and non-technical solutions.
+* [Design objective DO8: KYC-process status updates](kyc-ico-requirements-do8.md) - The KYC-system must provide status updates of the KYC-process available for the investor.
+* [Design objective DO9: Web-interface key management](kyc-ico-requirements-do9.md) - The KYC-system should allow key management facilitated via a web interface; proper incentives for investors need to be set.
+* [Design objective DO10: Decentralized public blockchain for fast KYC access](kyc-ico-requirements-do10.md) - The KYC-process should run on a decentralized, public blockchain solution, which allows parties involved in the ICO to access the results of the KYC-process as fast as possible.
 
 ## Meta-requirements for the Design of a Blockchain-enabled Multi-sided Platform for Sustainability and Circular Economy
 
