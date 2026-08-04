@@ -5,7 +5,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 ## Finance, bonds & tokenized securities
 
 * [Design Principles for Blockchain-based Applications in Green Bond Reporting](green-bond-reporting-dp.md) - Ameera Darwish et al., 2023; 6 design-knowledge item(s).
-* [Designing the future of bond markets: Reducing transaction costs through tokenization](bond-markets-tokenization-tac.md) - David Cisar et al., 2025; 5 design-knowledge item(s).
+* [Designing the future of bond markets: Reducing transaction costs through tokenization](bond-markets-tokenization-tac.md) - David Cisar et al., 2025; 17 design-knowledge item(s).
 * [Trading Green Bonds Using Distributed Ledger Technology](trading-green-bonds-dlt.md) - Henrik Axelsen et al., 2023; 14 design-knowledge item(s).
 
 ## Supply chain, logistics & procurement
