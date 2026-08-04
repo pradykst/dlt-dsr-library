@@ -15,7 +15,7 @@ const EXPECTED_TYPE_COUNTS = {
   "design-goal": 3,
   "design-objective": 54,
   "design-principle": 114,
-  "design-requirement": 15,
+  "design-requirement": 28,
   "meta-requirement": 10,
   paper: 34,
   reference: 2,
@@ -53,9 +53,9 @@ test("canonical bundle parses as native OKF v0.1 with deterministic counts", asy
 
   assert.equal(bundle.rootPath, resolve(process.cwd(), "knowledge/okf"));
   assert.equal(bundle.okfVersion, "0.1");
-  assert.equal(bundle.markdownFileCount, 278);
+  assert.equal(bundle.markdownFileCount, 291);
   assert.equal(bundle.reservedDocuments.length, 4);
-  assert.equal(bundle.concepts.length, 274);
+  assert.equal(bundle.concepts.length, 287);
   assert.deepEqual(countsByType(bundle), EXPECTED_TYPE_COUNTS);
   assert.deepEqual(bundle.fatalErrors, []);
   assert.deepEqual(bundle.warnings, []);
@@ -65,7 +65,7 @@ test("concept IDs are normalized POSIX paths without the Markdown suffix", async
   const bundle = await loadOkfBundle({ bundlePath: "knowledge/okf" });
   const ids = bundle.concepts.map((concept) => concept.id);
 
-  assert.equal(new Set(ids).size, 274);
+  assert.equal(new Set(ids).size, 287);
   assert.ok(ids.every((id) => !id.endsWith(".md")));
   assert.ok(ids.every((id) => !id.includes("\\")));
   assert.ok(bundle.concepts.every((concept) => concept.filePath === `${concept.id}.md`));

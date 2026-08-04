@@ -53,7 +53,20 @@ The *output knowledge* of this project is captured as the atomic design-knowledg
 
 ## Design knowledge
 
-* [Design requirement REQ: Functional artefact requirements for a DLT trading and settlement system](../design-knowledge/trading-green-bonds-dlt-req.md) - Core technical requirements:
+* [Design requirement REQ1: Manage states of contracts](../design-knowledge/trading-green-bonds-dlt-req1.md) - Manage states of contracts across the securities' lifecycle.
+* [Design requirement REQ2: Identify and verify users](../design-knowledge/trading-green-bonds-dlt-req2.md) - Identify and verify that users are authorized for their roles.
+* [Design requirement REQ3: Maintain ownership](../design-knowledge/trading-green-bonds-dlt-req3.md) - Maintain ownership of securities.
+* [Design requirement REQ4: Guarantee ACID transaction execution](../design-knowledge/trading-green-bonds-dlt-req4.md) - Guarantee atomic, consistent, isolated, and durable (ACID) execution of compound transactions, specifically delivery versus payment.
+* [Design requirement REQ5: Enforce correct attribution and non-repudiability](../design-knowledge/trading-green-bonds-dlt-req5.md) - Enforce correct attribution and non-repudiability of actions (using digital signatures and cryptographic commitments).
+* [Design requirement REQ6: Interoperability with external systems](../design-knowledge/trading-green-bonds-dlt-req6.md) - Interoperability with external systems.
+* [Design requirement REQ7: Settlement finality](../design-knowledge/trading-green-bonds-dlt-req7.md) - Settlement finality: the determination of a definite time after which the transfer of legal title (ownership) is irrevocable.
+* [Design requirement REQ8: Support high-frequency-data instruments](../design-knowledge/trading-green-bonds-dlt-req8.md) - Support for new financial instruments with high-frequency data dependencies (e.g., carbon emission monitoring data).
+* [Design requirement REQ9: DLTR compliance with reasoned exemptions](../design-knowledge/trading-green-bonds-dlt-req9.md) - DLTR compliance with well-reasoned exemptions from existing regulations written for traditional centralized systems.
+* [Design requirement REQ10: Interoperability with legacy and DLT settlement systems](../design-knowledge/trading-green-bonds-dlt-req10.md) - Interoperability with legacy private and central banking as well as private, permissioned, and permissionless DLT/blockchain and other clearing and settlement systems.
+* [Design requirement REQ11: Full regulator access for automated supervision](../design-knowledge/trading-green-bonds-dlt-req11.md) - Support for full access by the financial supervisor/regulator to maximize automated supervision.
+* [Design requirement REQ12: Full transparency and traceability of verification data](../design-knowledge/trading-green-bonds-dlt-req12.md) - Full transparency and traceability of underlying verification data throughout carbon credit and advanced instruments' lifecycle.
+* [Design requirement REQ13: Efficient high-volume trading with real-time monitoring](../design-knowledge/trading-green-bonds-dlt-req13.md) - Efficient high-volume trading processing, instantaneous settlement (execution) of trades, real-time monitoring, and advanced market abuse detection.
+* [Design requirement REQ14: Catalyze structured finance via a domain-specific language](../design-knowledge/trading-green-bonds-dlt-req14.md) - Ability to catalyze structured finance by domain-specific language for specifying new instruments and immediately issuing them.
 
 # Citations
 [1] Henrik Axelsen, Ulrik Rasmussen, Johannes Rude Jensen, Omri Ross, Fritz Henglein. Trading Green Bonds Using Distributed Ledger Technology. ECIS 2023 Research Papers. https://aisel.aisnet.org/ecis2023_rp/340
