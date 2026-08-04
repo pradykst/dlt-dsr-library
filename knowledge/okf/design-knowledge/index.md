@@ -139,12 +139,6 @@ Source: [decentralized-procurement-logistics](../papers/decentralized-procuremen
 * [Design principle DP2: Automation](decentralized-procurement-logistics-dp2.md) - Carry out the freight-transport procurement process in an end-to-end automated fashion, digitizing paper-based processes and delegating allocation to the blockchain.
 * [Design principle DP3: Metrics privacy](decentralized-procurement-logistics-dp3.md) - Keep sensitive allocation metrics off-chain in competitive markets so that private data is not exposed while public allocation results remain verifiable.
 
-## Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility
-
-Source: [forgetting-blockchain-gdpr](../papers/forgetting-blockchain-gdpr.md)
-
-* [Design principle DP: Principles for designing data-protection-compliant (forgetting) blockchains](forgetting-blockchain-gdpr-dp.md) - The derived guidance for data-protection-compliant blockchains includes:
-
 ## Design Principles for Blockchain-based Applications in Green Bond Reporting
 
 Source: [green-bond-reporting-dp](../papers/green-bond-reporting-dp.md)

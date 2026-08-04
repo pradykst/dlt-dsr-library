@@ -1,5 +1,28 @@
 # Pre-edit blocker report: forgetting-blockchain-gdpr
 
+## Status: resolved (see post-edit-report.md)
+
+## Resolution note (2026-08-05)
+
+Project decision: a formal canonical design-knowledge concept may exist
+only when the source paper explicitly labels, enumerates, tables, or
+otherwise formally presents it as reusable design knowledge (a design
+goal, objective, requirement, principle, feature, or equivalent). It may
+not be constructed by combining artifact description, interview prose,
+discussion, limitations, implications, conclusions, or recommendations
+from disjoint sections — which is exactly what the removed
+`forgetting-blockchain-gdpr-dp.md` node did. Re-verified against the full
+PDF: no table, figure, or numbered list of "design principles" exists
+anywhere in the source. The unsupported node was removed (0 canonical
+concepts, 0 relationships for this paper). The paper's real content —
+artifact/forgetting mechanism, expert evaluation, findings, and
+limitations — is now represented directly in the paper record's own
+narrative sections instead of being miscast as formal design knowledge.
+See `post-edit-report.md` for the full before/after accounting, changed
+files, and commit hash.
+
+## Original blocker (superseded by the resolution above; kept as decision history)
+
 ## Status: blocked (schema/ambiguity — no file changes made)
 
 ## Exact ambiguity

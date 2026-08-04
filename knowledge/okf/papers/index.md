@@ -27,7 +27,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 
 ## Privacy, GDPR & compliance
 
-* [Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility](forgetting-blockchain-gdpr.md) - Simon Farshid et al., 2019; 1 design-knowledge item(s).
+* [Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility](forgetting-blockchain-gdpr.md) - Simon Farshid et al., 2019; 0 design-knowledge item(s).
 * [How to Develop a GDPR-Compliant Blockchain Solution for Cross-Organizational Workflow Management: Evidence from the German Asylum Procedure](gdpr-workflow-asylum.md) - Florian Guggenmos et al., 2020; 2 design-knowledge item(s).
 * [Yes, I Do: Marrying Blockchain Applications with GDPR](yes-i-do-gdpr.md) - Benjamin Schellinger et al., 2022; 4 design-knowledge item(s).
 
