@@ -51,7 +51,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 * [And No One Gets the Short End of the Stick: A Blockchain-Based Approach to Solving the Two-Sided Opportunism Problem in Interorganizational Information Sharing](short-end-opportunism-sharing.md) - Lukas Florian Bossler et al., 2025; 5 design-knowledge item(s).
 * [Blockchain to Rule the Waves - Nascent Design Principles for Reducing Risk and Uncertainty in Decentralized Environments](rule-the-waves-shipping.md) - Kristoffer Naerland et al., 2017; 4 design-knowledge item(s).
 * [Blockchain-based token system for incentivizing peer review: A design science approach](peer-review-token-incentives.md) - Chad Anderson et al., 2025; 3 design-knowledge item(s).
-* [Cross-Organizational Workflow Management Using Blockchain Technology - Towards Applicability, Auditability, and Automation](cross-org-workflow-objectives.md) - Gilbert Fridgen et al., 2018; 1 design-knowledge item(s).
+* [Cross-Organizational Workflow Management Using Blockchain Technology - Towards Applicability, Auditability, and Automation](cross-org-workflow-objectives.md) - Gilbert Fridgen et al., 2018; 10 design-knowledge item(s).
 * [Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity](trust-enabling-capacity-exchange.md) - Nick Grosse et al., 2024; 6 design-knowledge item(s).
 * [From ambivalence to trust: Using blockchain in customer loyalty programs](ambivalence-trust-loyalty.md) - Manuel Utz et al., 2023; 6 design-knowledge item(s).
 * [From Dissonance to Dialogue: A Token-Based Approach to Bridge the Gap Between Manufacturers and Customers](dissonance-dialogue-recall.md) - Norman Pytel et al., 2024; 11 design-knowledge item(s).

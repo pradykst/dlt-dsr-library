@@ -1,10 +1,10 @@
 ---
 type: design-objective
-title: "DO - Design objectives for the blockchain documentary-workflow prototype"
-description: "The prototype's nine design objectives are:"
+title: "DO1b - Avoid multiple originals and signatures"
+description: "By the use of digital documents multiple versions and signatures of one document are not required anymore."
 resource: "https://hdl.handle.net/10125/50503"
 source_paper: "Cross-Organizational Workflow Management Using Blockchain Technology - Towards Applicability, Auditability, and Automation"
-label: "DO"
+label: "DO1b"
 tags:
   - cross-org-workflow-objectives
   - design-objective
@@ -15,9 +15,9 @@ tags:
 timestamp: '2026-07-16T00:00:00+00:00'
 ---
 
-# Design objective DO: Design objectives for the blockchain documentary-workflow prototype
+# Design objective DO1b: Avoid multiple originals and signatures
 
-The prototype's nine design objectives are: (DO1a) digitize paper-based process steps, e.g., document sending, mapping a fully digitized process; (DO1b) avoid multiple originals and signatures by using digital documents; (DO2) automate manual document checking via smart contracts; (DO3) allow for concurrent document processing so participants need not wait for paper documents; (DO4) impose an overall real-time tracking system; (DO5) provide an end-to-end traceable process history; (DO6) make process participants (persons) transparent, each identifying before acting; (DO7) shorten overall process time; (DO8) keep high flexibility for varying situations (e.g., different countries and document requirements); and (DO9) lower overall costs.
+By the use of digital documents multiple versions and signatures of one document are not required anymore.
 
 ## Source paper
 
@@ -26,3 +26,4 @@ This design objective is proposed by [Cross-Organizational Workflow Management U
 # Citations
 [1] Gilbert Fridgen, Nils Urbach, Sven Radszuwill, Lena Utz. Cross-Organizational Workflow Management Using Blockchain Technology - Towards Applicability, Auditability, and Automation. HICSS 51 (2018). https://hdl.handle.net/10125/50503
 [2] Source document: Cross-Organizational Workflow Management Using Blockchain Technology (only objectives).pdf
+[3] Source evidence: Table 3 ("Design objectives for the Blockchain prototype"), row DO1b, article p. 3512.

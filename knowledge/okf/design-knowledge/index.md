@@ -120,7 +120,16 @@ Source: [certified-data-chats-used-cars](../papers/certified-data-chats-used-car
 
 Source: [cross-org-workflow-objectives](../papers/cross-org-workflow-objectives.md)
 
-* [Design objective DO: Design objectives for the blockchain documentary-workflow prototype](cross-org-workflow-objectives-do.md) - The prototype's nine design objectives are:
+* [Design objective DO1a: Digitize paper-based process steps, e.g. document sending](cross-org-workflow-objectives-do1a.md) - The BDW maps a fully digitized process, i.e. no paper-based documents are necessary.
+* [Design objective DO1b: Avoid multiple originals and signatures](cross-org-workflow-objectives-do1b.md) - By the use of digital documents multiple versions and signatures of one document are not required anymore.
+* [Design objective DO2: Automate manual document checking](cross-org-workflow-objectives-do2.md) - For the banks, the manual document check is avoided by the use of smart contracts.
+* [Design objective DO3: Allow for concurrent document processing](cross-org-workflow-objectives-do3.md) - As process participants do not need to wait for paper-based documents to arrive, a concurrent document check is possible for the advising and issuing bank.
+* [Design objective DO4: Impose an overall tracking system](cross-org-workflow-objectives-do4.md) - A real time process tracking is implemented.
+* [Design objective DO5: Provide process history](cross-org-workflow-objectives-do5.md) - Any process can be traced end to end anytime.
+* [Design objective DO6: Make process participants (persons) transparent](cross-org-workflow-objectives-do6.md) - Each participant must identify before conducting an action.
+* [Design objective DO7: Shorten overall process time](cross-org-workflow-objectives-do7.md) - The overall process time is heavily shortened.
+* [Design objective DO8: Keep high flexibility](cross-org-workflow-objectives-do8.md) - The DBW is applicable in various situations, e.g. for companies from different countries, various document requirements etc.
+* [Design objective DO9: Lower Costs](cross-org-workflow-objectives-do9.md) - Overall, the BDW safes costs.
 
 ## Decentralized Procurement Mechanisms for Efficient Logistics Services Mapping - a Design Science Research Approach
 
