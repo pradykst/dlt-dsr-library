@@ -294,8 +294,8 @@ Source: [dissonance-dialogue-recall](../papers/dissonance-dialogue-recall.md)
 
 Source: [gdpr-workflow-asylum](../papers/gdpr-workflow-asylum.md)
 
-* [Design principle DP1: Do not store personal data on a blockchain](gdpr-workflow-asylum-dp1.md) - Keep personal data off-chain, since blockchain's tamper-resistant storage conflicts with the rights to rectification and erasure;
-* [Design principle DP2: Use a highly secure off-chain mapping architecture for attribution](gdpr-workflow-asylum-dp2.md) - If a use case requires that data on the blockchain be attributable to a natural person, employ pseudonymization:
+* [Design principle DP1: Do not store personal data on a blockchain](gdpr-workflow-asylum-dp1.md) - Blockchain's paradigm of tamper-resistant storage jars profoundly with the right to rectification and erasure, so blockchain solution architects should keep personal data off-chain.
+* [Design principle DP2: Use a highly secure off-chain mapping architecture for attribution](gdpr-workflow-asylum-dp2.md) - If a use case requires that data on the blockchain be attributable to a natural person, use a highly secure off-chain mapping architecture.
 
 ## Know-Your-Customer (KYC) Requirements for Initial Coin Offerings: Toward Designing a Compliant-by-Design KYC-System Based on Blockchain Technology
 
