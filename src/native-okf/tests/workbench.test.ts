@@ -82,7 +82,7 @@ test("blockchain IoT paper card includes its requirements, principles, and featu
   );
 });
 
-test("aligning-newsvendors paper card contains only its own two principles", async () => {
+test("aligning-newsvendors paper card contains only its own three principles", async () => {
   const library = await getLibraryViewModel();
   const paper = library.papers.find((candidate) => candidate.id === ALIGNING_PAPER_ID);
   assert.ok(paper);
@@ -92,11 +92,12 @@ test("aligning-newsvendors paper card contains only its own two principles", asy
     [
       "design-knowledge/aligning-newsvendors-scoring-rules-dp1",
       "design-knowledge/aligning-newsvendors-scoring-rules-dp2",
+      "design-knowledge/aligning-newsvendors-scoring-rules-dp3",
     ],
   );
   assert.deepEqual(
     paper.linkedTypeCounts.map(({ type, count }) => [type, count]),
-    [["design-principle", 2]],
+    [["design-principle", 3]],
   );
 });
 

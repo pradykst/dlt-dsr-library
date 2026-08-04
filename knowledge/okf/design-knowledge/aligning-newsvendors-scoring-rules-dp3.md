@@ -1,10 +1,10 @@
 ---
 type: design-principle
-title: "DP1 - Decentralized, party-independent control of the escrow/payment"
-description: "Payments should be handled by escrow accounts controlled by no individual entity."
+title: "DP3 - Unambiguous source of the realized outcome"
+description: "The source of the realized outcome must be unambiguous."
 resource: "https://doi.org/10.1016/j.dss.2021.113626"
 source_paper: "Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules"
-label: "DP1"
+label: "DP3"
 tags:
   - aligning-newsvendors-scoring-rules
   - design-principle
@@ -15,9 +15,9 @@ tags:
 timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
-# Design principle DP1: Decentralized, party-independent control of the escrow/payment
+# Design principle DP3: Unambiguous source of the realized outcome
 
-Payments should be handled by escrow accounts controlled by no individual entity. The decentralization aspect of blockchain technology effectively handles this design principle: information about escrow accounts in a blockchain is controlled neither by the newsvendor nor by the expert but is instead collectively controlled by a set of independent computational devices, thus enhancing trust.
+The source of the realized outcome must be unambiguous. The solution relies on the concept of oracles to determine the realized outcome, i.e., data feeds that define the observed demand and, consequently, the payment the expert receives; given the crucial role these data feeds play, their source must be unambiguously defined so that both the expert and the newsvendor agree to use them.
 
 ## Source paper
 
@@ -26,4 +26,4 @@ This design principle is proposed by [Aligning the interests of newsvendors and 
 # Citations
 [1] Arthur Carvalho, Majid Karimi. Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules. Decision Support Systems 151 (2021) 113626. https://doi.org/10.1016/j.dss.2021.113626
 [2] Source document: ALIGNI~1.PDF (on-disk filename for "Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules.pdf")
-[3] Source evidence: Section 4.1 ("Design principles"), "Design principle #1: payments should be handled by escrow accounts controlled by no individual entity", article p. 7.
+[3] Source evidence: Section 4.1 ("Design principles"), "Design principle #3: the source of the realized outcome must be unambiguous", article p. 7.

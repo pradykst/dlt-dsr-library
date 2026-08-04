@@ -6,8 +6,9 @@ Atomic design-knowledge concepts extracted from the 34 papers. Each item is a de
 
 Source: [aligning-newsvendors-scoring-rules](../papers/aligning-newsvendors-scoring-rules.md)
 
-* [Design principle DP1: Decentralized, party-independent control of the escrow/payment](aligning-newsvendors-scoring-rules-dp1.md) - The contract and its escrow/payment mechanism should be governed in a decentralized manner so that it is controlled by neither the newsvendor nor the expert;
-* [Design principle DP2: Enforceable and immutable algorithmic contracts](aligning-newsvendors-scoring-rules-dp2.md) - Contracts between the newsvendor and the expert should be defined as enforceable and immutable algorithms;
+* [Design principle DP1: Decentralized, party-independent control of the escrow/payment](aligning-newsvendors-scoring-rules-dp1.md) - Payments should be handled by escrow accounts controlled by no individual entity.
+* [Design principle DP2: Enforceable and immutable algorithmic contracts](aligning-newsvendors-scoring-rules-dp2.md) - Contracts between the newsvendor and the expert should be defined as enforceable and immutable algorithms.
+* [Design principle DP3: Unambiguous source of the realized outcome](aligning-newsvendors-scoring-rules-dp3.md) - The source of the realized outcome must be unambiguous.
 
 ## An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing
 

@@ -47,15 +47,17 @@ The six core dimensions of this DSR project, following the [DSR grid](../about-t
 * **Research process.** Design science research: formal derivation of a tailored proper scoring rule, followed by design and implementation of an Ethereum smart-contract prototype and a decentralized application (DApp), with analytical demonstration.
 * **Key concepts.** Blockchain, forecasting, newsvendor, proper scoring rules, smart contracts, trust.
 * **Solution description.** A tailored proper scoring rule coded as a blockchain-based smart contract, with escrow/payment governed in a decentralized, party-independent manner. Solution-space representation: Instantiation (Ethereum prototype and DApp) plus design principles (nascent design theory).
-* **Output knowledge.** Two design principles - decentralized, party-independent control of the escrow/payment, and enforceable, immutable algorithmic contracts - demonstrated with a working prototype.
+* **Output knowledge.** Three design principles - decentralized, party-independent control of the escrow/payment; enforceable, immutable algorithmic contracts; and an unambiguous source for the realized outcome - demonstrated with a working prototype.
 
 The *output knowledge* of this project is captured as the atomic design-knowledge concepts listed below.
 
 ## Design knowledge
 
-* [Design principle DP1: Decentralized, party-independent control of the escrow/payment](../design-knowledge/aligning-newsvendors-scoring-rules-dp1.md) - The contract and its escrow/payment mechanism should be governed in a decentralized manner so that it is controlled by neither the newsvendor nor the expert;
-* [Design principle DP2: Enforceable and immutable algorithmic contracts](../design-knowledge/aligning-newsvendors-scoring-rules-dp2.md) - Contracts between the newsvendor and the expert should be defined as enforceable and immutable algorithms;
+* [Design principle DP1: Decentralized, party-independent control of the escrow/payment](../design-knowledge/aligning-newsvendors-scoring-rules-dp1.md) - Payments should be handled by escrow accounts controlled by no individual entity.
+* [Design principle DP2: Enforceable and immutable algorithmic contracts](../design-knowledge/aligning-newsvendors-scoring-rules-dp2.md) - Contracts between the newsvendor and the expert should be defined as enforceable and immutable algorithms.
+* [Design principle DP3: Unambiguous source of the realized outcome](../design-knowledge/aligning-newsvendors-scoring-rules-dp3.md) - The source of the realized outcome must be unambiguous.
 
 # Citations
 [1] Arthur Carvalho, Majid Karimi. Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules. Decision Support Systems 151 (2021) 113626. https://doi.org/10.1016/j.dss.2021.113626
-[2] Source document: Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules.pdf
+[2] Source document: ALIGNI~1.PDF (on-disk filename for "Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules.pdf"; confirmed by title, authors, and DOI match against the PDF's own text)
+[3] Source evidence: Section 4.1 ("Design principles"), article p. 7.

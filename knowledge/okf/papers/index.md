@@ -10,7 +10,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 
 ## Supply chain, logistics & procurement
 
-* [Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules](aligning-newsvendors-scoring-rules.md) - Arthur Carvalho et al., 2021; 2 design-knowledge item(s).
+* [Aligning the interests of newsvendors and forecasters through blockchain-based smart contracts and proper scoring rules](aligning-newsvendors-scoring-rules.md) - Arthur Carvalho et al., 2021; 3 design-knowledge item(s).
 * [Decentralized Procurement Mechanisms for Efficient Logistics Services Mapping - a Design Science Research Approach](decentralized-procurement-logistics.md) - Tiphaine Henry et al., 2022; 3 design-knowledge item(s).
 * [Designing a blockchain-based information system for procurement processes - Balancing decentralization, scalability, and security while maintaining privacy](procurement-is-trilemma.md) - Valeriya Arnold et al., 2026; 7 design-knowledge item(s).
 * [Digging for Quality Management in Production Systems: A Solution Space for Blockchain Collaborations](quality-management-production.md) - Norman Pytel et al., 2022; 6 design-knowledge item(s).
