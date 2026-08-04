@@ -273,12 +273,30 @@ Source: [quality-management-production](../papers/quality-management-production.
 
 Source: [ambivalence-trust-loyalty](../papers/ambivalence-trust-loyalty.md)
 
-* [Design objective DO1: Authenticity](ambivalence-trust-loyalty-do1.md) - Provide loyalty tokens and data from authentic sources - e.g., using local IoT controllers for consumption data and a green/renewable energy index for generation - so customers can trust the sustai...
+* [Design objective DO1: Accountability](ambivalence-trust-loyalty-do1.md) - Provide tamper-proof and easily accessible storage of data in the blockchain network, displayed in a readily accessible and verifiable way, together with tamper-proof and automated data processing.
 * [Design objective DO2: Customizability](ambivalence-trust-loyalty-do2.md) - Let customers set rules for their smart appliances based on generation and consumption data so that electricity consumption aligns with their sustainability preferences.
-* [Design objective DO3: Transparency](ambivalence-trust-loyalty-do3.md) - Assess and communicate the sustainability of generation (e.g., via a renewable energy index) so customers can transparently monitor their green electricity.
+* [Design objective DO3: Simplicity](ambivalence-trust-loyalty-do3.md) - Provide an intuitive user interface so customers, who vary in digital literacy, do not have to deal with the technical details of blockchain technology.
 * [Design objective DO4: Efficiency](ambivalence-trust-loyalty-do4.md) - Enable seamless, reliable and scalable information exchange between electricity supplier and customer, minimizing blockchain data processing to retain high uptime and availability.
-* [Design objective DO5: Usability](ambivalence-trust-loyalty-do5.md) - Provide an intuitive user interface (with a cloud controller for data storage/display) so users need not deal with the technical details of blockchain.
+* [Design objective DO5: Maintainability](ambivalence-trust-loyalty-do5.md) - Enable the architecture to connect to different legacy systems, with connection uptime easy to monitor by IT administrator staff, and make Nexo Energy easy to order.
 * [Design objective DO6: Affordability](ambivalence-trust-loyalty-do6.md) - Keep participation in the blockchain-based loyalty program affordable for customers, keeping additional-service and hardware costs (e.g., low-cost local controllers) reasonable.
+* [Design requirement DR1: Tamper-proof and easily accessible storage of data in the blockchain network](ambivalence-trust-loyalty-dr1.md) - Tamper-proof and easily accessible storage of data in the blockchain network, displayed in a readily accessible and verifiable way.
+* [Design requirement DR2: Tamper-proof and automated data processing](ambivalence-trust-loyalty-dr2.md) - Tamper-proof and automated data processing, for instance via smart contracts.
+* [Design requirement DR3: Secure storage of electricity generation data](ambivalence-trust-loyalty-dr3.md) - Secure storage of electricity generation data in the blockchain network.
+* [Design requirement DR4: Secure storage of electricity consumption data](ambivalence-trust-loyalty-dr4.md) - Secure storage of electricity consumption data in the blockchain network.
+* [Design requirement DR5: Intuitive and comprehensive adjustment of electricity consumption](ambivalence-trust-loyalty-dr5.md) - Intuitive and comprehensive adjustment of electricity consumption, depending on the share of renewable or green electricity in the grid.
+* [Design requirement DR6: Deliver all information for setup process](ambivalence-trust-loyalty-dr6.md) - Deliver all information for the setup process, should setup be done without a technician.
+* [Design requirement DR7: Automatic smart device detection](ambivalence-trust-loyalty-dr7.md) - Automatic smart device detection, to ease the setup process for customers.
+* [Design requirement DR8: Intuitive user interface](ambivalence-trust-loyalty-dr8.md) - An intuitive user interface so users need not deal with the technical details of blockchain technology.
+* [Design requirement DR9: Fast data synchronization between software components](ambivalence-trust-loyalty-dr9.md) - Fast data synchronization between software components.
+* [Design requirement DR10: High software uptime and availability](ambivalence-trust-loyalty-dr10.md) - High software uptime and availability, minimizing blockchain data processing.
+* [Design requirement DR11: Easy to monitor by IT administrator staff](ambivalence-trust-loyalty-dr11.md) - The uptime of the connection to legacy systems should be easy to monitor by IT administrator staff.
+* [Design requirement DR12: Easy to order for customers](ambivalence-trust-loyalty-dr12.md) - Nexo Energy should integrate existing GETs and make it easy to order for customers.
+* [Design requirement DR13: Affordable for customers](ambivalence-trust-loyalty-dr13.md) - Participation in a blockchain-based customer loyalty program should remain affordable for customers.
+* [Design requirement DR14: Reasonable costs for operation](ambivalence-trust-loyalty-dr14.md) - Electricity suppliers should ensure reasonable costs for operation before implementation.
+* [Design principle DP1: Give customers agency](ambivalence-trust-loyalty-dp1.md) - Customer loyalty programs should leave room for customers to shape their own portfolio of desired services and functions, giving customers a real sense of choice and agency.
+* [Design principle DP2: Provide customers with sufficient and verifiable information](ambivalence-trust-loyalty-dp2.md) - Customer loyalty programs should proactively ensure that customers can access all required information in an easily verifiable manner.
+* [Design principle DP3: Consider appropriate levels of usability for customers](ambivalence-trust-loyalty-dp3.md) - Customer loyalty programs should provide different levels of didactical reduction while retaining the basic message, rather than proactively reducing access to granular information.
+* [Design principle DP4: Give data access to customers](ambivalence-trust-loyalty-dp4.md) - Customer loyalty programs promise the greatest success if they include an option for customers to be granted access to all relevant and verifiable data.
 
 ## From Dissonance to Dialogue: A Token-Based Approach to Bridge the Gap Between Manufacturers and Customers
 
