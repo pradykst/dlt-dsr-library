@@ -2,7 +2,7 @@
 type: paper
 title: "Yes, I Do: Marrying Blockchain Applications with GDPR"
 description: "The paper offers comprehensive guidance for developing GDPR-compliant blockchain solutions, contributing a generic framework and four design principles, and emphasizing the distinction between applications based on blockchain's data-integrity versus computational-integrity guarantees."
-resource: "https://hdl.handle.net/10125/79760"
+resource: "https://hdl.handle.net/10125/79900"
 authors: "Benjamin Schellinger, Fabiane Voelter, Nils Urbach, Johannes Sedlmeir"
 year: 2022
 venue: "HICSS 55 (2022)"
@@ -17,14 +17,14 @@ tags:
   - framework
   - design-science-research
   - blockchain
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Yes, I Do: Marrying Blockchain Applications with GDPR
 
 **Authors:** Benjamin Schellinger, Fabiane Voelter, Nils Urbach, Johannes Sedlmeir  
 **Venue:** HICSS 55 (2022)  
-**Link:** https://hdl.handle.net/10125/79760
+**Link:** https://hdl.handle.net/10125/79900
 
 ## Summary
 
@@ -59,5 +59,6 @@ The *output knowledge* of this project is captured as the atomic design-knowledg
 * [Design principle DP4: Review all relevant laws](../design-knowledge/yes-i-do-gdpr-dp4.md) - Do not only evaluate reconciliation with the GDPR but also further industry-specific laws.
 
 # Citations
-[1] Benjamin Schellinger, Fabiane Voelter, Nils Urbach, Johannes Sedlmeir. Yes, I Do: Marrying Blockchain Applications with GDPR. HICSS 55 (2022). https://hdl.handle.net/10125/79760
+[1] Benjamin Schellinger, Fabiane Voelter, Nils Urbach, Johannes Sedlmeir. Yes, I Do: Marrying Blockchain Applications with GDPR. HICSS 55 (2022). https://hdl.handle.net/10125/79900
 [2] Source document: Yes, I Do - Marrying Blockchain Applications with GDPR.pdf
+[3] Source evidence: Section 6 ("Discussion and conclusion"), article p. 4638, for DP1-DP4 (already correctly represented in the corpus; corrected resource URI to match the PDF's own printed header "URI: https://hdl.handle.net/10125/79900", article p. 4631, which previously read 79760).
