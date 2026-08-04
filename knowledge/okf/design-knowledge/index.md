@@ -154,8 +154,13 @@ Source: [green-bond-reporting-dp](../papers/green-bond-reporting-dp.md)
 
 Source: [procurement-is-trilemma](../papers/procurement-is-trilemma.md)
 
-* [Design principle DP1: Balance decentralization, scalability and security](procurement-is-trilemma-dp1.md) - Balance decentralization, scalability and security by using a public chain as a trust anchor, a Layer-2 for scaling, and decentralized communication between layers, rather than defaulting to permis...
-* [Design principle DP2: Maintain the balance under privacy requirements](procurement-is-trilemma-dp2.md) - Maintain the decentralization-scalability-security balance when privacy is required by integrating efficient, resilient cryptography (e.g., zero-knowledge proofs) and minimizing control points.
+* [Design objective DO1: Publicly accessible, interoperable blockchain infrastructure](procurement-is-trilemma-do1.md) - The artifact should leverage standardization efforts to enable enterprises to seamlessly integrate their ERP systems with publicly accessible, interoperable blockchain infrastructure.
+* [Design objective DO2: Stable, regulation-compliant payment processing](procurement-is-trilemma-do2.md) - The artifact should embed stable and regulation-compliant payment processing into blockchain-based procurement workflows.
+* [Design objective DO3: Strengthen dispute-resolution trust via permissionless blockchain](procurement-is-trilemma-do3.md) - The artifact should strengthen trust in procurement's dispute resolution processes without undermining trust in the underlying infrastructure by leveraging permissionless blockchain.
+* [Design objective DO4: Infrastructure that scales with volume and users](procurement-is-trilemma-do4.md) - The artifact should be built on an infrastructure capable of scaling with growing transaction volumes and users.
+* [Design objective DO5: Privacy-enabled while maintaining auditability](procurement-is-trilemma-do5.md) - The artifact should be privacy-enabled while maintaining the inherent auditability of blockchain records.
+* [Design principle DP1: Balance decentralization, scalability and security](procurement-is-trilemma-dp1.md) - Principle of balancing the blockchain trilemma with a public Layer 1 as a trust anchor, a Layer 2 for scalability, and decentralized communication between layers.
+* [Design principle DP2: Maintain the balance under privacy requirements](procurement-is-trilemma-dp2.md) - Principle of ensuring privacy while maintaining a balanced blockchain trilemma through efficient and resilient cryptography and minimized control mechanism.
 
 ## Designing a cross-organizational identity management system: Utilizing SSI for the certification of retailer attributes
 
