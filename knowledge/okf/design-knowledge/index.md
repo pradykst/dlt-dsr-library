@@ -371,9 +371,12 @@ Source: [msp-sustainability-circular](../papers/msp-sustainability-circular.md)
 
 Source: [delivery-invoice-transparency](../papers/delivery-invoice-transparency.md)
 
-* [Design objective DO1: Secure data exchange](delivery-invoice-transparency-do1.md) - Ensure fundamentally secure data exchange within a decentralized infrastructure, focusing on the data-protection goals of confidentiality, integrity, availability and authenticity for delivery invo...
+* [Design objective DO1: Secure data exchange](delivery-invoice-transparency-do1.md) - Ensure fundamentally secure data exchange within a decentralized infrastructure, focusing on the data-protection goals of confidentiality, integrity, availability and authenticity for delivery invoices.
 * [Design objective DO2: Collaboration](delivery-invoice-transparency-do2.md) - Support the collaboration aspect of coopetition, using network effects (e.g., Hyperledger Fabric) to enhance the overall construction planning process between participants.
-* [Design objective DO3: Competition](delivery-invoice-transparency-do3.md) - Account for the competition aspect of coopetition, using decentralized networks and access controls so that security, trust and transparency are strengthened without exposing competitively sensitiv...
+* [Design objective DO3: Competition](delivery-invoice-transparency-do3.md) - Account for the competition aspect of coopetition, using decentralized networks and access controls so that security, trust and transparency are strengthened without exposing competitively sensitive information.
+* [Design principle DP1: Implement a decentralized solution when network effects outweigh complexity](delivery-invoice-transparency-dp1.md) - Implement a decentralized solution when the advantages of network effects in a coopetitive market outweigh the challenges of implementing such a complex solution.
+* [Design principle DP2: Implement private data collections and private channels](delivery-invoice-transparency-dp2.md) - Implement private data collections and private channels to safeguard inter-organizational data exchange processes from being disclosed to unauthorized third parties.
+* [Design principle DP3: Augment private data collections with additional privacy-preserving technologies](delivery-invoice-transparency-dp3.md) - To ensure complete confidentiality of data, it is necessary to augment private data collections and channels with additional privacy-preserving technologies.
 
 ## Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing
 
