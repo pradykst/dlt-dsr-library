@@ -167,10 +167,18 @@ Source: [procurement-is-trilemma](../papers/procurement-is-trilemma.md)
 
 Source: [cross-org-identity-ssi](../papers/cross-org-identity-ssi.md)
 
-* [Design principle DP1: Use the multiplicity of actor roles for scaling](cross-org-identity-ssi-dp1.md) - Design SSI systems so that any party can take on the issuer, holder or verifier role at any time, using the multiplicity of roles to scale the identity ecosystem.
-* [Design principle DP2: Consider credentials for multiple applications](cross-org-identity-ssi-dp2.md) - Issue verifiable credentials in a context-independent, general-purpose manner so that the same credential can facilitate additional use cases and reduce friction.
-* [Design principle DP3: Recognize the identity holder as primary controller](cross-org-identity-ssi-dp3.md) - Design applications so that the identity holder is an active participant in almost all processes, since all processes start with or require approval from the holder.
-* [Design principle DP4: Use public DIDs only for credential issuers](cross-org-identity-ssi-dp4.md) - Publish public DIDs only for credential issuers and exchange DIDs bilaterally for all other parties, minimizing on-chain transactions and privacy risks.
+* [Design objective DO1: Issuance](cross-org-identity-ssi-do1.md) - The system should allow the issuance of a certificate to prove the retailer's identity and a certificate to prove correct tax registration.
+* [Design objective DO2: Verification](cross-org-identity-ssi-do2.md) - The system should facilitate the tax authority and the marketplace to verify certificates' validity, signature, and integrity.
+* [Design objective DO3: Revocation](cross-org-identity-ssi-do3.md) - The system must allow the issuing party to mark an outdated certificate as invalid and ensure the verifier knows it is no longer valid.
+* [Design objective DO4: Audit](cross-org-identity-ssi-do4.md) - The tax authority should be able to audit the marketplace's verification process to confirm legal compliance.
+* [Design objective DO5: Decentralization](cross-org-identity-ssi-do5.md) - No central authority should oversee all documents and attributes, requiring a decentralized and interoperable IdM approach.
+* [Design objective DO6: Data confidentiality](cross-org-identity-ssi-do6.md) - Data about individual parties must only be accessible to them and the parties directly involved in the process.
+* [Design objective DO7: Data availability](cross-org-identity-ssi-do7.md) - The system should ensure constant availability of the service.
+* [Design objective DO8: Usability](cross-org-identity-ssi-do8.md) - The application and handling of a certificate should be designed as intuitively as possible.
+* [Design principle DP1: Use the multiplicity of roles of actors for scaling the identity ecosystem](cross-org-identity-ssi-dp1.md) - Such systems should be designed so that one party can take on each of the issuer, holder or verifier role at any time, using the multiplicity of roles of actors for scaling the identity ecosystem.
+* [Design principle DP2: Consider credentials for multiple applications to facilitate additional use cases](cross-org-identity-ssi-dp2.md) - Issue verifiable credentials in a context-independent, general-purpose manner so that the same credential can facilitate additional use cases and reduce friction.
+* [Design principle DP3: Recognize the identity holder as the primary controller to ensure seamless processes](cross-org-identity-ssi-dp3.md) - Design applications so that the identity holder is an active participant in almost all processes, since all processes start with or require approval from the holder.
+* [Design principle DP4: Use public DIDs only for credential issuers to minimize privacy issues](cross-org-identity-ssi-dp4.md) - Publish public DIDs only for credential issuers and exchange DIDs bilaterally for all other parties, minimizing on-chain transactions and privacy risks.
 
 ## Designing a fair and inclusive digital asset-based name-image-likeness marketplace
 

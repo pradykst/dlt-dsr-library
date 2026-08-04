@@ -23,7 +23,7 @@ test("repository exposes the canonical concepts and open-ended types", async () 
     getConceptsByType("producer-defined-type-that-is-not-in-this-bundle"),
   ]);
 
-  assert.equal(allConcepts.length, 293);
+  assert.equal(allConcepts.length, 301);
   assert.equal(papers.length, 34);
   assert.equal(references.length, 2);
   assert.deepEqual(unknownType, []);
