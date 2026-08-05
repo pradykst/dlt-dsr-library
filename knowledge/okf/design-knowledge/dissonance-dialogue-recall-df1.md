@@ -26,6 +26,7 @@ This design feature is a technology-specific realization proposed by [From Disso
 ## Implements
 
 * [Design principle DP3: Traceability with customer notifications](./dissonance-dialogue-recall-dp3.md)
+* [Design principle DP4: Interoperability across EVM-supported applications](./dissonance-dialogue-recall-dp4.md)
 * [Design principle DP5: Customer participation in recall information](./dissonance-dialogue-recall-dp5.md)
 
 # Citations

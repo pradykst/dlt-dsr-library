@@ -29,6 +29,7 @@ This design principle is proposed by [From Dissonance to Dialogue: A Token-Based
 
 ## Implemented by
 
+* [Design feature DF1: Customer wallet notification for recall states](./dissonance-dialogue-recall-df1.md)
 * [Design feature DF3: Recall tracing and product-state extension of the token](./dissonance-dialogue-recall-df3.md)
 * [Design feature DF4: Interorganizational BC-based data storage](./dissonance-dialogue-recall-df4.md)
 * [Design feature DF5: Customer product-defect announcement](./dissonance-dialogue-recall-df5.md)
