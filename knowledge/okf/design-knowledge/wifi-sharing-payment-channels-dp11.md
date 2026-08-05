@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP11 - Dynamic trust-score accounting"
-description: "Provide the system with accounting mechanisms using a dynamic trust-score in order to facilitate cooperative host behavior and ensure high service levels by rewarding hosts for cooperation or high..."
+description: "Provide the system with accounting mechanisms using a dynamic trust-score in order to facilitate cooperative host behavior and ensure high service levels by rewarding hosts for cooperation or high availability."
 resource: "https://doi.org/10.1145/3529097"
 source_paper: "An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing"
 label: "DP11"
@@ -12,7 +12,7 @@ tags:
   - telecommunications
   - payment-channels
   - architecture
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP11: Dynamic trust-score accounting
@@ -22,6 +22,12 @@ Provide the system with accounting mechanisms using a dynamic trust-score in ord
 ## Source paper
 
 This design principle is proposed by [An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing](../papers/wifi-sharing-payment-channels.md) (Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann, 2023).
+
+## Addresses
+
+* [Design requirement S#FA: Fraudulent access points](./wifi-sharing-payment-channels-dr-s-fa.md)
+* [Design requirement AU#AC: Application confinement](./wifi-sharing-payment-channels-dr-au-ac.md)
+* [Design requirement AR#RO: Risk of overcharging](./wifi-sharing-payment-channels-dr-ar-ro.md)
 
 # Citations
 [1] Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann. An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing. ACM Transactions on Management Information Systems 14(1), Article 1 (2023). https://doi.org/10.1145/3529097

@@ -23,6 +23,11 @@ Provide the system with a module to keep transaction costs to a minimum in order
 
 This design principle is proposed by [An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing](../papers/wifi-sharing-payment-channels.md) (Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann, 2023).
 
+## Addresses
+
+* [Design requirement AU#AC: Application confinement](./wifi-sharing-payment-channels-dr-au-ac.md)
+* [Design requirement AR#RO: Risk of overcharging](./wifi-sharing-payment-channels-dr-ar-ro.md)
+
 # Citations
 [1] Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann. An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing. ACM Transactions on Management Information Systems 14(1), Article 1 (2023). https://doi.org/10.1145/3529097
 [2] Source document: An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing.pdf

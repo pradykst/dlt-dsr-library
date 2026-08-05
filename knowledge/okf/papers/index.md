@@ -47,7 +47,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 
 ## Trust, incentives & other domains
 
-* [An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing](wifi-sharing-payment-channels.md) - Christian Janiesch et al., 2023; 14 design-knowledge item(s).
+* [An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing](wifi-sharing-payment-channels.md) - Christian Janiesch et al., 2023; 24 design-knowledge item(s).
 * [And No One Gets the Short End of the Stick: A Blockchain-Based Approach to Solving the Two-Sided Opportunism Problem in Interorganizational Information Sharing](short-end-opportunism-sharing.md) - Lukas Florian Bossler et al., 2025; 5 design-knowledge item(s).
 * [Blockchain to Rule the Waves - Nascent Design Principles for Reducing Risk and Uncertainty in Decentralized Environments](rule-the-waves-shipping.md) - Kristoffer Naerland et al., 2017; 4 design-knowledge item(s).
 * [Blockchain-based token system for incentivizing peer review: A design science approach](peer-review-token-incentives.md) - Chad Anderson et al., 2025; 3 design-knowledge item(s).

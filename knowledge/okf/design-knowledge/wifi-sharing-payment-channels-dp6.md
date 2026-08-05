@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP6 - Tamper-proof transaction history via trusted intermediary"
-description: "Provide the system with a mutually trusted intermediary requiring a transaction history that records a user's data traffic, resource consumption and incurred costs, in order to ensure that connecti..."
+description: "Provide the system with a mutually trusted intermediary requiring a transaction history that records a user's data traffic, resource consumption and incurred costs, in order to ensure that connection data cannot be manipulated or corrupted."
 resource: "https://doi.org/10.1145/3529097"
 source_paper: "An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing"
 label: "DP6"
@@ -12,7 +12,7 @@ tags:
   - telecommunications
   - payment-channels
   - architecture
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP6: Tamper-proof transaction history via trusted intermediary
@@ -22,6 +22,11 @@ Provide the system with a mutually trusted intermediary requiring a transaction 
 ## Source paper
 
 This design principle is proposed by [An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing](../papers/wifi-sharing-payment-channels.md) (Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann, 2023).
+
+## Addresses
+
+* [Design requirement S#FA: Fraudulent access points](./wifi-sharing-payment-channels-dr-s-fa.md)
+* [Design requirement AR#RO: Risk of overcharging](./wifi-sharing-payment-channels-dr-ar-ro.md)
 
 # Citations
 [1] Christian Janiesch, Marcus Fischer, Florian Imgrund, Adrian Hofmann, Axel Winkelmann. An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing. ACM Transactions on Management Information Systems 14(1), Article 1 (2023). https://doi.org/10.1145/3529097

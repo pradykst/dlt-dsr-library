@@ -24,7 +24,7 @@ import {
 } from "../shared/routes.ts";
 import type { NativeOkfAccessMode } from "./access/types.ts";
 
-const EXPECTED_MARKDOWN_DOCUMENT_COUNT = 372;
+const EXPECTED_MARKDOWN_DOCUMENT_COUNT = 382;
 
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const FORBIDDEN_RUNTIME_IMPORT =
