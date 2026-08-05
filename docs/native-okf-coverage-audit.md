@@ -5,8 +5,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Validity boundaries
 
 - OKF version: 0.1
-- Markdown files: 245
-- Concepts: 241
+- Markdown files: 404
+- Concepts: 400
 - Papers: 34
 - Native format valid: yes (0 fatal errors)
 - Internal links valid: yes (0 broken-link warnings)
@@ -15,29 +15,29 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Corpus distribution
 
 - design-goal + design-principle: 1
-- design-objective: 6
-- design-principle: 17
-- design-principle + design-feature: 3
+- design-objective: 4
+- design-objective + design-principle: 3
+- design-objective + design-requirement + design-principle: 2
+- design-objective + meta-requirement + design-principle: 1
+- design-principle: 9
+- design-principle + design-feature: 2
 - design-requirement: 1
-- design-requirement + design-principle: 1
-- design-requirement + design-principle + design-feature: 3
+- design-requirement + design-principle: 2
+- design-requirement + design-principle + design-feature: 4
 - meta-requirement: 1
-- meta-requirement + design-principle: 1
+- meta-requirement + design-principle: 2
+- meta-requirement + design-principle + design-feature: 1
+- no associated design knowledge: 1
 
 ## Papers with potential missing explicit categories
 
-- `papers/ambivalence-trust-loyalty`
-- `papers/bemi-marketplace-interfaces`
-- `papers/bond-markets-tokenization-tac`
 - `papers/certified-data-chats-used-cars`
-- `papers/consent-self-management-hie`
 - `papers/cross-org-workflow-objectives`
+- `papers/forgetting-blockchain-gdpr`
 - `papers/nil-marketplace-fair-inclusive`
-- `papers/procurement-is-trilemma`
 - `papers/quality-management-production`
 - `papers/short-end-opportunism-sharing`
 - `papers/trust-enabling-capacity-exchange`
-- `papers/unchaining-social-crowdlending`
 
 ## Per-paper audit
 
@@ -50,45 +50,49 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Features present: no
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
-  - design-principle: 2
+  - design-principle: 3
 - Explicit count statements:
-  - Two design principles: stated 2 design-principle
+  - Three design principles: stated 3 design-principle
 - Potential representation warnings:
   - none
 
 ### From ambivalence to trust: Using blockchain in customer loyalty programs
 
 - Paper ID: `papers/ambivalence-trust-loyalty`
-- Semantic relationships: 0
-- Requirements present: no
-- Principles present: no
+- Semantic relationships: 14
+- Requirements present: yes
+- Principles present: yes
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
   - design-objective: 6
+  - design-requirement: 14
+  - design-principle: 4
 - Explicit count statements:
-  - Six design objectives: stated 6 design-objective
+  - six design objectives: stated 6 design-objective
+  - four design principles: stated 4 design-principle
+  - fourteen design requirements: stated 14 design-requirement
 - Potential representation warnings:
-  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
+  - none
 
 ### Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study
 
 - Paper ID: `papers/bemi-marketplace-interfaces`
-- Semantic relationships: 14
+- Semantic relationships: 26
 - Requirements present: no
 - Principles present: yes
 - Features present: yes
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
-  - design-principle: 6
+  - meta-requirement: 10
+  - design-principle: 8
   - design-feature: 16
 - Explicit count statements:
   - sixteen design features: stated 16 design-feature
-  - six design principles: stated 6 design-principle
-  - Ten meta-requirements: stated 10 meta-requirement
+  - eight design principles: stated 8 design-principle
+  - ten meta-requirements: stated 10 meta-requirement
 - Potential representation warnings:
-  - [explicit-count-conflict] Text states "Ten meta-requirements" (10), but 0 associated meta-requirement concepts are represented.
-  - [mentioned-category-missing] Paper text mentions meta-requirements, but no meta-requirement concept is associated with the paper.
+  - none
 
 ### Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data
 
@@ -112,18 +116,21 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing the future of bond markets: Reducing transaction costs through tokenization
 
 - Paper ID: `papers/bond-markets-tokenization-tac`
-- Semantic relationships: 0
+- Semantic relationships: 14
 - Requirements present: no
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - design-objective: 5
+  - meta-requirement: 7
   - design-principle: 5
 - Explicit count statements:
-  - Five design principles: stated 5 design-principle
+  - five design objectives: stated 5 design-objective
+  - five design principles: stated 5 design-principle
+  - Seven meta-requirements: stated 7 meta-requirement
 - Potential representation warnings:
-  - [mentioned-category-missing] Paper text mentions design objectives, but no design-objective concept is associated with the paper.
-  - [mentioned-category-missing] Paper text mentions meta-requirements, but no meta-requirement concept is associated with the paper.
+  - none
 
 ### Certified data chats for future used car markets
 
@@ -145,18 +152,23 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Blockchain innovation for consent self-management in health information exchanges
 
 - Paper ID: `papers/consent-self-management-hie`
-- Semantic relationships: 0
-- Requirements present: no
+- Semantic relationships: 16
+- Requirements present: yes
 - Principles present: yes
-- Features present: no
+- Features present: yes
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
+  - design-requirement: 5
   - design-principle: 5
+  - design-feature: 5
 - Explicit count statements:
-  - Five design principles: stated 5 design-principle
+  - 5 design features: stated 5 design-feature
+  - five design features: stated 5 design-feature
+  - 5 design principles: stated 5 design-principle
+  - five design principles: stated 5 design-principle
+  - Five design requirements: stated 5 design-requirement
 - Potential representation warnings:
-  - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
-  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
+  - none
 
 ### Using Blockchain to Sustainably Manage Containers in International Shipping
 
@@ -180,11 +192,13 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Requirements present: no
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - design-objective: 8
   - design-principle: 4
 - Explicit count statements:
-  - none detected
+  - eight design objectives: stated 8 design-objective
+  - four design principles: stated 4 design-principle
 - Potential representation warnings:
   - none
 
@@ -197,11 +211,11 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
-  - design-objective: 1
+  - design-objective: 10
 - Explicit count statements:
-  - nine design objectives: stated 9 design-objective
+  - Nine design objectives: stated 9 design-objective
 - Potential representation warnings:
-  - [explicit-count-conflict] Text states "nine design objectives" (9), but 1 associated design-objective concepts are represented.
+  - [explicit-count-conflict] Text states "Nine design objectives" (9), but 10 associated design-objective concepts are represented.
 
 ### Decentralized Procurement Mechanisms for Efficient Logistics Services Mapping - a Design Science Research Approach
 
@@ -221,22 +235,24 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Overcoming the Data Transparency Trade-Off: Designing a Blockchain-Based Delivery Invoice System for the Construction Industry
 
 - Paper ID: `papers/delivery-invoice-transparency`
-- Semantic relationships: 0
+- Semantic relationships: 5
 - Requirements present: no
-- Principles present: no
+- Principles present: yes
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
   - design-objective: 3
+  - design-principle: 3
 - Explicit count statements:
   - Three design objectives: stated 3 design-objective
+  - three design principles: stated 3 design-principle
 - Potential representation warnings:
   - none
 
 ### From Dissonance to Dialogue: A Token-Based Approach to Bridge the Gap Between Manufacturers and Customers
 
 - Paper ID: `papers/dissonance-dialogue-recall`
-- Semantic relationships: 27
+- Semantic relationships: 28
 - Requirements present: yes
 - Principles present: yes
 - Features present: yes
@@ -246,8 +262,11 @@ This offline audit separates format/link validity from semantic coverage. Warnin
   - design-principle: 6
   - design-feature: 8
 - Explicit count statements:
+  - 8 design features: stated 8 design-feature
   - eight design features: stated 8 design-feature
+  - 6 design principles: stated 6 design-principle
   - six design principles: stated 6 design-principle
+  - 5 design requirements: stated 5 design-requirement
   - Five design requirements: stated 5 design-requirement
 - Potential representation warnings:
   - none
@@ -255,7 +274,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Blockchain-based digital rights management systems: Design principles for the music industry
 
 - Paper ID: `papers/drm-music-industry`
-- Semantic relationships: 8
+- Semantic relationships: 9
 - Requirements present: yes
 - Principles present: yes
 - Features present: yes
@@ -276,20 +295,20 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Paper ID: `papers/forgetting-blockchain-gdpr`
 - Semantic relationships: 0
 - Requirements present: no
-- Principles present: yes
+- Principles present: no
 - Features present: no
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
-  - design-principle: 1
+  - none
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
-  - none
+  - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
 
 ### Designing GDPR Compliant Credential Verification Using Blockchain: A Design Science Research Approach
 
 - Paper ID: `papers/gdpr-credential-verification`
-- Semantic relationships: 4
+- Semantic relationships: 5
 - Requirements present: no
 - Principles present: yes
 - Features present: no
@@ -336,15 +355,18 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity
 
 - Paper ID: `papers/kyc-framework-ssi`
-- Semantic relationships: 0
-- Requirements present: no
+- Semantic relationships: 16
+- Requirements present: yes
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - design-objective: 6
+  - design-requirement: 16
   - design-principle: 3
 - Explicit count statements:
-  - none detected
+  - six design objectives: stated 6 design-objective
+  - three design principles: stated 3 design-principle
 - Potential representation warnings:
   - none
 
@@ -357,7 +379,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
-  - design-objective: 1
+  - design-objective: 10
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
@@ -366,12 +388,13 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing
 
 - Paper ID: `papers/matchmaking-additive-manufacturing`
-- Semantic relationships: 0
+- Semantic relationships: 12
 - Requirements present: no
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - meta-requirement: 12
   - design-principle: 12
 - Explicit count statements:
   - 12 design principles: stated 12 design-principle
@@ -431,19 +454,19 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing a blockchain-based information system for procurement processes - Balancing decentralization, scalability, and security while maintaining privacy
 
 - Paper ID: `papers/procurement-is-trilemma`
-- Semantic relationships: 0
+- Semantic relationships: 5
 - Requirements present: no
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - design-objective: 5
   - design-principle: 2
 - Explicit count statements:
   - five design objectives: stated 5 design-objective
-  - Two design principles: stated 2 design-principle
+  - two design principles: stated 2 design-principle
 - Potential representation warnings:
-  - [explicit-count-conflict] Text states "five design objectives" (5), but 0 associated design-objective concepts are represented.
-  - [mentioned-category-missing] Paper text mentions design objectives, but no design-objective concept is associated with the paper.
+  - none
 
 ### Digging for Quality Management in Production Systems: A Solution Space for Blockchain Collaborations
 
@@ -517,7 +540,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Features present: no
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
-  - design-requirement: 1
+  - design-requirement: 14
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
@@ -548,25 +571,27 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
-  - design-objective: 1
+  - design-objective: 17
 - Explicit count statements:
   - seventeen design objectives: stated 17 design-objective
 - Potential representation warnings:
-  - [explicit-count-conflict] Text states "seventeen design objectives" (17), but 1 associated design-objective concepts are represented.
+  - none
 
 ### An Architecture Using Payment Channel Networks for Blockchain-based Wi-Fi Sharing
 
 - Paper ID: `papers/wifi-sharing-payment-channels`
-- Semantic relationships: 0
-- Requirements present: no
+- Semantic relationships: 38
+- Requirements present: yes
 - Principles present: yes
 - Features present: no
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
+  - design-requirement: 10
   - design-principle: 14
 - Explicit count statements:
   - 14 design principles: stated 14 design-principle
   - Fourteen design principles: stated 14 design-principle
+  - 10 design requirements: stated 10 design-requirement
 - Potential representation warnings:
   - none
 
