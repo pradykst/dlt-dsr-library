@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP3 - Trust"
-description: "Ensure the integrity, security, fairness and impartiality of the review system so that reviewers trust that their rewards and identities are protected;"
+description: "Ensure that reviewers' identities are protected in blind review processes and that incentives are allocated properly, since trust in the peer review process is critical for maintaining the credibility of published research."
 resource: "https://doi.org/10.1016/j.dss.2025.114514"
 source_paper: "Blockchain-based token system for incentivizing peer review: A design science approach"
 label: "DP3"
@@ -12,12 +12,12 @@ tags:
   - incentives
   - tokenization
   - trust
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP3: Trust
 
-Ensure the integrity, security, fairness and impartiality of the review system so that reviewers trust that their rewards and identities are protected; immutability and decentralization of blockchain address this trust principle.
+Ensure that reviewers' identities are protected in blind review processes and that incentives are allocated properly, since trust in the peer review process is critical for maintaining the credibility of published research.
 
 ## Source paper
 

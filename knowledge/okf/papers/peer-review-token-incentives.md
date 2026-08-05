@@ -54,8 +54,8 @@ The *output knowledge* of this project is captured as the atomic design-knowledg
 ## Design knowledge
 
 * [Design principle DP1: Motivation-appropriate incentives](../design-knowledge/peer-review-token-incentives-dp1.md) - Provide incentives to reviewers that appeal to their specific motivations, since understanding and leveraging different types of motivation ensures the system effectively encourages participation.
-* [Design principle DP2: Flexibility](../design-knowledge/peer-review-token-incentives-dp2.md) - Support functionality that is customizable to the needs of stakeholders, so that different outlets can motivate reviewers with different reward types (e.g., recognition vs.
-* [Design principle DP3: Trust](../design-knowledge/peer-review-token-incentives-dp3.md) - Ensure the integrity, security, fairness and impartiality of the review system so that reviewers trust that their rewards and identities are protected;
+* [Design principle DP2: Flexibility](../design-knowledge/peer-review-token-incentives-dp2.md) - Support customizable functionality that can accommodate varying incentive schemes depending on the specific needs and preferences of each journal, since flexibility increases the likelihood of securing enough willing reviewers while respecting the diversity in reviewer motivations.
+* [Design principle DP3: Trust](../design-knowledge/peer-review-token-incentives-dp3.md) - Ensure that reviewers' identities are protected in blind review processes and that incentives are allocated properly, since trust in the peer review process is critical for maintaining the credibility of published research.
 
 ## Design features
 
@@ -68,3 +68,4 @@ Concrete, technology-specific realizations of the design principles in this arti
 # Citations
 [1] Chad Anderson, Pratiksha Shrestha, Suman Bhunia, Arthur Carvalho, Younghwa Lee. Blockchain-based token system for incentivizing peer review: A design science approach. Decision Support Systems 197 (2025) 114514. https://doi.org/10.1016/j.dss.2025.114514
 [2] Source document: Blockchain-based token system for incentivizing peer review.pdf
+[3] Source evidence: DP1-DP3 tabled per Gregor et al. schema in Tables 3-5 (article p. 4-5); DF1-DF3 defined in Section 5 and explicitly linked to DP1-DP3 in Fig. 2 and accompanying prose (article p. 5), confirming no design-requirements layer exists in this paper.

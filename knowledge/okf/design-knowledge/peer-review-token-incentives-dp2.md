@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP2 - Flexibility"
-description: "Support functionality that is customizable to the needs of stakeholders, so that different outlets can motivate reviewers with different reward types (e.g., recognition vs."
+description: "Support customizable functionality that can accommodate varying incentive schemes depending on the specific needs and preferences of each journal, since flexibility increases the likelihood of securing enough willing reviewers while respecting the diversity in reviewer motivations."
 resource: "https://doi.org/10.1016/j.dss.2025.114514"
 source_paper: "Blockchain-based token system for incentivizing peer review: A design science approach"
 label: "DP2"
@@ -12,12 +12,12 @@ tags:
   - incentives
   - tokenization
   - trust
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP2: Flexibility
 
-Support functionality that is customizable to the needs of stakeholders, so that different outlets can motivate reviewers with different reward types (e.g., recognition vs. monetary reward), consistent with expectancy theory.
+Support customizable functionality that can accommodate varying incentive schemes depending on the specific needs and preferences of each journal, since flexibility increases the likelihood of securing enough willing reviewers while respecting the diversity in reviewer motivations.
 
 ## Source paper
 
