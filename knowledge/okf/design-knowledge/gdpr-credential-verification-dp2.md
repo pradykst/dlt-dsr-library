@@ -12,7 +12,7 @@ tags:
   - gdpr-privacy
   - credential-verification
   - zero-knowledge
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP2: Smart contracts to automate verification
@@ -26,6 +26,7 @@ This design principle is proposed by [Designing GDPR Compliant Credential Verifi
 ## Addresses
 
 * [Meta-requirement MR2: Automated verification](./gdpr-credential-verification-mr2.md)
+* [Meta-requirement MR3: Easy-to-use, easily integrated interface](./gdpr-credential-verification-mr3.md)
 
 # Citations
 [1] Janne Parkkila, AKM Bahalul Haque, Jaakko Vuolasto, Anastasiia Gurzhii, Sami Hyrynsalmi, Najmul Islam. Designing GDPR Compliant Credential Verification Using Blockchain: A Design Science Research Approach. ECIS 2024 Proceedings. https://aisel.aisnet.org/ecis2024/track16_fintech/track16_fintech/5

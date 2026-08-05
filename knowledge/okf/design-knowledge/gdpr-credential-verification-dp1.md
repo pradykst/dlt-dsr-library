@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP1 - Blockchain for trustworthy multi-party verification"
-description: "Use blockchain to enable trustworthy and transparent user-credential verification with legitimate documents among multiple parties, since immutable entries and multi-party participation ensure only..."
+description: "Use blockchain to enable trustworthy and transparent user-credential verification with legitimate documents among multiple parties, since immutable entries and multi-party participation ensure only authentic certificates are stored."
 resource: "https://aisel.aisnet.org/ecis2024/track16_fintech/track16_fintech/5"
 source_paper: "Designing GDPR Compliant Credential Verification Using Blockchain: A Design Science Research Approach"
 label: "DP1"
@@ -12,7 +12,7 @@ tags:
   - gdpr-privacy
   - credential-verification
   - zero-knowledge
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP1: Blockchain for trustworthy multi-party verification
