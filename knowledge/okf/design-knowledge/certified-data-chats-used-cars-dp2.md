@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP2 - Selective information disclosure"
-description: "Allow negotiating sellers to selectively disclose information to the buyers by moving certified data to the conversation area (e.g., via drag-and-drop), enabling context-individual disclosure manag..."
+description: "Allow negotiating sellers to selectively disclose information to the buyers by moving certified data to the conversation area (e.g., via drag-and-drop), enabling context-individual disclosure management."
 resource: "https://doi.org/10.1007/s12525-024-00725-z"
 source_paper: "Certified data chats for future used car markets"
 label: "DP2"
@@ -12,7 +12,7 @@ tags:
   - data-market
   - negotiation
   - chat
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP2: Selective information disclosure

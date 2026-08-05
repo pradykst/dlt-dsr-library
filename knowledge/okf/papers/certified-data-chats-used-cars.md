@@ -57,7 +57,7 @@ The *output knowledge* of this project is captured as the atomic design-knowledg
 * [Design goal DG2: Simple and seamless interaction](../design-knowledge/certified-data-chats-used-cars-dg2.md) - Enable simple and seamless interaction using the certified data assets.
 * [Design goal DG3: Transparent and manageable disclosure](../design-knowledge/certified-data-chats-used-cars-dg3.md) - Enable transparent and manageable disclosure using the certified data assets.
 * [Design principle DP1: Certified data provision](../design-knowledge/certified-data-chats-used-cars-dp1.md) - Provide certified data to negotiating sellers and buyers in a certified data area, so that both parties can consider the car data credible and trustworthy, increasing market transparency.
-* [Design principle DP2: Selective information disclosure](../design-knowledge/certified-data-chats-used-cars-dp2.md) - Allow negotiating sellers to selectively disclose information to the buyers by moving certified data to the conversation area (e.g., via drag-and-drop), enabling context-individual disclosure manag...
+* [Design principle DP2: Selective information disclosure](../design-knowledge/certified-data-chats-used-cars-dp2.md) - Allow negotiating sellers to selectively disclose information to the buyers by moving certified data to the conversation area (e.g., via drag-and-drop), enabling context-individual disclosure management.
 * [Design principle DP3: Data presentation as overview and within conversation](../design-knowledge/certified-data-chats-used-cars-dp3.md) - Present certified data in used-car negotiations both as an overview and within the conversation, marking certified messages so they are recognized as certified and tamper-proof.
 
 # Citations
