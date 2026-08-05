@@ -23,6 +23,15 @@ HIEs should be able to communicate consent status across HIEs without a central 
 
 This design principle is proposed by [Blockchain innovation for consent self-management in health information exchanges](../papers/consent-self-management-hie.md) (Chad Anderson, Arthur Carvalho, Mala Kaul, Jeffrey W. Merhout, 2023).
 
+## Addresses
+
+* [Design requirement DR5: Interoperability](./consent-self-management-hie-dr5.md)
+
+## Implemented by
+
+* [Design feature DF4: Decentralization](./consent-self-management-hie-df4.md)
+* [Design feature DF5: Distribution](./consent-self-management-hie-df5.md)
+
 # Citations
 [1] Chad Anderson, Arthur Carvalho, Mala Kaul, Jeffrey W. Merhout. Blockchain innovation for consent self-management in health information exchanges. Decision Support Systems 174 (2023) 114021. https://doi.org/10.1016/j.dss.2023.114021
 [2] Source document: Blockchain innovation for consent self-management in health information exchanges.pdf

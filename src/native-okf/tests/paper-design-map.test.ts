@@ -73,14 +73,18 @@ test("principle/feature maps omit empty requirement columns", async () => {
   assert.equal(map.edges.length, 4);
 });
 
-test("a principle-only paper honestly renders one semantic column", async () => {
+test("Consent self-management projects the canonical 5/5/5 semantic map", async () => {
   const map = await buildPaperDesignMap(CONSENT);
   assert.ok(map);
   assert.deepEqual(
     map.columns.map((column) => [column.type, column.nodeIds.length]),
-    [["design-principle", 5]],
+    [
+      ["design-requirement", 5],
+      ["design-principle", 5],
+      ["design-feature", 5],
+    ],
   );
-  assert.equal(map.edges.length, 0);
+  assert.equal(map.edges.length, 16);
 });
 
 test("unknown native types remain columns while ambiguous links stay raw-only", () => {

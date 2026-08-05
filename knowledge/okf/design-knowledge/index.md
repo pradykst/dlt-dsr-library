@@ -75,11 +75,21 @@ Source: [blockchain-iot-sensor-data](../papers/blockchain-iot-sensor-data.md)
 
 Source: [consent-self-management-hie](../papers/consent-self-management-hie.md)
 
+* [Design requirement DR1: Privacy](consent-self-management-hie-dr1.md) - Patient consent self-management must support patients' privacy preferences, since the exposure of protected health information to unauthorized entities can be detrimental to patients and healthcare organizations are federally mandated to secure PHI privacy under HIPAA.
+* [Design requirement DR2: Self-management](consent-self-management-hie-dr2.md) - The solution must support patients' self-management of their own consent data, reflecting patients' rights to notice, access, and consent over the collection, use and disclosure of their personal data.
+* [Design requirement DR3: Trust](consent-self-management-hie-dr3.md) - The solution must build and maintain patient trust in health information exchange by giving patients control over and visibility into their consent relationships, since patient trust is critical to the rights patients have to control the sharing of their protected health information.
+* [Design requirement DR4: Compliance](consent-self-management-hie-dr4.md) - The solution must have the flexibility to comply with the variable body of federal and state regulatory rules governing patient consent for PHI sharing, since healthcare providers must comply with these regulations for the patient data they manage.
+* [Design requirement DR5: Interoperability](consent-self-management-hie-dr5.md) - The solution must be interoperable across the currently fragmented health information exchange infrastructure to enable full self-management of consent, since the range of HIE organizational forms is each designed to support connectivity for only a limited set of entities.
 * [Design principle DP1: Authorization-restricted consent visibility](consent-self-management-hie-dp1.md) - Only HIEs and providers with authorization can view a patient's consent status, maintaining confidentiality.
 * [Design principle DP2: Patient-only consent changes](consent-self-management-hie-dp2.md) - Only the patient can change their consent status, supporting self-management and engendering patient trust.
 * [Design principle DP3: Auditable consent history](consent-self-management-hie-dp3.md) - The history of consent transactions between patients and the HIE must be auditable so that compliance with consent laws can be verified for all transactions.
 * [Design principle DP4: Cross-HIE consent communication without central authority](consent-self-management-hie-dp4.md) - HIEs should be able to communicate consent status across HIEs without a central authority, supporting interoperability.
 * [Design principle DP5: Patient-driven cross-HIE consent updates](consent-self-management-hie-dp5.md) - Enable patients to share changes in their consent status across HIEs.
+* [Design feature DF1: Encryption](consent-self-management-hie-df1.md) - Blockchain wallets store and seamlessly use private keys to digitally sign blockchain transactions, providing encryption for consent transactions.
+* [Design feature DF2: Key management](consent-self-management-hie-df2.md) - Blockchain wallets manage the cryptographic keys that authenticate users and facilitate the creation of blockchain transactions.
+* [Design feature DF3: Immutability](consent-self-management-hie-df3.md) - Consent transactions are never erased; a previous transaction remains, and any change is added as a new transaction to the append-only blockchain data structure.
+* [Design feature DF4: Decentralization](consent-self-management-hie-df4.md) - A user can connect and submit a consent transaction to a single HIE without the need for a central, trusted entity to mediate the exchange.
+* [Design feature DF5: Distribution](consent-self-management-hie-df5.md) - A consent transaction submitted to a single HIE is shared with all blockchain network nodes (HIEs), eventually becoming available to all HIEs.
 
 ## Blockchain to Rule the Waves - Nascent Design Principles for Reducing Risk and Uncertainty in Decentralized Environments
 

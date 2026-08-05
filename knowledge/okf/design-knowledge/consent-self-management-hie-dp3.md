@@ -23,6 +23,15 @@ The history of consent transactions between patients and the HIE must be auditab
 
 This design principle is proposed by [Blockchain innovation for consent self-management in health information exchanges](../papers/consent-self-management-hie.md) (Chad Anderson, Arthur Carvalho, Mala Kaul, Jeffrey W. Merhout, 2023).
 
+## Addresses
+
+* [Design requirement DR3: Trust](./consent-self-management-hie-dr3.md)
+* [Design requirement DR4: Compliance](./consent-self-management-hie-dr4.md)
+
+## Implemented by
+
+* [Design feature DF3: Immutability](./consent-self-management-hie-df3.md)
+
 # Citations
 [1] Chad Anderson, Arthur Carvalho, Mala Kaul, Jeffrey W. Merhout. Blockchain innovation for consent self-management in health information exchanges. Decision Support Systems 174 (2023) 114021. https://doi.org/10.1016/j.dss.2023.114021
 [2] Source document: Blockchain innovation for consent self-management in health information exchanges.pdf

@@ -47,9 +47,16 @@ test("coverage audit includes all 34 papers and canonical type totals", async ()
 test("known text/category mismatches are audit warnings, not invented concepts", async () => {
   const report = await buildCoverageAudit();
 
-  const consent = warningMessages(report, "papers/consent-self-management-hie");
-  assert.match(consent, /design requirements/iu);
-  assert.match(consent, /design features/iu);
+  const consent = report.papers.find(
+    (paper) => paper.paperId === "papers/consent-self-management-hie",
+  );
+  assert.ok(consent);
+  assert.equal(
+    consent.warnings.some((warning) =>
+      /design requirements|design features/iu.test(warning.message)
+    ),
+    false,
+  );
 
   const trust = warningMessages(report, "papers/trust-enabling-capacity-exchange");
   assert.match(trust, /meta-requirements/iu);

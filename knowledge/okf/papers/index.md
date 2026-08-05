@@ -43,7 +43,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 ## Healthcare, IoT & sensor data
 
 * [Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data](blockchain-iot-sensor-data.md) - Mathieu Chanson et al., 2019; 8 design-knowledge item(s).
-* [Blockchain innovation for consent self-management in health information exchanges](consent-self-management-hie.md) - Chad Anderson et al., 2023; 5 design-knowledge item(s).
+* [Blockchain innovation for consent self-management in health information exchanges](consent-self-management-hie.md) - Chad Anderson et al., 2023; 15 design-knowledge item(s).
 
 ## Trust, incentives & other domains
 

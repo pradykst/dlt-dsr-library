@@ -68,4 +68,4 @@ Concrete, technology-specific realizations of the design principles in this arti
 # Citations
 [1] Chad Anderson, Pratiksha Shrestha, Suman Bhunia, Arthur Carvalho, Younghwa Lee. Blockchain-based token system for incentivizing peer review: A design science approach. Decision Support Systems 197 (2025) 114514. https://doi.org/10.1016/j.dss.2025.114514
 [2] Source document: Blockchain-based token system for incentivizing peer review.pdf
-[3] Source evidence: DP1-DP3 tabled per Gregor et al. schema in Tables 3-5 (article p. 4-5); DF1-DF3 defined in Section 5 and explicitly linked to DP1-DP3 in Fig. 2 and accompanying prose (article p. 5), confirming no design-requirements layer exists in this paper.
+[3] Source evidence: DP1-DP3 tabled per Gregor et al. schema in Tables 3-5 (article p. 4-5); DF1-DF3 defined in Section 5 and explicitly linked to DP1-DP3 in Fig. 2 and accompanying prose (article p. 5); the paper defines no separate class of formal precursor requirements to its design principles.
