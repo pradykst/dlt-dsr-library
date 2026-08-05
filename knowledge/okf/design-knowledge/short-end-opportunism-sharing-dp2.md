@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP2 - Nonreversible shared computation"
-description: "Utilize nonreversible functions that are reliably and independently executed to compute the shared information from the confidentially stored sensitive data, allowing predefinition of what informat..."
+description: "Utilize nonreversible functions that are reliably and independently executed to compute the shared information from the confidentially stored sensitive data, allowing predefinition of what information is shared."
 resource: "https://doi.org/10.1287/isre.2022.0065"
 source_paper: "And No One Gets the Short End of the Stick: A Blockchain-Based Approach to Solving the Two-Sided Opportunism Problem in Interorganizational Information Sharing"
 label: "DP2"
@@ -12,7 +12,7 @@ tags:
   - information-sharing
   - trust
   - manufacturing
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP2: Nonreversible shared computation

@@ -1,7 +1,7 @@
 ---
 type: design-principle
 title: "DP1 - Confidential storage with proof of integrity"
-description: "Store the sensitive data in a manipulation-resistant storage exclusively with the information provider and instantly create a manipulation-resistant proof of integrity for the information recipient..."
+description: "Store the sensitive data in a manipulation-resistant storage exclusively with the information provider and instantly create a manipulation-resistant proof of integrity for the information recipient, so that neither manipulation nor leakage occurs."
 resource: "https://doi.org/10.1287/isre.2022.0065"
 source_paper: "And No One Gets the Short End of the Stick: A Blockchain-Based Approach to Solving the Two-Sided Opportunism Problem in Interorganizational Information Sharing"
 label: "DP1"
@@ -12,7 +12,7 @@ tags:
   - information-sharing
   - trust
   - manufacturing
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP1: Confidential storage with proof of integrity
