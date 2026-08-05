@@ -38,7 +38,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 * [Designing a fair and inclusive digital asset-based name-image-likeness marketplace](nil-marketplace-fair-inclusive.md) - Arthur Carvalho et al., 2026; 3 design-knowledge item(s).
 * [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](bemi-marketplace-interfaces.md) - Tobias Koelbel et al., 2023; 6 design-knowledge item(s).
 * [Meta-requirements for the Design of a Blockchain-enabled Multi-sided Platform for Sustainability and Circular Economy](msp-sustainability-circular.md) - Hanna Buyssens et al., 2024; 6 design-knowledge item(s).
-* [Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing](matchmaking-additive-manufacturing.md) - Tobias Koelbel et al., 2023; 12 design-knowledge item(s).
+* [Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing](matchmaking-additive-manufacturing.md) - Tobias Koelbel et al., 2023; 24 design-knowledge item(s).
 
 ## Healthcare, IoT & sensor data
 

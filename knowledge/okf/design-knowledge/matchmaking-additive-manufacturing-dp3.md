@@ -23,6 +23,10 @@ Design BEMs to prevent unauthorized access to sensitive business data and store 
 
 This design principle is proposed by [Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing](../papers/matchmaking-additive-manufacturing.md) (Tobias Koelbel, Marcel Linkenheil, 2023).
 
+## Addresses
+
+* [Meta-requirement MR3: Data Security & Integrity](./matchmaking-additive-manufacturing-mr3.md)
+
 # Citations
 [1] Tobias Koelbel, Marcel Linkenheil. Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing. HICSS 56 (2023). https://hdl.handle.net/10125/103293
 [2] Source document: Requirements and Design Principles for Blockchain-enabled matchmaking marketplaces.pdf

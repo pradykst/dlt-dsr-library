@@ -23,6 +23,10 @@ Design BEMs with ambidextrous user interfaces (manual HMI and automated M2M) and
 
 This design principle is proposed by [Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing](../papers/matchmaking-additive-manufacturing.md) (Tobias Koelbel, Marcel Linkenheil, 2023).
 
+## Addresses
+
+* [Meta-requirement MR7: User Interface](./matchmaking-additive-manufacturing-mr7.md)
+
 # Citations
 [1] Tobias Koelbel, Marcel Linkenheil. Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing. HICSS 56 (2023). https://hdl.handle.net/10125/103293
 [2] Source document: Requirements and Design Principles for Blockchain-enabled matchmaking marketplaces.pdf

@@ -21,7 +21,7 @@ const EXPECTED_TYPE_COUNTS = {
   "design-objective": 78,
   "design-principle": 122,
   "design-requirement": 58,
-  "meta-requirement": 17,
+  "meta-requirement": 29,
   paper: 34,
   reference: 2,
 } as const;
@@ -52,12 +52,12 @@ test("canonical bundle validation reports exact fixture totals", async () => {
 
   assert.equal(report.bundleRoot, resolve(process.cwd(), "knowledge/okf"));
   assert.equal(report.okfVersion, "0.1");
-  assert.equal(report.markdownFileCount, 360);
+  assert.equal(report.markdownFileCount, 372);
   assert.equal(report.reservedFileCount, 4);
-  assert.equal(report.conceptCount, 356);
+  assert.equal(report.conceptCount, 368);
   assert.deepEqual(report.countsByType, EXPECTED_TYPE_COUNTS);
   assert.equal(report.paperCount, 34);
-  assert.equal(report.internalLinkCount, 870);
+  assert.equal(report.internalLinkCount, 906);
   assert.equal(report.externalLinkCount, 0);
   assert.equal(report.brokenLinkWarningCount, 0);
   assert.equal(report.fatalValidationErrorCount, 0);
@@ -72,12 +72,12 @@ test("validation formatting includes every required concise metric", async () =>
   for (const expectedLine of [
     `Bundle root: ${resolve(process.cwd(), "knowledge/okf")}`,
     "OKF version: 0.1",
-    "Markdown files: 360",
+    "Markdown files: 372",
     "Reserved files: 4",
-    "Concepts: 356",
+    "Concepts: 368",
     "  paper: 34",
     "Papers: 34",
-    "Internal links: 870",
+    "Internal links: 906",
     "External links: 0",
     "Broken-link warnings: 0",
     "Fatal validation errors: 0",
