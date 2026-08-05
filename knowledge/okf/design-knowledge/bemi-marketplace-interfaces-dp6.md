@@ -23,6 +23,10 @@ Design BEMIs with external storage connectivity to mitigate blockchain scalabili
 
 This design principle is proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Addresses
+
+* [Meta-requirement MR8: Foster selective data transmission](./bemi-marketplace-interfaces-mr8.md)
+
 ## Implemented by
 
 * [Design feature DF12: Peer-to-peer database linking (IPFS)](./bemi-marketplace-interfaces-df12.md)

@@ -23,6 +23,10 @@ Design BEMIs that prioritize simplicity and intuitiveness while balancing trustw
 
 This design principle is proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Addresses
+
+* [Meta-requirement MR1: Balance simplicity and trustworthiness](./bemi-marketplace-interfaces-mr1.md)
+
 ## Implemented by
 
 * [Design feature DF1: Landing page](./bemi-marketplace-interfaces-df1.md)

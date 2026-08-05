@@ -23,6 +23,10 @@ Design BEMIs with real-time input plausibility checks to reduce the risk of erro
 
 This design principle is proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Addresses
+
+* [Meta-requirement MR7: Implement input validation](./bemi-marketplace-interfaces-mr7.md)
+
 ## Implemented by
 
 * [Design feature DF10: Error notification](./bemi-marketplace-interfaces-df10.md)

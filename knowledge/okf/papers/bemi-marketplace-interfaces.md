@@ -1,7 +1,7 @@
 ---
 type: paper
 title: "Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study"
-description: "Grounded in representation theory, the paper derives ten meta-requirements and six design principles for blockchain-enabled marketplace interfaces that balance simplicity and trustworthiness, foster learning, provide interoperable identity/reputation, support domain-specific visualizations, add plausibility checks, and enable privacy-preserving external storage."
+description: "Grounded in the theory of effective use, the paper derives ten meta-requirements and eight design principles for blockchain-enabled marketplace interfaces that balance simplicity and trustworthiness, foster learning, provide interoperable identity/reputation, support domain-specific visualizations, add plausibility checks, enable privacy-preserving external storage, offer customized dashboards, and reflect industry-specific processes."
 resource: "https://aisel.aisnet.org/icis2023/blockchain/blockchain/1"
 authors: "Tobias Koelbel, Ahmed Zekri, Christof Weinhardt"
 year: 2023
@@ -28,7 +28,7 @@ timestamp: '2026-07-16T00:00:00+00:00'
 
 ## Summary
 
-Grounded in representation theory, the paper derives ten meta-requirements and six design principles for blockchain-enabled marketplace interfaces that balance simplicity and trustworthiness, foster learning, provide interoperable identity/reputation, support domain-specific visualizations, add plausibility checks, and enable privacy-preserving external storage.
+Grounded in the theory of effective use, the paper derives ten meta-requirements and eight design principles for blockchain-enabled marketplace interfaces that balance simplicity and trustworthiness, foster learning, provide interoperable identity/reputation, support domain-specific visualizations, add plausibility checks, enable privacy-preserving external storage, offer customized dashboards, and reflect industry-specific processes.
 
 ## Artifact
 
@@ -46,19 +46,31 @@ The six core dimensions of this DSR project, following the [DSR grid](../about-t
 * **Input knowledge.** The Theory of Effective Use (Burton-Jones & Grange) as the overarching kernel theory; affordances (Gibson); representation theory; interface-design literature.
 * **Research process.** Design science research: a systematic literature review and expert interviews to synthesize meta-requirements, then instantiation (Open3D) and evaluation.
 * **Key concepts.** Blockchain, B2B, interface, design science research, theory of effective use.
-* **Solution description.** A blockchain-enabled marketplace interface (Open3D) realizing six design principles through sixteen design features. Solution-space representation: Instantiation (Open3D) plus a design theory (meta-requirements, principles, features).
-* **Output knowledge.** Ten meta-requirements, six design principles and sixteen design features for blockchain marketplace interfaces.
+* **Solution description.** A blockchain-enabled marketplace interface (Open3D) realizing eight design principles through sixteen design features. Solution-space representation: Instantiation (Open3D) plus a design theory (meta-requirements, principles, features).
+* **Output knowledge.** Ten meta-requirements, eight design principles and sixteen design features for blockchain marketplace interfaces.
 
 The *output knowledge* of this project is captured as the atomic design-knowledge concepts listed below.
 
 ## Design knowledge
 
+* [Meta-requirement MR1: Balance simplicity and trustworthiness](../design-knowledge/bemi-marketplace-interfaces-mr1.md) - BEMI interfaces must balance simplicity and trustworthiness, ensuring usability for both tech-savvy and non-tech-savvy individuals despite the interface's overall technical complexity.
+* [Meta-requirement MR2: Provide audience-specific documentation](../design-knowledge/bemi-marketplace-interfaces-mr2.md) - BEMIs should support users' learning by providing concise and audience-specific explanations of complex concepts.
+* [Meta-requirement MR3: Ensure user-centric identity management](../design-knowledge/bemi-marketplace-interfaces-mr3.md) - Identities in a BEMI should be designed for interoperability, and be easily accessible and manageable by users across different platforms.
+* [Meta-requirement MR4: Fit transparent and interoperable reputation](../design-knowledge/bemi-marketplace-interfaces-mr4.md) - A fair, transparent and interoperable reputation system should be implemented, differentiating between actor-specific trust and trust in marketplace processes.
+* [Meta-requirement MR5: Set up adjustable visualizations](../design-knowledge/bemi-marketplace-interfaces-mr5.md) - Complex and multidimensional concepts should be operationally divided into smaller parts with adjustable visualizations, allowing users to start with one particular perspective and successively take additional perspectives into account.
+* [Meta-requirement MR6: Offer product and status representation](../design-knowledge/bemi-marketplace-interfaces-mr6.md) - BEMIs should allow for consistent graphical representation of service operations (i.e., orders) and available hardware resources (i.e., 3D printers).
+* [Meta-requirement MR7: Implement input validation](../design-knowledge/bemi-marketplace-interfaces-mr7.md) - Functions should be implemented that instantly validate inputs and alert users to any errors.
+* [Meta-requirement MR8: Foster selective data transmission](../design-knowledge/bemi-marketplace-interfaces-mr8.md) - BEMIs must incorporate functionalities that allow for selective data transmission to provide a secure and trustworthy environment while safeguarding the privacy and confidentiality of sensitive information.
+* [Meta-requirement MR9: Enable customized dashboards](../design-knowledge/bemi-marketplace-interfaces-mr9.md) - BEMIs must provide tabular overviews of all user-specific information in dashboards that must be specialized to supply-side and demand-side market participants.
+* [Meta-requirement MR10: Allow for domain-specific information](../design-knowledge/bemi-marketplace-interfaces-mr10.md) - BEMIs should implement two domain-specific functions: a direct communication channel between buyers and sellers, and the ability for demanders to reserve suppliers' manufacturing capacities.
 * [Design principle DP1: Prioritize simplicity while balancing trustworthiness](../design-knowledge/bemi-marketplace-interfaces-dp1.md) - Design BEMIs that prioritize simplicity and intuitiveness while balancing trustworthiness and usability to ensure a user experience that resembles traditional marketplaces.
 * [Design principle DP2: Support learning and engagement via documentation](../design-knowledge/bemi-marketplace-interfaces-dp2.md) - Design BEMIs that support users' learning and engagement by providing comprehensive documentation to foster trust by transparency and stimulate innovation in decentralized communities.
 * [Design principle DP3: Interoperable identity and reputation infrastructure](../design-knowledge/bemi-marketplace-interfaces-dp3.md) - Design BEMIs with an interoperable identity management and reputation infrastructure to increase trust between transaction partners and enable user empowerment with sovereign authentication methods.
 * [Design principle DP4: Domain-specific graphical representations](../design-knowledge/bemi-marketplace-interfaces-dp4.md) - Design BEMIs with graphical representations and functions for CAM-specific perspectives so that users can seamlessly navigate multidimensionality and incorporate stakeholders' points of view.
 * [Design principle DP5: Real-time plausibility checks and time-limited corrections](../design-knowledge/bemi-marketplace-interfaces-dp5.md) - Design BEMIs with real-time input plausibility checks to reduce the risk of errors and allow for time-limited corrections, given the irreversibility of finalized transactions.
 * [Design principle DP6: External storage connectivity for privacy and scalability](../design-knowledge/bemi-marketplace-interfaces-dp6.md) - Design BEMIs with external storage connectivity to mitigate blockchain scalability issues and enable privacy-preserving data storage.
+* [Design principle DP7: User-specific dashboards for customized KPI reporting](../design-knowledge/bemi-marketplace-interfaces-dp7.md) - Design BEMIs with user-specific dashboards that enable customized information and reports on essential KPIs across variable levels of granularity.
+* [Design principle DP8: Industry-specific processes for actionable decision-making](../design-knowledge/bemi-marketplace-interfaces-dp8.md) - Design BEMIs that reflect industry-specific processes to guide users with actionable insights that facilitate decision making.
 
 ## Design features
 
@@ -84,3 +96,4 @@ Concrete, technology-specific realizations of the design principles in this arti
 # Citations
 [1] Tobias Koelbel, Ahmed Zekri, Christof Weinhardt. Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study. ICIS 2023 Proceedings. https://aisel.aisnet.org/icis2023/blockchain/blockchain/1
 [2] Source document: Developing Blockchain-enabled Marketplace Interfaces - A Design Science Research Study.pdf
+[3] Source evidence: p. 6-8 (the ten formally coded meta-requirements MR1-MR10, each introduced inline alongside its governing design principle) and Figure 2 (p. 10, "Mapping of Meta-Requirements, Design Principles and Design Features", explicitly grouping MR1-MR4 under Transparent Interaction, MR5-MR8 under Representation Fidelity, and MR9-MR10 under Informed Action, with arrows to DP1-DP8 and onward to DF1-DF16). The corpus previously represented only DP1-DP6, omitting DP7 and DP8 (p. 8, "we argue implementing our seventh DP7" and "we formulate our last DP as follows - DP8") and all ten meta-requirements; DF13/DF14 were also misattributed to DP4 instead of DP7, and DF15/DF16 lacked any Implements relationship, both corrected per Figure 2's explicit arrows.

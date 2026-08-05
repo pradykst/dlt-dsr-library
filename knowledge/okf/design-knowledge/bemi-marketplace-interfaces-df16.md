@@ -23,6 +23,10 @@ A 'Reserve' button letting users reserve available capacity in the marketplace.
 
 This design feature is a technology-specific realization proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Implements
+
+* [Design principle DP8: Industry-specific processes for actionable decision-making](./bemi-marketplace-interfaces-dp8.md)
+
 # Citations
 [1] Tobias Koelbel, Ahmed Zekri, Christof Weinhardt. Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study. ICIS 2023 Proceedings. https://aisel.aisnet.org/icis2023/blockchain/blockchain/1
 [2] Source document: Developing Blockchain-enabled Marketplace Interfaces - A Design Science Research Study.pdf

@@ -23,13 +23,16 @@ Design BEMIs with graphical representations and functions for CAM-specific persp
 
 This design principle is proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Addresses
+
+* [Meta-requirement MR5: Set up adjustable visualizations](./bemi-marketplace-interfaces-mr5.md)
+* [Meta-requirement MR6: Offer product and status representation](./bemi-marketplace-interfaces-mr6.md)
+
 ## Implemented by
 
 * [Design feature DF7: Role-specific dashboards](./bemi-marketplace-interfaces-df7.md)
 * [Design feature DF8: Interactive dashboard features](./bemi-marketplace-interfaces-df8.md)
 * [Design feature DF9: Visual dashboard features](./bemi-marketplace-interfaces-df9.md)
-* [Design feature DF13: Customized and trusted view](./bemi-marketplace-interfaces-df13.md)
-* [Design feature DF14: Transaction history](./bemi-marketplace-interfaces-df14.md)
 
 # Citations
 [1] Tobias Koelbel, Ahmed Zekri, Christof Weinhardt. Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study. ICIS 2023 Proceedings. https://aisel.aisnet.org/icis2023/blockchain/blockchain/1

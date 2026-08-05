@@ -25,7 +25,7 @@ This design feature is a technology-specific realization proposed by [Developing
 
 ## Implements
 
-* [Design principle DP4: Domain-specific graphical representations](./bemi-marketplace-interfaces-dp4.md)
+* [Design principle DP7: User-specific dashboards for customized KPI reporting](./bemi-marketplace-interfaces-dp7.md)
 
 # Citations
 [1] Tobias Koelbel, Ahmed Zekri, Christof Weinhardt. Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study. ICIS 2023 Proceedings. https://aisel.aisnet.org/icis2023/blockchain/blockchain/1

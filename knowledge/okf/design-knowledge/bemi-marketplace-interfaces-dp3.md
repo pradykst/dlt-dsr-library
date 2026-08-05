@@ -23,6 +23,11 @@ Design BEMIs with an interoperable identity management and reputation infrastruc
 
 This design principle is proposed by [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](../papers/bemi-marketplace-interfaces.md) (Tobias Koelbel, Ahmed Zekri, Christof Weinhardt, 2023).
 
+## Addresses
+
+* [Meta-requirement MR3: Ensure user-centric identity management](./bemi-marketplace-interfaces-mr3.md)
+* [Meta-requirement MR4: Fit transparent and interoperable reputation](./bemi-marketplace-interfaces-mr4.md)
+
 ## Implemented by
 
 * [Design feature DF5: Connect Wallet / SSI identity](./bemi-marketplace-interfaces-df5.md)
