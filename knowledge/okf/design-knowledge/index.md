@@ -194,8 +194,30 @@ Source: [nil-marketplace-fair-inclusive](../papers/nil-marketplace-fair-inclusiv
 
 Source: [kyc-framework-ssi](../papers/kyc-framework-ssi.md)
 
-* [Design principle DP1: Utilize blockchain only for public data](kyc-framework-ssi-dp1.md) - Use blockchain in SSI processes only for public data:
-* [Design principle DP2: Anticipate an ecosystem of various ledgers](kyc-framework-ssi-dp2.md) - Do not assume a single shared ledger;
+* [Design objective Objective 1: Efficiency](kyc-framework-ssi-do1.md) - Three requirements had to be satisfied: end-to-end digital processing of relevant documents, automation of manual processes, and standardized exchange of eKYC documents.
+* [Design objective Objective 2: Regulatory compliance](kyc-framework-ssi-do2.md) - The Money Laundering Act (MLA), GDPR, and eIDAS are particularly relevant regulations for a digital KYC process.
+* [Design objective Objective 3: Decentralization](kyc-framework-ssi-do3.md) - A viable solution must avoid central storage of customer data and prevent lock-in effects that could result in the aggregation of market power.
+* [Design objective Objective 4: Trust](kyc-framework-ssi-do4.md) - Requires acceptance of KYC documents attested by other banks, validity checks, and authenticity checks.
+* [Design objective Objective 5: Privacy](kyc-framework-ssi-do5.md) - Requires compliance with the need to know principle and data minimization.
+* [Design objective Objective 6: User experience](kyc-framework-ssi-do6.md) - Requires low complexity, availability of different user interfaces, and backup, recovery, and support.
+* [Design requirement R1.1: End-to-end digital processing of relevant documents](kyc-framework-ssi-r1-1.md) - A prerequisite for automating process steps and reducing friction.
+* [Design requirement R1.2: Automation of manual processes](kyc-framework-ssi-r1-2.md) - Many current validation steps are conducted manually and should be automated.
+* [Design requirement R1.3: Standardized exchange of eKYC documents](kyc-framework-ssi-r1-3.md) - Crucial for efficient integration of eKYC checks conducted at other institutions.
+* [Design requirement R2.1: Money Laundering Act (MLA)](kyc-framework-ssi-r2-1.md) - Requirements regarding customer identification, record storage, and risk documentation.
+* [Design requirement R2.2: GDPR](kyc-framework-ssi-r2-2.md) - Requirements including privacy by design, right to erasure, purpose limitation, and data minimization.
+* [Design requirement R2.3: eIDAS](kyc-framework-ssi-r2-3.md) - Requirements on electronic means of identification, security levels, and cross-border interoperability.
+* [Design requirement R3.1: Avoid central storage of customer data](kyc-framework-ssi-r3-1.md) - A viable eKYC solution must avoid central storage of customer data to prevent data breaches.
+* [Design requirement R3.2: Prevent lock-in effects](kyc-framework-ssi-r3-2.md) - The system must be constructed to prevent lock-in effects that aggregate market power.
+* [Design requirement R4.1: Acceptance of KYC documents attested by other banks](kyc-framework-ssi-r4-1.md) - Required to make eKYC documents reusable across banks.
+* [Design requirement R4.2: Validity checks](kyc-framework-ssi-r4-2.md) - Documents must be tamper-proof, so validity checks must be feasible.
+* [Design requirement R4.3: Authenticity checks](kyc-framework-ssi-r4-3.md) - The customer's identity and connection to the documents must have a high level of assurance.
+* [Design requirement R5.1: Need to know principle](kyc-framework-ssi-r5-1.md) - Only customers and entities relevant to the KYC process must have access to personal data.
+* [Design requirement R5.2: Data minimization](kyc-framework-ssi-r5-2.md) - Parties and data exchanged should be restricted to what is necessary.
+* [Design requirement R6.1: Low complexity](kyc-framework-ssi-r6-1.md) - The eKYC process must be fast and simple for the customer.
+* [Design requirement R6.2: Availability of different user interfaces](kyc-framework-ssi-r6-2.md) - The variety of devices customers use must be respected.
+* [Design requirement R6.3: Backup, recovery, and support](kyc-framework-ssi-r6-3.md) - Exception handling is needed if a device storing customer data is lost or stolen.
+* [Design principle DP1: Utilize blockchain only for public data](kyc-framework-ssi-dp1.md) - Use blockchain in SSI processes only for public data: organizations should repeatedly request and verify attributes through bilateral communication channels and read from, rather than write to, the ledger.
+* [Design principle DP2: Anticipate an ecosystem of various ledgers](kyc-framework-ssi-dp2.md) - Do not assume a single shared ledger; anticipate an ecosystem of various distributed ledgers.
 * [Design principle DP3: Enable decentralization at the edge](kyc-framework-ssi-dp3.md) - Ensure that users can store their verifiable credentials on an infrastructure of their choice, supporting user autonomy and decentralization at the edge of the SSI architecture.
 
 ## Designing GDPR Compliant Credential Verification Using Blockchain: A Design Science Research Approach

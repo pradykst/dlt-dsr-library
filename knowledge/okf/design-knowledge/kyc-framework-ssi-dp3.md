@@ -12,7 +12,7 @@ tags:
   - kyc
   - banking
   - verifiable-credentials
-timestamp: '2026-07-16T00:00:00+00:00'
+timestamp: '2026-08-05T00:00:00+00:00'
 ---
 
 # Design principle DP3: Enable decentralization at the edge
