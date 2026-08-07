@@ -5,8 +5,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Validity boundaries
 
 - OKF version: 0.1
-- Markdown files: 404
-- Concepts: 400
+- Markdown files: 442
+- Concepts: 438
 - Papers: 34
 - Native format valid: yes (0 fatal errors)
 - Internal links valid: yes (0 broken-link warnings)
@@ -19,14 +19,14 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - design-objective + design-principle: 3
 - design-objective + design-requirement + design-principle: 2
 - design-objective + meta-requirement + design-principle: 1
-- design-principle: 9
-- design-principle + design-feature: 2
+- design-principle: 8
+- design-principle + design-feature: 1
 - design-requirement: 1
 - design-requirement + design-principle: 2
-- design-requirement + design-principle + design-feature: 4
+- design-requirement + design-principle + design-feature: 5
 - meta-requirement: 1
 - meta-requirement + design-principle: 2
-- meta-requirement + design-principle + design-feature: 1
+- meta-requirement + design-principle + design-feature: 2
 - no associated design knowledge: 1
 
 ## Papers with potential missing explicit categories
@@ -34,10 +34,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - `papers/certified-data-chats-used-cars`
 - `papers/cross-org-workflow-objectives`
 - `papers/forgetting-blockchain-gdpr`
-- `papers/nil-marketplace-fair-inclusive`
 - `papers/quality-management-production`
 - `papers/short-end-opportunism-sharing`
-- `papers/trust-enabling-capacity-exchange`
 
 ## Per-paper audit
 
@@ -420,19 +418,21 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing a fair and inclusive digital asset-based name-image-likeness marketplace
 
 - Paper ID: `papers/nil-marketplace-fair-inclusive`
-- Semantic relationships: 3
-- Requirements present: no
+- Semantic relationships: 8
+- Requirements present: yes
 - Principles present: yes
 - Features present: yes
 - Objectives, goals, or meta-requirements present: no
 - Native concept counts:
+  - design-requirement: 5
   - design-principle: 3
   - design-feature: 2
 - Explicit count statements:
   - two design features: stated 2 design-feature
-  - Three design principles: stated 3 design-principle
+  - three design principles: stated 3 design-principle
+  - Five design requirements: stated 5 design-requirement
 - Potential representation warnings:
-  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
+  - none
 
 ### Blockchain-based token system for incentivizing peer review: A design science approach
 
@@ -549,18 +549,21 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity
 
 - Paper ID: `papers/trust-enabling-capacity-exchange`
-- Semantic relationships: 0
+- Semantic relationships: 14
 - Requirements present: no
 - Principles present: yes
-- Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Features present: yes
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - meta-requirement: 19
   - design-principle: 6
+  - design-feature: 14
 - Explicit count statements:
-  - Six design principles: stated 6 design-principle
+  - 14 design features: stated 14 design-feature
+  - six design principles: stated 6 design-principle
+  - 19 meta-requirements: stated 19 meta-requirement
 - Potential representation warnings:
-  - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
-  - [mentioned-category-missing] Paper text mentions meta-requirements, but no meta-requirement concept is associated with the paper.
+  - none
 
 ### Unchaining Social Businesses - Blockchain as the Basic Technology of a Crowdlending Platform
 
