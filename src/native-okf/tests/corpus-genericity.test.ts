@@ -67,10 +67,15 @@ const CATEGORY_SPECS: readonly CategorySpec[] = [
 ];
 
 const REQUIRED_STRUCTURES = new Set([
+  "",
   "design-feature+design-principle+design-requirement",
+  "design-feature+design-principle+meta-requirement",
   "design-feature+design-principle",
   "design-principle",
   "design-objective",
+  "design-objective+design-principle",
+  "design-objective+design-principle+design-requirement",
+  "design-objective+design-principle+meta-requirement",
   "design-goal+design-principle",
   "design-requirement",
   "design-principle+design-requirement",
@@ -440,14 +445,6 @@ test("the dynamic structural-diversity matrix covers every repository shape with
       .filter((candidate) => candidate.structure === structure)
       .sort((left, right) => right.associated.length - left.associated.length)[0];
     assert.ok(row, structure);
-    const represented = CATEGORY_SPECS.find((spec) => (row.counts.get(spec.type) ?? 0) > 0)!;
-    const absent = CATEGORY_SPECS.find((spec) => (row.counts.get(spec.type) ?? 0) === 0);
-    const { retrieval } = await resolveRetrieval(categoryQuestion(row, represented));
-    const requestedIds = selectedFor(row, represented).map((concept) => concept.id);
-    assert.deepEqual(
-      retrieval.finalConcepts.slice(0, requestedIds.length).map((concept) => concept.conceptId),
-      requestedIds,
-    );
     const semanticMap = buildPaperDesignMapFromBundle((await corpusFixture).bundle, row.paper);
     const storedMap = await buildStoredPaperDesignMap(row.paper.id);
     assert.ok(storedMap, row.title);
@@ -455,6 +452,24 @@ test("the dynamic structural-diversity matrix covers every repository shape with
     assert.equal(storedMap.edges.length, semanticMap.edges.length, row.title);
     assert.ok(storedMap.nodes.every((node) => node.provenance === "stored" && node.synthesis === false));
     assert.ok(storedMap.edges.every((edge) => edge.provenance === "stored"));
+
+    const represented = CATEGORY_SPECS.find((spec) => (row.counts.get(spec.type) ?? 0) > 0);
+    if (!represented) {
+      // A paper with zero linked design-knowledge concepts is a valid
+      // repository shape: its stored map honestly renders zero nodes and
+      // zero edges rather than fabricating a synthetic node.
+      assert.equal(storedMap.nodes.length, 0, row.title);
+      assert.equal(storedMap.edges.length, 0, row.title);
+      assert.equal(semanticMap.columns.length, 0, row.title);
+      continue;
+    }
+    const absent = CATEGORY_SPECS.find((spec) => (row.counts.get(spec.type) ?? 0) === 0);
+    const { retrieval } = await resolveRetrieval(categoryQuestion(row, represented));
+    const requestedIds = selectedFor(row, represented).map((concept) => concept.id);
+    assert.deepEqual(
+      retrieval.finalConcepts.slice(0, requestedIds.length).map((concept) => concept.conceptId),
+      requestedIds,
+    );
     if (absent) {
       assert.ok(!semanticMap.columns.some((column) => column.type === absent.type), `${row.title}: ${absent.type}`);
     }

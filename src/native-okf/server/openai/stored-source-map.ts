@@ -244,7 +244,6 @@ export async function buildStoredPaperDesignMap(
   const paper = bundle.conceptsById.get(paperConceptId);
   if (!paper || paper.type !== "paper") return undefined;
   const map = buildPaperDesignMapFromBundle(bundle, paper);
-  if (map.nodes.length === 0) return undefined;
 
   const nodeIds = new Set(map.nodes.map((node) => node.id));
   if (
@@ -320,8 +319,9 @@ export async function storedPaperMapPresentation(
   const relationshipText = diagram.edges.length === 0
     ? "no canonical stored relationships"
     : `${diagram.edges.length} canonical stored relationship${diagram.edges.length === 1 ? "" : "s"}`;
-  const summary =
-    `This exact stored map for **${paperTitle}** contains ${diagram.nodes.length} native design concept${diagram.nodes.length === 1 ? "" : "s"} across ${representedStages} and ${relationshipText}. It is a deterministic repository projection: all shown nodes and edges have stored provenance, and no synthesized design knowledge was added.`;
+  const summary = diagram.nodes.length === 0
+    ? `**${paperTitle}** has no linked formal design-knowledge concepts in the repository, so this stored map honestly contains zero nodes and ${relationshipText}. It is a deterministic repository projection: no synthesized design knowledge was added.`
+    : `This exact stored map for **${paperTitle}** contains ${diagram.nodes.length} native design concept${diagram.nodes.length === 1 ? "" : "s"} across ${representedStages} and ${relationshipText}. It is a deterministic repository projection: all shown nodes and edges have stored provenance, and no synthesized design knowledge was added.`;
   const conceptIds = [
     ...new Set(
       diagram.nodes.flatMap((node) => node.supportConceptIds),
