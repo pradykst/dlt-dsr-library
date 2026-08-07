@@ -1,6 +1,17 @@
 # Pre-edit blocker report: trust-enabling-capacity-exchange
 
-## Status: blocked (required shared application-logic change — no file changes retained)
+## Status: RESOLVED — see post-edit-report.md
+
+Resolved in a later session under explicit project authorization that
+source fidelity overrides historical known-mismatch fixtures. Both the 19
+meta-requirements (Fig. 3) and 14 design features (Fig. 6) identified below
+were added; Fig. 3's MR->DP mapping was confirmed too ambiguous (crossing
+connector lines, no explicit per-MR prose statement) and no relationships
+were added for it, consistent with this report's own original assessment.
+See `post-edit-report.md` for the full resolution. This report is retained
+below as decision history.
+
+## Status (original, pre-resolution): blocked (required shared application-logic change — no file changes retained)
 
 ## Exact ambiguity
 

@@ -11,12 +11,12 @@ import { parseOkfMarkdown } from "../server/markdown.ts";
 import type { OkfBundle } from "../server/types.ts";
 
 const EXPECTED_TYPE_COUNTS = {
-  "design-feature": 47,
+  "design-feature": 61,
   "design-goal": 3,
   "design-objective": 78,
   "design-principle": 124,
   "design-requirement": 73,
-  "meta-requirement": 39,
+  "meta-requirement": 58,
   paper: 34,
   reference: 2,
 } as const;
@@ -53,9 +53,9 @@ test("canonical bundle parses as native OKF v0.1 with deterministic counts", asy
 
   assert.equal(bundle.rootPath, resolve(process.cwd(), "knowledge/okf"));
   assert.equal(bundle.okfVersion, "0.1");
-  assert.equal(bundle.markdownFileCount, 404);
+  assert.equal(bundle.markdownFileCount, 437);
   assert.equal(bundle.reservedDocuments.length, 4);
-  assert.equal(bundle.concepts.length, 400);
+  assert.equal(bundle.concepts.length, 433);
   assert.deepEqual(countsByType(bundle), EXPECTED_TYPE_COUNTS);
   assert.deepEqual(bundle.fatalErrors, []);
   assert.deepEqual(bundle.warnings, []);
@@ -65,7 +65,7 @@ test("concept IDs are normalized POSIX paths without the Markdown suffix", async
   const bundle = await loadOkfBundle({ bundlePath: "knowledge/okf" });
   const ids = bundle.concepts.map((concept) => concept.id);
 
-  assert.equal(new Set(ids).size, 400);
+  assert.equal(new Set(ids).size, 433);
   assert.ok(ids.every((id) => !id.endsWith(".md")));
   assert.ok(ids.every((id) => !id.includes("\\")));
   assert.ok(bundle.concepts.every((concept) => concept.filePath === `${concept.id}.md`));

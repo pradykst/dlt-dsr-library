@@ -58,9 +58,16 @@ test("known text/category mismatches are audit warnings, not invented concepts",
     false,
   );
 
-  const trust = warningMessages(report, "papers/trust-enabling-capacity-exchange");
-  assert.match(trust, /meta-requirements/iu);
-  assert.match(trust, /design features/iu);
+  const trust = report.papers.find(
+    (paper) => paper.paperId === "papers/trust-enabling-capacity-exchange",
+  );
+  assert.ok(trust);
+  assert.equal(
+    trust.warnings.some((warning) =>
+      /meta-requirements|design features/iu.test(warning.message)
+    ),
+    false,
+  );
 
   const nil = warningMessages(report, "papers/nil-marketplace-fair-inclusive");
   assert.match(nil, /design requirements/iu);

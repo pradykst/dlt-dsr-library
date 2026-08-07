@@ -278,12 +278,45 @@ Source: [bond-markets-tokenization-tac](../papers/bond-markets-tokenization-tac.
 
 Source: [trust-enabling-capacity-exchange](../papers/trust-enabling-capacity-exchange.md)
 
-* [Design principle DP1: Signaling of tender-relevant information](trust-enabling-capacity-exchange-dp1.md) - Provide functions for customized creation of tenders and their linkage to a verified identity, revealing them simultaneously and in a distributed manner, to reduce uncertainty from vague specificat...
+* [MR-S1: Creation and management of tender](trust-enabling-capacity-exchange-mr-s1.md) - Specification dimension.
+* [MR-S2: Cross-domain management](trust-enabling-capacity-exchange-mr-s2.md) - Specification dimension.
+* [MR-I1: Search functions](trust-enabling-capacity-exchange-mr-i1.md) - Information dimension.
+* [MR-I2: Identity management and verification](trust-enabling-capacity-exchange-mr-i2.md) - Information dimension.
+* [MR-I3: Services to support the initiation process](trust-enabling-capacity-exchange-mr-i3.md) - Information dimension.
+* [MR-N1: Possibility for intermediate connection](trust-enabling-capacity-exchange-mr-n1.md) - Negotiation dimension.
+* [MR-N2: Heterogeneity of contracts](trust-enabling-capacity-exchange-mr-n2.md) - Negotiation dimension.
+* [MR-N3: Function for final award of the contract](trust-enabling-capacity-exchange-mr-n3.md) - Negotiation dimension.
+* [MR-F1: Conditions for fulfilling the payment](trust-enabling-capacity-exchange-mr-f1.md) - Fulfilment dimension.
+* [MR-F2: Compliance with legal framework conditions](trust-enabling-capacity-exchange-mr-f2.md) - Fulfilment dimension.
+* [MR-A1: Serious rating](trust-enabling-capacity-exchange-mr-a1.md) - After-Sales dimension.
+* [MR-A2: Provision of decision relevant KPIs](trust-enabling-capacity-exchange-mr-a2.md) - After-Sales dimension.
+* [MR-O1: Transparency and completeness of collected data relevant to transaction](trust-enabling-capacity-exchange-mr-o1.md) - Overlapping category.
+* [MR-O2: Decentralization and Simultaneity](trust-enabling-capacity-exchange-mr-o2.md) - Overlapping category.
+* [MR-O3: Communication services](trust-enabling-capacity-exchange-mr-o3.md) - Overlapping category.
+* [MR-O4: Equality of participants](trust-enabling-capacity-exchange-mr-o4.md) - Overlapping category.
+* [MR-O5: Interface compatibility and standards](trust-enabling-capacity-exchange-mr-o5.md) - Overlapping category.
+* [MR-O6: Depictability of human interaction and role models](trust-enabling-capacity-exchange-mr-o6.md) - Overlapping category.
+* [MR-O7: Encryption concepts](trust-enabling-capacity-exchange-mr-o7.md) - Overlapping category.
+* [Design principle DP1: Signaling of tender-relevant information](trust-enabling-capacity-exchange-dp1.md) - Provide functions for customized creation of tenders and their linkage to a verified identity, revealing them simultaneously and in a distributed manner, to reduce uncertainty from vague specifications and missing identity assignments.
 * [Design principle DP2: Signaling of identity-relevant information](trust-enabling-capacity-exchange-dp2.md) - Provide functions for decentralized storage, configuration and verification of identities to establish trust in each participant's identity, ensuring transparency and correctness of identity.
-* [Design principle DP3: Authority and fairness](trust-enabling-capacity-exchange-dp3.md) - Provide functions for creating and decentrally storing contracts and their order-relevant contents, and for monitoring compliance and enforcing sanctions/rewards, providing a transparent data basis...
+* [Design principle DP3: Authority and fairness](trust-enabling-capacity-exchange-dp3.md) - Provide functions for creating and decentrally storing contracts and their order-relevant contents, and for monitoring compliance and enforcing sanctions/rewards, providing a transparent data basis and traceable enforcement of countermeasures.
 * [Design principle DP4: Incentive mechanisms](trust-enabling-capacity-exchange-dp4.md) - Make the value-adding benefits of cooperation and the imminent losses from violations transparent and observable to all participants, motivating them and deterring opportunistic behavior.
-* [Design principle DP5: Screening functionality](trust-enabling-capacity-exchange-dp5.md) - Provide functions for depositing information, distributed and verified access, validity checking and searching/contacting participants, so that information obtained during retrieval is valid and tr...
-* [Design principle DP6: Reputation mechanism](trust-enabling-capacity-exchange-dp6.md) - Provide a reputation mechanism that, after the fulfillment stage, allows serious rating of each identity with decentralized collection and transparent processing/distribution of rating data, so par...
+* [Design principle DP5: Screening functionality](trust-enabling-capacity-exchange-dp5.md) - Provide functions for depositing information, distributed and verified access, validity checking and searching/contacting participants, so that information obtained during retrieval is valid and trustworthy.
+* [Design principle DP6: Reputation mechanism](trust-enabling-capacity-exchange-dp6.md) - Provide a reputation mechanism that, after the fulfillment stage, allows serious rating of each identity with decentralized collection and transparent processing/distribution of rating data, so participants can trust the reputation data.
+* [DF1.1: Creating a tender](trust-enabling-capacity-exchange-df1-1.md) - Implements DP1.
+* [DF1.2: Distributing information relevant to tender](trust-enabling-capacity-exchange-df1-2.md) - Implements DP1.
+* [DF2.1: Creating an identity](trust-enabling-capacity-exchange-df2-1.md) - Implements DP2.
+* [DF2.2: Distributing information relevant to identity](trust-enabling-capacity-exchange-df2-2.md) - Implements DP2.
+* [DF3.1: Ensuring authorized access](trust-enabling-capacity-exchange-df3-1.md) - Implements DP3.
+* [DF3.2: Configuring permissions](trust-enabling-capacity-exchange-df3-2.md) - Implements DP3.
+* [DF3.3: Prevention of fraud](trust-enabling-capacity-exchange-df3-3.md) - Implements DP3.
+* [DF4.1: Enforcing rewards and incentive](trust-enabling-capacity-exchange-df4-1.md) - Implements DP4.
+* [DF4.2: Ensuring traceability of enforced rewards and incentives](trust-enabling-capacity-exchange-df4-2.md) - Implements DP4.
+* [DF5.1: Permitted access to information relevant to tender](trust-enabling-capacity-exchange-df5-1.md) - Implements DP5.
+* [DF5.2: Permitted access to information relevant to identity](trust-enabling-capacity-exchange-df5-2.md) - Implements DP5.
+* [DF5.3: Permitted access to information relevant to reputation](trust-enabling-capacity-exchange-df5-3.md) - Implements DP5.
+* [DF6.1: Creating an individual assessment](trust-enabling-capacity-exchange-df6-1.md) - Implements DP6.
+* [DF6.2: Distributing information relevant to the assessment](trust-enabling-capacity-exchange-df6-2.md) - Implements DP6.
 
 ## Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study
 
