@@ -1,7 +1,7 @@
 ---
 type: design-feature
 title: "DF1 - Primary Markets"
-description: "Purchasing collectibles mints NFTs, and on monetary compensation a predetermined, hardcoded portion of the value is distributed as royalties among the associated student-athletes (randomized primar..."
+description: "Purchasing collectibles mints NFTs, and on monetary compensation a predetermined, hardcoded portion of the value is distributed as royalties among the associated student-athletes (randomized primary-market sales)."
 resource: "https://doi.org/10.1016/j.dss.2025.114580"
 source_paper: "Designing a fair and inclusive digital asset-based name-image-likeness marketplace"
 label: "DF1"

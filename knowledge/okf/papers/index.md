@@ -35,7 +35,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 
 * [Blockchain-based digital rights management systems: Design principles for the music industry](drm-music-industry.md) - Raffaele Fabio Ciriello et al., 2023; 6 design-knowledge item(s).
 * [Certified data chats for future used car markets](certified-data-chats-used-cars.md) - Andreas Engelmann et al., 2024; 6 design-knowledge item(s).
-* [Designing a fair and inclusive digital asset-based name-image-likeness marketplace](nil-marketplace-fair-inclusive.md) - Arthur Carvalho et al., 2026; 3 design-knowledge item(s).
+* [Designing a fair and inclusive digital asset-based name-image-likeness marketplace](nil-marketplace-fair-inclusive.md) - Arthur Carvalho et al., 2026; 10 design-knowledge item(s).
 * [Developing Blockchain-enabled Marketplace Interfaces: A Design Science Research Study](bemi-marketplace-interfaces.md) - Tobias Koelbel et al., 2023; 34 design-knowledge item(s).
 * [Meta-requirements for the Design of a Blockchain-enabled Multi-sided Platform for Sustainability and Circular Economy](msp-sustainability-circular.md) - Hanna Buyssens et al., 2024; 6 design-knowledge item(s).
 * [Requirements and Design Principles for Blockchain-enabled Matchmaking-Marketplaces in Additive Manufacturing](matchmaking-additive-manufacturing.md) - Tobias Koelbel et al., 2023; 24 design-knowledge item(s).

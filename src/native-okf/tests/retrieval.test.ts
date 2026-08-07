@@ -86,7 +86,7 @@ test("native lexical search is deterministic and diagnostically ranked", async (
   assert.ok(first.results.every((result, index, values) =>
     index === 0 || (values[index - 1]?.score ?? 0) >= result.score));
   assert.ok(first.results.every((result) => Number.isFinite(result.score) && result.score > 0));
-  assert.equal(first.diagnostics.indexedConceptCount, 433);
+  assert.equal(first.diagnostics.indexedConceptCount, 438);
   assert.equal(first.diagnostics.candidateCount >= first.results.length, true);
   assert.equal(first.diagnostics.meaningfulTermCount, first.meaningfulTerms.length);
   assertRelativePaths({

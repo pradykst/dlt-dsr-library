@@ -11,15 +11,6 @@ import {
   formatCoverageAuditMarkdown,
 } from "../server/coverage-audit.ts";
 
-function warningMessages(
-  report: Awaited<ReturnType<typeof buildCoverageAudit>>,
-  paperId: string,
-): string {
-  const paper = report.papers.find((candidate) => candidate.paperId === paperId);
-  assert.ok(paper, "missing paper audit: " + paperId);
-  return paper.warnings.map((warning) => warning.message).join("\n");
-}
-
 test("coverage audit includes all 34 papers and canonical type totals", async () => {
   const [report, bundle] = await Promise.all([
     buildCoverageAudit(),
@@ -69,8 +60,14 @@ test("known text/category mismatches are audit warnings, not invented concepts",
     false,
   );
 
-  const nil = warningMessages(report, "papers/nil-marketplace-fair-inclusive");
-  assert.match(nil, /design requirements/iu);
+  const nil = report.papers.find(
+    (paper) => paper.paperId === "papers/nil-marketplace-fair-inclusive",
+  );
+  assert.ok(nil);
+  assert.equal(
+    nil.warnings.some((warning) => /design requirements/iu.test(warning.message)),
+    false,
+  );
 
   const peerReview = report.papers.find(
     (paper) => paper.paperId === "papers/peer-review-token-incentives",

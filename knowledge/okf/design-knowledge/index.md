@@ -204,11 +204,16 @@ Source: [cross-org-identity-ssi](../papers/cross-org-identity-ssi.md)
 
 Source: [nil-marketplace-fair-inclusive](../papers/nil-marketplace-fair-inclusive.md)
 
-* [Design principle DP1: Plausible events (randomized collectible sales)](nil-marketplace-fair-inclusive-dp1.md) - Enable market-based randomized sales of royalty-paying collectibles so that every student-athlete has a non-zero chance of profiting from their NIL, satisfying the inclusiveness requirement via the...
-* [Design principle DP2: Market royalties (meritocratic allocation)](nil-marketplace-fair-inclusive-dp2.md) - Allow ex-post, market-driven adjustments to the initial allocation through royalties from secondary-market sales of collectibles, so that student-athletes are rewarded in proportion to relevant dif...
-* [Design principle DP3: Blockchain-based marketplace infrastructure](nil-marketplace-fair-inclusive-dp3.md) - Use blockchain technology as the foundational infrastructure - with transparent public ledgers and smart contracts - to create a well-functioning NIL collectibles marketplace that satisfies require...
-* [Design feature DF1: Primary Markets](nil-marketplace-fair-inclusive-df1.md) - Purchasing collectibles mints NFTs, and on monetary compensation a predetermined, hardcoded portion of the value is distributed as royalties among the associated student-athletes (randomized primar...
-* [Design feature DF2: Market Exchanges](nil-marketplace-fair-inclusive-df2.md) - Minted NFTs that pay royalties to student-athletes can be traded in secondary markets;
+* [Design requirement DR1: Inclusiveness](nil-marketplace-fair-inclusive-dr1.md) - NIL projects should provide all student-athletes with access to opportunities and resources.
+* [Design requirement DR2: Meritocratic Allocation](nil-marketplace-fair-inclusive-dr2.md) - Relevant differences among student-athletes should be a driving factor when allocating NIL financial resources.
+* [Design requirement DR3: Market Thickness](nil-marketplace-fair-inclusive-dr3.md) - Participants in market-based NIL projects should be able to find trading partners quickly.
+* [Design requirement DR4: No Congestion](nil-marketplace-fair-inclusive-dr4.md) - Market-based NIL projects must overcome congestion by having fast transactions.
+* [Design requirement DR5: Market Safety](nil-marketplace-fair-inclusive-dr5.md) - Market-based NIL initiatives must be safe for the student-athletes.
+* [Design principle DP1: Plausible events (randomized collectible sales)](nil-marketplace-fair-inclusive-dp1.md) - Enable market-based randomized sales of royalty-paying collectibles so that every student-athlete has a non-zero chance of profiting from their NIL, satisfying the inclusiveness requirement via the possibility effect.
+* [Design principle DP2: Market royalties (meritocratic allocation)](nil-marketplace-fair-inclusive-dp2.md) - Allow ex-post, market-driven adjustments to the initial allocation through royalties from secondary-market sales of collectibles, so that student-athletes are rewarded in proportion to relevant differences, satisfying meritocratic fairness.
+* [Design principle DP3: Blockchain-based marketplace infrastructure](nil-marketplace-fair-inclusive-dp3.md) - Use blockchain technology as the foundational infrastructure - with transparent public ledgers and smart contracts - to create a well-functioning NIL collectibles marketplace that satisfies requirements for successful markets.
+* [Design feature DF1: Primary Markets](nil-marketplace-fair-inclusive-df1.md) - Purchasing collectibles mints NFTs, and on monetary compensation a predetermined, hardcoded portion of the value is distributed as royalties among the associated student-athletes (randomized primary-market sales).
+* [Design feature DF2: Market Exchanges](nil-marketplace-fair-inclusive-df2.md) - Minted NFTs that pay royalties to student-athletes can be traded in secondary markets; deterministic secondary-market sales implement the meritocratic-allocation principle.
 
 ## Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity
 

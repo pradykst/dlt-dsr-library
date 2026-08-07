@@ -1,6 +1,15 @@
 # Pre-edit blocker report: nil-marketplace-fair-inclusive
 
-## Status: blocked (required shared application-logic change — no file changes made)
+## Status: RESOLVED — see post-edit-report.md
+
+Resolved in a later session under explicit project authorization that
+source fidelity overrides historical known-mismatch fixtures. The five
+design requirements (Fig. 1, Section 5.1) and their five DR->DP
+relationships identified below were added exactly as this report
+described. See `post-edit-report.md` for the full resolution. This report
+is retained below as decision history.
+
+## Status (original, pre-resolution): blocked (required shared application-logic change — no file changes made)
 
 ## Exact ambiguity
 
