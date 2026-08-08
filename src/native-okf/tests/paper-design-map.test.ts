@@ -48,7 +48,7 @@ test("Blockchain for the IoT projects the canonical 4/4/9 semantic map", async (
     "design-knowledge/blockchain-iot-sensor-data-dr4 -> design-knowledge/blockchain-iot-sensor-data-dp4 [addresses]",
     "design-knowledge/blockchain-iot-sensor-data-dp1 -> design-knowledge/blockchain-iot-sensor-data-df1 [implements]",
     "design-knowledge/blockchain-iot-sensor-data-dp1 -> design-knowledge/blockchain-iot-sensor-data-df3 [implements]",
-    "design-knowledge/blockchain-iot-sensor-data-dp1 -> design-knowledge/blockchain-iot-sensor-data-df6 [implements]",
+    "design-knowledge/blockchain-iot-sensor-data-dp4 -> design-knowledge/blockchain-iot-sensor-data-df6 [implements]",
   ]) {
     assert.ok(keys.has(expected), "missing semantic edge: " + expected);
   }

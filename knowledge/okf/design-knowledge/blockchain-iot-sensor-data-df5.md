@@ -30,3 +30,4 @@ This design feature is a technology-specific realization proposed by [Blockchain
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Section 4.3, "a storage service (DF4) that writes into the raw data storage (DF5)... the storage service saves the encrypted raw data in the cloud," article p. 1283; labeled "DF5. Secure Mass Storage: Raw Sensor Data Storage" in Figure 3, article p. 1283, and shown as component "5 Secure Mass Storage" in Figure 4, article p. 1284.

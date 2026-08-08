@@ -43,7 +43,6 @@ test("stored source fallback uses only allowlisted connected native concepts", a
     [
       "design-knowledge/blockchain-iot-sensor-data-df1",
       "design-knowledge/blockchain-iot-sensor-data-df3",
-      "design-knowledge/blockchain-iot-sensor-data-df6",
     ].some((id) => sourcePaths.has(id)),
   );
 });

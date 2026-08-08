@@ -53,14 +53,14 @@ The *output knowledge* of this project is captured as the atomic design-knowledg
 
 ## Design knowledge
 
-* [Design requirement DR1: Tamper-resistant data handling](../design-knowledge/blockchain-iot-sensor-data-dr1.md) - Enable tamper-resistant generation, processing, and exchange of IoT sensor data.
-* [Design requirement DR2: Privacy-preserving data handling](../design-knowledge/blockchain-iot-sensor-data-dr2.md) - Enable privacy-preserving generation, processing, and exchange of IoT sensor data.
-* [Design requirement DR3: Large data-volume throughput](../design-knowledge/blockchain-iot-sensor-data-dr3.md) - Enable large data-volume throughput in the generation, processing and exchange of IoT sensor data.
-* [Design requirement DR4: Economic feasibility](../design-knowledge/blockchain-iot-sensor-data-dr4.md) - Ensure economic feasibility of the sensor-data generation, processing and exchange system.
-* [Design principle DP1: Source-to-sink certification](../design-knowledge/blockchain-iot-sensor-data-dp1.md) - Certify sensor data on the basis of source-to-sink protection so that data producers are accountable for the data they provide.
-* [Design principle DP2: Cross-validation certification](../design-knowledge/blockchain-iot-sensor-data-dp2.md) - Certify sensor data on the basis of cross-validation and plausibility checks to reduce the risk of manipulation.
-* [Design principle DP3: Owner-controlled disclosure](../design-knowledge/blockchain-iot-sensor-data-dp3.md) - Let data owners determine when and to what extent their certified data is communicated to others.
-* [Design principle DP4: Linearly scalable architecture](../design-knowledge/blockchain-iot-sensor-data-dp4.md) - Certify data on the basis of a linearly scalable system architecture.
+* [Design requirement DR1: Tamper-resistant data handling](../design-knowledge/blockchain-iot-sensor-data-dr1.md) - Enable tamper-resistant data generation, processing, and exchange.
+* [Design requirement DR2: Privacy-preserving data handling](../design-knowledge/blockchain-iot-sensor-data-dr2.md) - Enable privacy-preserving data generation, processing, and exchange.
+* [Design requirement DR3: Large data-volume throughput](../design-knowledge/blockchain-iot-sensor-data-dr3.md) - Enable large data volume throughput.
+* [Design requirement DR4: Economic feasibility](../design-knowledge/blockchain-iot-sensor-data-dr4.md) - Ensure economic feasibility.
+* [Design principle DP1: Source-to-sink certification](../design-knowledge/blockchain-iot-sensor-data-dp1.md) - Sensor data are certified on the basis of source-to-sink protection.
+* [Design principle DP2: Cross-validation certification](../design-knowledge/blockchain-iot-sensor-data-dp2.md) - Sensor data are certified on the basis of cross-validation.
+* [Design principle DP3: Owner-controlled disclosure](../design-knowledge/blockchain-iot-sensor-data-dp3.md) - Data owners determine when and to what extent their certified data is communicated to others.
+* [Design principle DP4: Linearly scalable architecture](../design-knowledge/blockchain-iot-sensor-data-dp4.md) - Data are certified on the basis of a linearly scalable system architecture.
 
 ## Design features
 
@@ -79,3 +79,4 @@ Concrete, technology-specific realizations of the design principles in this arti
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Abstract and Section 1 (article p. 1272), Section 3.2 "Design Cycles" and Figure 2 (article p. 1278) for methodology; Table 1 (article p. 1281) for the four design requirements; Section 4.2 (article pp. 1281-1282) for the four design principles; Section 4.3 and Figure 3 "Design Requirements, Principles, and Features" (article p. 1283) for the nine design features and their DR-DP-DF mapping; Section 7.1 and Table 4 "Components of an SDPS Design Theory" (article p. 1294) for the design theory summary.

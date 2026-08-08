@@ -1,7 +1,7 @@
 ---
 type: design-requirement
 title: "DR1 - Tamper-resistant data handling"
-description: "Enable tamper-resistant generation, processing, and exchange of IoT sensor data."
+description: "Enable tamper-resistant data generation, processing, and exchange."
 resource: "https://doi.org/10.17705/1jais.00567"
 source_paper: "Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data"
 label: "DR1"
@@ -17,7 +17,7 @@ timestamp: '2026-07-16T00:00:00+00:00'
 
 # Design requirement DR1: Tamper-resistant data handling
 
-Enable tamper-resistant generation, processing, and exchange of IoT sensor data.
+Enable tamper-resistant data generation, processing, and exchange. The process of IoT sensor data generation, processing, and exchange should be supported by systems that ensure tamper resistance throughout the whole data pipeline.
 
 ## Source paper
 
@@ -26,3 +26,4 @@ This design requirement is proposed by [Blockchain for the IoT: Privacy-Preservi
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Section 4.1 ("Developing Design Requirements"), "DR1: Enable tamper-resistant data generation, processing, and exchange. The process of IoT sensor data generation, processing, and exchange should be supported by systems that ensure tamper resistance throughout the whole data pipeline," article p. 1280; also Table 1 (ID 1), article p. 1281.

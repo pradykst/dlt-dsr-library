@@ -223,7 +223,6 @@ test("source-to-sink retrieval keeps the principle and all implementing features
     "design-knowledge/blockchain-iot-sensor-data-dp1",
     "design-knowledge/blockchain-iot-sensor-data-df1",
     "design-knowledge/blockchain-iot-sensor-data-df3",
-    "design-knowledge/blockchain-iot-sensor-data-df6",
   ]) {
     assert.ok(ids.has(expectedId), `missing source-to-sink context ${expectedId}`);
   }

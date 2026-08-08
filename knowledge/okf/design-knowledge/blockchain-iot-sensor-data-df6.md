@@ -25,8 +25,9 @@ This design feature is a technology-specific realization proposed by [Blockchain
 
 ## Implements
 
-* [Design principle DP1: Source-to-sink certification](./blockchain-iot-sensor-data-dp1.md)
+* [Design principle DP4: Linearly scalable architecture](./blockchain-iot-sensor-data-dp4.md)
 
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Section 4.3, "the fourth design principle, requiring a linearly scalable system architecture, needs three more design features—namely, a storage service (DF4) that writes into the raw data storage (DF5) and also into an independent verification storage system (DF6)," article p. 1283 (DF6 implements DP4, not DP1 — corrected from a prior mismapping). Labeled "DF6. Blockchain-Based Hash Storage: Independent Verification Storage" in Figure 3, article p. 1283, and shown as component "6 BC-based Hash Storage" in Figure 4, article p. 1284.

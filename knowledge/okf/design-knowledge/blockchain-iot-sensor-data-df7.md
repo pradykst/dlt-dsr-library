@@ -30,3 +30,4 @@ This design feature is a technology-specific realization proposed by [Blockchain
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Section 4.3, "an access management service (DF7)... ensures that the raw data, which are stored in an encrypted form in a centralized mass storage system, can only be decrypted by the data owner," article p. 1283; labeled "DF7. Access Management Service: Key and Access Right Management" in Figure 3, article p. 1283, and shown as component "7 Access Management Service" in Figure 4, article p. 1284.

@@ -30,3 +30,4 @@ This design feature is a technology-specific realization proposed by [Blockchain
 # Citations
 [1] Mathieu Chanson, Andreas Bogner, Dominik Bilgeri, Elgar Fleisch, Felix Wortmann. Blockchain for the IoT: Privacy-Preserving Protection of Sensor Data. Journal of the Association for Information Systems 20(9), 2019, 1271-1307. https://doi.org/10.17705/1jais.00567
 [2] Source document: Blockchain for the IoT.pdf
+[3] Source evidence: Section 4.3 ("Mapping Design Principles to Design Features"), "First, we have to collect the data (DF1)," article p. 1283; labeled "DF1. Sensor: Sensor Data Collection" in Figure 3, article p. 1283, and shown as component "1 Sensor" in Figure 4 ("Artifact Architecture"), article p. 1284.

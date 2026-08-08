@@ -192,7 +192,6 @@ test("relation hints survive into display-ready relationships and graph edges", 
     ["design-knowledge/blockchain-iot-sensor-data-dr1", "Addresses"],
     ["design-knowledge/blockchain-iot-sensor-data-df1", "Implemented by"],
     ["design-knowledge/blockchain-iot-sensor-data-df3", "Implemented by"],
-    ["design-knowledge/blockchain-iot-sensor-data-df6", "Implemented by"],
   ]);
 
   for (const [targetId, relationHint] of expectedHints) {

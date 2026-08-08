@@ -19,7 +19,6 @@ const DR1_ID = "design-knowledge/blockchain-iot-sensor-data-dr1";
 const IMPLEMENTING_FEATURE_IDS = [
   "design-knowledge/blockchain-iot-sensor-data-df1",
   "design-knowledge/blockchain-iot-sensor-data-df3",
-  "design-knowledge/blockchain-iot-sensor-data-df6",
 ] as const;
 
 function sorted(values: Iterable<string>): string[] {

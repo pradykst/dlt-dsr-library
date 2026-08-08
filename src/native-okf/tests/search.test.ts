@@ -98,9 +98,9 @@ test("stop-word-only input produces an empty diagnostic response", async () => {
 
 test("equal-score candidates use stable concept-ID tie-breaking", async () => {
   clearOkfSearchCacheForTests();
-  const first = await searchOkf("dp1", { prefix: false, fuzzy: false, limit: 50 });
+  const first = await searchOkf("meta-requirement", { prefix: false, fuzzy: false, limit: 50 });
   clearOkfSearchCacheForTests();
-  const second = await searchOkf("dp1", { prefix: false, fuzzy: false, limit: 50 });
+  const second = await searchOkf("meta-requirement", { prefix: false, fuzzy: false, limit: 50 });
 
   assert.deepEqual(
     first.results.map((result) => result.conceptId),
