@@ -79,7 +79,7 @@ test("release homepage metrics are derived from the canonical native bundle", as
   assert.deepEqual(viewModel.metrics, {
     paperCount: 34,
     conceptCount: 449,
-    resolvedNativeLinkCount: 1210,
+    resolvedNativeLinkCount: 1224,
     representedTypeCount: 8,
   });
   assert.deepEqual(

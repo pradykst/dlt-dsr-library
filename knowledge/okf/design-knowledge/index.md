@@ -460,12 +460,12 @@ Source: [kyc-ico-requirements](../papers/kyc-ico-requirements.md)
 
 Source: [msp-sustainability-circular](../papers/msp-sustainability-circular.md)
 
-* [Meta-requirement MR1: Provenance and traceability](msp-sustainability-circular-mr1.md) - The platform should enable provenance and traceability, allowing stakeholders to track and verify product origins and a product's sustainable attributes.
-* [Meta-requirement MR2: Smart contracts](msp-sustainability-circular-mr2.md) - The platform should use smart contracts to automate processes and enforce sustainability requirements (e.g., rewarding actors who adhere to emission agreements).
-* [Meta-requirement MR3: Tokenization](msp-sustainability-circular-mr3.md) - The platform should support tokenization (e.g., certifications and carbon-credit-style tokens) that can be shared in a tamper-proof fashion, bolstering confidence and avoiding greenwashing.
-* [Meta-requirement MR4: Data integrity, transparency, and immutability](msp-sustainability-circular-mr4.md) - The platform should ensure data integrity, transparency and immutability so that only authorized actors can record data, enhancing the integrity of information for all.
-* [Meta-requirement MR5: Data and information sharing](msp-sustainability-circular-mr5.md) - The platform's decentralized design should enable data and information sharing in a transparent fashion across sectors, fostering collaboration and trust.
-* [Meta-requirement MR6: Resource efficiency](msp-sustainability-circular-mr6.md) - The platform should promote resource efficiency, e.g., through smart contracts and tokenization that streamline transactions and require fewer intermediaries and resources to monitor sustainable be...
+* [Meta-requirement MR1: Provenance and traceability](msp-sustainability-circular-mr1.md) - Blockchain must provide insights into the provenance and traceability of data to disclose the sustainable origin of products.
+* [Meta-requirement MR2: Smart contracts](msp-sustainability-circular-mr2.md) - Blockchain technology must enforce smart contracts to streamline processes and sustainability requirements across the platform.
+* [Meta-requirement MR3: Tokenization](msp-sustainability-circular-mr3.md) - Blockchain technology must facilitate the creation of sustainability tokens to incentivize sustainable behavior.
+* [Meta-requirement MR4: Data integrity, transparency, and immutability](msp-sustainability-circular-mr4.md) - Blockchain technology must safeguard the integrity of the data, allowing all data to be tamper-proof and visible to the relevant parties to preserve sustainable behavior across the platform.
+* [Meta-requirement MR5: Data and information sharing](msp-sustainability-circular-mr5.md) - Blockchain technology must exchange data and information in a transparent fashion to establish a sense of shared sustainable responsibility across the platform.
+* [Meta-requirement MR6: Resource efficiency](msp-sustainability-circular-mr6.md) - Blockchain technology must use resources efficiently to reduce waste and optimize resource usage.
 
 ## Overcoming the Data Transparency Trade-Off: Designing a Blockchain-Based Delivery Invoice System for the Construction Industry
 
