@@ -156,9 +156,17 @@ Source: [cross-org-workflow-objectives](../papers/cross-org-workflow-objectives.
 
 Source: [decentralized-procurement-logistics](../papers/decentralized-procurement-logistics.md)
 
-* [Design principle DP1: Understandability](decentralized-procurement-logistics-dp1.md) - Adequately explain the smart-contract decision-making process (e.g., allocation computation outputs) to non-technical users in order to counter the black-box issue and encourage adoption.
-* [Design principle DP2: Automation](decentralized-procurement-logistics-dp2.md) - Carry out the freight-transport procurement process in an end-to-end automated fashion, digitizing paper-based processes and delegating allocation to the blockchain.
-* [Design principle DP3: Metrics privacy](decentralized-procurement-logistics-dp3.md) - Keep sensitive allocation metrics off-chain in competitive markets so that private data is not exposed while public allocation results remain verifiable.
+* [Design requirement R1: Allocation flexibility](decentralized-procurement-logistics-dr1.md) - A solution must provide allocation flexibility to shippers and carriers.
+* [Design requirement R2: Autonomous allocation process](decentralized-procurement-logistics-dr2.md) - A solution must provide an autonomous allocation process.
+* [Design requirement R3: Real-time payment](decentralized-procurement-logistics-dr3.md) - A solution must enact real-time payment to help carriers optimize their commercial processes and operating costs.
+* [Design requirement R4: CMR regulations compliance](decentralized-procurement-logistics-dr4.md) - A solution must comply with CMR regulations.
+* [Design requirement R5: Delivery history integrity and traceability](decentralized-procurement-logistics-dr5.md) - A solution must provide delivery history integrity and traceability.
+* [Design objective P1: Platform operating costs reduction](decentralized-procurement-logistics-do1.md) - Platform operating costs reduction of the FTSP system should be considered to enhance the transportation process.
+* [Design objective P2: Contractual flexibility](decentralized-procurement-logistics-do2.md) - The platform should offer contractual flexibility.
+* [Design objective P3: Allocation integrity](decentralized-procurement-logistics-do3.md) - Allocation integrity should be considered, be it for the allocation process, the record of service rates, and the management of CMR.
+* [Design principle DP1: Understandability](decentralized-procurement-logistics-dp1.md) - The smart contract shipper-carrier allocation protocol must be displayed to the shipper.
+* [Design principle DP2: Automation](decentralized-procurement-logistics-dp2.md) - The FTSP process must be carried on in an end-to-end fashion by the smart contract.
+* [Design principle DP3: Metrics privacy](decentralized-procurement-logistics-dp3.md) - The allocation mechanism must keep sensitive data off-chain in competitive markets.
 
 ## Design Principles for Blockchain-based Applications in Green Bond Reporting
 
