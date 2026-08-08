@@ -1,7 +1,7 @@
 ---
 type: design-objective
 title: "DO6 - Traceability"
-description: "Provide traceability of products and goods at any time to enforce process automation while protecting confidentiality in a coopetitive environment."
+description: "Provide product information at any time to enforce process automation through traceability."
 resource: "https://doi.org/10.1007/s12525-025-00809-4"
 source_paper: "Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management"
 label: "DO6"
@@ -17,7 +17,7 @@ timestamp: '2026-07-16T00:00:00+00:00'
 
 # Design objective DO6: Traceability
 
-Provide traceability of products and goods at any time to enforce process automation while protecting confidentiality in a coopetitive environment.
+Provide product information at any time to enforce process automation through traceability.
 
 ## Source paper
 
@@ -26,3 +26,4 @@ This design objective is proposed by [Striking a balance: Designing a blockchain
 # Citations
 [1] Jonathan Lautenschlager, Jan Stramm, Tobias Guggenberger, Nils Urbach. Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management. Electronic Markets 35:70 (2025). https://doi.org/10.1007/s12525-025-00809-4
 [2] Source document: Striking a balance - Designing a blockchain-based solution to navigate.pdf
+[3] Source evidence: Table 2 ("Derivation of Design Objectives"), row "Traceability" (article p. 10): "Traceability is vital for enforcing process automation by providing product information at any time." Elaborated under "Design Objective 6–Traceability" (article p. 11), which discusses confidentiality protection in coopetitive settings as narrative elaboration rather than part of the table's formal statement.

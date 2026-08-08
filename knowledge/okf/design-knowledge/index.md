@@ -503,14 +503,17 @@ Source: [matchmaking-additive-manufacturing](../papers/matchmaking-additive-manu
 
 Source: [striking-balance-coopetition](../papers/striking-balance-coopetition.md)
 
-* [Design objective DO1: Data protection](striking-balance-coopetition-do1.md) - Protect data against internal and external attackers;
-* [Design objective DO2: Accountability](striking-balance-coopetition-do2.md) - Ensure organizations are identifiable in the network to enable accountability, so participants know with whom they conduct business and actions can be attributed.
-* [Design objective DO3: Decentralization](striking-balance-coopetition-do3.md) - Provide a decentralized solution to prevent monopolistic market dependencies and enable democratic decision-making and balanced power structures.
-* [Design objective DO4: Performance](striking-balance-coopetition-do4.md) - Enable the system to handle many transactions fast, with scalability, low latency and throughput sufficient for large construction supply networks.
-* [Design objective DO5: Interoperability](striking-balance-coopetition-do5.md) - Make the solution integrable and interoperable with existing systems (e.g., ERP, BIM) to accomplish true cooperation and lower market-entry barriers.
-* [Design objective DO6: Traceability](striking-balance-coopetition-do6.md) - Provide traceability of products and goods at any time to enforce process automation while protecting confidentiality in a coopetitive environment.
-* [Design objective DO7: Transparency](striking-balance-coopetition-do7.md) - Provide transparency to achieve the benefits of cooperation and information sharing, with transparency levels adjustable to protect sensitive data.
-* [Design objective DO8: Automation](striking-balance-coopetition-do8.md) - Enforce automation (e.g., smart contracts executing payments on predefined conditions) to boost process efficiency and reduce human error.
+* [Design objective DO1: Data protection](striking-balance-coopetition-do1.md) - Protect data against internal and external attackers; sensitive business data and personal data must be protected from access by unauthorized third parties.
+* [Design objective DO2: Accountability](striking-balance-coopetition-do2.md) - Ensure organizations are identifiable in the network to enable accountability.
+* [Design objective DO3: Decentralization](striking-balance-coopetition-do3.md) - Provide a decentralized solution to prevent monopolistic market dependencies.
+* [Design objective DO4: Performance](striking-balance-coopetition-do4.md) - Enable the system to handle many transactions fast.
+* [Design objective DO5: Interoperability](striking-balance-coopetition-do5.md) - Make the solution integrable and interoperable with existing systems to accomplish true cooperation.
+* [Design objective DO6: Traceability](striking-balance-coopetition-do6.md) - Provide product information at any time to enforce process automation through traceability.
+* [Design objective DO7: Transparency](striking-balance-coopetition-do7.md) - Provide transparency to achieve the benefits of cooperation and information sharing.
+* [Design objective DO8: Automation](striking-balance-coopetition-do8.md) - Boost process efficiency by enforcing automation.
+* [Design principle DP1: Adopt decentralization when network effects outweigh implementation complexity](striking-balance-coopetition-dp1.md) - Opt for a decentralized solution when the benefits of leveraging network effects in a coopetitive market surpass the complexities and challenges of its implementation.
+* [Design principle DP2: Use private data collections and channels for inter-organizational data protection](striking-balance-coopetition-dp2.md) - Utilize private data collections and private channels to protect inter-organizational data exchanges from unauthorized third-party access.
+* [Design principle DP3: Layer privacy-enhancing technologies onto private channels for complete confidentiality](striking-balance-coopetition-dp3.md) - Enhance private data collections and channels with additional privacy-preserving technologies to ensure complete data confidentiality.
 
 ## Trading Green Bonds Using Distributed Ledger Technology
 

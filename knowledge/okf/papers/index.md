@@ -15,7 +15,7 @@ The 34 papers in this design-knowledge library, grouped by application domain. E
 * [Designing a blockchain-based information system for procurement processes - Balancing decentralization, scalability, and security while maintaining privacy](procurement-is-trilemma.md) - Valeriya Arnold et al., 2026; 7 design-knowledge item(s).
 * [Digging for Quality Management in Production Systems: A Solution Space for Blockchain Collaborations](quality-management-production.md) - Norman Pytel et al., 2022; 6 design-knowledge item(s).
 * [Overcoming the Data Transparency Trade-Off: Designing a Blockchain-Based Delivery Invoice System for the Construction Industry](delivery-invoice-transparency.md) - Jonathan Lautenschlager et al., 2023; 6 design-knowledge item(s).
-* [Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management](striking-balance-coopetition.md) - Jonathan Lautenschlager et al., 2025; 8 design-knowledge item(s).
+* [Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management](striking-balance-coopetition.md) - Jonathan Lautenschlager et al., 2025; 11 design-knowledge item(s).
 * [Using Blockchain to Sustainably Manage Containers in International Shipping](containers-shipping-sustainable.md) - Roman Beck et al., 2020; 2 design-knowledge item(s).
 
 ## Identity, KYC & SSI

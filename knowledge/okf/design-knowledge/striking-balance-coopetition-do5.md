@@ -1,7 +1,7 @@
 ---
 type: design-objective
 title: "DO5 - Interoperability"
-description: "Make the solution integrable and interoperable with existing systems (e.g., ERP, BIM) to accomplish true cooperation and lower market-entry barriers."
+description: "Make the solution integrable and interoperable with existing systems to accomplish true cooperation."
 resource: "https://doi.org/10.1007/s12525-025-00809-4"
 source_paper: "Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management"
 label: "DO5"
@@ -17,7 +17,7 @@ timestamp: '2026-07-16T00:00:00+00:00'
 
 # Design objective DO5: Interoperability
 
-Make the solution integrable and interoperable with existing systems (e.g., ERP, BIM) to accomplish true cooperation and lower market-entry barriers.
+Make the solution integrable and interoperable with existing systems to accomplish true cooperation.
 
 ## Source paper
 
@@ -26,3 +26,4 @@ This design objective is proposed by [Striking a balance: Designing a blockchain
 # Citations
 [1] Jonathan Lautenschlager, Jan Stramm, Tobias Guggenberger, Nils Urbach. Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management. Electronic Markets 35:70 (2025). https://doi.org/10.1007/s12525-025-00809-4
 [2] Source document: Striking a balance - Designing a blockchain-based solution to navigate.pdf
+[3] Source evidence: Table 2 ("Derivation of Design Objectives"), row "Interoperability" (article p. 10): "To accomplish true cooperation, the solution must be integrable and interoperable with existing systems." Elaborated under "Design Objective 5–Interoperability" (article p. 11), which names ERP/CRM/BIM examples and market-entry barriers as narrative elaboration rather than part of the table's formal statement.
