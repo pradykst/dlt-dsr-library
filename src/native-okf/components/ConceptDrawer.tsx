@@ -3,6 +3,7 @@
 import { useEffect, useId } from "react";
 
 import type { GraphNodeDto } from "../shared/types.ts";
+import { titleWithoutRepeatedProducerLabel } from "../shared/presentation.ts";
 import { colorsForGraphType } from "./GraphLegend.tsx";
 
 export interface ConceptDrawerProps {
@@ -28,6 +29,10 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
 
   const colors = colorsForGraphType(concept.type);
   const summary = concept.markdownSummary?.trim() || concept.description?.trim();
+  const displayTitle = titleWithoutRepeatedProducerLabel(
+    concept.title,
+    concept.label,
+  );
 
   return (
     <aside
@@ -56,7 +61,7 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
             ) : null}
           </div>
           <h3 id={titleId} className="font-serif text-xl font-semibold leading-tight text-ink">
-            {concept.title}
+            {displayTitle}
           </h3>
         </div>
 

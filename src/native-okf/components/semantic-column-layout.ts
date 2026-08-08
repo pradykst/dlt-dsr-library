@@ -1,5 +1,7 @@
 export type SemanticOrientation = "horizontal" | "vertical";
 
+export const PAPER_DESIGN_FIT_MIN_ZOOM = 0.2;
+
 export interface SemanticLayoutInputNode<T> {
   id: string;
   columnKey: string;

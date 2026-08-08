@@ -25,9 +25,9 @@ import type {
   GraphNodeDto,
   PaperDesignMapDto,
 } from "../shared/types.ts";
+import { titleWithoutRepeatedProducerLabel } from "../shared/presentation.ts";
 import {
   calculateDiagramViewport,
-  GENERATED_DIAGRAM_FIT_MIN_ZOOM,
   GENERATED_DIAGRAM_FIT_SCREEN_PADDING,
 } from "./chat/diagram-viewport.ts";
 import ConceptDrawer from "./ConceptDrawer.tsx";
@@ -35,6 +35,7 @@ import GraphLegend, { colorsForGraphType } from "./GraphLegend.tsx";
 import { SemanticColumnHeadings } from "./SemanticColumnHeadings.tsx";
 import {
   layoutSemanticColumns,
+  PAPER_DESIGN_FIT_MIN_ZOOM,
   type SemanticColumnLayout,
 } from "./semantic-column-layout.ts";
 import {
@@ -59,6 +60,10 @@ const EDGE_TYPES = { straight: StraightFlowEdge } satisfies EdgeTypes;
 function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
   const { concept, dimmed } = data;
   const colors = colorsForGraphType(concept.type);
+  const displayTitle = titleWithoutRepeatedProducerLabel(
+    concept.title,
+    concept.label,
+  );
   return (
     <div
       className={`flex rounded-xl border-2 px-3.5 py-3 text-left shadow-md motion-safe:transition-[border-color,box-shadow,opacity] motion-safe:duration-150 ${
@@ -70,7 +75,7 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
         backgroundColor: colors.background,
         borderColor: selected ? "#20242a" : colors.border,
       }}
-      aria-label={`${concept.label ? `${concept.label}. ` : ""}${concept.title}. ${concept.typeLabel}.`}
+      aria-label={`${concept.label ? `${concept.label}. ` : ""}${displayTitle}. ${concept.typeLabel}.`}
     >
       <Handle
         type="target"
@@ -80,21 +85,18 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
         style={{ borderColor: colors.border }}
       />
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <span
-            className="truncate text-[9px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: colors.text }}
-          >
-            {concept.typeLabel}
-          </span>
+        <div className="flex min-h-3 min-w-0 items-center justify-end">
           {concept.label ? (
-            <span className="shrink-0 font-mono text-[10px] font-bold text-ink">
+            <span
+              className="shrink-0 font-mono text-[10px] font-bold"
+              style={{ color: colors.text }}
+            >
               {concept.label}
             </span>
           ) : null}
         </div>
         <p className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-ink">
-          {concept.title}
+          {displayTitle}
         </p>
       </div>
       <Handle
@@ -256,7 +258,7 @@ function PaperDesignCanvas({
       layout.bounds,
       { width: viewport.width, height: viewport.height },
       GENERATED_DIAGRAM_FIT_SCREEN_PADDING,
-      { minZoom: GENERATED_DIAGRAM_FIT_MIN_ZOOM, maxZoom: 1.05 },
+      { minZoom: PAPER_DESIGN_FIT_MIN_ZOOM, maxZoom: 1.05 },
     );
     setViewport(transform, { duration: 0 });
   }, [flowReady, layout.bounds, setViewport]);
@@ -312,7 +314,7 @@ function PaperDesignCanvas({
           edges={edges}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
-          minZoom={GENERATED_DIAGRAM_FIT_MIN_ZOOM}
+          minZoom={PAPER_DESIGN_FIT_MIN_ZOOM}
           maxZoom={1.6}
           nodesDraggable={false}
           nodesConnectable={false}

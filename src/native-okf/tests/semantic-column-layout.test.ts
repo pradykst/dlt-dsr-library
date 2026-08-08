@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   compareSemanticLayoutNodes,
   layoutSemanticColumns,
+  PAPER_DESIGN_FIT_MIN_ZOOM,
 } from "../components/semantic-column-layout.ts";
 import { straightLinePath } from "../components/straight-edge.ts";
 import { calculateDiagramViewport } from "../components/chat/diagram-viewport.ts";
@@ -97,6 +98,46 @@ test("fit transform keeps every paper-map node inside the viewport", () => {
     padding,
     { minZoom: 0.38, maxZoom: 1.05 },
   );
+
+  for (const node of layout.nodes) {
+    const left = transform.x + node.position.x * transform.zoom;
+    const top = transform.y + node.position.y * transform.zoom;
+    const right = left + node.width * transform.zoom;
+    const bottom = top + node.height * transform.zoom;
+    assert.ok(left >= padding - 0.1);
+    assert.ok(top >= padding - 0.1);
+    assert.ok(right <= viewport.width - padding + 0.1);
+    assert.ok(bottom <= viewport.height - padding + 0.1);
+  }
+});
+
+test("paper-map fit allows dense curated columns below the generated-diagram floor", () => {
+  assert.equal(PAPER_DESIGN_FIT_MIN_ZOOM, 0.2);
+  const denseNodes = Array.from({ length: 19 }, (_value, index) => ({
+    id: `mr${index + 1}`,
+    columnKey: "meta-requirement",
+    label: `Meta-requirement ${index + 1}`,
+    producerLabel: `MR${index + 1}`,
+    value: index,
+  }));
+  const layout = layoutSemanticColumns(
+    denseNodes,
+    [],
+    [{ key: "meta-requirement", title: "Meta-Requirements" }],
+    {
+      nodeWidth: 240,
+      nodeHeight: 92,
+      nodeGap: 30,
+      columnGap: 150,
+      outerPadding: 36,
+    },
+  );
+  const viewport = { width: 1214, height: 653 };
+  const padding = 36;
+  const transform = calculateDiagramViewport(layout.bounds, viewport, padding, {
+    minZoom: PAPER_DESIGN_FIT_MIN_ZOOM,
+    maxZoom: 1.05,
+  });
 
   for (const node of layout.nodes) {
     const left = transform.x + node.position.x * transform.zoom;

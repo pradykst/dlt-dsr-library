@@ -24,6 +24,40 @@ export function fallbackTitleFromId(id: string): string {
   return formatConceptType(segment ?? id);
 }
 
+function escapeRegularExpression(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+/**
+ * Keeps a producer label visible once when a card renders it separately from
+ * the source-authored title. The stored title itself is never changed.
+ */
+export function titleWithoutRepeatedProducerLabel(
+  title: string,
+  producerLabel: string | undefined,
+): string {
+  const displayTitle = title.trim();
+  const displayLabel = producerLabel?.trim();
+  if (!displayLabel) return displayTitle;
+
+  const prefix = new RegExp(
+    `^${escapeRegularExpression(displayLabel)}(?:\\s*(?:-|:|\\u2013|\\u2014)\\s*|\\s+)`,
+    "iu",
+  );
+  const withoutPrefix = displayTitle.replace(prefix, "").trim();
+  return withoutPrefix || displayTitle;
+}
+
+/** Compares researcher-facing semantic labels independent of separators. */
+export function equivalentSemanticLabels(left: string, right: string): boolean {
+  const normalize = (value: string) => value
+    .normalize("NFKC")
+    .toLocaleLowerCase("en")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+  return normalize(left) === normalize(right);
+}
+
 /**
  * Converts a Next.js catch-all route value to a bundle-relative lookup key.
  * Encoded separators and traversal segments are rejected before the repository

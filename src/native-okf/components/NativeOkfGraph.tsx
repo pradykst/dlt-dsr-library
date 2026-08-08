@@ -18,6 +18,7 @@ import type {
   GraphEdgeDto,
   GraphNodeDto,
 } from "../shared/types.ts";
+import { titleWithoutRepeatedProducerLabel } from "../shared/presentation.ts";
 import ConceptDrawer from "./ConceptDrawer.tsx";
 import GraphLegend, {
   colorsForGraphType,
@@ -152,6 +153,10 @@ function layoutGraphNodes(graph: GraphDto): Node<ConceptFlowNodeData>[] {
 
 function ConceptFlowNode({ data, selected }: NodeProps<ConceptFlowNodeData>) {
   const { concept, colors } = data;
+  const displayTitle = titleWithoutRepeatedProducerLabel(
+    concept.title,
+    concept.label,
+  );
 
   return (
     <div
@@ -186,7 +191,7 @@ function ConceptFlowNode({ data, selected }: NodeProps<ConceptFlowNodeData>) {
           </span>
         ) : null}
       </div>
-      <div className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-ink">{concept.title}</div>
+      <div className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-ink">{displayTitle}</div>
       {concept.label ? (
         <div className="mt-2 font-mono text-[10px] text-muted">{concept.label}</div>
       ) : null}

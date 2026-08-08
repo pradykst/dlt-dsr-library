@@ -3,6 +3,7 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 
 import type { GeneratedDiagramNode as DiagramNode } from "../../shared/chat-types.ts";
+import { equivalentSemanticLabels } from "../../shared/presentation.ts";
 import {
   GENERATED_DIAGRAM_NODE_HEIGHT,
   GENERATED_DIAGRAM_NODE_WIDTH,
@@ -92,7 +93,7 @@ export function GeneratedDiagramNodeRenderer({
       <div className="flex min-w-0 items-start justify-between gap-2">
         <span className="min-w-0 truncate text-[9px] font-bold uppercase tracking-[0.12em] text-muted">
           {stageCaption(diagramNode.stage)}
-          {diagramNode.category.toLowerCase() !== diagramNode.stage
+          {!equivalentSemanticLabels(diagramNode.category, diagramNode.stage)
             ? ` / ${diagramNode.category}`
             : ""}
         </span>

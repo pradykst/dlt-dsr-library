@@ -29,6 +29,12 @@ test("generated node details retain descriptions, grounding, and synthesis statu
   assert.match(canvasNode, /Stored/u);
 });
 
+test("generated nodes suppress punctuation-only category and stage duplication", async () => {
+  const canvasNode = await componentSource("chat/GeneratedDiagramNode.tsx");
+  assert.match(canvasNode, /equivalentSemanticLabels\(diagramNode\.category, diagramNode\.stage\)/u);
+  assert.doesNotMatch(canvasNode, /category\.toLowerCase\(\) !== diagramNode\.stage/u);
+});
+
 test("drawer starts closed and selection does not rerun semantic layout", async () => {
   const presentation = await componentSource(
     "chat/GeneratedDiagramPresentation.tsx",
@@ -67,6 +73,9 @@ test("generated diagrams use dynamic columns and direct straight edges", async (
   assert.doesNotMatch(edgeHelper, /bezier|orthogonalPolylinePath/iu);
   assert.match(edge, /markerEnd=\{markerEnd\}/u);
   assert.match(headings, /pointer-events-none/u);
+  assert.match(headings, /nearestGap - 4/u);
+  assert.match(headings, /fittedFontSize/u);
+  assert.match(headings, /text-ellipsis/u);
 });
 
 test("relationship labels remain optional and presentation-only", async () => {
@@ -91,6 +100,7 @@ test("paper map colors express type without relying on color alone", async () =>
   assert.match(map, /concept\.typeLabel/u);
   assert.match(map, /concept\.label/u);
   assert.match(map, /aria-label/u);
+  assert.doesNotMatch(map, /\{concept\.typeLabel\}\s*<\/span>/u);
   assert.match(legend, /design-requirement/u);
   assert.match(legend, /design-principle/u);
   assert.match(legend, /design-feature/u);

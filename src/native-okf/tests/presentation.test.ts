@@ -12,9 +12,11 @@ import {
   resolveOkfMarkdownHref,
 } from "../shared/links.ts";
 import {
+  equivalentSemanticLabels,
   fallbackTitleFromId,
   formatConceptType,
   normalizeCatchAllSegments,
+  titleWithoutRepeatedProducerLabel,
 } from "../shared/presentation.ts";
 
 test("catch-all normalization retains the complete bundle-relative path", () => {
@@ -135,6 +137,41 @@ test("unknown producer-defined types receive generic readable presentation", () 
     fallbackTitleFromId("producer-space/custom_widget.md"),
     "Custom Widget",
   );
+});
+
+test("producer labels remain visible once without changing source titles", () => {
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("DP1 - Decentralized control", "DP1"),
+    "Decentralized control",
+  );
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("MDR4 — Integrate object events", "MDR4"),
+    "Integrate object events",
+  );
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("S#IA: Preserve source syntax", "S#IA"),
+    "Preserve source syntax",
+  );
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("DF3.1 - Detailed feature", "DF3.1"),
+    "Detailed feature",
+  );
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("DF3.1 - Detailed feature", "DF3"),
+    "DF3.1 - Detailed feature",
+  );
+  assert.equal(
+    titleWithoutRepeatedProducerLabel("Cross-organizational trust", "DP1"),
+    "Cross-organizational trust",
+  );
+  assert.equal(titleWithoutRepeatedProducerLabel("DP1", "DP1"), "DP1");
+});
+
+test("semantic label comparison ignores formatting but preserves distinct categories", () => {
+  assert.equal(equivalentSemanticLabels("Design Principle", "design-principle"), true);
+  assert.equal(equivalentSemanticLabels("Meta Requirement", "meta_requirement"), true);
+  assert.equal(equivalentSemanticLabels("Producer Type A", "producer-type-a"), true);
+  assert.equal(equivalentSemanticLabels("Design Principle", "Design Feature"), false);
 });
 
 const AUDITED_EXTENSIONS = new Set([".cjs", ".js", ".jsx", ".json", ".mjs", ".ts", ".tsx"]);
