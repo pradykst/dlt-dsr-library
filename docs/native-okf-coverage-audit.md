@@ -5,8 +5,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Validity boundaries
 
 - OKF version: 0.1
-- Markdown files: 442
-- Concepts: 438
+- Markdown files: 459
+- Concepts: 455
 - Papers: 34
 - Native format valid: yes (0 fatal errors)
 - Internal links valid: yes (0 broken-link warnings)
@@ -15,26 +15,29 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Corpus distribution
 
 - design-goal + design-principle: 1
-- design-objective: 4
-- design-objective + design-principle: 3
-- design-objective + design-requirement + design-principle: 2
+- design-objective: 3
+- design-objective + design-principle: 4
+- design-objective + design-requirement + design-principle: 3
 - design-objective + meta-requirement + design-principle: 1
-- design-principle: 8
+- design-principle: 6
 - design-principle + design-feature: 1
 - design-requirement: 1
 - design-requirement + design-principle: 2
 - design-requirement + design-principle + design-feature: 5
 - meta-requirement: 1
-- meta-requirement + design-principle: 2
+- meta-requirement + design-principle: 3
 - meta-requirement + design-principle + design-feature: 2
 - no associated design knowledge: 1
 
 ## Papers with potential missing explicit categories
 
 - `papers/certified-data-chats-used-cars`
+- `papers/containers-shipping-sustainable`
 - `papers/cross-org-workflow-objectives`
 - `papers/forgetting-blockchain-gdpr`
+- `papers/green-bond-reporting-dp`
 - `papers/quality-management-production`
+- `papers/rule-the-waves-shipping`
 - `papers/short-end-opportunism-sharing`
 
 ## Per-paper audit
@@ -181,7 +184,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
-  - none
+  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
 
 ### Designing a cross-organizational identity management system: Utilizing SSI for the certification of retailer attributes
 
@@ -218,15 +221,17 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Decentralized Procurement Mechanisms for Efficient Logistics Services Mapping - a Design Science Research Approach
 
 - Paper ID: `papers/decentralized-procurement-logistics`
-- Semantic relationships: 0
-- Requirements present: no
+- Semantic relationships: 6
+- Requirements present: yes
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - design-objective: 3
+  - design-requirement: 5
   - design-principle: 3
 - Explicit count statements:
-  - none detected
+  - Five design requirements: stated 5 design-requirement
 - Potential representation warnings:
   - none
 
@@ -346,9 +351,10 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Native concept counts:
   - design-principle: 6
 - Explicit count statements:
-  - Six design principles: stated 6 design-principle
+  - six design principles: stated 6 design-principle
 - Potential representation warnings:
-  - none
+  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
+  - [mentioned-category-missing] Paper text mentions meta-requirements, but no meta-requirement concept is associated with the paper.
 
 ### Designing a Framework for Digital KYC Processes Built on Blockchain-Based Self-Sovereign Identity
 
@@ -411,7 +417,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Native concept counts:
   - meta-requirement: 6
 - Explicit count statements:
-  - Six meta-requirements: stated 6 meta-requirement
+  - six meta-requirements: stated 6 meta-requirement
 - Potential representation warnings:
   - none
 
@@ -475,15 +481,17 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Requirements present: no
 - Principles present: yes
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
+  - meta-requirement: 6
   - design-principle: 6
 - Explicit count statements:
-  - Six design principles: stated 6 design-principle
+  - 6 design-principle: stated 6 design-principle
+  - six design principles: stated 6 design-principle
+  - 6 meta-requirement: stated 6 meta-requirement
 - Potential representation warnings:
   - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
   - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
-  - [mentioned-category-missing] Paper text mentions meta-requirements, but no meta-requirement concept is associated with the paper.
 
 ### Blockchain to Rule the Waves - Nascent Design Principles for Reducing Risk and Uncertainty in Decentralized Environments
 
@@ -498,7 +506,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
-  - none
+  - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
+  - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
 
 ### And No One Gets the Short End of the Stick: A Blockchain-Based Approach to Solving the Two-Sided Opportunism Problem in Interorganizational Information Sharing
 
@@ -519,13 +528,14 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Striking a balance: Designing a blockchain-based solution to navigate coopetition dynamics in supply chain management
 
 - Paper ID: `papers/striking-balance-coopetition`
-- Semantic relationships: 0
+- Semantic relationships: 12
 - Requirements present: no
-- Principles present: no
+- Principles present: yes
 - Features present: no
 - Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
   - design-objective: 8
+  - design-principle: 3
 - Explicit count statements:
   - Eight design objectives: stated 8 design-objective
 - Potential representation warnings:
