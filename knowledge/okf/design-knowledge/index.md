@@ -164,12 +164,12 @@ Source: [decentralized-procurement-logistics](../papers/decentralized-procuremen
 
 Source: [green-bond-reporting-dp](../papers/green-bond-reporting-dp.md)
 
-* [Design principle DP1: Consortium blockchain](green-bond-reporting-dp-dp1.md) - Use a consortium blockchain, since a set of known, semi-trusted green-bond participants suits a permissioned setting.
-* [Design principle DP2: Proof-of-authority consensus](green-bond-reporting-dp-dp2.md) - Use a proof-of-authority consensus mechanism, which is suitable because some level of trust already exists among participants.
-* [Design principle DP3: Smart-contract document validation](green-bond-reporting-dp-dp3.md) - Use smart contracts to validate that an authorized party uploaded and signed the (reporting) file.
-* [Design principle DP4: Reputation-based incentives](green-bond-reporting-dp-dp4.md) - Design for reputation rather than monetary incentives, given the conservative nature of the financial sector.
-* [Design principle DP5: Off-chain decision-making](green-bond-reporting-dp-dp5.md) - Keep off-chain decisions taken by different stakeholders in their current format, while on-chain decisions are facilitated through smart contracts.
-* [Design principle DP6: Role-based privileges](green-bond-reporting-dp-dp6.md) - Identify the issuer, second-opinion provider and investor as different roles with different privilege rights, such as access and editing rights.
+* [Design principle DP1: Consortium blockchain](green-bond-reporting-dp-dp1.md) - Use a consortium blockchain.
+* [Design principle DP2: Proof-of-authority consensus](green-bond-reporting-dp-dp2.md) - The proof-of-authority consensus mechanism is suitable due to some level of trust already existing.
+* [Design principle DP3: Smart-contract document validation](green-bond-reporting-dp-dp3.md) - Smart contracts can validate that an authorized party uploaded and signed the file.
+* [Design principle DP4: Reputation-based incentives](green-bond-reporting-dp-dp4.md) - Design for reputation rather than monetary incentives.
+* [Design principle DP5: Off-chain decision-making](green-bond-reporting-dp-dp5.md) - Off-chain decisions different stakeholders take remain in their current format. On-chain decisions are facilitated through smart contracts.
+* [Design principle DP6: Role-based privileges](green-bond-reporting-dp-dp6.md) - The issuer, second opinion provider, and investor are identified as different roles with different privilege rights, such as access and editing rights and building and approving blocks.
 
 ## Designing a blockchain-based information system for procurement processes - Balancing decentralization, scalability, and security while maintaining privacy
 

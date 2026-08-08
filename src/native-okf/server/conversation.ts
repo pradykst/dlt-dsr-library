@@ -196,19 +196,6 @@ function paperForReference(
   })?.slug;
 }
 
-function linkedPaperSlug(
-  concept: OkfConcept,
-  paperIdToSlug: ReadonlyMap<string, string>,
-): string | undefined {
-  for (const link of [...concept.outgoingLinks, ...concept.incomingLinks]) {
-    const slug =
-      (link.targetId ? paperIdToSlug.get(link.targetId) : undefined) ??
-      paperIdToSlug.get(link.sourceId);
-    if (slug) return slug;
-  }
-  return undefined;
-}
-
 export async function loadNativeOkfConversationCatalog(): Promise<NativeOkfConversationCatalog> {
   const [paperConcepts, allConcepts] = await Promise.all([
     getAllPapers(),
@@ -229,11 +216,10 @@ export async function loadNativeOkfConversationCatalog(): Promise<NativeOkfConve
     ...(concept.type === "paper"
       ? { paperSlug: paperIdToSlug.get(concept.id) }
       : {
-          paperSlug:
-            paperForReference(
-              stringMetadata(concept, "source_paper"),
-              papers,
-            ) ?? linkedPaperSlug(concept, paperIdToSlug),
+          paperSlug: paperForReference(
+            stringMetadata(concept, "source_paper"),
+            papers,
+          ),
         }),
   }));
   return { papers, concepts };
