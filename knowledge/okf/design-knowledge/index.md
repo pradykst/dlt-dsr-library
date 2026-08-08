@@ -95,8 +95,8 @@ Source: [consent-self-management-hie](../papers/consent-self-management-hie.md)
 
 Source: [rule-the-waves-shipping](../papers/rule-the-waves-shipping.md)
 
-* [Design principle DP1: Digitization](rule-the-waves-shipping-dp1.md) - All data is stored and exchanged digitally, reducing the likelihood of data loss and enabling faster, more cost-effective information exchange as well as the use of blockchain technology.
-* [Design principle DP2: Tamper-proof storage](rule-the-waves-shipping-dp2.md) - All changes made to the data stored in the system can be retraced, so that information cannot be lost and (together with user authentication) all changes can be traced to identifiable users.
+* [Design principle DP1: Digitization](rule-the-waves-shipping-dp1.md) - All data is stored and exchanged digitally.
+* [Design principle DP2: Tamper-proof storage](rule-the-waves-shipping-dp2.md) - All changes made to the data that are stored in the system can be retraced.
 * [Design principle DP3: Accessibility](rule-the-waves-shipping-dp3.md) - The system can be accessed easily even by technically non-sophisticated stakeholders.
 * [Design principle DP4: User authentication](rule-the-waves-shipping-dp4.md) - All activities in the system can be traced back to certain users.
 
