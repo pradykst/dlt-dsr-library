@@ -374,12 +374,18 @@ Source: [bemi-marketplace-interfaces](../papers/bemi-marketplace-interfaces.md)
 
 Source: [quality-management-production](../papers/quality-management-production.md)
 
-* [Design principle DP1: Standardized representation of traceability objects](quality-management-production-dp1.md) - Provide a standardized representation of traceability objects through a hybrid, token-based traceability system, with organizations collaboratively determining necessary dimensions before developin...
-* [Design principle DP2: Extended quality control over communication and objects](quality-management-production-dp2.md) - Provide information about direct and indirect objects to give extended quality control over communication processes, affected objects, and involved quality trading partners.
-* [Design principle DP3: Import objects from traditional information systems](quality-management-production-dp3.md) - Enable the system to import objects from traditional information systems (and export unique token identifiers) to fully utilize blockchain as a leading information system for identifiers in supply...
-* [Design principle DP4: Standardized token events](quality-management-production-dp4.md) - Allow the definition of standardized events to achieve a syntactic and semantic standard for token events.
-* [Design principle DP5: Easy integration without enterprise-system modification](quality-management-production-dp5.md) - Provide a unique-system-identifier application that can be integrated with a network or token standard easily, without having to modify one's enterprise system at great expense.
-* [Design principle DP6: Confidentiality of available information](quality-management-production-dp6.md) - Ensure that available information addresses confidentiality concerns to protect identity recognition against external parties.
+* [Meta-requirement MDR1: Minimal necessary traceability objects](quality-management-production-mdr1.md) - The system should integrate as much as necessary and as little as possible traceability objects.
+* [Meta-requirement MDR2: Efficient communication of affected PS, Quality, and System objects](quality-management-production-mdr2.md) - The system should increase efficiency of communication in channels for affected PS, Quality, and System objects.
+* [Meta-requirement MDR3: UTIDs for harmonized object identification](quality-management-production-mdr3.md) - The system should provide UTIDs to increase object identification for a harmonized traceability understanding.
+* [Meta-requirement MDR4: Integration of object types and events](quality-management-production-mdr4.md) - The system should allow the integration of object types and events.
+* [Meta-requirement MDR5: Simple architecture for horizontal network-partner scalability](quality-management-production-mdr5.md) - The system should provide a simple architecture for horizontal network partner's scalability (participation and exit).
+* [Meta-requirement MDR6: Security mechanisms for confidentiality](quality-management-production-mdr6.md) - The system should provide security mechanisms to address confidentiality concerns.
+* [Design principle DP1: Standardized representation of traceability objects](quality-management-production-dp1.md) - The system contains a consistent understanding among organizations of traceability terminologies and valuable objects.
+* [Design principle DP2: Extended quality control over communication and objects](quality-management-production-dp2.md) - The system provides hybrid tokens to map direct and indirect objects of different object types.
+* [Design principle DP3: Import objects from traditional information systems](quality-management-production-dp3.md) - The system provides import of objects from traditional IS (e.g., ERP, MES, QMS) and export of UTIDs.
+* [Design principle DP4: Standardized token events](quality-management-production-dp4.md) - The system provides functions to ensure standardized events for tokens.
+* [Design principle DP5: Easy integration without enterprise-system modification](quality-management-production-dp5.md) - The system provides USID (e.g., system IDs, license) integration through the BC system or token configuration.
+* [Design principle DP6: Confidentiality of available information](quality-management-production-dp6.md) - The system provides confidentiality by design mechanisms.
 
 ## From ambivalence to trust: Using blockchain in customer loyalty programs
 
