@@ -178,6 +178,30 @@ test("paper page keeps structured knowledge while hiding technical and relations
   assert.deepEqual(filtered, { title: "Generic paper", methodology: "kept" });
 });
 
+test("type presentation does not repeat adjacent semantic labels", async () => {
+  const [workbench, conceptCard, generatedDiagram] = await Promise.all([
+    source("src/native-okf/components/WorkbenchView.tsx"),
+    source("src/native-okf/components/ConceptCard.tsx"),
+    source("src/native-okf/components/chat/GeneratedDiagramPresentation.tsx"),
+  ]);
+  assert.match(
+    compact(workbench),
+    /isPaper \? \( <TypeBadge type=\{concept\.type\} label=\{concept\.typeLabel\} \/> \) : null/u,
+  );
+  assert.match(workbench, /aria-label=\{`\$\{group\.count\} \$\{group\.typeLabel\}`\}/u);
+  assert.doesNotMatch(
+    workbench,
+    /<TypeBadge type=\{group\.type\} label=\{group\.typeLabel\} count=\{group\.count\} \/>/u,
+  );
+  assert.match(workbench, /showTypeBadge=\{false\}/u);
+  assert.match(conceptCard, /showTypeBadge = true/u);
+  assert.match(conceptCard, /\{showTypeBadge \? \(/u);
+  assert.match(
+    generatedDiagram,
+    /!equivalentSemanticLabels\(node\.category, node\.stage\)/u,
+  );
+});
+
 test("chat page and assistant panel use concise researcher-facing copy", async () => {
   const [page, workbench] = await Promise.all([
     source("app/native-okf/chat/page.tsx"),

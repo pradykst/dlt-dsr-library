@@ -86,7 +86,9 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
       ]}
       actions={
         <>
-          <TypeBadge type={concept.type} label={concept.typeLabel} />
+          {isPaper ? (
+            <TypeBadge type={concept.type} label={concept.typeLabel} />
+          ) : null}
           {resourceIsSafe && concept.resource ? (
             <a
               href={concept.resource}
@@ -202,7 +204,12 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
                     <h3 id={`group-${group.type}`} className="font-serif text-2xl font-semibold text-ink">
                       {group.typeLabel}
                     </h3>
-                    <TypeBadge type={group.type} label={group.typeLabel} count={group.count} />
+                    <span
+                      aria-label={`${group.count} ${group.typeLabel}`}
+                      className="font-mono text-xs font-semibold text-muted"
+                    >
+                      {group.count}
+                    </span>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {group.concepts.map((linkedConcept) => (
@@ -210,6 +217,7 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
                         key={linkedConcept.id}
                         concept={linkedConcept}
                         meta={<code className="font-mono">{linkedConcept.id}</code>}
+                        showTypeBadge={false}
                       />
                     ))}
                   </div>

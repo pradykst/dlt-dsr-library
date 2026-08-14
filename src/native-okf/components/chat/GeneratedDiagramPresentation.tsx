@@ -24,6 +24,7 @@ import type {
   GeneratedDiagramNode as DiagramNode,
 } from "../../shared/chat-types.ts";
 import { conceptHref } from "../../shared/links.ts";
+import { equivalentSemanticLabels } from "../../shared/presentation.ts";
 import { SemanticColumnHeadings } from "../SemanticColumnHeadings.tsx";
 import {
   StraightFlowEdge,
@@ -123,8 +124,12 @@ export function GeneratedDiagramDetailsPanel({
       <dl className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
         <dt className="font-bold uppercase tracking-wide text-muted">Stage</dt>
         <dd className="font-semibold text-ink">{formatStage(node.stage)}</dd>
-        <dt className="font-bold uppercase tracking-wide text-muted">Category</dt>
-        <dd className="break-words font-semibold text-ink">{node.category}</dd>
+        {!equivalentSemanticLabels(node.category, node.stage) ? (
+          <>
+            <dt className="font-bold uppercase tracking-wide text-muted">Category</dt>
+            <dd className="break-words font-semibold text-ink">{node.category}</dd>
+          </>
+        ) : null}
         {node.group ? (
           <>
             <dt className="font-bold uppercase tracking-wide text-muted">Group</dt>

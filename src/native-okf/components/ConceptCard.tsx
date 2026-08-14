@@ -10,6 +10,7 @@ export interface ConceptCardProps {
   meta?: ReactNode;
   footer?: ReactNode;
   compact?: boolean;
+  showTypeBadge?: boolean;
 }
 
 export function ConceptCard({
@@ -17,6 +18,7 @@ export function ConceptCard({
   meta,
   footer,
   compact = false,
+  showTypeBadge = true,
 }: ConceptCardProps) {
   return (
     <article className="group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue/40 hover:shadow-research">
@@ -27,7 +29,9 @@ export function ConceptCard({
         href={conceptHref(concept.id)}
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <TypeBadge type={concept.type} label={concept.typeLabel} />
+          {showTypeBadge ? (
+            <TypeBadge type={concept.type} label={concept.typeLabel} />
+          ) : null}
           {meta ? <div className="text-xs text-muted">{meta}</div> : null}
         </div>
 
@@ -70,4 +74,3 @@ export function ConceptCard({
     </article>
   );
 }
-
