@@ -5,8 +5,8 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ## Validity boundaries
 
 - OKF version: 0.1
-- Markdown files: 459
-- Concepts: 455
+- Markdown files: 466
+- Concepts: 462
 - Papers: 34
 - Native format valid: yes (0 fatal errors)
 - Internal links valid: yes (0 broken-link warnings)
@@ -17,6 +17,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - design-goal + design-principle: 1
 - design-objective: 3
 - design-objective + design-principle: 4
+- design-objective + design-requirement: 1
 - design-objective + design-requirement + design-principle: 3
 - design-objective + meta-requirement + design-principle: 1
 - design-principle: 6
@@ -27,7 +28,6 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 - meta-requirement: 1
 - meta-requirement + design-principle: 3
 - meta-requirement + design-principle + design-feature: 2
-- no associated design knowledge: 1
 
 ## Papers with potential missing explicit categories
 
@@ -277,7 +277,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Blockchain-based digital rights management systems: Design principles for the music industry
 
 - Paper ID: `papers/drm-music-industry`
-- Semantic relationships: 9
+- Semantic relationships: 13
 - Requirements present: yes
 - Principles present: yes
 - Features present: yes
@@ -296,13 +296,14 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility
 
 - Paper ID: `papers/forgetting-blockchain-gdpr`
-- Semantic relationships: 0
-- Requirements present: no
+- Semantic relationships: 6
+- Requirements present: yes
 - Principles present: no
 - Features present: no
-- Objectives, goals, or meta-requirements present: no
+- Objectives, goals, or meta-requirements present: yes
 - Native concept counts:
-  - none
+  - design-objective: 1
+  - design-requirement: 6
 - Explicit count statements:
   - none detected
 - Potential representation warnings:
@@ -477,7 +478,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Digging for Quality Management in Production Systems: A Solution Space for Blockchain Collaborations
 
 - Paper ID: `papers/quality-management-production`
-- Semantic relationships: 0
+- Semantic relationships: 10
 - Requirements present: no
 - Principles present: yes
 - Features present: no
@@ -486,9 +487,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
   - meta-requirement: 6
   - design-principle: 6
 - Explicit count statements:
-  - 6 design-principle: stated 6 design-principle
   - six design principles: stated 6 design-principle
-  - 6 meta-requirement: stated 6 meta-requirement
 - Potential representation warnings:
   - [mentioned-category-missing] Paper text mentions design features, but no design-feature concept is associated with the paper.
   - [mentioned-category-missing] Paper text mentions design requirements, but no design-requirement concept is associated with the paper.
@@ -559,7 +558,7 @@ This offline audit separates format/link validity from semantic coverage. Warnin
 ### Designing trust-enabling blockchain systems for the inter-organizational exchange of capacity
 
 - Paper ID: `papers/trust-enabling-capacity-exchange`
-- Semantic relationships: 14
+- Semantic relationships: 67
 - Requirements present: no
 - Principles present: yes
 - Features present: yes
