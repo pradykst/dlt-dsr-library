@@ -15,6 +15,7 @@ import type { OkfBundle, OkfConcept, OkfLink } from "../server/types.ts";
 const BLOCKCHAIN = "papers/blockchain-iot-sensor-data";
 const PEER_REVIEW = "papers/peer-review-token-incentives";
 const CONSENT = "papers/consent-self-management-hie";
+const QUALITY = "papers/quality-management-production";
 
 function edgeKey(edge: { sourceId: string; targetId: string; label: string }): string {
   return edge.sourceId + " -> " + edge.targetId + " [" + edge.label + "]";
@@ -85,6 +86,31 @@ test("Consent self-management projects the canonical 5/5/5 semantic map", async 
     ],
   );
   assert.equal(map.edges.length, 16);
+});
+
+test("Quality management projects all ten Figure 5 MDR-to-DP mappings", async () => {
+  const map = await buildPaperDesignMap(QUALITY);
+  assert.ok(map);
+  assert.deepEqual(
+    map.columns.map((column) => [column.type, column.nodeIds.length]),
+    [
+      ["meta-requirement", 6],
+      ["design-principle", 6],
+    ],
+  );
+  assert.equal(map.nodes.length, 12);
+  assert.equal(map.edges.length, 10);
+
+  const keys = new Set(map.edges.map(edgeKey));
+  for (const expected of [
+    "design-knowledge/quality-management-production-mdr1 -> design-knowledge/quality-management-production-dp1 [addresses]",
+    "design-knowledge/quality-management-production-mdr1 -> design-knowledge/quality-management-production-dp2 [addresses]",
+    "design-knowledge/quality-management-production-mdr2 -> design-knowledge/quality-management-production-dp4 [addresses]",
+    "design-knowledge/quality-management-production-mdr5 -> design-knowledge/quality-management-production-dp6 [addresses]",
+    "design-knowledge/quality-management-production-mdr6 -> design-knowledge/quality-management-production-dp6 [addresses]",
+  ]) {
+    assert.ok(keys.has(expected), "missing Figure 5 edge: " + expected);
+  }
 });
 
 test("unknown native types remain columns while ambiguous links stay raw-only", () => {
