@@ -16,6 +16,7 @@ const BLOCKCHAIN = "papers/blockchain-iot-sensor-data";
 const PEER_REVIEW = "papers/peer-review-token-incentives";
 const CONSENT = "papers/consent-self-management-hie";
 const QUALITY = "papers/quality-management-production";
+const TRUST_CAPACITY = "papers/trust-enabling-capacity-exchange";
 
 function edgeKey(edge: { sourceId: string; targetId: string; label: string }): string {
   return edge.sourceId + " -> " + edge.targetId + " [" + edge.label + "]";
@@ -110,6 +111,34 @@ test("Quality management projects all ten Figure 5 MDR-to-DP mappings", async ()
     "design-knowledge/quality-management-production-mdr6 -> design-knowledge/quality-management-production-dp6 [addresses]",
   ]) {
     assert.ok(keys.has(expected), "missing Figure 5 edge: " + expected);
+  }
+});
+
+test("Trust-capacity projects the complete Figure 3 and Figure 6 map", async () => {
+  const map = await buildPaperDesignMap(TRUST_CAPACITY);
+  assert.ok(map);
+  assert.deepEqual(
+    map.columns.map((column) => [column.type, column.nodeIds.length]),
+    [
+      ["meta-requirement", 19],
+      ["design-principle", 6],
+      ["design-feature", 14],
+    ],
+  );
+  assert.equal(map.nodes.length, 39);
+  assert.equal(map.edges.length, 67);
+
+  const keys = new Set(map.edges.map(edgeKey));
+  for (const expected of [
+    "design-knowledge/trust-enabling-capacity-exchange-mr-s1 -> design-knowledge/trust-enabling-capacity-exchange-dp1 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-mr-s1 -> design-knowledge/trust-enabling-capacity-exchange-dp2 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-mr-i1 -> design-knowledge/trust-enabling-capacity-exchange-dp3 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-mr-s2 -> design-knowledge/trust-enabling-capacity-exchange-dp4 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-mr-a2 -> design-knowledge/trust-enabling-capacity-exchange-dp5 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-mr-o7 -> design-knowledge/trust-enabling-capacity-exchange-dp6 [addresses]",
+    "design-knowledge/trust-enabling-capacity-exchange-dp6 -> design-knowledge/trust-enabling-capacity-exchange-df6-2 [implements]",
+  ]) {
+    assert.ok(keys.has(expected), "missing trust-capacity edge: " + expected);
   }
 });
 
