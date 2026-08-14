@@ -23,6 +23,7 @@ import {
   PAPER_DSR_DIMENSIONS,
   publicPaperFrontmatter,
 } from "../shared/paper-presentation.ts";
+import type { LinkedConceptGroupDto } from "../shared/types.ts";
 
 async function source(relativePath: string): Promise<string> {
   return readFile(resolve(process.cwd(), relativePath), "utf8");
@@ -124,7 +125,10 @@ test("paper presentation derives all six DSR dimensions and removes raw duplicat
   for (const paper of library.papers) {
     const view = await getPaperWorkbenchViewModel(paper.id);
     assert.ok(view);
-    const presentation = buildPaperPresentation(view.concept.markdownBody);
+    const presentation = buildPaperPresentation(
+      view.concept.markdownBody,
+      view.linkedGroups,
+    );
     assert.deepEqual(
       presentation.dsrDimensions.map(({ title }) => title),
       PAPER_DSR_DIMENSIONS.map(({ title }) => title),
@@ -136,6 +140,15 @@ test("paper presentation derives all six DSR dimensions and removes raw duplicat
     );
     assert.doesNotMatch(presentation.narrativeMarkdown, /^## DSR grid\s*$/imu);
     assert.doesNotMatch(presentation.narrativeMarkdown, /^## Design knowledge\s*$/imu);
+    for (const group of view.linkedGroups) {
+      for (const concept of group.concepts) {
+        assert.equal(
+          presentation.narrativeMarkdown.includes(concept.filePath),
+          false,
+          `${paper.id} repeats ${concept.id} in Overview`,
+        );
+      }
+    }
   }
 });
 
@@ -176,6 +189,104 @@ test("paper page keeps structured knowledge while hiding technical and relations
     methodology: "kept",
   });
   assert.deepEqual(filtered, { title: "Generic paper", methodology: "kept" });
+});
+
+test("paper Overview omits linked formal inventories while structured cards and graph remain intact", async () => {
+  const view = await getPaperWorkbenchViewModel("papers/blockchain-iot-sensor-data");
+  assert.ok(view);
+  const presentation = buildPaperPresentation(
+    view.concept.markdownBody,
+    view.linkedGroups,
+  );
+
+  assert.doesNotMatch(presentation.narrativeMarkdown, /^## Design features\s*$/imu);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /Design feature DF1:/u);
+  assert.match(presentation.narrativeMarkdown, /^## Summary\s*$/mu);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /^# Blockchain for the IoT:/mu);
+
+  assert.deepEqual(
+    view.linkedGroups.map((group) => [group.type, group.count]),
+    [
+      ["design-feature", 9],
+      ["design-principle", 4],
+      ["design-requirement", 4],
+    ],
+  );
+  assert.equal(view.paperDesignMap?.nodes.length, 17);
+  assert.equal(view.paperDesignMap?.edges.length, 14);
+
+  const workbench = await source("src/native-okf/components/WorkbenchView.tsx");
+  assert.match(workbench, /buildPaperPresentation\(concept\.markdownBody, view\.linkedGroups\)/u);
+  assert.match(workbench, /view\.linkedGroups\.map[\s\S]*?<ConceptCard/u);
+});
+
+test("formal inventory filtering is type-generic and retains ordinary narrative", () => {
+  const concept = (
+    id: string,
+    filePath: string,
+    type: string,
+    typeLabel: string,
+    title: string,
+  ) => ({ id, filePath, type, typeLabel, title, tags: [] });
+  const groups: LinkedConceptGroupDto[] = [
+    {
+      type: "design-principle",
+      typeLabel: "Design Principle",
+      count: 1,
+      concepts: [concept(
+        "design-knowledge/example-dp1",
+        "design-knowledge/example-dp1.md",
+        "design-principle",
+        "Design Principle",
+        "DP1 - Preserve narrative",
+      )],
+    },
+    {
+      type: "design-requirement",
+      typeLabel: "Design Requirement",
+      count: 1,
+      concepts: [concept(
+        "design-knowledge/example-dr1",
+        "design-knowledge/example-dr1.md",
+        "design-requirement",
+        "Design Requirement",
+        "DR1 - Retain evidence",
+      )],
+    },
+  ];
+  const presentation = buildPaperPresentation([
+    "# Example paper",
+    "",
+    "**Authors:** Example Author",
+    "**Venue:** Example Venue",
+    "**Link:** https://example.test",
+    "",
+    "## Summary",
+    "",
+    "The artifact uses design features to satisfy its privacy objectives.",
+    "",
+    "## Design principles",
+    "",
+    "* [Design principle DP1: Preserve narrative](../design-knowledge/example-dp1.md)",
+    "",
+    "## Design requirements",
+    "",
+    "* [Design requirement DR1: Retain evidence](../design-knowledge/example-dr1.md)",
+    "",
+    "## Discussion",
+    "",
+    "Ordinary discussion remains.",
+  ].join("\n"), groups);
+
+  assert.match(
+    presentation.narrativeMarkdown,
+    /artifact uses design features to satisfy its privacy objectives/u,
+  );
+  assert.match(presentation.narrativeMarkdown, /Ordinary discussion remains/u);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /^## Design principles\s*$/imu);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /^## Design requirements\s*$/imu);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /DP1: Preserve narrative/u);
+  assert.doesNotMatch(presentation.narrativeMarkdown, /DR1: Retain evidence/u);
 });
 
 test("type presentation does not repeat adjacent semantic labels", async () => {

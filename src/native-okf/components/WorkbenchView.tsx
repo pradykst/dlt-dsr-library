@@ -40,7 +40,7 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
   const isPaper = view.kind === "paper";
   const frontmatter = concept.frontmatter;
   const paperPresentation = isPaper
-    ? buildPaperPresentation(concept.markdownBody)
+    ? buildPaperPresentation(concept.markdownBody, view.linkedGroups)
     : null;
   const displayFrontmatter = isPaper
     ? publicPaperFrontmatter(frontmatter)

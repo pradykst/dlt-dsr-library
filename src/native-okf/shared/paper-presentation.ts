@@ -1,4 +1,4 @@
-import type { JsonObject } from "./types.ts";
+import type { JsonObject, LinkedConceptGroupDto } from "./types.ts";
 
 export const PAPER_DSR_DIMENSIONS = [
   { key: "problem-description", title: "Problem description" },
@@ -61,6 +61,51 @@ function escapedRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
+function equivalentSectionLabel(heading: string, typeLabel: string): boolean {
+  const normalize = (value: string) => normalizedHeading(value)
+    .replace(/[-_/]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  const normalizedType = normalize(typeLabel);
+  const normalizedSection = normalize(heading);
+  return normalizedSection === normalizedType || normalizedSection === `${normalizedType}s`;
+}
+
+function linkedConceptInventorySection(
+  lines: readonly string[],
+  group: LinkedConceptGroupDto,
+): MarkdownSection | null {
+  const candidates = lines.flatMap((_line, index) => {
+    const heading = lines[index]?.match(/^(##)\s+(.+?)\s*$/u);
+    if (!heading || !equivalentSectionLabel(heading[2] ?? "", group.typeLabel)) {
+      return [];
+    }
+    const relativeEnd = lines.slice(index + 1).findIndex((line) => /^#{1,2}\s+/u.test(line));
+    const end = relativeEnd < 0 ? lines.length : index + 1 + relativeEnd;
+    return [{ start: index, end, lines: lines.slice(index + 1, end) }];
+  });
+  const canonicalPaths = group.concepts.map((concept) => concept.filePath.replace(/\\/gu, "/"));
+  return candidates.find((section) => {
+    const destinations = section.lines
+      .flatMap((line) => [...line.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/gu)])
+      .map((match) => (match[1] ?? "").split(/[?#]/u, 1)[0]?.replace(/\\/gu, "/") ?? "");
+    return destinations.some((destination) =>
+      canonicalPaths.some((path) => destination === path || destination.endsWith(`/${path}`))
+    );
+  }) ?? null;
+}
+
+function redundantPaperHeader(lines: readonly string[]): MarkdownSection | null {
+  const start = lines.findIndex((line) => /^#\s+\S/u.test(line));
+  if (start < 0) return null;
+  const relativeEnd = lines.slice(start + 1).findIndex((line) => /^##\s+/u.test(line));
+  if (relativeEnd < 0) return null;
+  const end = start + 1 + relativeEnd;
+  const preamble = lines.slice(start + 1, end).join("\n");
+  if (!/^\s*\*\*Authors?:\*\*/imu.test(preamble)) return null;
+  return { start, end, lines: lines.slice(start + 1, end) };
+}
+
 function dimensionContent(
   sectionLines: readonly string[],
   title: string,
@@ -86,11 +131,23 @@ function dimensionContent(
   return content || null;
 }
 
-export function buildPaperPresentation(markdownBody: string): PaperPresentation {
+export function buildPaperPresentation(
+  markdownBody: string,
+  linkedGroups: readonly LinkedConceptGroupDto[] = [],
+): PaperPresentation {
   const lines = markdownBody.split(/\r?\n/u);
   const dsrSection = markdownSection(lines, "DSR grid");
   const designKnowledgeSection = markdownSection(lines, "Design knowledge");
-  const removedRanges = [dsrSection, designKnowledgeSection].filter(
+  const paperHeader = redundantPaperHeader(lines);
+  const linkedInventorySections = linkedGroups
+    .map((group) => linkedConceptInventorySection(lines, group))
+    .filter((section): section is MarkdownSection => section !== null);
+  const removedRanges = [
+    paperHeader,
+    dsrSection,
+    designKnowledgeSection,
+    ...linkedInventorySections,
+  ].filter(
     (section): section is MarkdownSection => section !== null,
   );
   const narrativeMarkdown = lines
