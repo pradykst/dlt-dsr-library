@@ -26,11 +26,14 @@ This design principle is proposed by [Blockchain-based digital rights management
 ## Addresses
 
 * [Design requirement DR1: Transparent music licensing structures](./drm-music-industry-dr1.md)
+* [Design requirement DR3: Efficient and transparent royalty payout](./drm-music-industry-dr3.md)
 
 ## Implemented by
 
 * [Design feature DF1: Public-permissioned blockchain](./drm-music-industry-df1.md)
+* [Design feature DF2: pBFT consensus](./drm-music-industry-df2.md)
 
 # Citations
 [1] Raffaele Fabio Ciriello, Alexandra Cecilie Gjol Torbensen, Magnus Rotvit Perlt Hansen, Christoph Mueller-Bloch. Blockchain-based digital rights management systems: Design principles for the music industry. Electronic Markets 33:5 (2023). https://doi.org/10.1007/s12525-023-00628-5
 [2] Source document: Blockchain-based digital rights management systems.pdf
+[3] Source evidence: Figure 4, "Design features of blockchain-based DRM systems", article p. 16 (PDF p. 16), explicitly connects DR1 and DR3 to DP1 and connects DP1 to DF1 and DF2.

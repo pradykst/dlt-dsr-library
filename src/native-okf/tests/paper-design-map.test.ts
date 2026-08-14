@@ -18,6 +18,7 @@ const CONSENT = "papers/consent-self-management-hie";
 const QUALITY = "papers/quality-management-production";
 const TRUST_CAPACITY = "papers/trust-enabling-capacity-exchange";
 const FORGETTING = "papers/forgetting-blockchain-gdpr";
+const DRM_MUSIC = "papers/drm-music-industry";
 
 function edgeKey(edge: { sourceId: string; targetId: string; label: string }): string {
   return edge.sourceId + " -> " + edge.targetId + " [" + edge.label + "]";
@@ -155,6 +156,31 @@ test("Forgetting blockchain projects its objective and six numbered requirements
   );
   assert.equal(map.nodes.length, 7);
   assert.equal(map.edges.length, 6);
+});
+
+test("Music DRM projects every unambiguous Figure 4 connector", async () => {
+  const map = await buildPaperDesignMap(DRM_MUSIC);
+  assert.ok(map);
+  assert.deepEqual(
+    map.columns.map((column) => [column.type, column.nodeIds.length]),
+    [
+      ["design-requirement", 3],
+      ["design-principle", 3],
+      ["design-feature", 4],
+    ],
+  );
+  assert.equal(map.nodes.length, 10);
+  assert.equal(map.edges.length, 13);
+
+  const keys = new Set(map.edges.map(edgeKey));
+  for (const expected of [
+    "design-knowledge/drm-music-industry-dr3 -> design-knowledge/drm-music-industry-dp1 [addresses]",
+    "design-knowledge/drm-music-industry-dr1 -> design-knowledge/drm-music-industry-dp3 [addresses]",
+    "design-knowledge/drm-music-industry-dp1 -> design-knowledge/drm-music-industry-df2 [implements]",
+    "design-knowledge/drm-music-industry-dp2 -> design-knowledge/drm-music-industry-df3 [implements]",
+  ]) {
+    assert.ok(keys.has(expected), "missing Figure 4 edge: " + expected);
+  }
 });
 
 test("unknown native types remain columns while ambiguous links stay raw-only", () => {

@@ -57,7 +57,7 @@ test("canonical bundle validation reports exact fixture totals", async () => {
   assert.equal(report.conceptCount, 462);
   assert.deepEqual(report.countsByType, EXPECTED_TYPE_COUNTS);
   assert.equal(report.paperCount, 34);
-  assert.equal(report.internalLinkCount, 1319);
+  assert.equal(report.internalLinkCount, 1325);
   assert.equal(report.externalLinkCount, 0);
   assert.equal(report.brokenLinkWarningCount, 0);
   assert.equal(report.fatalValidationErrorCount, 0);
@@ -77,7 +77,7 @@ test("validation formatting includes every required concise metric", async () =>
     "Concepts: 462",
     "  paper: 34",
     "Papers: 34",
-    "Internal links: 1319",
+    "Internal links: 1325",
     "External links: 0",
     "Broken-link warnings: 0",
     "Fatal validation errors: 0",

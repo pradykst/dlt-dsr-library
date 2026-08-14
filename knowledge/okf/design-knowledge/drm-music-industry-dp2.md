@@ -32,7 +32,9 @@ This design principle is proposed by [Blockchain-based digital rights management
 
 * [Design feature DF1: Public-permissioned blockchain](./drm-music-industry-df1.md)
 * [Design feature DF2: pBFT consensus](./drm-music-industry-df2.md)
+* [Design feature DF3: Fiat-pegged stablecoin payout](./drm-music-industry-df3.md)
 
 # Citations
 [1] Raffaele Fabio Ciriello, Alexandra Cecilie Gjol Torbensen, Magnus Rotvit Perlt Hansen, Christoph Mueller-Bloch. Blockchain-based digital rights management systems: Design principles for the music industry. Electronic Markets 33:5 (2023). https://doi.org/10.1007/s12525-023-00628-5
 [2] Source document: Blockchain-based digital rights management systems.pdf
+[3] Source evidence: Figure 4, "Design features of blockchain-based DRM systems", article p. 16 (PDF p. 16), explicitly connects DP2 to DF1, DF2, and DF3.
