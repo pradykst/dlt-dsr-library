@@ -8,7 +8,7 @@ year: 2019
 venue: "HICSS 52 (2019)"
 methodology: "Design science research (Peffers et al. 2007): problem identification, definition of objectives, design and development of a pruning-based prototype, demonstration, and expert evaluation."
 dsr_grid: true
-dsr_solution_space: "Instantiation (proof-of-concept prototype); the paper's guidance for future designers is presented as narrative discussion, not as a formally itemized set of design principles."
+dsr_solution_space: "Design objective and six explicitly numbered prototype requirements; instantiation (proof-of-concept prototype). The paper does not formally itemize design principles or design features."
 tags:
   - forgetting-blockchain-gdpr
   - gdpr-privacy
@@ -67,7 +67,17 @@ The authors call for further work on: new smart-contract best practices and moni
 
 ## Design knowledge
 
-This paper does not present its guidance for future designers as a source-labelled, enumerated, or tabled set of design goals, objectives, requirements, principles, or features. Its "principles for designing data-protection-compliant blockchains" (as stated in the abstract and conclusion) are conveyed only as narrative discussion, scattered across the Evaluation Q&A (Section 4.5), the Limitations (Section 5), and the Discussion and conclusion (Section 6), without any table, figure, or numbered list presenting them as a formal, reusable set. Per the project's canonicalization rule, no formal design-knowledge concept is created for this paper; its contribution is represented above in Artifact and forgetting mechanism, Evaluation, Findings, and Limitations instead. This is a valid zero-node representation: the paper contributes a working artifact and evaluated lessons, not formally itemized reusable design knowledge.
+Section 4.2 formally defines one prototype objective and explicitly enumerates six requirements that the prototype needs to fulfil:
+
+* [Design objective DO1: Working forgetting-blockchain prototype](../design-knowledge/forgetting-blockchain-gdpr-do1.md)
+* [Design requirement DR1: Tamper resistance](../design-knowledge/forgetting-blockchain-gdpr-dr1.md)
+* [Design requirement DR2: Information distributed to all nodes](../design-knowledge/forgetting-blockchain-gdpr-dr2.md)
+* [Design requirement DR3: New nodes can join later](../design-knowledge/forgetting-blockchain-gdpr-dr3.md)
+* [Design requirement DR4: All nodes can add transactions](../design-knowledge/forgetting-blockchain-gdpr-dr4.md)
+* [Design requirement DR5: Decentralization without trustees](../design-knowledge/forgetting-blockchain-gdpr-dr5.md)
+* [Design requirement DR6: Delete transactions after a predefined time](../design-knowledge/forgetting-blockchain-gdpr-dr6.md)
+
+Each numbered requirement addresses the stated prototype objective. The implementation mechanisms in Section 4.3 remain represented as artifact details: the paper does not formally label or enumerate them as reusable design features. Likewise, its later narrative guidance is not converted into synthesized design principles.
 
 # Citations
 [1] Simon Farshid, Andreas Reitz, Peter Roßbach. Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility. HICSS 52 (2019), pp. 7087-7095. https://hdl.handle.net/10125/60145
@@ -76,3 +86,4 @@ This paper does not present its guidance for future designers as a source-labell
 [4] Source evidence: Evaluation — Section 4.4 "Demonstration" (three financial-services experts; Figures 3-8) and Table 2 "Solutions to Blockchain privacy problems", article p. 7091-7092.
 [5] Source evidence: Findings — Section 4.5 "Evaluation" (objectives assessment against Section 4.2's six requirements; expert consensus that a GDPR-compliant transaction is possible), article p. 7092-7093.
 [6] Source evidence: Limitations — Section 5 "Limitations" (four numbered points: restricted-environment applicability, loss of built-in contract history, weak-subjectivity node bootstrapping, downtime-driven deletion-time recommendation), article p. 7093.
+[7] Source evidence: Design objective and six numbered requirements — Section 4.2 "Definition of objectives", article p. 7089 (PDF p. 4); their evaluation appears in Section 4.5, article p. 7092.

@@ -387,6 +387,18 @@ Source: [quality-management-production](../papers/quality-management-production.
 * [Design principle DP5: Easy integration without enterprise-system modification](quality-management-production-dp5.md) - The system provides USID (e.g., system IDs, license) integration through the BC system or token configuration.
 * [Design principle DP6: Confidentiality of available information](quality-management-production-dp6.md) - The system provides confidentiality by design mechanisms.
 
+## Design of a forgetting blockchain: A possible way to accomplish GDPR compatibility
+
+Source: [forgetting-blockchain-gdpr](../papers/forgetting-blockchain-gdpr.md)
+
+* [Design objective DO1: Working forgetting-blockchain prototype](forgetting-blockchain-gdpr-do1.md) - Build a working prototype demonstrating that transactions can be deleted from a blockchain while maintaining functionality.
+* [Design requirement DR1: Tamper resistance](forgetting-blockchain-gdpr-dr1.md) - The prototype needs to be tamper-resistant.
+* [Design requirement DR2: Information distributed to all nodes](forgetting-blockchain-gdpr-dr2.md) - All information needs to be distributed to all nodes in the network.
+* [Design requirement DR3: New nodes can join later](forgetting-blockchain-gdpr-dr3.md) - It should be possible for new nodes to join the network afterwards.
+* [Design requirement DR4: All nodes can add transactions](forgetting-blockchain-gdpr-dr4.md) - All nodes can add transactions.
+* [Design requirement DR5: Decentralization without trustees](forgetting-blockchain-gdpr-dr5.md) - The prototype must be decentralized and may not rely on trustees.
+* [Design requirement DR6: Delete transactions after a predefined time](forgetting-blockchain-gdpr-dr6.md) - Delete every transaction after a predefined amount of time.
+
 ## From ambivalence to trust: Using blockchain in customer loyalty programs
 
 Source: [ambivalence-trust-loyalty](../papers/ambivalence-trust-loyalty.md)

@@ -17,6 +17,7 @@ const PEER_REVIEW = "papers/peer-review-token-incentives";
 const CONSENT = "papers/consent-self-management-hie";
 const QUALITY = "papers/quality-management-production";
 const TRUST_CAPACITY = "papers/trust-enabling-capacity-exchange";
+const FORGETTING = "papers/forgetting-blockchain-gdpr";
 
 function edgeKey(edge: { sourceId: string; targetId: string; label: string }): string {
   return edge.sourceId + " -> " + edge.targetId + " [" + edge.label + "]";
@@ -140,6 +141,20 @@ test("Trust-capacity projects the complete Figure 3 and Figure 6 map", async () 
   ]) {
     assert.ok(keys.has(expected), "missing trust-capacity edge: " + expected);
   }
+});
+
+test("Forgetting blockchain projects its objective and six numbered requirements", async () => {
+  const map = await buildPaperDesignMap(FORGETTING);
+  assert.ok(map);
+  assert.deepEqual(
+    map.columns.map((column) => [column.type, column.nodeIds.length]),
+    [
+      ["design-objective", 1],
+      ["design-requirement", 6],
+    ],
+  );
+  assert.equal(map.nodes.length, 7);
+  assert.equal(map.edges.length, 6);
 });
 
 test("unknown native types remain columns while ambiguous links stay raw-only", () => {
