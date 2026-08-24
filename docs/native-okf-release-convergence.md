@@ -54,7 +54,7 @@ The source section contains at most 12 concepts from the union of support IDs ac
 
 One bounded synthesis-plan repair is allowed. Its request contains only the validated problem, bounded refinement and constraints, concise allowlisted concept metadata, the strict response schema, and content-free validation error codes. It does not replay arbitrary invalid output.
 
-If repair also fails, invalid output is withheld. The response remains `diagramMode: "synthesized"` with `diagramStatus: "evidence-fallback"` or `"failed"`. An optional deterministic stored graph is explicitly labelled “Supporting evidence map — not the requested synthesized flow.” It is never stored as a synthesis draft and does not consume diagram feature quota.
+If repair also fails, invalid output is withheld. The response remains `diagramMode: "synthesized"` with `diagramStatus: "evidence-fallback"` or `"failed"`. An optional deterministic stored graph is explicitly labelled “Supporting evidence map — not the requested synthesized flow.” It is never stored as a synthesis draft.
 
 ## Conversation state and refinement
 
@@ -69,23 +69,22 @@ The deprecated `synthesisDraft` input field is accepted only for same-tab sessio
 
 ## Current external data boundary
 
-A deterministic pre-retrieval and pre-reservation gate rejects requests whose central requirement is live external data, including prices, market quotations, weather, news, sports results or schedules, office holders, external statistics, or real-time status. It returns:
+A deterministic pre-retrieval gate rejects requests whose central requirement is live external data, including prices, market quotations, weather, news, sports results or schedules, office holders, external statistics, or real-time status. It returns:
 
 > This library does not provide live external market data. It can answer questions about the stored DSR and blockchain design knowledge.
 
-This path performs no retrieval, moderation, answer, diagram, or repair call; creates no paid reservation; consumes no question or diagram quota; and returns no sources or warnings. Stored-library questions about a current paper, latest stored paper, a price mechanism, or market design are not blocked by those words alone.
+This path performs no retrieval, moderation, answer, diagram, or repair call and returns no sources or warnings. Stored-library questions about a current paper, latest stored paper, a price mechanism, or market design are not blocked by those words alone.
 
-## Quota and cost semantics
+## Cost semantics
 
-A diagram unit is consumed only when the final response contains a validated diagram with `diagramStatus: "success"`. This includes deterministic stored paper maps, validated stored structured diagrams, and validated synthesized flows.
-
-Clarifications, no-match responses, live-data boundary responses, manual diagram disable, synthesis failure, evidence fallback, safe text-only failure, New chat, and session restoration consume no diagram unit. A failed synthesis still reconciles every actual model and repair token and follows the existing substantive question-quota rule. The final response quota is read after reconciliation from the operational store.
-
-No access cookie, origin, rate, cooldown, concurrency, revocation, operational-pause, pricing, budget, or transaction boundary changes in this phase.
+Deterministic stored and comparative maps do not invoke OpenAI. Clarifications,
+no-match responses, the live-data boundary, New Chat, and session restoration
+also make no model call. Model-backed text and synthesized diagrams use the
+bounded provider path.
 
 ## Browser and privacy boundary
 
-Messages, focus, last synthesis problem, latest validated draft, local conversation ID, and diagram preference remain bounded in `sessionStorage`. New chat clears all of them and resets diagram intent without changing access or quota state. No chat, prompt, answer, source body, or synthesis draft is added to the operational SQLite store.
+Messages, focus, last synthesis problem, latest validated draft, local conversation ID, and diagram preference remain bounded in `sessionStorage`. New chat clears all of them and resets diagram intent. No chat, prompt, answer, source body, or synthesis draft is persisted by the server.
 
 ## Viewport behavior
 

@@ -6,7 +6,7 @@ export const NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE =
 const LIVE_QUALIFIER =
   /\b(?:live|real[\s-]*time|right now|today(?:'s)?|currently|current|latest|up[\s-]*to[\s-]*date|next)\b/iu;
 const EXTERNAL_DATA_SUBJECT =
-  /\b(?:prices?|quotes?|quotations?|exchange rates?|market capitalization|market cap|weather|forecasts?|news|headlines?|sports?|scores?|fixtures?|game|match|schedules?|office holders?|presidents?|prime ministers?|chancellors?|chief executive officers?|ceos?|external statistics?|polls?|election results?)\b/iu;
+  /\b(?:prices?|quotes?|quotations?|exchange rates?|market capitalization|market cap|profitability|investment returns?|trading signals?|weather|forecasts?|news|headlines?|sports?|scores?|fixtures?|game|match|schedules?|office holders?|presidents?|prime ministers?|chancellors?|chief executive officers?|ceos?|external statistics?|polls?|election results?)\b/iu;
 const INHERENTLY_LIVE_REQUEST =
   /\b(?:weather forecast|stock quote|market quote|live score|sports score|news headline|exchange rate|real[\s-]*time status|outside (?:the )?(?:stored )?library)\b|\bwho\s+is\s+(?:the\s+)?(?:president|prime minister|chancellor|chief executive officer|ceo)\b/iu;
 

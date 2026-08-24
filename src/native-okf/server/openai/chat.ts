@@ -75,6 +75,7 @@ import {
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import {
+  buildComparativePaperDesignMap,
   buildGroundedStoredSourceMap,
   buildStoredPaperDesignMap,
   storedPaperMapPresentation,
@@ -108,7 +109,7 @@ export type NativeOkfDiagramGenerator = (input: {
   context: NativeOkfGroundedContext;
   question: string;
   answerMarkdown: string;
-  mode: NativeOkfDiagramMode;
+  mode: Exclude<NativeOkfDiagramMode, "comparative">;
   grounding: NativeOkfDiagramGrounding;
   priorDraft: SynthesisDraftState | null;
   requireRpfPath: boolean;
@@ -126,6 +127,7 @@ export interface NativeOkfChatDependencies {
   buildStoredPaperMap?: (
     paperConceptId: string,
   ) => Promise<GeneratedDiagram | undefined>;
+  buildComparativePaperMap?: typeof buildComparativePaperDesignMap;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -587,6 +589,55 @@ export async function answerNativeOkfChat(
         "The exact stored paper map could not be assembled safely. No model-generated substitute was used.",
       sources: [],
       diagramMode: "stored",
+      diagramStatus: "failed",
+      diagnosticCode: "stored-map-unavailable",
+      insufficientContext: false,
+      conversationState: completedConversationState(prepared, retrieval, []),
+      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+    };
+  }
+
+  if (includeDiagram && prepared.preferDeterministicComparativeMap) {
+    const paperBySlug = new Map(
+      prepared.catalog.papers.map((paper) => [paper.slug, paper]),
+    );
+    const paperConceptIds = prepared.focusedPaperSlugs.flatMap((slug) => {
+      const paper = paperBySlug.get(slug);
+      return paper ? [paper.conceptId] : [];
+    });
+    try {
+      const presentation = await (
+        dependencies.buildComparativePaperMap ?? buildComparativePaperDesignMap
+      )(paperConceptIds);
+      if (presentation) {
+        return {
+          kind: "answer",
+          presentationMode: "diagram-primary",
+          answerMarkdown: presentation.summary,
+          deterministicSummary: presentation.summary,
+          sources: presentation.sources,
+          diagram: presentation.diagram,
+          diagramMode: "comparative",
+          diagramStatus: "success",
+          insufficientContext: false,
+          conversationState: completedConversationState(
+            prepared,
+            retrieval,
+            presentation.sources,
+          ),
+          ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+        };
+      }
+    } catch {
+      // The content-free diagnostic below is the only client-visible detail.
+    }
+    return {
+      kind: "answer",
+      presentationMode: "safe-error",
+      answerMarkdown:
+        "The comparative stored evidence map could not be assembled safely. No model-generated substitute was used.",
+      sources: [],
+      diagramMode: "comparative",
       diagramStatus: "failed",
       diagnosticCode: "stored-map-unavailable",
       insufficientContext: false,

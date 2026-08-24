@@ -146,7 +146,6 @@ function compactResponse(
 ): NativeOkfChatResponse | undefined {
   if (!response) return undefined;
   const safe = { ...response };
-  delete safe.quota;
   delete safe.retrievalDebug;
   delete safe.conversationState;
   // The validated latest draft is stored once in the session conversation state.

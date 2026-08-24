@@ -24,14 +24,16 @@ import {
 } from "../shared/diagram-intent.ts";
 import { getAllConcepts, getAllPapers } from "./repository.ts";
 import {
+  nativeOkfRequestedKindForType,
   prioritizeExplicitPaperCategoryContext,
   type NativeOkfRequestedConceptKind,
 } from "./retrieval.ts";
+import { applyNativeOkfStructuredAnalysis } from "./structured-analysis.ts";
 import type { RetrievalResult } from "./retrieval-types.ts";
 import type { OkfConcept } from "./types.ts";
 
 const COMPARISON_PATTERN =
-  /\b(?:compare|comparison|contrast|differences?|versus|vs\.?)\b/iu;
+  /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differences?|versus|vs\.?)\b/iu;
 const DETAIL_PATTERN =
   /\b(?:in detail|detailed|exhaustive|step[\s-]*by[\s-]*step|literature review|full methodological discussion)\b/iu;
 const IMPLEMENTS_REFERENCE_PATTERN =
@@ -50,13 +52,23 @@ const FEATURES_REFERENCE_PATTERN = /\bthose\s+features\b/iu;
 const GENERIC_DIAGRAM_PATTERN =
   /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:a\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
 const SYNTHESIS_ACTION_PATTERN =
-  /\b(?:design|propose|create|generate|construct|develop|formulate|build|combine)\b/iu;
+  /\b(?:propos(?:e|ing)|creat(?:e|ing)|generat(?:e|ing)|construct(?:ing)?|develop(?:ing)?|formulat(?:e|ing)|build(?:ing)?|combin(?:e|ing)|designing)\b|^\s*(?:please\s+)?design\b/iu;
 const SYNTHESIS_OUTPUT_PATTERN =
   /\b(?:framework|solution|architecture|flow|theory|artifact|approach|design)\b/iu;
 const SYNTHESIS_NOVELTY_PATTERN =
   /\b(?:new|my problem|this (?:new )?(?:idea|problem|use case)|problem-specific|how should .+ be solved|across|fragmented|privacy-preserving)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
+const SYNTHESIS_STANDALONE_MUTATION_PATTERN =
+  /\b(?:make|add|remove|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
+const DESIGN_PROBLEM_GUIDANCE_PATTERN =
+  /\b(?:i|we)\s+(?:(?:want|need|would\s+like)\s+help\s+(?:to\s+)?(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?)|(?:am|are)\s+(?:building|designing|creating|developing|constructing)|(?:want|need|plan|intend|aim|am\s+trying|are\s+trying)\s+to\s+(?:build|design|create|develop|construct))\b|\b(?:can|could|would)\s+you\s+(?:guide|help)\s+(?:me|us)(?:\s+(?:in|with|to)\s+(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?))?\b|\bhow\s+should\s+(?:i|we)\s+(?:build|design|create|develop|construct)\b|\bguide\s+(?:me|us)\s+(?:in|with)\s+(?:building|designing|creating|developing|constructing)\b/iu;
+const CORPUS_QUERY_PATTERN =
+  /\b(?:which|what)\s+(?:of\s+the\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bfind\s+examples?\b|\bfind\s+(?:examples?\s+(?:of|from)\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\b(?:all|every|each)\s+(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bacross\s+(?:the\s+)?(?:library|corpus|papers?|studies|articles?|works?|publications?)\b/iu;
+const STRUCTURED_QUERY_PATTERN =
+  /\b(?:counts?|categories|types?|represented|formal|map(?:s|ped|ping)?|relationships?|links?|connect(?:s|ed|ing|ions?)?|unmapped|lack(?:s|ed|ing)?|without|absence|zero)\b/iu;
+const COMPARISON_DIAGRAM_FOLLOW_UP_PATTERN =
+  /\b(?:what\s+we\s+(?:just\s+)?discussed|the\s+(?:discussion|comparison)|this|that|it|those\s+(?:papers?|studies|works))\b/iu;
 const STORED_DIAGRAM_REQUEST_PATTERN =
   /\b(?:from|in)\s+(?:this|that|the|a named)\s+paper\b|\bstored\s+(?:map|relations?|knowledge)|\bsource\s+map\b|\brequirements?\s*,?\s*principles?\s*(?:and|&)\s*features?\s+from\b|\b(?:show|visuali[sz]e|diagram|flow)\b[^.!?]{0,120}\bpaper\b/iu;
 const OUTPUT_MISSING_PATTERN = /\b(?:something|anything)\b/iu;
@@ -99,6 +111,16 @@ const PAPER_TITLE_MATCH_STOP_WORDS = new Set([
 
 export type NativeOkfAnswerMode = "normal" | "comparison" | "detailed";
 
+export type NativeOkfQueryMode =
+  | "PAPER_QA"
+  | "MULTI_PAPER_QA"
+  | "CORPUS_SEARCH"
+  | "STRUCTURED_CORPUS_ANALYSIS"
+  | "DESIGN_PROBLEM_SYNTHESIS"
+  | "STORED_PAPER_DIAGRAM"
+  | "COMPARATIVE_EVIDENCE_DIAGRAM"
+  | "SYNTHESIZED_DESIGN_DIAGRAM";
+
 export interface NativeOkfConversationPaper {
   slug: string;
   conceptId: string;
@@ -128,9 +150,12 @@ export interface PreparedNativeOkfChatRequest {
   restrictedPaperSlugs: string[];
   focusedConceptIds: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
+  queryMode: NativeOkfQueryMode;
+  corpusQuery: boolean;
   includeDiagram: boolean;
   diagramMode: NativeOkfDiagramMode | null;
   preferDeterministicPaperMap: boolean;
+  preferDeterministicComparativeMap: boolean;
   answerMode: NativeOkfAnswerMode;
   intent: NativeOkfConversationIntent;
   synthesisProblem: string | null;
@@ -372,7 +397,7 @@ function paperMentionScore(
 }
 
 const MULTI_PAPER_MENTION_PATTERN =
-  /\b(?:compare|comparison|between|versus|vs\.?)\b/iu;
+  /\b(?:compar(?:e|es|ed|ing|ison|ative)|between|versus|vs\.?)\b/iu;
 
 function hasExplicitLoosePaperPhrase(
   question: string,
@@ -402,6 +427,10 @@ function rankedPaperMentions(
     }))
     .filter(({ score }) => score > 0);
   const anchored = mentions.filter(({ score }) => score >= 8_000);
+  const hasPaperReferenceCue =
+    /\b(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b/iu.test(question) ||
+    MULTI_PAPER_MENTION_PATTERN.test(question);
+  if (anchored.length === 0 && !hasPaperReferenceCue) return [];
   const candidates = anchored.length === 0
     ? mentions
     : MULTI_PAPER_MENTION_PATTERN.test(question)
@@ -488,14 +517,7 @@ function findExplicitConceptIds(
 function conceptKind(
   type: string,
 ): NativeOkfRequestedConceptKind | "other" {
-  const normalizedType = normalize(type);
-  if (normalizedType.includes("goal")) return "goal";
-  if (normalizedType.includes("objective")) return "objective";
-  if (normalizedType.includes("meta requirement")) return "meta-requirement";
-  if (normalizedType.includes("requirement")) return "requirement";
-  if (normalizedType.includes("principle")) return "principle";
-  if (normalizedType.includes("feature")) return "feature";
-  return "other";
+  return nativeOkfRequestedKindForType(type) ?? "other";
 }
 
 const REQUESTED_CATEGORY_PATTERNS: ReadonlyArray<
@@ -635,9 +657,27 @@ export function inferNativeOkfSynthesisIntent(
 ): boolean {
   if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
-  if (state.lastSynthesisProblem && SYNTHESIS_REFINEMENT_PATTERN.test(question)) {
+  if (
+    state.lastSynthesisProblem &&
+    state.lastIntent === "synthesized-flow" &&
+    inferDiagramIntent(question)
+  ) {
     return true;
   }
+  if (
+    state.lastSynthesisProblem &&
+    state.lastIntent === "synthesized-flow" &&
+    SYNTHESIS_REFINEMENT_PATTERN.test(question)
+  ) {
+    return true;
+  }
+  if (
+    SYNTHESIS_STANDALONE_MUTATION_PATTERN.test(question) &&
+    SYNTHESIS_OUTPUT_PATTERN.test(question)
+  ) {
+    return true;
+  }
+  if (DESIGN_PROBLEM_GUIDANCE_PATTERN.test(question)) return true;
   return SYNTHESIS_ACTION_PATTERN.test(question) &&
     (
       SYNTHESIS_OUTPUT_PATTERN.test(question) ||
@@ -769,6 +809,7 @@ function clarificationFor(
   synthesisIntent: boolean,
 ): NativeOkfClarification | null {
   if (
+    synthesisIntent &&
     SYNTHESIS_REFINEMENT_PATTERN.test(question) &&
     !state.lastSynthesisProblem &&
     !state.latestValidatedSynthesisDraft
@@ -794,17 +835,10 @@ function clarificationFor(
       question: "Which of the two papers should remain in the diagram?",
     };
   }
-  if (synthesisIntent && OUTPUT_MISSING_PATTERN.test(question)) {
-    return {
-      kind: "missing-output-type",
-      question:
-        "Should the result be an explanatory theory or a design solution?",
-    };
-  }
   if (
     synthesisIntent &&
-    !SYNTHESIS_OUTPUT_PATTERN.test(question) &&
-    !/\bhow should .+ be solved\b/iu.test(question)
+    !state.lastSynthesisProblem &&
+    OUTPUT_MISSING_PATTERN.test(question)
   ) {
     return {
       kind: "missing-output-type",
@@ -891,7 +925,16 @@ export async function assembleNativeOkfContextualRetrieval(
 ): Promise<RetrievalResult> {
   const paperSlugs = prepared.explicitPaperSlugs.length > 0
     ? prepared.explicitPaperSlugs
-    : prepared.restrictedPaperSlugs;
+    : prepared.restrictedPaperSlugs.length > 0
+      ? prepared.restrictedPaperSlugs
+      : [
+          "PAPER_QA",
+          "MULTI_PAPER_QA",
+          "STORED_PAPER_DIAGRAM",
+          "COMPARATIVE_EVIDENCE_DIAGRAM",
+        ].includes(prepared.queryMode)
+        ? prepared.focusedPaperSlugs
+        : [];
   const paperBySlug = new Map(
     prepared.catalog.papers.map((paper) => [paper.slug, paper]),
   );
@@ -912,11 +955,17 @@ export async function assembleNativeOkfContextualRetrieval(
         prepared.requestedConceptKinds.length > 0
       ? prepared.explicitPaperSlugs
       : [];
-  return restrictNativeOkfRetrievalToPaperSlugs(
+  const scoped = restrictNativeOkfRetrievalToPaperSlugs(
     prepared,
     prioritized,
     evidencePaperSlugs,
   );
+  return applyNativeOkfStructuredAnalysis(scoped, {
+    question: prepared.effectiveQuestion,
+    paperConceptIds,
+    requestedConceptKinds: prepared.requestedConceptKinds,
+    corpusQuery: prepared.corpusQuery,
+  });
 }
 
 function restrictNativeOkfRetrievalToPaperSlugs(
@@ -1001,6 +1050,7 @@ export async function prepareNativeOkfChatRequest(
   const effectiveQuestion = pendingOriginal
     ? `${pendingOriginal}\nClarification response: ${request.question}`
     : request.question;
+  const corpusQuery = CORPUS_QUERY_PATTERN.test(effectiveQuestion);
   const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
     effectiveQuestion,
     catalog,
@@ -1034,8 +1084,9 @@ export async function prepareNativeOkfChatRequest(
     catalog,
   );
   const contextBase =
-    explicitPaperSlugs.length > 0 &&
-      !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion)
+    (corpusQuery ||
+      explicitPaperSlugs.length > 0 &&
+        !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion))
       ? {
           ...validatedState,
           activePaperSlugs: [],
@@ -1059,10 +1110,11 @@ export async function prepareNativeOkfChatRequest(
       catalog,
     ),
   );
-  const synthesisIntent = inferNativeOkfSynthesisIntent(
+  let synthesisIntent = inferNativeOkfSynthesisIntent(
     effectiveQuestion,
     contextBase,
   );
+  if (corpusQuery) synthesisIntent = false;
   const restrictedPaperSlugs = resolvedPaperRestriction(
     effectiveQuestion,
     explicitPaperSlugs,
@@ -1088,6 +1140,20 @@ export async function prepareNativeOkfChatRequest(
         inferDiagramIntent(effectiveQuestion) ||
         (synthesisIntent && contextBase.lastDiagramRequested)
       ));
+  const storedPaperDiagram =
+    includeDiagram && focusedPaperSlugs.length === 1 &&
+    inferStoredPaperMapIntent(effectiveQuestion);
+  const comparativeDiagram =
+    includeDiagram &&
+    focusedPaperSlugs.length >= 2 &&
+    (
+      COMPARISON_PATTERN.test(effectiveQuestion) ||
+      explicitPaperSlugs.length === 0 &&
+        (contextBase.lastIntent === "comparison" ||
+          contextBase.lastIntent === "comparative-diagram") &&
+        COMPARISON_DIAGRAM_FOLLOW_UP_PATTERN.test(effectiveQuestion)
+    );
+  if (storedPaperDiagram || comparativeDiagram) synthesisIntent = false;
   const answerMode: NativeOkfAnswerMode = DETAIL_PATTERN.test(
     effectiveQuestion,
   )
@@ -1097,6 +1163,8 @@ export async function prepareNativeOkfChatRequest(
       : "normal";
   const intent: NativeOkfConversationIntent = synthesisIntent
     ? "synthesized-flow"
+    : comparativeDiagram
+      ? "comparative-diagram"
     : includeDiagram
       ? "stored-diagram"
       : answerMode === "comparison"
@@ -1105,12 +1173,33 @@ export async function prepareNativeOkfChatRequest(
   const diagramMode: NativeOkfDiagramMode | null = includeDiagram
     ? synthesisIntent
       ? "synthesized"
+      : comparativeDiagram
+        ? "comparative"
       : "stored"
     : null;
   const preferDeterministicPaperMap =
     diagramMode === "stored" &&
-    focusedPaperSlugs.length === 1 &&
-    inferStoredPaperMapIntent(effectiveQuestion);
+    focusedPaperSlugs.length === 1;
+  const preferDeterministicComparativeMap =
+    diagramMode === "comparative" && focusedPaperSlugs.length >= 2;
+  const queryMode: NativeOkfQueryMode = diagramMode === "synthesized"
+    ? "SYNTHESIZED_DESIGN_DIAGRAM"
+    : preferDeterministicComparativeMap
+      ? "COMPARATIVE_EVIDENCE_DIAGRAM"
+      : preferDeterministicPaperMap
+        ? "STORED_PAPER_DIAGRAM"
+        : synthesisIntent
+          ? "DESIGN_PROBLEM_SYNTHESIS"
+          : corpusQuery &&
+              (requestedKinds.length > 0 || STRUCTURED_QUERY_PATTERN.test(effectiveQuestion))
+            ? "STRUCTURED_CORPUS_ANALYSIS"
+            : corpusQuery
+              ? "CORPUS_SEARCH"
+              : focusedPaperSlugs.length >= 2
+                ? "MULTI_PAPER_QA"
+                : focusedPaperSlugs.length === 1
+                  ? "PAPER_QA"
+                  : "CORPUS_SEARCH";
   const clarification = clarificationFor(
     effectiveQuestion,
     ambiguousPaperReference,
@@ -1125,13 +1214,17 @@ export async function prepareNativeOkfChatRequest(
       contextBase.lastSynthesisProblem?.problemStatement ??
       effectiveQuestion.slice(0, 800)
     : null;
+  const synthesisRetrievalQuestion =
+    synthesisIntent && contextBase.lastSynthesisProblem
+      ? `${effectiveQuestion}\nActive design problem: ${contextBase.lastSynthesisProblem.problemStatement}`
+      : effectiveQuestion;
   return {
     request,
     catalog,
     validatedState,
     effectiveQuestion,
     retrievalQuestion: contextualRetrievalQuestion(
-      effectiveQuestion,
+      synthesisRetrievalQuestion,
       retrievalPaperSlugs,
       focusedConceptIds,
       catalog,
@@ -1141,9 +1234,12 @@ export async function prepareNativeOkfChatRequest(
     restrictedPaperSlugs,
     focusedConceptIds,
     requestedConceptKinds: requestedKinds,
+    queryMode,
+    corpusQuery,
     includeDiagram,
     diagramMode,
     preferDeterministicPaperMap,
+    preferDeterministicComparativeMap,
     answerMode,
     intent,
     synthesisProblem,

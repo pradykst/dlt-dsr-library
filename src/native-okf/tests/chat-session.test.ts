@@ -53,14 +53,6 @@ function answerResponse(): NativeOkfChatResponse {
     ],
     insufficientContext: false,
     conversationState: createInitialNativeOkfConversationState(),
-    quota: {
-      questionsRemainingToday: 3,
-      diagramsRemainingToday: 1,
-      questionsRemainingTotal: 7,
-      diagramsRemainingTotal: 2,
-      resetAtMs: 1,
-      accessExpiresAtMs: 2,
-    },
     retrievalDebug: { sourceBody: "must not persist" },
   };
 }
@@ -92,12 +84,11 @@ function payload(): NativeOkfChatSessionPayload {
   };
 }
 
-test("same-tab session messages and focus round-trip without quota or debug data", () => {
+test("same-tab session messages and focus round-trip without debug data", () => {
   const storage = new MemorySessionStorage();
   assert.equal(writeNativeOkfChatSession(storage, payload()), true);
 
   const raw = storage.getItem(NATIVE_OKF_CHAT_SESSION_KEY) ?? "";
-  assert.doesNotMatch(raw, /questionsRemainingToday/u);
   assert.doesNotMatch(raw, /sourceBody/u);
 
   const restored = readNativeOkfChatSession(storage);
@@ -207,7 +198,7 @@ test("canonical chat path adds no server-side conversation persistence", async (
   const paths = [
     "app/api/native-okf/chat/route.ts",
     "src/native-okf/server/openai/chat.ts",
-    "src/native-okf/server/access/authorized-chat.ts",
+    "src/native-okf/server/public-chat.ts",
   ] as const;
   const source = (
     await Promise.all(

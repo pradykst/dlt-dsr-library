@@ -101,6 +101,45 @@ export interface CorpusOverview {
   papers: CorpusPaperOverview[];
 }
 
+export interface StructuredConceptEvidence {
+  conceptId: string;
+  title: string;
+  type: string;
+  paperConceptId: string;
+  explicitTermMatch: boolean;
+}
+
+export interface StructuredRelationshipEvidence {
+  sourceId: string;
+  sourceType: string;
+  targetId: string;
+  targetType: string;
+  label: string;
+}
+
+export interface StructuredPaperEvidence {
+  paperConceptId: string;
+  title: string;
+  representedTypeCounts: Record<string, number>;
+  relevantConceptCount: number;
+  relevantConcepts: StructuredConceptEvidence[];
+  relevantRelationshipCount: number;
+  relevantRelationships: StructuredRelationshipEvidence[];
+  relationshipStatus: "mapped" | "unmapped" | "missing-layer" | "not-requested";
+  explicitTermMatchCount: number;
+}
+
+export interface NativeOkfStructuredAnalysis {
+  scope: "paper" | "multi-paper" | "corpus";
+  checkedPaperCount: number;
+  exhaustiveForScope: boolean;
+  requestedKinds: string[];
+  exactTerm: string | null;
+  relationshipCheckComplete: boolean;
+  absenceCheckComplete: boolean;
+  papers: StructuredPaperEvidence[];
+}
+
 export interface ExpandedResult {
   conceptId: string;
   type: string;
@@ -185,4 +224,5 @@ export interface RetrievalResult {
   noMatch: boolean;
   debug: RetrievalDebug;
   contextCharacterEstimate: number;
+  structuredAnalysis?: NativeOkfStructuredAnalysis;
 }

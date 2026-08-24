@@ -345,6 +345,89 @@ export async function storedPaperMapPresentation(
   return { summary, sources };
 }
 
+export async function buildComparativePaperDesignMap(
+  paperConceptIds: readonly string[],
+): Promise<{
+  diagram: GeneratedDiagram;
+  summary: string;
+  sources: NativeOkfSourceCard[];
+} | undefined> {
+  const bundle = await getOkfBundle();
+  const uniquePaperIds = [...new Set(paperConceptIds)];
+  if (uniquePaperIds.length < 2) return undefined;
+
+  const paperMaps = await Promise.all(
+    uniquePaperIds.map(async (paperId, paperIndex) => {
+      const paper = bundle.conceptsById.get(paperId);
+      const map = await buildStoredPaperDesignMap(paperId);
+      if (!paper || paper.type !== "paper" || !map) return null;
+      const title = displayTitle(paper);
+      const nodeId = new Map(
+        map.nodes.map((node, nodeIndex) => [
+          node.id,
+          `paper-${paperIndex + 1}-node-${nodeIndex + 1}`,
+        ]),
+      );
+      return {
+        paper,
+        title,
+        nodes: map.nodes.map((node) => ({
+          ...node,
+          id: nodeId.get(node.id)!,
+          group: boundedText(title, 40),
+        })),
+        edges: map.edges.flatMap((edge) => {
+          const source = nodeId.get(edge.source);
+          const target = nodeId.get(edge.target);
+          return source && target ? [{ ...edge, source, target }] : [];
+        }),
+      };
+    }),
+  );
+  if (paperMaps.some((entry) => entry === null)) return undefined;
+  const maps = paperMaps.filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  const nodes = maps.flatMap((entry) => entry.nodes);
+  const edges = maps.flatMap((entry) => entry.edges);
+  if (nodes.length === 0) return undefined;
+
+  const diagram: GeneratedDiagram = {
+    title: `Comparative stored evidence: ${maps.map((entry) => entry.title).join(" / ")}`,
+    explanation:
+      "A deterministic comparison of canonical stored paper maps. Paper-labelled groups preserve provenance, and no relationship is inferred between papers.",
+    nodes,
+    edges,
+  };
+  const sourcePaperByConceptId = new Map<string, string>();
+  for (const entry of maps) {
+    for (const node of entry.nodes) {
+      for (const conceptId of node.supportConceptIds) {
+        if (!sourcePaperByConceptId.has(conceptId)) {
+          sourcePaperByConceptId.set(conceptId, entry.title);
+        }
+      }
+    }
+  }
+  const sources = [...sourcePaperByConceptId].flatMap(
+    ([conceptId, sourcePaper], index) => {
+      const concept = bundle.conceptsById.get(conceptId);
+      if (!concept || concept.type === "paper" || concept.type === "reference") {
+        return [];
+      }
+      return [{
+        sourceId: `S${index + 1}`,
+        conceptId,
+        title: displayTitle(concept),
+        type: concept.type,
+        ...(concept.description ? { description: concept.description } : {}),
+        sourcePaper,
+        ...(concept.resource ? { resource: concept.resource } : {}),
+      } satisfies NativeOkfSourceCard];
+    },
+  );
+  const summary = `This deterministic comparison keeps ${maps.length} resolved papers in separate labelled groups and shows ${nodes.length} stored design concepts with ${edges.length} canonical within-paper relationships. No cross-paper edge or synthesized relationship was added.`;
+  return { diagram, summary, sources };
+}
+
 export async function buildGroundedStoredSourceMap(
   retrieval: RetrievalResult,
 ): Promise<GeneratedDiagram | undefined> {

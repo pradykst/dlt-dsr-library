@@ -53,7 +53,6 @@ const WORKFLOWS: ReadonlyArray<{
 
 interface GuidedChatStartersProps {
   papers: readonly NativeOkfGuidedStarterPaper[];
-  diagramQuotaExhausted: boolean;
   currentDiagramEnabled: boolean;
   pending: boolean;
   onDefaultDiagramIntent: (enabled: boolean) => void;
@@ -95,7 +94,6 @@ function PaperSelect({
 
 export function GuidedChatStarters({
   papers,
-  diagramQuotaExhausted,
   currentDiagramEnabled,
   pending,
   onDefaultDiagramIntent,
@@ -122,7 +120,7 @@ export function GuidedChatStarters({
 
   function activate(kind: NativeOkfGuidedStarterKind) {
     const workflow = WORKFLOWS.find((candidate) => candidate.kind === kind);
-    if (!workflow || (workflow.requiresDiagram && diagramQuotaExhausted)) return;
+    if (!workflow) return;
     const opening = activeKind !== kind;
     setActiveKind(opening ? kind : null);
     setAttempted(false);
@@ -182,8 +180,6 @@ export function GuidedChatStarters({
     <section aria-label="Guided starters" className="min-w-0 max-w-full">
       <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {WORKFLOWS.map((workflow) => {
-          const quotaDisabled =
-            workflow.requiresDiagram && diagramQuotaExhausted;
           const expanded = activeKind === workflow.kind;
           return (
             <button
@@ -191,7 +187,7 @@ export function GuidedChatStarters({
               type="button"
               aria-expanded={expanded}
               aria-controls="native-okf-guided-starter-form"
-              disabled={quotaDisabled || pending}
+              disabled={pending}
               onClick={() => activate(workflow.kind)}
               className="min-w-0 rounded-xl border border-line bg-paper px-4 py-3 text-left transition hover:border-blue/35 hover:bg-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:cursor-not-allowed disabled:opacity-55"
             >
@@ -201,11 +197,6 @@ export function GuidedChatStarters({
               <span className="mt-1 block text-xs leading-5 text-muted">
                 {workflow.description}
               </span>
-              {quotaDisabled ? (
-                <span className="mt-2 block text-xs font-medium text-amber-800">
-                  Diagram allowance is exhausted. Text-only questions remain available.
-                </span>
-              ) : null}
             </button>
           );
         })}

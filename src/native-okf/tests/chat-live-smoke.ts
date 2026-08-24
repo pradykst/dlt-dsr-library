@@ -7,7 +7,7 @@ const baseUrlValue = baseUrlArgument?.slice("--base-url=".length);
 
 if (!baseUrlValue) {
   console.log(
-    "Native OKF protected-route smoke test skipped: pass --base-url=<running application>.",
+    "Native OKF public-route smoke test skipped: pass --base-url=<running application>.",
   );
 } else {
   const baseUrl = new URL(baseUrlValue);
@@ -15,34 +15,15 @@ if (!baseUrlValue) {
     throw new Error("The smoke-test base URL must use HTTP or HTTPS.");
   }
 
-  const accessResponse = await fetch(
-    new URL("/api/native-okf/access", baseUrl),
-    {
-      method: "GET",
-      cache: "no-store",
-      redirect: "error",
-    },
-  );
-  const accessPayload: unknown = await accessResponse
-    .json()
-    .catch(() => undefined);
-
-  if (
-    typeof accessPayload === "object" &&
-    accessPayload !== null &&
-    "authenticated" in accessPayload &&
-    accessPayload.authenticated === true
-  ) {
-    throw new Error(
-      "The route smoke test refuses to send a paid request with an authenticated session.",
-    );
-  }
-
   const chatResponse = await fetch(
     new URL("/api/native-okf/chat", baseUrl),
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        origin: baseUrl.origin,
+        "sec-fetch-site": "same-origin",
+      },
       body: JSON.stringify({
         question: "What design principles address privacy?",
         includeDiagram: false,
@@ -52,13 +33,13 @@ if (!baseUrlValue) {
     },
   );
 
-  if (![401, 403, 429, 503].includes(chatResponse.status)) {
+  if (chatResponse.status !== 200) {
     throw new Error(
-      `Expected the protected chat route to reject anonymous paid access; received HTTP ${chatResponse.status}.`,
+      `Expected anonymous public chat access; received HTTP ${chatResponse.status}.`,
     );
   }
 
   console.log(
-    `Native OKF protected-route smoke test passed (access HTTP ${accessResponse.status}; anonymous chat HTTP ${chatResponse.status}).`,
+    `Native OKF public-route smoke test passed (anonymous chat HTTP ${chatResponse.status}).`,
   );
 }

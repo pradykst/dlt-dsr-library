@@ -98,7 +98,7 @@ test("executable native evaluation tools cannot invoke an unprotected model clie
   }
 
   const smokeSource = await readFile(resolve(cwd, paths[1]), "utf8");
-  assert.match(smokeSource, /\/api\/native-okf\/access/u);
+  assert.doesNotMatch(smokeSource, /\/api\/native-okf\/access/u);
   assert.match(smokeSource, /\/api\/native-okf\/chat/u);
   assert.deepEqual(violations, []);
 });

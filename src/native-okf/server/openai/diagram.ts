@@ -32,7 +32,7 @@ export interface GenerateNativeOkfDiagramOptions {
   context: NativeOkfGroundedContext;
   question: string;
   answerMarkdown: string;
-  mode?: NativeOkfDiagramMode;
+  mode?: Exclude<NativeOkfDiagramMode, "comparative">;
   grounding?: NativeOkfDiagramGrounding;
   priorDraft?: SynthesisDraftState | null;
   requireRpfPath?: boolean;

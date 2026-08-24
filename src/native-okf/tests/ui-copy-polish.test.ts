@@ -38,13 +38,13 @@ test("desktop, mobile, and footer navigation use the approved public labels", as
     source("components/layout/SiteHeader.tsx"),
     source("components/layout/SiteFooter.tsx"),
   ]);
-  for (const label of ["Home", "Library", "Chat", "Chat access"]) {
+  for (const label of ["Home", "Library", "Chat"]) {
     assert.match(header, new RegExp(`label: "${label}"`, "u"));
   }
   assert.doesNotMatch(header, /label: "Grounded Chat"|label: "Researcher Access"/u);
   assert.match(header, /public-mobile-navigation/u);
   assert.match(footer, /label: "Chat"/u);
-  assert.match(footer, /label: "Chat access"/u);
+  assert.doesNotMatch(footer, /label: "Chat access"/u);
   assert.doesNotMatch(footer, /Universität Leipzig research context/u);
   for (const item of [header, footer]) {
     assert.match(item, /target="_blank"/u);
@@ -326,7 +326,7 @@ test("chat page and assistant panel use concise researcher-facing copy", async (
   assert.match(workbench, /Design knowledge assistant/u);
   assert.match(
     compact(workbench),
-    /Answers use retrieved library sources\. Conversation content remains in this browser tab; only access and usage counters are stored\./u,
+    /Answers use retrieved library sources\. Conversation content remains in this browser tab and is not stored by the server\./u,
   );
   assert.doesNotMatch(page, /Research library chat|Native OKF grounded assistant|Local retrieval selects/u);
   assert.doesNotMatch(workbench, /Grounded native OKF assistant/u);
@@ -351,19 +351,17 @@ test("guided starter question generation remains unchanged", () => {
   );
 });
 
-test("access page and card use the approved concise copy without mode badges", async () => {
-  const [page, portal] = await Promise.all([
-    source("app/native-okf/access/page.tsx"),
-    source("src/native-okf/components/access/AccessPortal.tsx"),
+test("chat is presented directly without researcher access-code friction", async () => {
+  const [page, workbench, routes] = await Promise.all([
+    source("app/native-okf/chat/page.tsx"),
+    source("src/native-okf/components/chat/ChatWorkbench.tsx"),
+    source("src/native-okf/shared/routes.ts"),
   ]);
-  assert.match(page, /title="Chat access"/u);
-  assert.match(page, /Enter your evaluation access code to use the design knowledge assistant\./u);
-  assert.match(page, /breadcrumbs=\{\[\{ label: "Chat access" \}\]\}/u);
-  assert.doesNotMatch(page, /Limited native OKF evaluation/u);
-  assert.match(portal, /Enter access code/u);
-  assert.match(portal, /The paper library remains available without chat access\./u);
-  assert.match(portal, />\s*Access code\s*</u);
-  assert.match(portal, /placeholder="Enter access code"/u);
-  assert.match(portal, /\{busy \? "Checking\.\.\." : "Continue"\}/u);
-  assert.doesNotMatch(portal, /Private test|Limited researcher evaluation|modeLabel/u);
+  assert.match(page, /ChatWorkbench/u);
+  assert.match(workbench, /New chat/u);
+  assert.match(routes, /source: "\/access",[\s\S]*?destination: NATIVE_OKF_PUBLIC_ROUTES\.chat/u);
+  assert.doesNotMatch(
+    `${page}\n${workbench}`,
+    /access code|questions remaining|diagrams remaining|invitation-controlled/iu,
+  );
 });

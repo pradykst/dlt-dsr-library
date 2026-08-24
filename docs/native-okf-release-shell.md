@@ -4,7 +4,7 @@
 
 The production-facing shell presents the accepted native OKF implementation as the **DSR Knowledge Library**. It is a research prototype for inspecting linked design knowledge, performing bounded retrieval, and generating source-grounded synthesis. The release shell does not claim complete extraction, comprehensive DSR coverage, or authoritative model output.
 
-The accepted paper Workbench, semantic design map, Raw links view, selected-node drawer, chat conversation and composer, source cards, generated diagrams, access and quota panels, and private administrator dashboard remain frozen. Phase 6B changes only the public homepage, global navigation and footer, public route integration, public metadata, release copy, and narrowly related responsive behavior.
+The accepted paper Workbench, semantic design map, Raw links view, selected-node drawer, chat conversation and composer, source cards, and generated diagrams remain frozen. Phase 6B changes only the public homepage, global navigation and footer, public route integration, public metadata, release copy, and narrowly related responsive behavior.
 
 The canonical bundle at `knowledge/okf` is also frozen. Coverage warnings are not repaired in this release phase; paper-by-paper curation follows separately.
 
@@ -15,14 +15,11 @@ The canonical bundle at `knowledge/okf` is also frozen. Coverage warnings are no
 | `/` | Research-oriented landing page |
 | `/library` | Paper and design-knowledge library |
 | `/chat` | Grounded research assistant shell |
-| `/access` | Researcher and test access |
 | `/papers/[slug]` | Paper Workbench |
 | `/concepts/[...conceptId]` | Native concept page |
 | `/method` | Public method, grounding, privacy, and limitations |
-| `/admin/access` | Private administrator access |
-| `/admin` | Private operational dashboard |
 
-Protected service endpoints remain under `/api/native-okf/**`. There is no second canonical chat API.
+The public same-origin chat endpoint remains under `/api/native-okf/chat`. There is no second canonical chat API.
 
 ## Compatibility redirects
 
@@ -30,17 +27,17 @@ The former native-prefixed public routes temporarily redirect to the closest can
 
 - `/native-okf` → `/library`
 - `/native-okf/chat` → `/chat`
-- `/native-okf/access` → `/access`
+- `/native-okf/access` → `/chat`
 - `/native-okf/papers/[slug]` → `/papers/[slug]`
 - `/native-okf/concepts/[...conceptId]` → `/concepts/[...conceptId]`
-- `/native-okf/admin/access` → `/admin/access`
-- `/native-okf/admin` → `/admin`
+- `/native-okf/admin/access` → controlled not found
+- `/native-okf/admin` → controlled not found
 
 Temporary redirects avoid permanent browser caching during rollback. Query parameters remain intact where the framework does not explicitly replace them. Redirect definitions are centralized and audited for loops.
 
 ## Legacy public-route handling
 
-Legacy source remains on disk for rollback and historical comparison, but public navigation and canonical pages do not import it. Legacy route names are either redirected to the closest native replacement or sent to a controlled not-found response when no valid replacement exists. In particular, old exploration and Workbench entry points map to the library, old chat entry points map to grounded chat, and old evaluation entry points map to evaluation access. Administrative navigation is never public.
+Legacy source remains on disk for rollback and historical comparison, but public navigation and canonical pages do not import it. Legacy route names are either redirected to the closest native replacement or sent to a controlled not-found response when no valid replacement exists. In particular, old exploration and Workbench entry points map to the library, while old chat and evaluation entry points map to grounded chat. Administrative navigation is never public.
 
 Retained legacy OKF, Workbench, and evaluation API namespaces are shadowed by a native, no-store `404` response. Their source stays intact for rollback, but their implementations are not reachable and are never imported by canonical routes.
 
@@ -50,13 +47,13 @@ No legacy source is deleted in Phase 6B. Cleanup requires a later explicit accep
 
 The homepage is a focused research entry point rather than the full 34-paper listing. It contains:
 
-1. a restrained hero with library, chat, and evaluation-access actions;
+1. a restrained hero with library and chat actions;
 2. corpus metrics calculated from the current native repository;
 3. concise researcher capabilities;
 4. a conceptual native-OKF-to-validated-flow sequence;
 5. a small, deterministic featured-paper selection based on linked concept coverage, with stable metadata tie-breaks;
 6. a grounding and research-integrity statement;
-7. an invitation-controlled evaluation section; and
+7. a researcher-evaluation section; and
 8. the global research footer.
 
 The Requirements → Principles → Features motif is explicitly decorative. It is not presented as a stored paper result and does not imply that every paper contains those categories.
@@ -67,9 +64,9 @@ The public research notice is:
 
 ## Navigation and footer
 
-The global header contains only Home, Library, Grounded Chat, and Evaluation Access, with an accessible mobile menu and active-route indication. The private administrator routes are absent.
+The global header contains only Home, Library, and Grounded Chat, with an accessible mobile menu and active-route indication.
 
-The footer identifies the DSR Knowledge Library as a research prototype using native Open Knowledge Format in a Universität Leipzig research context. It links to the library, grounded chat, evaluation access, method and limitations, and the public privacy note. It contains no analytics, invented legal identity, social links, or administrator entry point.
+The footer identifies the DSR Knowledge Library as a research prototype using native Open Knowledge Format in a Universität Leipzig research context. It links to the library, grounded chat, method and limitations, and the public privacy note. It contains no analytics, invented legal identity, social links, or administrator entry point.
 
 ## Method and privacy information
 
@@ -83,17 +80,17 @@ The footer identifies the DSR Knowledge Library as a research prototype using na
 - researcher-evaluation status; and
 - the operational privacy boundary.
 
-The operational quota store does not persist prompts, responses, history, retrieved source text, or credentials. The public page deliberately omits secret configuration, database locations, prices, and internal access-control details.
+The server does not persist prompts, responses, history, or retrieved source text. The public page deliberately omits secret configuration and provider details.
 
 ## Frontend deployment checks
 
-The non-secret release-readiness check validates the OKF bundle, dynamic homepage metrics, route-helper uniqueness, compatibility redirects, absence of public administrator navigation, production retrieval-debug protection, recognized access mode, secret presence as booleans only, SQLite-path writability, Markdown discovery, route generation, output tracing, and absence of legacy imports from canonical code. It never calls OpenAI and never prints secret values.
+The non-secret release-readiness check validates the OKF bundle, dynamic homepage metrics, route-helper uniqueness, compatibility redirects, absence of public administrator navigation, production retrieval-debug protection, the optional chat kill switch, provider credential presence as a boolean only, Markdown discovery, route generation, output tracing, and absence of legacy imports from canonical code. It never calls OpenAI and never prints secret values.
 
-Production verification covers canonical pages, compatibility redirects, protected administrator routes, the existing protected chat API, noindex/robots behavior, sitemap membership, responsive shell behavior, and discovery of all 245 Markdown documents.
+Production verification covers canonical pages, compatibility redirects, anonymous same-origin chat, noindex/robots behavior, sitemap membership, responsive shell behavior, and discovery of all 245 Markdown documents.
 
 ## Deployment and rollback
 
-The evaluation release assumes the Phase 6A persistent single-instance SQLite deployment model. A serverless or horizontally scaled release still requires a shared durable operational-store adapter before evaluator use.
+The evaluation release has no researcher identity or database dependency. The public handler retains bounded request validation, same-origin checks, an emergency kill switch, and an identity-free in-process concurrency guard.
 
 Rollback is intentionally simple:
 

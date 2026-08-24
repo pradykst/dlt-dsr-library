@@ -1,6 +1,6 @@
 # Native OKF evaluation onboarding
 
-Phase 6D adds narrow onboarding and evaluation links around the accepted native OKF release. Chat orchestration, retrieval, contextual dialogue, citation validation, synthesis planning, diagram generation, quotas, access controls, and operational storage remain frozen.
+Phase 6D adds narrow onboarding and evaluation links around the accepted native OKF release. Chat orchestration, retrieval, contextual dialogue, citation validation, synthesis planning, and diagram generation remain frozen.
 
 ## Guided chat workflows
 
@@ -13,7 +13,7 @@ The empty chat state offers exactly four researcher-controlled workflows:
 
 Opening a workflow, choosing a paper, choosing a category, or entering a problem performs no API or model request. The generated question is displayed before submission. A request is made only when the researcher presses **Ask this question**, and it uses the same submission path as a manually typed question.
 
-After the first user message, the large starter area collapses to a small **Guided starters** control. Reopening it does not clear the transcript or conversation context. **New chat** clears transient starter selections by remounting the starter state, while preserving researcher access and canonical quota values.
+After the first user message, the large starter area collapses to a small **Guided starters** control. Reopening it does not clear the transcript or conversation context. **New chat** clears transient starter selections by remounting the starter state.
 
 ## Repository-derived catalog
 
@@ -21,9 +21,9 @@ The chat server page obtains a bounded starter catalog from the existing native 
 
 Supported categories are design requirements, design principles, design features, design objectives, meta-requirements, and design goals. A category appears only when the selected paper represents it. The starter catalog contains no Markdown bodies and does not use legacy records, CSV, Supabase, `graph.json`, or old OKF APIs.
 
-## Diagram allowance
+## Diagram workflows
 
-Explore a paper map and Build a grounded solution are disabled when the current diagram allowance is exhausted. The UI explains that text-only questions remain available. Inspect design knowledge and Compare two papers remain usable. No client-side quota decrement is performed; the browser continues to use the canonical post-response and access-status snapshots.
+Explore a paper map and Build a grounded solution use the same public chat path as manually composed questions. Controls are disabled only while a request is pending.
 
 ## Evaluation survey
 
@@ -35,19 +35,19 @@ Every survey action:
 - opens explicitly in a new tab;
 - uses `noopener noreferrer`;
 - includes an accessible new-tab label;
-- appends no questions, identifiers, access codes, sources, or tracking parameters.
+- appends no questions, identifiers, sources, or tracking parameters.
 
 The survey is not embedded, opened automatically, tracked by the server, or required before using the library. Dismissing the chat callout affects only the currently mounted chat view; survey completion is not stored.
 
 ## Privacy boundary
 
-The starter catalog contains repository metadata only. Starter configuration stays in browser component state. Generated questions enter the existing chat request only after explicit submission. The survey receives no library or chat state. Existing conversation data remains bounded to `sessionStorage` in the current tab, while the server persists only access, quota, cost, and safe operational aggregates.
+The starter catalog contains repository metadata only. Starter configuration stays in browser component state. Generated questions enter the existing chat request only after explicit submission. The survey receives no library or chat state. Existing conversation data remains bounded to `sessionStorage` in the current tab and is not persisted by the server.
 
 ## Deployment hygiene
 
 The release retains the production `start` command, required `NATIVE_OKF_PUBLIC_ORIGIN` deployment configuration, canonical routes, loop-free compatibility redirects, production retrieval-diagnostic gate, canonical-only sitemap, and administrator exclusion from public navigation. The survey is external and is not added to the sitemap.
 
-The repository ignores Next build output, local environment files while allowing example files, runtime SQLite state and companions through the ignored runtime directory, generated coverage artifacts, local debug logs, and common browser-test output directories. Production deployment still assumes a persistent writable SQLite volume and a single application instance unless operational storage is replaced deliberately.
+The repository ignores Next build output, local environment files while allowing example files, generated coverage artifacts, local debug logs, and common browser-test output directories.
 
 ## Known limitations
 

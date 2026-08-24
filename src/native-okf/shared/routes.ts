@@ -1,7 +1,7 @@
 /**
  * Canonical public routes for the accepted native OKF release shell.
  *
- * The protected model API deliberately keeps its existing native namespace.
+ * The model API deliberately keeps its existing native namespace.
  * Route definitions in this module are dependency-free so they can be shared
  * by server components, client components, tests, and Next configuration.
  */
@@ -9,23 +9,16 @@ export const NATIVE_OKF_PUBLIC_ROUTES = {
   home: "/",
   library: "/library",
   chat: "/chat",
-  access: "/access",
   method: "/method",
-  adminAccess: "/admin/access",
-  admin: "/admin",
 } as const;
 
 /** Concise alias used by release-shell components and readiness checks. */
 export const CANONICAL_ROUTES = NATIVE_OKF_PUBLIC_ROUTES;
 
 export const NATIVE_OKF_API_ROUTES = {
-  access: "/api/native-okf/access",
   chat: "/api/native-okf/chat",
   retrievalDebug: "/api/native-okf/retrieval-debug",
   retired: "/api/native-okf/retired",
-  adminSession: "/api/native-okf/admin/session",
-  adminDashboard: "/api/native-okf/admin/dashboard",
-  adminMutations: "/api/native-okf/admin/mutations",
 } as const;
 
 /** Public noindex destination that deliberately resolves to a controlled 404. */
@@ -46,12 +39,12 @@ export interface NativeOkfRewriteDefinition {
 export const NATIVE_OKF_COMPATIBILITY_REDIRECTS = [
   {
     source: "/native-okf/admin/access",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.adminAccess,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
     source: "/native-okf/admin",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.admin,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
@@ -71,7 +64,7 @@ export const NATIVE_OKF_COMPATIBILITY_REDIRECTS = [
   },
   {
     source: "/native-okf/access",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.access,
+    destination: NATIVE_OKF_PUBLIC_ROUTES.chat,
     permanent: false,
   },
   {
@@ -102,6 +95,11 @@ export const NATIVE_OKF_COMPATIBILITY_REDIRECTS = [
  */
 export const LEGACY_PUBLIC_REDIRECTS = [
   {
+    source: "/access",
+    destination: NATIVE_OKF_PUBLIC_ROUTES.chat,
+    permanent: false,
+  },
+  {
     source: "/workbench/import",
     destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
@@ -113,12 +111,12 @@ export const LEGACY_PUBLIC_REDIRECTS = [
   },
   {
     source: "/workbench/admin",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.adminAccess,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
     source: "/desrist-evaluation/admin",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.adminAccess,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
@@ -163,7 +161,7 @@ export const LEGACY_PUBLIC_REDIRECTS = [
   },
   {
     source: "/desrist-evaluation",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.access,
+    destination: NATIVE_OKF_PUBLIC_ROUTES.chat,
     permanent: false,
   },
 ] satisfies readonly NativeOkfRedirectDefinition[];
@@ -199,10 +197,6 @@ export const NATIVE_OKF_CANONICAL_REWRITES = [
   { source: NATIVE_OKF_PUBLIC_ROUTES.library, destination: "/native-okf" },
   { source: NATIVE_OKF_PUBLIC_ROUTES.chat, destination: "/native-okf/chat" },
   {
-    source: NATIVE_OKF_PUBLIC_ROUTES.access,
-    destination: "/native-okf/access",
-  },
-  {
     source: NATIVE_OKF_PUBLIC_ROUTES.method,
     destination: "/native-okf/method",
   },
@@ -214,20 +208,10 @@ export const NATIVE_OKF_CANONICAL_REWRITES = [
     source: "/concepts/:conceptId*",
     destination: "/native-okf/concepts/:conceptId*",
   },
-  {
-    source: NATIVE_OKF_PUBLIC_ROUTES.adminAccess,
-    destination: "/native-okf/admin/access",
-  },
-  {
-    source: NATIVE_OKF_PUBLIC_ROUTES.admin,
-    destination: "/native-okf/admin",
-  },
 ] satisfies readonly NativeOkfRewriteDefinition[];
 
 /** Patterns that should receive an X-Robots-Tag noindex header. */
 export const NATIVE_OKF_NOINDEX_PATTERNS = [
-  "/admin",
-  "/admin/:path*",
   "/api/:path*",
   "/native-okf",
   "/native-okf/:path*",

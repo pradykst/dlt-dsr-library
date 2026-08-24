@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Home, KeyRound, Menu, MessageSquareText, Network, X } from "lucide-react";
+import { BookOpen, Home, Menu, MessageSquareText, Network, X } from "lucide-react";
 
 import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "@/src/native-okf/shared/public-links";
 import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
@@ -12,7 +12,6 @@ const nav = [
   { label: "Home", href: CANONICAL_ROUTES.home, icon: Home },
   { label: "Library", href: CANONICAL_ROUTES.library, icon: BookOpen },
   { label: "Chat", href: CANONICAL_ROUTES.chat, icon: MessageSquareText },
-  { label: "Chat access", href: CANONICAL_ROUTES.access, icon: KeyRound },
 ];
 
 function isActiveRoute(pathname: string, href: string): boolean {

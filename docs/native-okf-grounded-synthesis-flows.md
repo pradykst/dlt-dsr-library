@@ -2,7 +2,7 @@
 
 Phase 6C2 adds ephemeral, problem-specific synthesis flows to the existing
 native OKF chat and structured-diagram path. It does not change the native OKF
-corpus, retrieval ranking, access controls, quotas, citations, semantic paper
+corpus, retrieval ranking, citations, semantic paper
 maps, or permanent-storage boundary.
 
 ## Two diagram modes
@@ -36,7 +36,7 @@ validated prior synthesis draft exists.
 The accepted diagram toggle remains authoritative. Explicit visual language may
 enable it through the existing client behavior. A deliberate uncheck produces a
 concise grounded design outline, not a hidden structured diagram or a textual
-diagram substitute, and consumes no diagram quota.
+diagram substitute.
 
 ## Clarification
 
@@ -45,7 +45,7 @@ application context, and an identifiable output. Deterministic checks use the
 existing Phase 6C1 clarification envelope to ask exactly one short question
 when one of those is critically missing.
 
-Clarification makes no model request, reservation, or paid quota change. The
+Clarification makes no model request. The
 bounded original question is retained in pending state and combined with the
 next user response. Specific requests, including a cross-marketplace identity
 flow, proceed directly.
@@ -137,8 +137,7 @@ not scholarly evidence.
 Explicit removals are applied to the bounded design-context draft before model
 generation. A paper restriction removes unsupported draft context for that
 turn. New chat clears the transcript, active focus, pending clarification,
-diagram intent, problem context, and draft without changing access or quota
-state.
+diagram intent, problem context, and draft.
 
 ## Text answer behavior
 
@@ -185,23 +184,15 @@ requirements/goals use lavender, principles green, features tan/gold, artifacts
 blue, and evaluation/outcome neutral. The detail drawer shows exact stored
 paths, synthesized support concepts, and bounded public rationales.
 
-## Quota, cost, and storage
+## Cost and storage
 
-One substantive synthesis or refinement turn uses the normal question quota.
-A requested structured diagram uses one diagram quota. Manual diagram disable,
-deterministic clarification, session restoration, New chat, and free no-match
-consume no diagram quota; clarification and no-match retain their existing
-question-quota behavior.
-
-The initial answer, structured generation, and single repair calls are all
-tracked by the existing Responses client wrapper and reconciled against the
-same atomic reservation. Repair never consumes a second question or diagram
-quota. Daily, total, monthly, monetary, RPM, IP, cooldown, concurrency,
-revocation, pause, and kill-switch limits are unchanged.
+Model-backed answers and synthesized diagrams use the existing bounded OpenAI
+path. Deterministic paper and comparative maps do not invoke OpenAI. The public
+handler retains an identity-free global concurrency guard and the deployment
+kill switch.
 
 Chats and drafts are never persisted on the server. No chat table or
-account-history product is added. The quota store continues to retain only
-operational usage data, not prompts, answers, source bodies, or drafts.
+account-history product is added.
 
 ## Limitations and Phase 6C3 boundary
 

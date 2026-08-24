@@ -1,13 +1,9 @@
 import "server-only";
 
 import assert from "node:assert/strict";
-import { mkdtemp, readdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 
 import {
-  checkUsageDatabaseWritable,
   nextConfigHasReleaseRouteGeneration,
   packageHasProductionStart,
   retrievalDebugHasProductionGate,
@@ -21,36 +17,35 @@ test("release environment reports credential presence without exposing values", 
   const secretText = "release-readiness-must-not-return-this-value";
   const summary = summarizeReleaseEnvironment({
     NATIVE_OKF_CHAT_ENABLED: "true",
-    NATIVE_OKF_ACCESS_MODE: "test",
     OPENAI_API_KEY: secretText,
-    NATIVE_OKF_SESSION_SECRET: secretText,
-    NATIVE_OKF_TEST_ACCESS_CODE: secretText,
   });
 
-  assert.equal(summary.accessMode, "test");
-  assert.equal(summary.accessModeRecognized, true);
+  assert.equal(summary.chatEnabled, true);
+  assert.equal(summary.chatEnabledRecognized, true);
   assert.equal(summary.requiredConfigurationPresent, true);
-  assert.equal(summary.secretPresence.openAiApiKey, true);
+  assert.equal(summary.providerPresence.openAiApiKey, true);
   assert.equal(JSON.stringify(summary).includes(secretText), false);
+
+  const defaultOpen = summarizeReleaseEnvironment({
+    OPENAI_API_KEY: secretText,
+  });
+  assert.equal(defaultOpen.chatEnabled, true);
+  assert.equal(defaultOpen.chatEnabledRecognized, true);
+  assert.equal(defaultOpen.requiredConfigurationPresent, true);
 
   const invalid = summarizeReleaseEnvironment({
     NATIVE_OKF_CHAT_ENABLED: "maybe",
-    NATIVE_OKF_ACCESS_MODE: "public",
   });
-  assert.equal(invalid.accessMode, "disabled");
-  assert.equal(invalid.accessModeRecognized, false);
+  assert.equal(invalid.chatEnabled, false);
   assert.equal(invalid.chatEnabledRecognized, false);
   assert.equal(invalid.requiredConfigurationPresent, false);
-});
 
-test("SQLite readiness probe never creates or opens the database file", async () => {
-  const root = await mkdtemp(join(tmpdir(), "native-okf-release-"));
-  const writable = await checkUsageDatabaseWritable({
-    cwd: root,
-    usageDbPath: "runtime/native-okf-usage.sqlite",
+  const disabled = summarizeReleaseEnvironment({
+    NATIVE_OKF_CHAT_ENABLED: "false",
   });
-  assert.equal(writable, true);
-  assert.deepEqual(await readdir(join(root, "runtime")), []);
+  assert.equal(disabled.chatEnabled, false);
+  assert.equal(disabled.chatEnabledRecognized, true);
+  assert.equal(disabled.requiredConfigurationPresent, true);
 });
 
 test("canonical and compatibility route definitions are complete and loop-free", () => {

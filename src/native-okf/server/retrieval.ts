@@ -610,13 +610,17 @@ const BROAD_CONTEXT_MARKDOWN_CHARACTERS = 400;
 export function nativeOkfRequestedKindForType(
   type: string,
 ): NativeOkfRequestedConceptKind | null {
-  const normalized = type.toLocaleLowerCase("en");
-  if (normalized.includes("goal")) return "goal";
-  if (normalized.includes("objective")) return "objective";
-  if (normalized.includes("meta-requirement")) return "meta-requirement";
-  if (normalized.includes("requirement")) return "requirement";
-  if (normalized.includes("principle")) return "principle";
-  if (normalized.includes("feature")) return "feature";
+  const tokens = new Set(
+    type.toLocaleLowerCase("en").split(/[^a-z\d]+/u).filter(Boolean),
+  );
+  if (tokens.has("goal")) return "goal";
+  if (tokens.has("objective")) return "objective";
+  if (tokens.has("meta") && tokens.has("requirement")) {
+    return "meta-requirement";
+  }
+  if (tokens.has("requirement")) return "requirement";
+  if (tokens.has("principle")) return "principle";
+  if (tokens.has("feature")) return "feature";
   return null;
 }
 function compactMarkdownWithLinks(body: string, maximum: number): string {
@@ -667,7 +671,7 @@ export async function prioritizeExplicitPaperCategoryContext(
   focus: NativeOkfExplicitPaperContextFocus,
 ): Promise<RetrievalResult> {
   const requestedKinds = new Set(focus.requestedConceptKinds);
-  if (focus.paperConceptIds.length === 0 || requestedKinds.size === 0) {
+  if (focus.paperConceptIds.length === 0) {
     return retrieval;
   }
 
@@ -697,8 +701,6 @@ export async function prioritizeExplicitPaperCategoryContext(
       return concept && kind && requestedKinds.has(kind) ? [concept] : [];
     })
     .sort(comparePaperContextConcepts);
-  if (requested.length === 0) return retrieval;
-
   const requestedIds = new Set(requested.map((concept) => concept.id));
   const connectedIds = new Set<string>();
   for (const [paperId, associated] of associatedByPaper) {

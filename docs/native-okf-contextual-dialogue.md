@@ -59,9 +59,8 @@ The server preserves the bounded original question in pending state, then
 combines the next user response with it for deterministic contextual retrieval.
 Well-formed paper or concept questions proceed without clarification.
 
-Deterministic clarification occurs before retrieval reservation or model setup.
-It makes no OpenAI request, creates no cost reservation, and consumes neither
-question nor diagram quota. Clearing the conversation removes the pending
+Deterministic clarification occurs before retrieval or model setup.
+It makes no OpenAI request. Clearing the conversation removes the pending
 question, so a later ambiguous reference cannot reuse old focus.
 
 ## Browser session boundary
@@ -73,23 +72,20 @@ The serialized payload is bounded to 100,000 characters and old messages are
 compacted first. Corrupt, unavailable, oversized, or schema-invalid storage is
 ignored safely.
 
-The browser does not use `localStorage` for chat. It does not store access
-codes, cookies, secrets, invitation data, API keys, administrator information,
-full retrieved source bodies, quota metadata, or retrieval diagnostics.
+The browser does not use `localStorage` for chat. It does not store cookies,
+secrets, API keys, administrator information, full retrieved source bodies, or
+retrieval diagnostics.
 Conversation data survives refresh in the same tab but is isolated from other
 tabs and browser sessions.
 
-No server-side chat table or prompt/answer write was added. Quota accounting
-continues to store usage metadata only, so the operational claim that questions
-and answers are not persisted by the quota system remains accurate.
+No server-side chat table or prompt/answer write was added.
 
 ## New chat
 
 The restrained **New chat** control clears visible messages, the session payload,
 active paper/concept/source focus, pending clarification, and diagram intent. It
 restores the existing safe diagram default and creates a fresh local
-conversation ID. It does not revoke access, change quota counters, contact the
-model, or require a server request.
+conversation ID. It does not contact the model or require a server request.
 
 ## Concise grounded answers
 

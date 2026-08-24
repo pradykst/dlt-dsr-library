@@ -47,7 +47,7 @@ const METHOD_SECTIONS = [
   {
     id: "privacy",
     title: "Operational privacy",
-    body: "Evaluation access is invitation-controlled. The operational access and quota store records counters, token usage, estimated cost, safe outcomes, and privacy-preserving identifiers. It does not persist questions, answers, conversation history, retrieved source text, or credentials. Chat history remains in bounded browser session storage for the current tab.",
+    body: "The grounded assistant is available directly from the public Chat page. Questions, answers, conversation history, and retrieved source text are not persisted by the server. Chat history remains bounded in browser session storage for the current tab and is cleared by New Chat.",
   },
 ] as const;
 

@@ -141,7 +141,7 @@ test("production starter logic contains no canonical paper-title or topic branch
   }
 });
 
-test("starter component is explicit, quota-aware, keyboard-native, and API-free", async () => {
+test("starter component is explicit, keyboard-native, and API-free", async () => {
   const component = await source(
     "src/native-okf/components/chat/GuidedChatStarters.tsx",
   );
@@ -151,8 +151,8 @@ test("starter component is explicit, quota-aware, keyboard-native, and API-free"
   assert.match(component, /<select/u);
   assert.match(component, /<textarea/u);
   assert.match(component, /aria-expanded=/u);
-  assert.match(component, /diagramQuotaExhausted/u);
-  assert.match(component, /Text-only questions remain available/u);
+  assert.doesNotMatch(component, /diagramQuotaExhausted/u);
+  assert.match(component, /This workflow is text-only unless you enable the existing diagram control/u);
   assert.match(component, /min-w-0 max-w-full/u);
   assert.doesNotMatch(component, /\bfetch\s*\(/u);
   assert.doesNotMatch(component, /\/api\/native-okf/u);
@@ -240,7 +240,6 @@ test("public navigation and Method evaluation copy meet the release boundary", a
     "Home",
     "Library",
     "Chat",
-    "Chat access",
     "Give feedback",
   ]) assert.match(header, new RegExp(label, "u"));
   assert.doesNotMatch(header, />\s*Admin(?:istrator)?\s*</u);

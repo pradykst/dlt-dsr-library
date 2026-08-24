@@ -23,11 +23,11 @@ import type { PaperCardDto } from "../shared/types.ts";
 const EXPECTED_COMPATIBILITY_REDIRECTS = new Map([
   ["/native-okf", "/library"],
   ["/native-okf/chat", "/chat"],
-  ["/native-okf/access", "/access"],
+  ["/native-okf/access", "/chat"],
   ["/native-okf/papers/:slug", "/papers/:slug"],
   ["/native-okf/concepts/:conceptId*", "/concepts/:conceptId*"],
-  ["/native-okf/admin/access", "/admin/access"],
-  ["/native-okf/admin", "/admin"],
+  ["/native-okf/admin/access", "/route-unavailable"],
+  ["/native-okf/admin", "/route-unavailable"],
 ]);
 
 async function source(relativePath: string): Promise<string> {
@@ -147,10 +147,7 @@ test("canonical routes and temporary compatibility redirects are loop-free", () 
     home: "/",
     library: "/library",
     chat: "/chat",
-    access: "/access",
     method: "/method",
-    adminAccess: "/admin/access",
-    admin: "/admin",
   });
   assert.deepEqual(validateNativeOkfRouteIntegrity(), []);
   assert.deepEqual(
@@ -189,7 +186,7 @@ test("global header and footer expose only the intended public navigation", asyn
     source("components/layout/SiteFooter.tsx"),
   ]);
 
-  for (const label of ["Home", "Library", "Chat", "Chat access"]) {
+  for (const label of ["Home", "Library", "Chat"]) {
     assert.match(header, new RegExp(`label: "${label}"`, "u"));
   }
   assert.match(header, /Give feedback/u);
@@ -221,14 +218,14 @@ test("method page explains limitations, grounding, and operational privacy", asy
   assert.match(method, /Citation-ID and source-path validation|citation IDs/u);
   assert.match(method, /Corpus-curation limitations/u);
   assert.match(method, /No-match behavior/u);
-  assert.match(method, /does not persist questions, answers, conversation history/u);
+  assert.match(method, /Questions, answers, conversation history,[\s\S]*are not persisted/u);
   assert.match(method, /Generated output remains non-authoritative/u);
 });
 
 test("sitemap source includes canonical public records and excludes private routes", async () => {
   const sitemap = await source("app/sitemap.ts");
 
-  for (const routeName of ["home", "library", "chat", "access", "method"]) {
+  for (const routeName of ["home", "library", "chat", "method"]) {
     assert.match(sitemap, new RegExp(`CANONICAL_ROUTES\\.${routeName}`, "u"));
   }
   assert.match(sitemap, /conceptPageHref\(concept\.id\)/u);

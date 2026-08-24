@@ -27,6 +27,7 @@ export const NATIVE_OKF_CONVERSATION_INTENTS = [
   "answer",
   "comparison",
   "stored-diagram",
+  "comparative-diagram",
   "synthesized-flow",
   "clarification",
 ] as const;
@@ -181,7 +182,7 @@ export interface SynthesisProblemState {
   sourcePaperSlugs: string[];
 }
 
-export type NativeOkfDiagramMode = "stored" | "synthesized";
+export type NativeOkfDiagramMode = "stored" | "comparative" | "synthesized";
 export type NativeOkfPresentationMode =
   | "text-primary"
   | "diagram-primary"
@@ -199,15 +200,6 @@ export type NativeOkfSafeDiagnosticCode =
   | "synthesis-plan-invalid"
   | "synthesis-plan-repair-failed";
 
-export interface NativeOkfPersonalQuotaMetadata {
-  questionsRemainingToday: number;
-  diagramsRemainingToday: number;
-  questionsRemainingTotal: number;
-  diagramsRemainingTotal: number;
-  resetAtMs: number;
-  accessExpiresAtMs: number;
-}
-
 export interface NativeOkfChatResponse {
   kind?: "answer" | "clarification";
   presentationMode: NativeOkfPresentationMode;
@@ -224,5 +216,4 @@ export interface NativeOkfChatResponse {
   insufficientContext: boolean;
   warnings?: string[];
   retrievalDebug?: unknown;
-  quota?: NativeOkfPersonalQuotaMetadata;
 }

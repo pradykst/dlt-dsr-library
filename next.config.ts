@@ -12,16 +12,13 @@ import {
 const tracedOkfBundle = ["./knowledge/okf/**/*.md"];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["better-sqlite3"],
   outputFileTracingIncludes: {
     "/": tracedOkfBundle,
     "/library": tracedOkfBundle,
     "/chat": tracedOkfBundle,
-    "/access": tracedOkfBundle,
     "/method": tracedOkfBundle,
     "/papers/**": tracedOkfBundle,
     "/concepts/**": tracedOkfBundle,
-    "/admin/**": tracedOkfBundle,
     "/sitemap.xml": tracedOkfBundle,
     "/native-okf": tracedOkfBundle,
     "/native-okf/**": tracedOkfBundle,

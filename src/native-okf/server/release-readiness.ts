@@ -1,17 +1,11 @@
 import "server-only";
 
-import { constants as fsConstants } from "node:fs";
 import {
-  access,
-  mkdir,
-  open,
   readFile,
   readdir,
   stat,
-  unlink,
 } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { getOkfBundle } from "./cache.ts";
 import { buildReleaseHomeViewModel } from "./release-home.ts";
@@ -22,7 +16,6 @@ import {
   NATIVE_OKF_PUBLIC_ROUTES,
   validateNativeOkfRouteIntegrity,
 } from "../shared/routes.ts";
-import type { NativeOkfAccessMode } from "./access/types.ts";
 
 const EXPECTED_MARKDOWN_DOCUMENT_COUNT = 466;
 
@@ -39,10 +32,8 @@ export const DEFAULT_RELEASE_CANONICAL_SOURCE_PATHS = [
   "app/native-okf/layout.tsx",
   "app/native-okf/page.tsx",
   "app/native-okf/chat/page.tsx",
-  "app/native-okf/access/page.tsx",
   "app/native-okf/papers",
   "app/native-okf/concepts",
-  "app/native-okf/admin",
   "app/native-okf/release-home",
   "app/native-okf/method",
   "components/layout/SiteHeader.tsx",
@@ -65,42 +56,32 @@ export const DEFAULT_PUBLIC_NAVIGATION_SOURCE_PATHS = [
 const REQUIRED_COMPATIBILITY_REDIRECTS = new Map<string, string>([
   ["/native-okf", "/library"],
   ["/native-okf/chat", "/chat"],
-  ["/native-okf/access", "/access"],
+  ["/native-okf/access", "/chat"],
   ["/native-okf/papers/:slug", "/papers/:slug"],
   ["/native-okf/concepts/:conceptId*", "/concepts/:conceptId*"],
-  ["/native-okf/admin/access", "/admin/access"],
-  ["/native-okf/admin", "/admin"],
+  ["/native-okf/admin/access", "/route-unavailable"],
+  ["/native-okf/admin", "/route-unavailable"],
 ]);
 
 const REQUIRED_CANONICAL_REWRITES = new Map<string, string>([
   ["/", "/native-okf/release-home"],
   ["/library", "/native-okf"],
   ["/chat", "/native-okf/chat"],
-  ["/access", "/native-okf/access"],
   ["/method", "/native-okf/method"],
   ["/papers/:slug", "/native-okf/papers/:slug"],
   ["/concepts/:conceptId*", "/native-okf/concepts/:conceptId*"],
-  ["/admin/access", "/native-okf/admin/access"],
-  ["/admin", "/native-okf/admin"],
 ]);
 
 type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
-export interface ReleaseSecretPresence {
+export interface ReleaseProviderPresence {
   openAiApiKey: boolean;
-  researcherSessionSecret: boolean;
-  inviteHashSecret: boolean;
-  testAccessCode: boolean;
-  adminAccessCode: boolean;
-  adminSessionSecret: boolean;
 }
 
 export interface ReleaseEnvironmentSummary {
-  accessMode: NativeOkfAccessMode;
-  accessModeRecognized: boolean;
   chatEnabled: boolean;
   chatEnabledRecognized: boolean;
-  secretPresence: ReleaseSecretPresence;
+  providerPresence: ReleaseProviderPresence;
   requiredConfigurationPresent: boolean;
 }
 
@@ -113,7 +94,7 @@ export interface ReleaseReadinessCheck {
 export interface ReleaseReadinessReport {
   ready: boolean;
   checks: ReleaseReadinessCheck[];
-  access: ReleaseEnvironmentSummary;
+  environment: ReleaseEnvironmentSummary;
   metrics: {
     markdownDocumentCount: number;
     conceptCount: number;
@@ -126,14 +107,11 @@ export interface ReleaseReadinessReport {
 export interface ReleaseReadinessOptions {
   cwd?: string;
   environment?: EnvironmentSource;
-  usageDbPath?: string;
   canonicalSourcePaths?: readonly string[];
   publicNavigationSourcePaths?: readonly string[];
   nextConfigPath?: string;
   packageJsonPath?: string;
   retrievalDebugRoutePath?: string;
-  /** Tests may disable directory creation and supply an already existing parent. */
-  createUsageDirectory?: boolean;
 }
 
 function isPresent(value: string | undefined): boolean {
@@ -144,7 +122,7 @@ function parseBooleanSetting(
   value: string | undefined,
 ): { value: boolean; recognized: boolean } {
   const normalized = value?.trim().toLocaleLowerCase("en");
-  if (!normalized) return { value: false, recognized: true };
+  if (!normalized) return { value: true, recognized: true };
   if (["1", "true", "yes", "on"].includes(normalized)) {
     return { value: true, recognized: true };
   }
@@ -161,50 +139,17 @@ function parseBooleanSetting(
 export function summarizeReleaseEnvironment(
   environment: EnvironmentSource,
 ): ReleaseEnvironmentSummary {
-  const requestedMode = environment.NATIVE_OKF_ACCESS_MODE
-    ?.trim()
-    .toLocaleLowerCase("en");
-  const accessModeRecognized =
-    !requestedMode ||
-    requestedMode === "disabled" ||
-    requestedMode === "test" ||
-    requestedMode === "invite";
-  const accessMode: NativeOkfAccessMode =
-    requestedMode === "test" || requestedMode === "invite"
-      ? requestedMode
-      : "disabled";
   const enabled = parseBooleanSetting(environment.NATIVE_OKF_CHAT_ENABLED);
-  const secretPresence = {
+  const providerPresence = {
     openAiApiKey: isPresent(environment.OPENAI_API_KEY),
-    researcherSessionSecret: isPresent(environment.NATIVE_OKF_SESSION_SECRET),
-    inviteHashSecret: isPresent(environment.NATIVE_OKF_INVITE_HASH_SECRET),
-    testAccessCode: isPresent(environment.NATIVE_OKF_TEST_ACCESS_CODE),
-    adminAccessCode: isPresent(environment.NATIVE_OKF_ADMIN_ACCESS_CODE),
-    adminSessionSecret: isPresent(environment.NATIVE_OKF_ADMIN_SESSION_SECRET),
   };
 
-  const paidModeActive = enabled.value && accessMode !== "disabled";
-  const paidConfigurationPresent =
-    !paidModeActive ||
-    (secretPresence.openAiApiKey &&
-      secretPresence.researcherSessionSecret &&
-      (accessMode === "test"
-        ? secretPresence.testAccessCode
-        : secretPresence.inviteHashSecret));
-  const adminPartiallyConfigured =
-    secretPresence.adminAccessCode !== secretPresence.adminSessionSecret;
-
   return {
-    accessMode,
-    accessModeRecognized,
     chatEnabled: enabled.value,
     chatEnabledRecognized: enabled.recognized,
-    secretPresence,
+    providerPresence,
     requiredConfigurationPresent:
-      accessModeRecognized &&
-      enabled.recognized &&
-      paidConfigurationPresent &&
-      !adminPartiallyConfigured,
+      enabled.recognized && (!enabled.value || providerPresence.openAiApiKey),
   };
 }
 
@@ -212,14 +157,6 @@ export function summarizeReleaseEnvironment(
 function readReleaseReadinessEnvironment(): EnvironmentSource {
   return {
     NATIVE_OKF_CHAT_ENABLED: process.env.NATIVE_OKF_CHAT_ENABLED,
-    NATIVE_OKF_ACCESS_MODE: process.env.NATIVE_OKF_ACCESS_MODE,
-    NATIVE_OKF_USAGE_DB_PATH: process.env.NATIVE_OKF_USAGE_DB_PATH,
-    NATIVE_OKF_SESSION_SECRET: process.env.NATIVE_OKF_SESSION_SECRET,
-    NATIVE_OKF_INVITE_HASH_SECRET: process.env.NATIVE_OKF_INVITE_HASH_SECRET,
-    NATIVE_OKF_TEST_ACCESS_CODE: process.env.NATIVE_OKF_TEST_ACCESS_CODE,
-    NATIVE_OKF_ADMIN_ACCESS_CODE: process.env.NATIVE_OKF_ADMIN_ACCESS_CODE,
-    NATIVE_OKF_ADMIN_SESSION_SECRET:
-      process.env.NATIVE_OKF_ADMIN_SESSION_SECRET,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   };
 }
@@ -232,57 +169,6 @@ function pathIsWithin(root: string, candidate: string): boolean {
       !difference.startsWith(`..${sep}`) &&
       !isAbsolute(difference))
   );
-}
-
-/**
- * Probes the SQLite parent directory and file permissions without opening or
- * reading the database itself. A temporary sibling file is always removed.
- */
-export async function checkUsageDatabaseWritable(options: {
-  cwd: string;
-  usageDbPath: string;
-  createDirectory?: boolean;
-}): Promise<boolean> {
-  const root = resolve(options.cwd);
-  const databasePath = isAbsolute(options.usageDbPath)
-    ? resolve(options.usageDbPath)
-    : resolve(root, options.usageDbPath);
-  const parent = dirname(databasePath);
-
-  try {
-    try {
-      await stat(parent);
-    } catch {
-      if (options.createDirectory === false || !pathIsWithin(root, parent)) {
-        return false;
-      }
-      await mkdir(parent, { recursive: true });
-    }
-
-    await access(parent, fsConstants.W_OK);
-    try {
-      await access(databasePath, fsConstants.F_OK);
-      await access(databasePath, fsConstants.W_OK);
-    } catch (error) {
-      const candidate = error as NodeJS.ErrnoException;
-      if (candidate.code !== "ENOENT") return false;
-    }
-
-    const probePath = resolve(
-      parent,
-      `.native-okf-readiness-${process.pid}-${randomUUID()}.tmp`,
-    );
-    let probe: Awaited<ReturnType<typeof open>> | undefined;
-    try {
-      probe = await open(probePath, "wx", 0o600);
-      return true;
-    } finally {
-      await probe?.close();
-      await unlink(probePath).catch(() => undefined);
-    }
-  } catch {
-    return false;
-  }
 }
 
 function fileExtension(filePath: string): string {
@@ -422,21 +308,12 @@ export async function runNativeOkfReleaseReadiness(
 ): Promise<ReleaseReadinessReport> {
   const cwd = resolve(options.cwd ?? process.cwd());
   const environment = options.environment ?? readReleaseReadinessEnvironment();
-  const accessSummary = summarizeReleaseEnvironment(environment);
-  const usageDbPath =
-    options.usageDbPath ??
-    environment.NATIVE_OKF_USAGE_DB_PATH?.trim() ??
-    "runtime/native-okf-usage.sqlite";
+  const environmentSummary = summarizeReleaseEnvironment(environment);
 
-  const [validation, bundle, home, storageWritable] = await Promise.all([
+  const [validation, bundle, home] = await Promise.all([
     validateOkfBundle({ cwd }),
     getOkfBundle(),
     buildReleaseHomeViewModel(),
-    checkUsageDatabaseWritable({
-      cwd,
-      usageDbPath,
-      createDirectory: options.createUsageDirectory ?? true,
-    }),
   ]);
 
   const routeIssues = validateRequiredReleaseRoutes();
@@ -531,19 +408,16 @@ export async function runNativeOkfReleaseReadiness(
       "Retrieval diagnostics return not-found in production",
     ),
     check(
-      "access-mode",
-      accessSummary.accessModeRecognized && accessSummary.chatEnabledRecognized,
-      `Access mode is recognized (${accessSummary.accessMode})`,
+      "chat-setting",
+      environmentSummary.chatEnabledRecognized,
+      environmentSummary.chatEnabled
+        ? "Public chat is enabled"
+        : "Public chat is disabled by the emergency switch",
     ),
     check(
       "required-configuration",
-      accessSummary.requiredConfigurationPresent,
-      "Required active-mode credentials are represented only as presence booleans",
-    ),
-    check(
-      "usage-store-writable",
-      storageWritable,
-      "SQLite location is writable without opening the operational database",
+      environmentSummary.requiredConfigurationPresent,
+      "An enabled public chat has a configured OpenAI provider key",
     ),
     check(
       "canonical-import-isolation",
@@ -555,7 +429,7 @@ export async function runNativeOkfReleaseReadiness(
   return {
     ready: checks.every((item) => item.ok),
     checks,
-    access: accessSummary,
+    environment: environmentSummary,
     metrics: {
       markdownDocumentCount: validation.markdownFileCount,
       conceptCount: home.metrics.conceptCount,
@@ -572,15 +446,15 @@ export function formatReleaseReadinessReport(
   const checks = report.checks.map(
     (item) => `${item.ok ? "PASS" : "FAIL"} ${item.id}: ${item.summary}`,
   );
-  const credentials = Object.entries(report.access.secretPresence).map(
+  const providers = Object.entries(report.environment.providerPresence).map(
     ([name, present]) => `  ${name}: ${present}`,
   );
   return [
     "Native OKF frontend release readiness",
     `Overall: ${report.ready ? "ready" : "not ready"}`,
-    `Access mode: ${report.access.accessMode}`,
-    "Credential presence (values are never displayed):",
-    ...credentials,
+    `Public chat: ${report.environment.chatEnabled ? "enabled" : "disabled"}`,
+    "Provider credential presence (values are never displayed):",
+    ...providers,
     ...checks,
   ].join("\n");
 }
