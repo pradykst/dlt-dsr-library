@@ -4,6 +4,7 @@ import { getOkfBundle } from "./cache.ts";
 import {
   associatedConceptsForPaper,
   projectSemanticEdges,
+  semanticTypeRank,
 } from "./paper-design-map.ts";
 import {
   nativeOkfRequestedKindForType,
@@ -30,6 +31,7 @@ export interface NativeOkfStructuredAnalysisFocus {
   paperConceptIds: readonly string[];
   requestedConceptKinds: readonly NativeOkfRequestedConceptKind[];
   corpusQuery: boolean;
+  multiPaperComparison?: boolean;
 }
 
 function normalize(value: string): string {
@@ -80,6 +82,58 @@ function explicitlyContainsTerm(concept: OkfConcept, exactTerm: string): boolean
   const haystack = new Set(searchableText(concept).split(" "));
   const terms = exactTerm.split(" ").filter(Boolean);
   return terms.length > 0 && terms.every((term) => haystack.has(term));
+}
+
+function explicitlyRepresentsTerm(concept: OkfConcept, exactTerm: string): boolean {
+  const identity = normalize([
+    concept.title ?? "",
+    typeof concept.frontmatter.label === "string"
+      ? concept.frontmatter.label
+      : "",
+    ...(concept.tags ?? []),
+    ...concept.headings
+      .filter((heading) => heading.depth === 1)
+      .map((heading) => heading.text),
+  ].join("\n"));
+  if (!identity) return false;
+  const identityTerms = new Set(identity.split(" "));
+  const exactTerms = exactTerm.split(" ").filter(Boolean);
+  if (exactTerms.length === 0) return false;
+  if (exactTerms.every((term) => identityTerms.has(term))) return true;
+  const semanticHead = exactTerms.at(-1)!;
+  return semanticHead.length >= 3 && identityTerms.has(semanticHead);
+}
+
+function canonicalTypeForKind(kind: NativeOkfRequestedConceptKind): string {
+  return kind === "goal"
+    ? "design-goal"
+    : kind === "objective"
+      ? "design-objective"
+      : kind === "meta-requirement"
+        ? "meta-requirement"
+        : kind === "requirement"
+          ? "design-requirement"
+          : kind === "principle"
+            ? "design-principle"
+            : "design-feature";
+}
+
+function canonicalRelationshipKinds(
+  requestedKinds: readonly NativeOkfRequestedConceptKind[],
+): NativeOkfRequestedConceptKind[] {
+  return [...new Set(requestedKinds)].sort((left, right) =>
+    semanticTypeRank(canonicalTypeForKind(left)) -
+      semanticTypeRank(canonicalTypeForKind(right)) ||
+    left.localeCompare(right, "en")
+  );
+}
+
+function requestedRelationshipLabel(question: string): string | null {
+  if (/\bimplement(?:s|ed|ing|ation)?\b/iu.test(question)) return "implements";
+  if (/\baddress(?:es|ed|ing)?\b/iu.test(question)) return "addresses";
+  if (/\bsupport(?:s|ed|ing)?\b/iu.test(question)) return "supports";
+  if (/\bsatisf(?:y|ies|ied|ying)\b/iu.test(question)) return "satisfies";
+  return null;
 }
 
 function representedTypeCounts(concepts: readonly OkfConcept[]): Record<string, number> {
@@ -139,9 +193,10 @@ function relationshipStatus(
 }
 
 function isRequestedRelationshipEdge(
-  edge: { sourceId: string; targetId: string },
+  edge: { sourceId: string; targetId: string; label?: string },
   requestedKinds: readonly NativeOkfRequestedConceptKind[],
   conceptsById: ReadonlyMap<string, OkfConcept>,
+  requestedLabel: string | null,
 ): boolean {
   if (requestedKinds.length < 2) return false;
   const sourceKinds = new Set(requestedKinds.slice(0, -1));
@@ -153,7 +208,8 @@ function isRequestedRelationshipEdge(
     conceptsById.get(edge.targetId)?.type ?? "",
   );
   return sourceKind !== null && sourceKinds.has(sourceKind) &&
-    edgeTargetKind === targetKind;
+    edgeTargetKind === targetKind &&
+    (requestedLabel === null || edge.label === requestedLabel);
 }
 
 function corpusEvidenceConcepts(
@@ -247,13 +303,18 @@ export async function applyNativeOkfStructuredAnalysis(
   focus: NativeOkfStructuredAnalysisFocus,
 ): Promise<RetrievalResult> {
   const requestedKinds = [...new Set(focus.requestedConceptKinds)];
+  const relationshipKinds = canonicalRelationshipKinds(requestedKinds);
+  const relationshipLabel = requestedRelationshipLabel(focus.question);
+  const comparisonSkeleton = focus.multiPaperComparison === true &&
+    focus.paperConceptIds.length > 1;
   const relationshipQuery = RELATIONSHIP_QUERY_PATTERN.test(focus.question) ||
     requestedKinds.length >= 2 &&
       /\b(?:compare|comparison|between|level)\b/iu.test(focus.question);
   const exactTerm = exactTermFromQuestion(focus.question);
   const structuredCorpusSemantics = requestedKinds.length > 0 ||
     exactTerm !== null ||
-    relationshipQuery && requestedKinds.length >= 2;
+    relationshipQuery && requestedKinds.length >= 2 ||
+    comparisonSkeleton;
   const needsStructuredAnalysis = focus.corpusQuery
     ? structuredCorpusSemantics
     : focus.paperConceptIds.length > 0 && structuredCorpusSemantics;
@@ -277,19 +338,26 @@ export async function applyNativeOkfStructuredAnalysis(
         return kind !== null && requestedKinds.includes(kind);
       });
       const termMatches = exactTerm
-        ? [...associated, paper].filter((concept) =>
-            explicitlyContainsTerm(concept, exactTerm)
-          )
+        ? [
+            ...associated.filter((concept) =>
+              explicitlyRepresentsTerm(concept, exactTerm)
+            ),
+            ...(explicitlyContainsTerm(paper, exactTerm) ? [paper] : []),
+          ]
         : [];
       const relevant = exactTerm
         ? termMatches
-        : requested;
+        : comparisonSkeleton && requestedKinds.length === 0
+          ? associated
+          : requested;
       const projected = projectSemanticEdges(bundle, associated).filter((edge) => {
-        if (!relationshipQuery || requestedKinds.length < 2) return false;
+        if (comparisonSkeleton && requestedKinds.length === 0) return true;
+        if (!relationshipQuery || relationshipKinds.length < 2) return false;
         return isRequestedRelationshipEdge(
           edge,
-          requestedKinds,
+          relationshipKinds,
           bundle.conceptsById,
+          relationshipLabel,
         );
       });
       const relationshipCount = projected.length;
@@ -298,7 +366,11 @@ export async function applyNativeOkfStructuredAnalysis(
         title: displayTitle(concept),
         type: concept.type,
         paperConceptId: paper.id,
-        explicitTermMatch: exactTerm !== null && explicitlyContainsTerm(concept, exactTerm),
+        explicitTermMatch: exactTerm !== null && (
+          concept.type === "paper"
+            ? explicitlyContainsTerm(concept, exactTerm)
+            : explicitlyRepresentsTerm(concept, exactTerm)
+        ),
       }));
       const compactConceptEvidence = focus.corpusQuery
         ? [...new Map(
@@ -324,7 +396,7 @@ export async function applyNativeOkfStructuredAnalysis(
           : relationshipEvidence,
         relationshipStatus: relationshipStatus(
           relevant,
-          requestedKinds,
+          relationshipKinds,
           relationshipCount,
           relationshipQuery,
         ),
@@ -346,7 +418,8 @@ export async function applyNativeOkfStructuredAnalysis(
     requestedKinds,
     exactTerm,
     relationshipCheckComplete: relationshipQuery,
-    absenceCheckComplete: relationshipQuery && ABSENCE_QUERY_PATTERN.test(focus.question),
+    absenceCheckComplete: exactTerm !== null ||
+      relationshipQuery && ABSENCE_QUERY_PATTERN.test(focus.question),
     papers: visibleRows,
   };
 

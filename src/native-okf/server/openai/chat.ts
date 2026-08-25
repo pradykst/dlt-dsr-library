@@ -403,8 +403,6 @@ const TECHNICAL_CONTEXT_WARNINGS = new Set([
   "One or more concepts were omitted because the context limit was exhausted.",
 ]);
 
-const ACTIONABLE_CONTEXT_WARNING =
-  "The retrieved evidence exceeded the bounded answer context; narrow the paper or concept category for fuller coverage.";
 const ACTIONABLE_REQUESTED_CONTEXT_WARNING =
   "Some directly requested stored records could not fit within the bounded answer context; narrow the paper or concept category and try again.";
 
@@ -435,7 +433,23 @@ function directlyRequestedConceptIds(
     .map((concept) => concept.conceptId);
 }
 
-function userFacingRetrievalWarnings(
+function directlyScopedEvidenceIds(
+  prepared: PreparedNativeOkfChatRequest,
+  requestedConceptIds: readonly string[],
+): string[] {
+  const paperSlugs = prepared.explicitPaperSlugs.length > 0
+    ? prepared.explicitPaperSlugs
+    : prepared.restrictedPaperSlugs;
+  const allowedPapers = new Set(paperSlugs);
+  return [...new Set([
+    ...prepared.catalog.papers
+      .filter((paper) => allowedPapers.has(paper.slug))
+      .map((paper) => paper.conceptId),
+    ...requestedConceptIds,
+  ])];
+}
+
+export function userFacingRetrievalWarnings(
   retrieval: RetrievalResult,
   requestedConceptIds: readonly string[],
 ): string[] {
@@ -454,9 +468,6 @@ function userFacingRetrievalWarnings(
   if (technicalWarnings.length === 0) return userFacing;
   if (missingRequestedSources.length > 0) {
     return [...userFacing, ACTIONABLE_REQUESTED_CONTEXT_WARNING];
-  }
-  if (requestedConceptIds.length === 0) {
-    return [...userFacing, ACTIONABLE_CONTEXT_WARNING];
   }
   return userFacing;
 }
@@ -664,6 +675,10 @@ export async function answerNativeOkfChat(
   );
 
   const expectedRequestedConceptIds = directlyRequestedConceptIds(prepared);
+  const expectedScopedEvidenceIds = directlyScopedEvidenceIds(
+    prepared,
+    expectedRequestedConceptIds,
+  );
   const requestedKinds = new Set(prepared.requestedConceptKinds);
   const expectedRequestedConceptIdSet = new Set(expectedRequestedConceptIds);
   const requiredConceptIds = retrieval.finalConcepts
@@ -836,7 +851,7 @@ export async function answerNativeOkfChat(
   ];
   const warnings = userFacingRetrievalWarnings(
     retrieval,
-    expectedRequestedConceptIds,
+    expectedScopedEvidenceIds,
   );
 
   if (validationErrors.length > 0) {

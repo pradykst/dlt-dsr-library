@@ -15,6 +15,7 @@ import {
 } from "../server/paper-design-map.ts";
 import {
   answerNativeOkfChat,
+  userFacingRetrievalWarnings,
   validateNativeOkfChatRequest,
 } from "../server/openai/chat.ts";
 import {
@@ -581,4 +582,239 @@ test("diagram mode selection is generic across repository papers and derived pai
       `${left.title} / ${right.title}`,
     );
   }
+});
+
+test("inverse and passive relationship wording resolves the same canonical edges across layer pairs", async () => {
+  const bundle = await getOkfBundle();
+  type RequestedKind = NonNullable<ReturnType<typeof nativeOkfRequestedKindForType>>;
+  const kindPhrase: Record<RequestedKind, string> = {
+    goal: "design goals",
+    objective: "design objectives",
+    "meta-requirement": "meta-requirements",
+    requirement: "design requirements",
+    principle: "design principles",
+    feature: "design features",
+  };
+  const operation: Record<string, readonly [string, string]> = {
+    implements: ["implement", "implemented"],
+    addresses: ["address", "addressed"],
+    supports: ["support", "supported"],
+    satisfies: ["satisfy", "satisfied"],
+  };
+  const candidates = (bundle.conceptsByType.get("paper") ?? []).flatMap((paper) => {
+    const associated = associatedConceptsForPaper(bundle, paper);
+    const edges = projectSemanticEdges(bundle, associated);
+    const groups = new Map<string, typeof edges>();
+    for (const edge of edges) {
+      const sourceKind = nativeOkfRequestedKindForType(
+        bundle.conceptsById.get(edge.sourceId)?.type ?? "",
+      );
+      const targetKind = nativeOkfRequestedKindForType(
+        bundle.conceptsById.get(edge.targetId)?.type ?? "",
+      );
+      if (!sourceKind || !targetKind || sourceKind === targetKind || !operation[edge.label]) {
+        continue;
+      }
+      const key = `${sourceKind}\0${targetKind}\0${edge.label}`;
+      const group = groups.get(key) ?? [];
+      group.push(edge);
+      groups.set(key, group);
+    }
+    return [...groups].map(([key, edges]) => ({ paper, key, edges }));
+  });
+  const selected = [...new Map(candidates.map((candidate) => [candidate.key, candidate])).values()]
+    .slice(0, 3);
+  assert.ok(selected.length >= 2);
+
+  for (const { paper, key, edges } of selected) {
+    const [sourceKind, targetKind, label] = key.split("\0") as [
+      RequestedKind,
+      RequestedKind,
+      string,
+    ];
+    const forms = operation[label];
+    assert.ok(forms);
+    const sourcePhrase = kindPhrase[sourceKind];
+    const targetPhrase = kindPhrase[targetKind];
+    assert.ok(sourcePhrase && targetPhrase);
+    const questions = [
+      `For ${paper.title}, which ${targetPhrase} ${forms[0]} these ${sourcePhrase}?`,
+      `For ${paper.title}, which ${sourcePhrase} are ${forms[1]} by these ${targetPhrase}?`,
+    ];
+    const expected = edges.map((edge) => `${edge.sourceId}->${edge.targetId}:${edge.label}`).sort();
+    for (const question of questions) {
+      const { retrieval } = await preparedRetrieval(question);
+      const row = retrieval.structuredAnalysis?.papers.find(
+        (item) => item.paperConceptId === paper.id,
+      );
+      assert.ok(row, question);
+      const actual = row.relevantRelationships
+        .map((edge) => `${edge.sourceId}->${edge.targetId}:${edge.label}`)
+        .sort();
+      assert.deepEqual(actual, expected, question);
+      assert.equal(row.relationshipStatus, "mapped", question);
+    }
+  }
+});
+
+test("peer-review follow-up uses the canonical principle-feature map instead of reporting no mappings", async () => {
+  const bundle = await getOkfBundle();
+  const catalog = await loadNativeOkfConversationCatalog();
+  const first = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Summarize the blockchain-based peer-review token paper.",
+    }),
+    catalog,
+  );
+  assert.equal(first.focusedPaperSlugs.length, 1);
+  const paper = catalog.papers.find((item) => item.slug === first.focusedPaperSlugs[0]);
+  assert.ok(paper);
+  const canonicalPaper = bundle.conceptsById.get(paper.conceptId);
+  assert.ok(canonicalPaper);
+  const expected = projectSemanticEdges(
+    bundle,
+    associatedConceptsForPaper(bundle, canonicalPaper),
+  ).filter((edge) =>
+    bundle.conceptsById.get(edge.sourceId)?.type === "design-principle" &&
+    bundle.conceptsById.get(edge.targetId)?.type === "design-feature"
+  );
+  assert.ok(expected.length > 0);
+
+  const prepared = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Which design features implement its principles, and why?",
+      conversationState: {
+        ...createInitialNativeOkfConversationState(),
+        activePaperSlugs: first.focusedPaperSlugs,
+      },
+    }),
+    catalog,
+  );
+  const retrieval = await assembleNativeOkfContextualRetrieval(
+    prepared,
+    await retrieveOkfContext(prepared.retrievalQuestion),
+  );
+  const row = retrieval.structuredAnalysis?.papers.find(
+    (item) => item.paperConceptId === paper.conceptId,
+  );
+  assert.ok(row);
+  assert.equal(row.relationshipStatus, "mapped");
+  assert.deepEqual(
+    row.relevantRelationships.map((edge) => `${edge.sourceId}->${edge.targetId}:${edge.label}`).sort(),
+    expected.map((edge) => `${edge.sourceId}->${edge.targetId}:${edge.label}`).sort(),
+  );
+});
+
+test("named multi-paper comparisons retain balanced canonical skeletons independent of paper order", async () => {
+  const bundle = await getOkfBundle();
+  const catalog = await loadNativeOkfConversationCatalog();
+  const shapes = catalog.papers.map((paper) => {
+    const canonical = bundle.conceptsById.get(paper.conceptId)!;
+    const associated = associatedConceptsForPaper(bundle, canonical);
+    return {
+      paper,
+      concepts: associated,
+      relationships: projectSemanticEdges(bundle, associated),
+    };
+  }).filter((shape) => shape.concepts.length > 0)
+    .sort((left, right) => left.concepts.length - right.concepts.length);
+  const pair = [shapes[0]!, shapes.at(-1)!];
+  assert.notEqual(pair[0].paper.slug, pair[1].paper.slug);
+  const signatures: Record<string, unknown>[] = [];
+
+  for (const ordered of [pair, [...pair].reverse()]) {
+    const question = `Compare ${ordered[0]!.paper.title} and ${ordered[1]!.paper.title}.`;
+    const { prepared, retrieval } = await preparedRetrieval(question);
+    assert.equal(prepared.queryMode, "MULTI_PAPER_QA");
+    const analysis = retrieval.structuredAnalysis;
+    assert.equal(analysis?.scope, "multi-paper");
+    assert.equal(analysis?.papers.length, 2);
+    const signature: Record<string, unknown> = {};
+    for (const expected of pair) {
+      const row = analysis?.papers.find(
+        (item) => item.paperConceptId === expected.paper.conceptId,
+      );
+      assert.ok(row, expected.paper.title);
+      assert.equal(row.relevantConceptCount, expected.concepts.length);
+      assert.equal(row.relevantRelationshipCount, expected.relationships.length);
+      assert.deepEqual(row.representedTypeCounts, Object.fromEntries(
+        [...new Set(expected.concepts.map((concept) => concept.type))]
+          .sort()
+          .map((type) => [
+            type,
+            expected.concepts.filter((concept) => concept.type === type).length,
+          ]),
+      ));
+      signature[expected.paper.conceptId] = {
+        concepts: row.relevantConcepts.map((concept) => concept.conceptId).sort(),
+        relationships: row.relevantRelationships
+          .map((edge) => `${edge.sourceId}->${edge.targetId}:${edge.label}`)
+          .sort(),
+      };
+    }
+    const context = buildNativeOkfGroundedContext(retrieval, question);
+    assert.ok(context.prompt.length <= retrieval.debug.limits.maxContextCharacters);
+    signatures.push(signature);
+  }
+  assert.deepEqual(signatures[0], signatures[1]);
+});
+
+test("exact-term formal roles follow the queried term identity rather than related concepts", async () => {
+  const bundle = await getOkfBundle();
+  const papersByTerm = new Map<string, Set<string>>();
+  for (const paper of bundle.conceptsByType.get("paper") ?? []) {
+    for (const concept of associatedConceptsForPaper(bundle, paper)) {
+      for (const term of new Set(
+        (concept.title ?? "").normalize("NFKC").toLocaleLowerCase("en")
+          .match(/[\p{L}\p{N}]{7,}/gu) ?? [],
+      )) {
+        const papers = papersByTerm.get(term) ?? new Set<string>();
+        papers.add(paper.id);
+        papersByTerm.set(term, papers);
+      }
+    }
+  }
+  const terms = [...papersByTerm]
+    .filter(([, papers]) => papers.size >= 2)
+    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .slice(0, 3)
+    .map(([term]) => term);
+  assert.equal(terms.length, 3);
+
+  for (const term of terms) {
+    const { retrieval } = await preparedRetrieval(
+      `Find examples where ${term} is used as a design feature, design principle, or implementation mechanism. Keep those categories separate.`,
+    );
+    assert.equal(retrieval.structuredAnalysis?.exhaustiveForScope, true);
+    assert.equal(retrieval.structuredAnalysis?.absenceCheckComplete, true);
+    const formalMatches = retrieval.structuredAnalysis?.papers.flatMap((paper) =>
+      paper.relevantConcepts.filter((concept) => concept.type !== "paper")
+    ) ?? [];
+    assert.ok(formalMatches.length > 0, term);
+    for (const match of formalMatches) {
+      const concept = bundle.conceptsById.get(match.conceptId);
+      assert.ok(concept);
+      const identity = [
+        concept.title ?? "",
+        typeof concept.frontmatter.label === "string" ? concept.frontmatter.label : "",
+        ...(concept.tags ?? []),
+        ...concept.headings.filter((heading) => heading.depth === 1).map((heading) => heading.text),
+      ].join(" ").normalize("NFKC").toLocaleLowerCase("en");
+      assert.match(identity, new RegExp(`\\b${term}\\b`, "u"), match.conceptId);
+    }
+  }
+});
+
+test("optional context trimming stays diagnostic while required evidence loss remains actionable", async () => {
+  const retrieval = await retrieveOkfContext("design knowledge relationships");
+  const technicalWarning =
+    "One or more concepts were omitted because the context limit was exhausted.";
+  const trimmed = { ...retrieval, warnings: [technicalWarning] };
+  assert.deepEqual(userFacingRetrievalWarnings(trimmed, []), []);
+  assert.deepEqual(
+    userFacingRetrievalWarnings(trimmed, ["missing/requested/concept"]),
+    [
+      "Some directly requested stored records could not fit within the bounded answer context; narrow the paper or concept category and try again.",
+    ],
+  );
 });

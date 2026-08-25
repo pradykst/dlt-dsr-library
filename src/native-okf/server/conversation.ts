@@ -965,6 +965,7 @@ export async function assembleNativeOkfContextualRetrieval(
     paperConceptIds,
     requestedConceptKinds: prepared.requestedConceptKinds,
     corpusQuery: prepared.corpusQuery,
+    multiPaperComparison: prepared.queryMode === "MULTI_PAPER_QA",
   });
 }
 
