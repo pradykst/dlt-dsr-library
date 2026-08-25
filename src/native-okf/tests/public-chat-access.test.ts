@@ -13,12 +13,15 @@ import { createInitialNativeOkfConversationState } from "../shared/chat-types.ts
 import { LEGACY_PUBLIC_REDIRECTS } from "../shared/routes.ts";
 
 const PUBLIC_CHAT_URL = "https://library.example/api/native-okf/chat";
+const INTERNAL_CHAT_URL = "http://127.0.0.1:3000/api/native-okf/chat";
+const ORIGINAL_PUBLIC_ORIGIN = process.env.NATIVE_OKF_PUBLIC_ORIGIN;
 
 function request(
   body: unknown,
   headers: Record<string, string> = {},
+  url = PUBLIC_CHAT_URL,
 ): Request {
-  return new Request(PUBLIC_CHAT_URL, {
+  return new Request(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -48,6 +51,58 @@ function response(
 
 test.beforeEach(() => {
   resetPublicNativeOkfChatConcurrencyForTests();
+});
+
+test.afterEach(() => {
+  if (ORIGINAL_PUBLIC_ORIGIN === undefined) {
+    delete process.env.NATIVE_OKF_PUBLIC_ORIGIN;
+  } else {
+    process.env.NATIVE_OKF_PUBLIC_ORIGIN = ORIGINAL_PUBLIC_ORIGIN;
+  }
+});
+
+test("configured public origin allows a same-origin request behind a reverse proxy", async () => {
+  process.env.NATIVE_OKF_PUBLIC_ORIGIN = "https://dsr-library.org";
+  const result = await handlePublicNativeOkfChat(
+    request(
+      { question: "Hello" },
+      {
+        origin: "https://dsr-library.org",
+        "sec-fetch-site": "same-origin",
+      },
+      INTERNAL_CHAT_URL,
+    ),
+    { answer: async () => response() },
+  );
+
+  assert.equal(result.status, 200);
+});
+
+test("configured public origin rejects an attacker origin behind a reverse proxy", async () => {
+  process.env.NATIVE_OKF_PUBLIC_ORIGIN = "https://dsr-library.org";
+  const result = await handlePublicNativeOkfChat(
+    request(
+      { question: "Hello" },
+      { origin: "https://attacker.example" },
+      INTERNAL_CHAT_URL,
+    ),
+    { answer: async () => response() },
+  );
+
+  assert.equal(result.status, 403);
+  assert.equal(
+    (await result.json() as Record<string, unknown>).code,
+    "same_origin_required",
+  );
+});
+
+test("request origin remains the fallback when no public origin is configured", async () => {
+  delete process.env.NATIVE_OKF_PUBLIC_ORIGIN;
+  const result = await handlePublicNativeOkfChat(request({ question: "Hello" }), {
+    answer: async () => response(),
+  });
+
+  assert.equal(result.status, 200);
 });
 
 test("anonymous same-origin requests delegate to the calibrated chat flow without a cookie", async () => {

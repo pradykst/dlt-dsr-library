@@ -9,6 +9,7 @@ import {
   NativeOkfRequestError,
   publicNativeOkfChatError,
 } from "./openai/errors.ts";
+import { getNativeOkfPublicOrigin } from "./public-origin.ts";
 
 const MAX_CONCURRENT_PUBLIC_CHAT_REQUESTS = 4;
 
@@ -42,13 +43,20 @@ function chatEnabled(environment: EnvironmentSource): boolean {
   return false;
 }
 
-function sameOriginJsonPost(request: Request): boolean {
+function sameOriginJsonPost(
+  request: Request,
+  environment: EnvironmentSource,
+): boolean {
   if (request.method.toUpperCase() !== "POST") return false;
 
   let expectedOrigin: string;
   let suppliedOrigin: string;
   try {
-    expectedOrigin = new URL(request.url).origin;
+    const requestOrigin = new URL(request.url).origin;
+    expectedOrigin = getNativeOkfPublicOrigin(
+      environment.NATIVE_OKF_PUBLIC_ORIGIN,
+      requestOrigin,
+    );
     const origin = request.headers.get("origin");
     if (!origin || origin === "null") return false;
     suppliedOrigin = new URL(origin).origin;
@@ -95,7 +103,7 @@ export async function handlePublicNativeOkfChat(
     );
   }
 
-  if (!sameOriginJsonPost(request)) {
+  if (!sameOriginJsonPost(request, environment)) {
     return jsonResponse(
       {
         error: "The chat request must come from this site.",
