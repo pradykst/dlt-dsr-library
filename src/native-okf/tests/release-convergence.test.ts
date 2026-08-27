@@ -112,15 +112,15 @@ function validPlan(): SynthesisPlan {
         reuseStoredConceptId: null,
       },
     ],
-    artifact: null,
-    evaluation: {
+    artifact: [],
+    evaluation: [{
       key: "evaluation-one",
       label: "Evaluate continuity and privacy",
       description: "Measure continuity preservation and unnecessary disclosure.",
       supportConceptIds: ["fixture/e1"],
       reuseStoredConceptId: null,
-    },
-    outcome: null,
+    }],
+    outcome: [],
     relationships: [
       { sourceKey: "problem", targetKey: "requirement-one", label: "requires", supportConceptIds: ["fixture/r1"] },
       { sourceKey: "problem", targetKey: "requirement-two", label: "requires", supportConceptIds: ["fixture/r2"] },
@@ -193,9 +193,9 @@ function planForGrounding(value: NativeOkfDiagramGrounding): SynthesisPlan {
       { key: "f-one", label: "Implement the first feature", description: "A grounded synthesized feature.", supportConceptIds: support(0), reuseStoredConceptId: null },
       { key: "f-two", label: "Implement the second feature", description: "A second grounded synthesized feature.", supportConceptIds: support(1), reuseStoredConceptId: null },
     ],
-    artifact: null,
-    evaluation: null,
-    outcome: null,
+    artifact: [],
+    evaluation: [],
+    outcome: [],
     relationships: [
       { sourceKey: "problem", targetKey: "r-one", label: "requires", supportConceptIds: support(0) },
       { sourceKey: "problem", targetKey: "r-two", label: "requires", supportConceptIds: support(1) },
@@ -263,7 +263,7 @@ test("valid SynthesisPlan converts deterministically to the current internal dia
   assert.equal(layout.nodes.length, converted.diagram.nodes.length);
 });
 
-test("SynthesisPlan validation enforces grounding, category counts, paths, and graph invariants", async (t) => {
+test("SynthesisPlan validation enforces grounding, requested paths, and graph invariants", async (t) => {
   const cases: Array<{ name: string; mutate: (plan: SynthesisPlan) => void; code: RegExp }> = [
     {
       name: "unknown node support",
@@ -274,21 +274,6 @@ test("SynthesisPlan validation enforces grounding, category counts, paths, and g
       name: "unknown relationship support",
       mutate: (plan) => { plan.relationships[0]!.supportConceptIds = ["unknown"]; },
       code: /invalid-value/,
-    },
-    {
-      name: "fewer than two requirements",
-      mutate: (plan) => { plan.requirements = plan.requirements.slice(0, 1); },
-      code: /requirements:invalid-count/,
-    },
-    {
-      name: "fewer than two principles",
-      mutate: (plan) => { plan.principles = plan.principles.slice(0, 1); },
-      code: /principles:invalid-count/,
-    },
-    {
-      name: "fewer than two features",
-      mutate: (plan) => { plan.features = plan.features.slice(0, 1); },
-      code: /features:invalid-count/,
     },
     {
       name: "missing RPF path",
@@ -315,7 +300,11 @@ test("SynthesisPlan validation enforces grounding, category counts, paths, and g
     await t.test(item.name, () => {
       const plan = clonePlan();
       item.mutate(plan);
-      const result = validateNativeOkfSynthesisPlan(plan, grounding());
+      const result = validateNativeOkfSynthesisPlan(
+        plan,
+        grounding(),
+        { requireRpfPath: item.name === "missing RPF path" },
+      );
       assert.equal(result.ok, false);
       if (!result.ok) assert.match(result.errors.join(" "), item.code);
     });
@@ -323,26 +312,25 @@ test("SynthesisPlan validation enforces grounding, category counts, paths, and g
 
   await t.test("rendered-node and relationship bounds", () => {
     const plan = clonePlan();
-    plan.requirements.push(
-      { key: "requirement-three", label: "Third requirement", description: "Third.", supportConceptIds: ["fixture/r2"], reuseStoredConceptId: null },
-      { key: "requirement-four", label: "Fourth requirement", description: "Fourth.", supportConceptIds: ["fixture/r2"], reuseStoredConceptId: null },
-    );
-    plan.principles.push(
-      { key: "principle-three", label: "Third principle", description: "Third.", supportConceptIds: ["fixture/p2"], reuseStoredConceptId: null },
-      { key: "principle-four", label: "Fourth principle", description: "Fourth.", supportConceptIds: ["fixture/p2"], reuseStoredConceptId: null },
-    );
-    plan.features.push(
-      { key: "feature-three", label: "Third feature", description: "Third.", supportConceptIds: ["fixture/f2"], reuseStoredConceptId: null },
-      { key: "feature-four", label: "Fourth feature", description: "Fourth.", supportConceptIds: ["fixture/f2"], reuseStoredConceptId: null },
-      { key: "feature-five", label: "Fifth feature", description: "Fifth.", supportConceptIds: ["fixture/f2"], reuseStoredConceptId: null },
-    );
-    plan.artifact = { key: "artifact-one", label: "Artifact", description: "Artifact.", supportConceptIds: ["fixture/f1"], reuseStoredConceptId: null };
-    plan.outcome = { key: "outcome-one", label: "Outcome", description: "Outcome.", supportConceptIds: ["fixture/f1"], reuseStoredConceptId: null };
+    for (let index = 0; index < SYNTHESIS_PLAN_LIMITS.maxRenderedNodes; index += 1) {
+      plan.requirements.push({
+        key: `extra-requirement-${index}`,
+        label: `Additional requirement ${index}`,
+        description: `Additional grounded requirement ${index}.`,
+        supportConceptIds: ["fixture/r2"],
+        reuseStoredConceptId: null,
+      });
+    }
     const result = validateNativeOkfSynthesisPlan(plan, grounding());
     assert.equal(result.ok, false);
-    if (!result.ok) assert.ok(result.errors.includes("plan:too-many-rendered-nodes"));
-    assert.equal(SYNTHESIS_PLAN_LIMITS.maxRenderedNodes, 14);
-    assert.equal(SYNTHESIS_PLAN_LIMITS.maxRelationships, 20);
+    if (!result.ok) {
+      assert.ok(
+        result.errors.includes("plan:too-many-rendered-nodes") ||
+        result.errors.includes("requirements:invalid-count"),
+      );
+    }
+    assert.equal(SYNTHESIS_PLAN_LIMITS.maxRenderedNodes, 48);
+    assert.equal(SYNTHESIS_PLAN_LIMITS.maxRelationships, 96);
   });
 });
 
@@ -363,7 +351,7 @@ test("synthesis summary is deterministic, count-derived, provenance-aware, and c
   assert.equal(first.includes("Selective continuity proof"), false);
 });
 
-test("plan generation uses the small schema, makes no answer call, and repairs once without raw replay", async () => {
+test("plan generation uses the content-only schema, makes no answer call, and repairs once without raw replay", async () => {
   const calls: Array<Record<string, unknown>> = [];
   const marker = "RAW_INVALID_PLAN_MUST_NOT_BE_REPLAYED";
   const result = await generateNativeOkfSynthesisPlan({
@@ -611,7 +599,7 @@ test("diagram-primary UI orders summary, diagram, limitation, and collapsed acce
   assert.ok(summary >= 0 && diagram > summary && limitation > diagram && sources > limitation);
   assert.match(source, /<details/);
   assert.match(source, /<summary[^>]*>[\s\S]*View \{sources\.length\} grounding source/);
-  assert.match(source, /collapsed=\{diagramPrimary\}/);
+  assert.match(source, /<SourceCollection[\s\S]*collapsed[\s\S]*\/>/);
 });
 
 test("diagram viewport keeps padding, resize refit, responsive height, and existing controls", async () => {

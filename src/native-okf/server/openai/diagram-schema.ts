@@ -1,15 +1,16 @@
 import "server-only";
 
-import { GENERATED_DIAGRAM_STAGES } from "../../shared/chat-types.ts";
+import {
+  GENERATED_DIAGRAM_STAGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+} from "../../shared/chat-types.ts";
 
 export const DIAGRAM_LIMITS = Object.freeze({
   maxTitleCharacters: 160,
   maxExplanationCharacters: 2_000,
-  preferredMinNodes: 7,
-  preferredMaxNodes: 12,
-  maxNodes: 14,
-  maxEdges: 20,
-  maxParallelBranches: 3,
+  maxNodes: MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+  maxEdges: MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
   maxNodeIdCharacters: 64,
   maxNodeLabelCharacters: 90,
   maxNodeDescriptionCharacters: 300,

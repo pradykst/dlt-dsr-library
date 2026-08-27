@@ -24,6 +24,12 @@ export interface NativeOkfGroundedContext {
   allowedConceptIds: ReadonlySet<string>;
   requiredConceptIds?: ReadonlySet<string>;
   prompt: string;
+  packing?: {
+    overviewDropped: boolean;
+    optionalConceptsDropped: number;
+    markdownTruncated: boolean;
+    sourceDetailsDropped: boolean;
+  };
 }
 
 export interface NativeOkfModelMessage {
@@ -147,6 +153,7 @@ export function buildNativeOkfGroundedContext(
   let selectedConcepts = [...retrieval.finalConcepts];
   let includeOverview = true;
   let includeDetails = true;
+  let optionalConceptsDropped = 0;
   let markdownLimit = selectedConcepts.reduce(
     (maximum, concept) => Math.max(maximum, concept.markdownBody.length),
     0,
@@ -165,6 +172,21 @@ export function buildNativeOkfGroundedContext(
   );
 
   let rendered = render();
+  if (rendered.prompt.length > maximumCharacters) {
+    includeOverview = false;
+    rendered = render();
+  }
+  while (rendered.prompt.length > maximumCharacters) {
+    const removableIndex = selectedConcepts.findLastIndex(
+      (concept) =>
+        !protectedIds.has(concept.conceptId) &&
+        concept.expansionDepth >= 2,
+    );
+    if (removableIndex < 0) break;
+    selectedConcepts.splice(removableIndex, 1);
+    optionalConceptsDropped += 1;
+    rendered = render();
+  }
   if (rendered.prompt.length > maximumCharacters && markdownLimit > 0) {
     let low = 0;
     let high = markdownLimit;
@@ -185,10 +207,6 @@ export function buildNativeOkfGroundedContext(
   }
 
   if (rendered.prompt.length > maximumCharacters) {
-    includeOverview = false;
-    rendered = render();
-  }
-  if (rendered.prompt.length > maximumCharacters) {
     includeDetails = false;
     rendered = render();
   }
@@ -198,6 +216,7 @@ export function buildNativeOkfGroundedContext(
     );
     if (removableIndex < 0) break;
     selectedConcepts.splice(removableIndex, 1);
+    optionalConceptsDropped += 1;
     rendered = render();
   }
   if (rendered.prompt.length > maximumCharacters) {
@@ -213,6 +232,14 @@ export function buildNativeOkfGroundedContext(
     allowedConceptIds: new Set(sources.map((source) => source.conceptId)),
     requiredConceptIds: requiredIds,
     prompt: rendered.prompt,
+    packing: {
+      overviewDropped: !includeOverview,
+      optionalConceptsDropped,
+      markdownTruncated: selectedConcepts.some(
+        (concept) => concept.markdownBody.length > markdownLimit,
+      ),
+      sourceDetailsDropped: !includeDetails,
+    },
   };
 }
 

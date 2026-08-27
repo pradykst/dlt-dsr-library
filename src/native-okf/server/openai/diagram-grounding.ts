@@ -165,3 +165,46 @@ export async function buildNativeOkfDiagramGrounding(
   };
 }
 
+/**
+ * Extends validation metadata for an already validated draft. New synthesis
+ * operations must still be checked against the unextended current-turn
+ * grounding before this helper is used.
+ */
+export async function extendNativeOkfDiagramGrounding(
+  grounding: NativeOkfDiagramGrounding,
+  preservedConceptIds: Iterable<string>,
+): Promise<NativeOkfDiagramGrounding> {
+  const bundle = await getOkfBundle();
+  const allowedConceptIds = new Set([
+    ...grounding.allowedConceptIds,
+    ...preservedConceptIds,
+  ]);
+  const eligibleStoredConceptIds = new Set(grounding.eligibleStoredConceptIds);
+  const conceptsById = new Map(grounding.conceptsById);
+  for (const conceptId of allowedConceptIds) {
+    const concept = bundle.conceptsById.get(conceptId);
+    if (!concept) continue;
+    if (concept.type !== "paper" && concept.type !== "reference") {
+      eligibleStoredConceptIds.add(conceptId);
+    }
+    if (!conceptsById.has(conceptId)) {
+      conceptsById.set(conceptId, {
+        conceptId,
+        title: displayTitle(concept),
+        description: descriptionFor(concept),
+        type: concept.type,
+        stage: diagramStageForConceptType(concept.type),
+      });
+    }
+  }
+  return {
+    allowedConceptIds,
+    eligibleStoredConceptIds,
+    conceptsById,
+    storedRelations: storedRelationsForConcepts(
+      bundle,
+      eligibleStoredConceptIds,
+    ),
+  };
+}
+

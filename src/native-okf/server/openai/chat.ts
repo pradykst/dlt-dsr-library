@@ -3,6 +3,8 @@ import "server-only";
 import type { Response } from "openai/resources/responses/responses";
 
 import {
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
   type GeneratedDiagram,
   type NativeOkfChatHistoryMessage,
@@ -12,6 +14,7 @@ import {
   type NativeOkfSafeDiagnosticCode,
   type SynthesisDraftState,
 } from "../../shared/chat-types.ts";
+import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
 import { synthesisProblemSummaryPhrase } from "../../shared/synthesis-problem-display.ts";
 import type {
@@ -32,6 +35,7 @@ import {
   clarificationConversationState,
   completedConversationState,
   hasSufficientNativeOkfSynthesisGrounding,
+  nativeOkfSynthesisRequiresRpfPath,
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
 import {
@@ -82,14 +86,18 @@ import {
 } from "./stored-source-map.ts";
 
 export const MAX_NATIVE_OKF_QUESTION_CHARACTERS = 2_000;
-export const MAX_NATIVE_OKF_HISTORY_MESSAGES = 8;
-export const MAX_NATIVE_OKF_HISTORY_MESSAGE_CHARACTERS = 2_000;
+export const MAX_NATIVE_OKF_HISTORY_MESSAGES =
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES;
+export const MAX_NATIVE_OKF_HISTORY_MESSAGE_CHARACTERS =
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS;
 export const MAX_NATIVE_OKF_REQUEST_BYTES = 32_000;
 
 const MIN_MEANINGFUL_QUESTION_CHARACTERS = 3;
 const ALLOWED_REQUEST_KEYS = new Set([
   "question",
   "history",
+  "diagramPreference",
+  "visibleHistoryMessageCount",
   "includeDiagram",
   "conversationState",
 ]);
@@ -126,6 +134,7 @@ export interface NativeOkfChatDependencies {
   generateDiagram?: NativeOkfDiagramGenerator;
   buildStoredPaperMap?: (
     paperConceptId: string,
+    requestedKinds?: readonly import("../retrieval.ts").NativeOkfRequestedConceptKind[],
   ) => Promise<GeneratedDiagram | undefined>;
   buildComparativePaperMap?: typeof buildComparativePaperDesignMap;
 }
@@ -211,6 +220,26 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
   if (input.includeDiagram !== undefined && typeof input.includeDiagram !== "boolean") {
     throw new NativeOkfRequestError("includeDiagram must be a boolean.");
   }
+  if (
+    input.diagramPreference !== undefined &&
+    input.diagramPreference !== "auto" &&
+    input.diagramPreference !== "requested" &&
+    input.diagramPreference !== "suppressed"
+  ) {
+    throw new NativeOkfRequestError(
+      "diagramPreference must be auto, requested, or suppressed.",
+    );
+  }
+  if (
+    input.visibleHistoryMessageCount !== undefined &&
+    (!Number.isInteger(input.visibleHistoryMessageCount) ||
+      (input.visibleHistoryMessageCount as number) < 0 ||
+      (input.visibleHistoryMessageCount as number) > 10_000)
+  ) {
+    throw new NativeOkfRequestError(
+      "visibleHistoryMessageCount must be an integer between 0 and 10000.",
+    );
+  }
 
   let conversationState;
   if (input.conversationState !== undefined) {
@@ -243,6 +272,12 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
     ...(input.includeDiagram === undefined
       ? {}
       : { includeDiagram: input.includeDiagram }),
+    ...(input.diagramPreference === undefined
+      ? {}
+      : { diagramPreference: input.diagramPreference }),
+    ...(input.visibleHistoryMessageCount === undefined
+      ? {}
+      : { visibleHistoryMessageCount: input.visibleHistoryMessageCount as number }),
     ...(conversationState === undefined
       ? {}
       : { conversationState }),
@@ -279,6 +314,7 @@ async function createTextResponse(
   environment: NativeOpenAiEnvironment,
   instructions: string,
   input: ReturnType<typeof buildNativeOkfModelInput>,
+  protectedStoredTitles: readonly string[] = [],
 ): Promise<string> {
   try {
     const response = await client.responses.create({
@@ -293,7 +329,10 @@ async function createTextResponse(
       parallel_tool_calls: false,
       text: { verbosity: "medium" },
     });
-    return extractNativeOkfResponseText(response);
+    return sanitizeGeneratedProse(
+      extractNativeOkfResponseText(response),
+      protectedStoredTitles,
+    );
   } catch (error) {
     throw normalizeOpenAiError(error);
   }
@@ -394,8 +433,7 @@ function sourceCardsForConceptIds(
     .flatMap((conceptId) => {
       const card = byConceptId.get(conceptId);
       return card ? [card] : [];
-    })
-    .slice(0, 12);
+    });
 }
 
 const TECHNICAL_CONTEXT_WARNINGS = new Set([
@@ -452,12 +490,12 @@ function directlyScopedEvidenceIds(
 export function userFacingRetrievalWarnings(
   retrieval: RetrievalResult,
   requestedConceptIds: readonly string[],
-): string[] {
-  const present = new Set(
+  retainedConceptIds: ReadonlySet<string> = new Set(
     retrieval.finalConcepts.map((concept) => concept.conceptId),
-  );
+  ),
+): string[] {
   const missingRequestedSources = requestedConceptIds.filter(
-    (conceptId) => !present.has(conceptId),
+    (conceptId) => !retainedConceptIds.has(conceptId),
   );
   const technicalWarnings = retrieval.warnings.filter((warning) =>
     TECHNICAL_CONTEXT_WARNINGS.has(warning)
@@ -478,6 +516,22 @@ function deterministicSynthesisFailureSummary(hasEvidenceMap: boolean): string {
     : "A validated synthesized flow could not be produced from the current-turn native OKF evidence. No failed or unvalidated synthesis content is displayed. Refine the problem or constraints and try the synthesis request again.";
 }
 
+function assertResolvedTurnPlan(prepared: PreparedNativeOkfChatRequest): void {
+  const plan = prepared.turnPlan;
+  if (
+    plan.effectiveQuestion !== prepared.effectiveQuestion ||
+    plan.includeDiagram !== prepared.includeDiagram ||
+    plan.diagramMode !== prepared.diagramMode ||
+    plan.queryMode !== prepared.queryMode ||
+    plan.focusedPaperSlugs.join("\u0000") !==
+      prepared.focusedPaperSlugs.join("\u0000") ||
+    plan.requestedConceptKinds.join("\u0000") !==
+      prepared.requestedConceptKinds.join("\u0000")
+  ) {
+    throw new Error("Native OKF resolved turn plan is inconsistent.");
+  }
+}
+
 export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
@@ -489,6 +543,7 @@ export async function answerNativeOkfChat(
       request,
       dependencies.conversationCatalog,
     ));
+  assertResolvedTurnPlan(prepared);
 
   if (prepared.clarification) {
     return {
@@ -504,7 +559,7 @@ export async function answerNativeOkfChat(
     };
   }
 
-  if (isNativeOkfLiveDataRequest(prepared.effectiveQuestion)) {
+  if (isNativeOkfLiveDataRequest(prepared.turnPlan.effectiveQuestion)) {
     return {
       kind: "answer",
       presentationMode: "no-match",
@@ -522,7 +577,8 @@ export async function answerNativeOkfChat(
     };
   }
 
-  const includeDiagram = prepared.includeDiagram;
+  const turnPlan = prepared.turnPlan;
+  const includeDiagram = turnPlan.includeDiagram;
   const retrieve = dependencies.retrieve ?? retrieveOkfContext;
   const rawRetrieval = await retrieve(prepared.retrievalQuestion);
   const retrieval = await assembleNativeOkfContextualRetrieval(
@@ -557,7 +613,7 @@ export async function answerNativeOkfChat(
   }
 
   if (includeDiagram && prepared.preferDeterministicPaperMap) {
-    const focusedSlug = prepared.focusedPaperSlugs[0];
+    const focusedSlug = turnPlan.focusedPaperSlugs[0];
     const focusedPaper = prepared.catalog.papers.find(
       (paper) => paper.slug === focusedSlug,
     );
@@ -565,7 +621,7 @@ export async function answerNativeOkfChat(
       try {
         const diagram = await (
           dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
-        )(focusedPaper.conceptId);
+        )(focusedPaper.conceptId, turnPlan.requestedConceptKinds);
         if (diagram) {
           const presentation = await storedPaperMapPresentation(
             focusedPaper.conceptId,
@@ -612,7 +668,7 @@ export async function answerNativeOkfChat(
     const paperBySlug = new Map(
       prepared.catalog.papers.map((paper) => [paper.slug, paper]),
     );
-    const paperConceptIds = prepared.focusedPaperSlugs.flatMap((slug) => {
+    const paperConceptIds = turnPlan.focusedPaperSlugs.flatMap((slug) => {
       const paper = paperBySlug.get(slug);
       return paper ? [paper.conceptId] : [];
     });
@@ -679,7 +735,7 @@ export async function answerNativeOkfChat(
     prepared,
     expectedRequestedConceptIds,
   );
-  const requestedKinds = new Set(prepared.requestedConceptKinds);
+  const requestedKinds = new Set(turnPlan.requestedConceptKinds);
   const expectedRequestedConceptIdSet = new Set(expectedRequestedConceptIds);
   const requiredConceptIds = retrieval.finalConcepts
     .filter((concept) => {
@@ -692,7 +748,7 @@ export async function answerNativeOkfChat(
     .map((concept) => concept.conceptId);
   const context = buildNativeOkfGroundedContext(
     retrieval,
-    prepared.effectiveQuestion,
+    turnPlan.effectiveQuestion,
     requiredConceptIds,
   );
 
@@ -706,12 +762,14 @@ export async function answerNativeOkfChat(
         client,
         environment,
         context,
-        question: prepared.effectiveQuestion,
+        question: turnPlan.effectiveQuestion,
         answerMarkdown: "",
         mode: "synthesized",
         grounding,
         priorDraft: prepared.priorSynthesisDraft,
-        requireRpfPath: true,
+        requireRpfPath: nativeOkfSynthesisRequiresRpfPath(
+          turnPlan.effectiveQuestion,
+        ),
         synthesisProblem: prepared.synthesisProblem,
         synthesisDomain: prepared.synthesisDomain,
       });
@@ -731,7 +789,7 @@ export async function answerNativeOkfChat(
       const usedSupportConceptIds = diagramResult.usedSupportConceptIds ??
         [...new Set(
           diagramResult.diagram.nodes.flatMap((node) => node.supportConceptIds),
-        )].slice(0, 12);
+        )];
       const sourceCards = sourceCardsForConceptIds(
         context,
         usedSupportConceptIds,
@@ -741,7 +799,7 @@ export async function answerNativeOkfChat(
         diagramResult.diagram,
       );
       const deterministicSummary = diagramResult.deterministicSummary ??
-        `This grounded proposal addresses ${synthesisProblemSummaryPhrase(prepared.synthesisProblem ?? prepared.effectiveQuestion)}. It presents one validated problem-specific flow derived from current-turn native OKF evidence. Solid elements reuse exact stored knowledge; dashed elements are synthesized adaptations supported by the listed sources and are not claims of stored theory.`;
+        `This grounded proposal addresses ${synthesisProblemSummaryPhrase(prepared.synthesisProblem ?? turnPlan.effectiveQuestion)}. It presents one validated problem-specific flow derived from current-turn native OKF evidence. Solid elements reuse exact stored knowledge; dashed elements are synthesized adaptations supported by the listed sources and are not claims of stored theory.`;
       return {
         kind: "answer",
         presentationMode: "diagram-primary",
@@ -825,11 +883,16 @@ export async function answerNativeOkfChat(
       : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
   ].join("\n\n");
   const modelInput = buildNativeOkfModelInput(history, context);
+  const protectedStoredTitles = context.sources.flatMap((source) => [
+    source.card.title,
+    ...(source.card.sourcePaper ? [source.card.sourcePaper] : []),
+  ]);
   const draftAnswer = await createTextResponse(
     client,
     environment,
     answerInstructions,
     modelInput,
+    protectedStoredTitles,
   );
 
   let citationResult = validateAnswerCitations(
@@ -852,6 +915,7 @@ export async function answerNativeOkfChat(
   const warnings = userFacingRetrievalWarnings(
     retrieval,
     expectedScopedEvidenceIds,
+    context.allowedConceptIds,
   );
 
   if (validationErrors.length > 0) {
@@ -879,6 +943,7 @@ export async function answerNativeOkfChat(
             : []),
         ].join("\n\n"),
         repairInput,
+        protectedStoredTitles,
       );
       const repairedCitations = validateAnswerCitations(
         repairedAnswer,
@@ -927,23 +992,11 @@ export async function answerNativeOkfChat(
   let diagramStatus: NativeOkfChatResponse["diagramStatus"] = null;
   if (presentationSafe && includeDiagram && prepared.diagramMode === "stored") {
     try {
-      const grounding = await buildNativeOkfDiagramGrounding(retrieval);
-      const diagramResult = await (
-        dependencies.generateDiagram ?? defaultDiagramGenerator
-      )({
-        client,
-        environment,
-        context,
-        question: prepared.effectiveQuestion,
-        answerMarkdown,
-        mode: "stored",
-        grounding,
-        priorDraft: null,
-        requireRpfPath: false,
-        synthesisProblem: null,
-        synthesisDomain: null,
+      diagram = await buildGroundedStoredSourceMap(retrieval, {
+        allowNarrowExactRelationship:
+          turnPlan.requestedConceptKinds.length === 2 &&
+          retrieval.structuredAnalysis?.relationshipCheckComplete === true,
       });
-      diagram = diagramResult.diagram;
       if (diagram) {
         responseDiagramMode = "stored";
         diagramStatus = "success";
@@ -953,7 +1006,23 @@ export async function answerNativeOkfChat(
     }
     if (!diagram) {
       try {
-        diagram = await buildGroundedStoredSourceMap(retrieval);
+        const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+        const diagramResult = await (
+          dependencies.generateDiagram ?? defaultDiagramGenerator
+        )({
+          client,
+          environment,
+          context,
+          question: turnPlan.effectiveQuestion,
+          answerMarkdown,
+          mode: "stored",
+          grounding,
+          priorDraft: null,
+          requireRpfPath: false,
+          synthesisProblem: null,
+          synthesisDomain: null,
+        });
+        diagram = diagramResult.diagram;
         if (diagram) {
           responseDiagramMode = "stored";
           diagramStatus = "success";

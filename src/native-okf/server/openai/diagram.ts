@@ -19,7 +19,7 @@ const MAX_REPAIR_ERRORS = 12;
 
 export const NATIVE_OKF_DIAGRAM_INSTRUCTIONS = `Return only a compact decision-support flow as a structured diagram matching the supplied strict schema. Do not output coordinates, rendering instructions, Markdown, or prose outside the structured response. Use no external knowledge and no source or concept outside the supplied allowlist.
 
-Keep every node in the same weakly connected flow, directed from the problem toward outcomes, with 7 to 12 nodes when the evidence permits, never more than 14 nodes or 20 edges, no more than three major parallel branches, no orphan, duplicate, or self-loop, and short stable IDs. Give every node a short canvas label of at most 72 characters. Write every description as one concise sentence of at most 280 characters; rationales are at most 240 characters, and edge labels at most 32 characters.
+Derive the topology from the question and evidence. Unequal stage sizes, omitted irrelevant stages, one-to-many, many-to-one, and many-to-many relationships are valid. Do not add filler, duplicate, or weakly rephrased nodes to make stages look balanced. Keep every included node in the same weakly connected flow, directed from the problem toward outcomes, with no orphan, duplicate, or self-loop and with short stable IDs. The schema ceilings are emergency safety guards, not output targets. Give every node a short canvas label of at most 72 characters. Write every description as one concise sentence of at most 280 characters; rationales are at most 240 characters, and edge labels at most 32 characters. Do not use em dashes in generated prose. Use commas, semicolons, colons, parentheses, or ordinary hyphens.
 
 Use only these normalized stages: problem, design-goal, design-objective, meta-requirement, design-requirement, requirements, design-principle, principles, design-feature, features, artifact, governance, evaluation, outcome, other. Do not emit empty stages.`;
 
@@ -222,6 +222,7 @@ export async function generateNativeOkfDiagram(
       constraints: options.priorDraft?.constraints ?? [],
       grounding: options.grounding,
       priorDraft: options.priorDraft ?? null,
+      requireRpfPath: options.requireRpfPath === true,
     });
   }
 

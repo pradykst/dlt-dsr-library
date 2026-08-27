@@ -8,7 +8,7 @@ const SHOW_VISUAL_OBJECT_PATTERN =
   /\b(?:show|display|draw)\b[^.!?]{0,100}\b(?:relationships?|relations?|connections?|flow|diagram|graph|map|architecture)\b/iu;
 
 const STORED_PAPER_MAP_INTENT_PATTERN =
-  /(?:\b(?:show|display|visuali[sz]e|generate|create|draw|depict|illustrate)\b|^\s*(?:please\s+)?map\b)[^.!?]{0,140}\b(?:requirements?\s*,?\s*principles?\s*,?\s*(?:and\s+)?features?|paper(?:'s)?\s+(?:design\s+)?map|(?:represented|canonical|stored)\s+(?:design\s+)?(?:map|knowledge|relations?|relationships?)|design\s+knowledge)\b/iu;
+  /(?:\b(?:show|display|visuali[sz]e|generate|create|draw|depict|illustrate|give)\b|^\s*(?:please\s+)?map\b)[^.!?]{0,160}\b(?:requirements?\s*,?\s*principles?\s*,?\s*(?:and\s+)?features?|rpf|rfp|paper(?:'s)?\s+(?:design\s+)?map|(?:represented|canonical|stored|complete)\s+(?:design\s+)?(?:map|knowledge|relations?|relationships?)|design\s+knowledge|this\s+paper|that\s+paper)\b/iu;
 
 const DIAGRAM_INTENT_WORDS = new Set([
   "architecture",
@@ -132,4 +132,19 @@ export function applyManualDiagramToggle(
     autoEnabled: false,
     manuallyDisabledFor: enabled ? null : normalizeQuestion(question),
   };
+}
+
+/** Converts UI suggestion state into the tri-state request contract. */
+export function diagramPreferenceForRequest(
+  state: DiagramIntentToggleState,
+  question: string,
+): "auto" | "requested" | "suppressed" {
+  if (state.enabled) return "requested";
+  if (
+    state.manuallyDisabledFor !== null &&
+    !diagramQuestionChangedMaterially(state.manuallyDisabledFor, question)
+  ) {
+    return "suppressed";
+  }
+  return "auto";
 }

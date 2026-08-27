@@ -51,16 +51,16 @@ function summaryFixture(): { plan: SynthesisPlan; diagram: GeneratedDiagram } {
   const requirements = ["r1", "r2", "r3"].map(planNode);
   const principles = ["p1", "p2", "p3"].map(planNode);
   const features = ["f1", "f2", "f3", "f4"].map(planNode);
-  const artifact = planNode("artifact");
-  const evaluation = planNode("evaluation");
-  const outcome = planNode("outcome");
+  const artifact = [planNode("artifact")];
+  const evaluation = [planNode("evaluation")];
+  const outcome = [planNode("outcome")];
   const entries = [
     ...requirements,
     ...principles,
     ...features,
-    artifact,
-    evaluation,
-    outcome,
+    ...artifact,
+    ...evaluation,
+    ...outcome,
   ];
   const nodes: GeneratedDiagramNode[] = entries.map((entry, index) => ({
     id: entry.key,

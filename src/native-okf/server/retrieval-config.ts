@@ -34,13 +34,17 @@ export const SEARCH_EXACT_PATH_MULTIPLIER = 5;
 export const SEARCH_EMBEDDED_PATH_MULTIPLIER = 3;
 export const SEARCH_QUOTED_PHRASE_MULTIPLIER = 1.6;
 
-/** The bounded defaults requested for the local lexical + graph pipeline. */
+/**
+ * Bounded relevant-detail defaults. The whole repository remains available to
+ * deterministic server analysis; ordinary model prompts still receive only
+ * ranked concepts and compact required structure.
+ */
 export const DEFAULT_RETRIEVAL_LIMITS: Required<RetrievalOptions> = Object.freeze({
   lexicalSeedLimit: 8,
   firstHopLimit: 12,
   secondHopLimit: 6,
-  maxConcepts: 20,
-  maxContextCharacters: 35_000,
+  maxConcepts: 28,
+  maxContextCharacters: 76_000,
   maxGraphDepth: 2,
   includeIncoming: true,
   includeOutgoing: true,

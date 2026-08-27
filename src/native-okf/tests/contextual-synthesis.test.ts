@@ -559,7 +559,7 @@ test("malformed client draft elements and unknown IDs are discarded", async () =
   assert.equal(corrupted, null);
 });
 
-test("remove-second-feature refinement removes the bounded design-context element", async () => {
+test("refinement retains the complete prior draft for validated patch application", async () => {
   const prior = draft();
   const secondFeature = {
     ...prior.nodes[3]!,
@@ -582,7 +582,7 @@ test("remove-second-feature refinement removes the bounded design-context elemen
   );
   assert.equal(
     prepared.priorSynthesisDraft?.nodes.some((node) => node.id === "feature-two"),
-    false,
+    true,
   );
 });
 
@@ -705,6 +705,12 @@ test("RPF validation is conditional for explicitly different DSR structures", ()
   assert.equal(
     nativeOkfSynthesisRequiresRpfPath(
       "Generate a grounded design solution for fragmented identity.",
+    ),
+    false,
+  );
+  assert.equal(
+    nativeOkfSynthesisRequiresRpfPath(
+      "Generate a flow with requirements, principles, and features.",
     ),
     true,
   );

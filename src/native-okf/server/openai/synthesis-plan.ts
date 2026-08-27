@@ -9,6 +9,11 @@ import type {
   GeneratedDiagramNode,
   SynthesisDraftState,
 } from "../../shared/chat-types.ts";
+import {
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+} from "../../shared/chat-types.ts";
+import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import { formatConceptType } from "../../shared/presentation.ts";
 import {
   synthesisProblemNodeDisplay,
@@ -28,14 +33,9 @@ export const SYNTHESIS_PLAN_LIMITS = Object.freeze({
   maxLabelCharacters: 90,
   maxDescriptionCharacters: 300,
   maxSupportConceptIds: 3,
-  maxRelationships: 20,
-  maxRenderedNodes: 14,
-  minRequirements: 2,
-  maxRequirements: 4,
-  minPrinciples: 2,
-  maxPrinciples: 4,
-  minFeatures: 2,
-  maxFeatures: 5,
+  maxRelationships: MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  maxRenderedNodes: MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+  maxNodesPerStage: MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES - 1,
   maxRelationshipLabelCharacters: 32,
 });
 
@@ -60,9 +60,9 @@ export interface SynthesisPlan {
   requirements: SynthesisPlanNode[];
   principles: SynthesisPlanNode[];
   features: SynthesisPlanNode[];
-  artifact: SynthesisPlanNode | null;
-  evaluation: SynthesisPlanNode | null;
-  outcome: SynthesisPlanNode | null;
+  artifact: SynthesisPlanNode[];
+  evaluation: SynthesisPlanNode[];
+  outcome: SynthesisPlanNode[];
   relationships: SynthesisPlanRelationship[];
 }
 
@@ -76,6 +76,7 @@ export interface GenerateNativeOkfSynthesisPlanOptions {
   constraints: readonly string[];
   grounding: NativeOkfDiagramGrounding;
   priorDraft: SynthesisDraftState | null;
+  requireRpfPath?: boolean;
 }
 
 export interface GeneratedNativeOkfSynthesisPlan {
@@ -183,28 +184,43 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
     },
     requirements: {
       type: "array",
-      minItems: SYNTHESIS_PLAN_LIMITS.minRequirements,
-      maxItems: SYNTHESIS_PLAN_LIMITS.maxRequirements,
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
       items: PLAN_NODE_SCHEMA,
     },
     principles: {
       type: "array",
-      minItems: SYNTHESIS_PLAN_LIMITS.minPrinciples,
-      maxItems: SYNTHESIS_PLAN_LIMITS.maxPrinciples,
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
       items: PLAN_NODE_SCHEMA,
     },
     features: {
       type: "array",
-      minItems: SYNTHESIS_PLAN_LIMITS.minFeatures,
-      maxItems: SYNTHESIS_PLAN_LIMITS.maxFeatures,
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
       items: PLAN_NODE_SCHEMA,
     },
-    artifact: { anyOf: [{ type: "null" }, PLAN_NODE_SCHEMA] },
-    evaluation: { anyOf: [{ type: "null" }, PLAN_NODE_SCHEMA] },
-    outcome: { anyOf: [{ type: "null" }, PLAN_NODE_SCHEMA] },
+    artifact: {
+      type: "array",
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+      items: PLAN_NODE_SCHEMA,
+    },
+    evaluation: {
+      type: "array",
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+      items: PLAN_NODE_SCHEMA,
+    },
+    outcome: {
+      type: "array",
+      minItems: 0,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+      items: PLAN_NODE_SCHEMA,
+    },
     relationships: {
       type: "array",
-      minItems: 3,
+      minItems: 1,
       maxItems: SYNTHESIS_PLAN_LIMITS.maxRelationships,
       items: {
         type: "object",
@@ -247,16 +263,16 @@ export const SYNTHESIS_PLAN_RESPONSE_FORMAT = {
   type: "json_schema",
   name: "native_okf_synthesis_plan",
   description:
-    "A small grounded synthesis plan. Rendering, provenance, layout, and source paths are server-derived.",
+    "A grounded synthesis plan. Rendering, provenance, layout, and source paths are server-derived.",
   strict: true,
   schema: SYNTHESIS_PLAN_JSON_SCHEMA,
 } as const;
 
-export const NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS = `Return only a small grounded SynthesisPlan matching the strict schema. Do not emit diagram coordinates, layout, paths, stages, ordering, groups, provenance, renderer fields, Markdown, or prose outside the response.
+export const NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS = `Return only a grounded SynthesisPlan matching the strict schema. Do not emit diagram coordinates, layout, paths, stages, ordering, groups, provenance, renderer fields, Markdown, or prose outside the response.
 
-Use only the supplied current-turn allowlisted stored concepts. Each proposed node and relationship needs one to three allowlisted supportConceptIds. Set reuseStoredConceptId only when the node should reuse that exact canonical stored concept; otherwise use null. Create two to four requirements, two to four principles, two to five features, and at most one artifact, evaluation, and outcome. The rendered result, including the server-created problem node, must have at most 14 nodes and 20 relationships.
+Use only the supplied current-turn allowlisted stored concepts. Each proposed node and relationship needs one to three allowlisted supportConceptIds. Set reuseStoredConceptId only when the node should reuse that exact canonical stored concept; otherwise use null. Derive the number and distribution of nodes from the design problem and evidence. Unequal stage sizes, omitted irrelevant stages, one-to-many, many-to-one, and many-to-many relationships are valid. Do not add filler, duplicate, or weakly rephrased concepts to balance the stages. The schema ceilings are emergency safety guards, not output targets.
 
-Use the reserved relationship endpoint key "problem" for the user problem. Produce one connected acyclic flow with at least one complete problem -> requirement -> principle -> feature path. The plan is a proposal grounded by stored knowledge, not stored knowledge itself.`;
+Use the reserved relationship endpoint key "problem" for the user problem. Produce one connected acyclic forward flow. Include a complete problem -> requirement -> principle -> feature path only when the request actually requires all of those stages. The plan is a proposal grounded by stored knowledge, not stored knowledge itself. Do not use em dashes in generated prose. Use commas, semicolons, colons, parentheses, or ordinary hyphens.`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -346,7 +362,7 @@ function parsePlanNode(
 
 function parsePlanArray(
   value: unknown,
-  kind: "requirement" | "principle" | "feature",
+  kind: "requirement" | "principle" | "feature" | "artifact" | "evaluation" | "outcome",
   minimum: number,
   maximum: number,
   grounding: NativeOkfDiagramGrounding,
@@ -363,26 +379,21 @@ function parsePlanArray(
   });
 }
 
-function parseOptionalNode(
-  value: unknown,
-  kind: "artifact" | "evaluation" | "outcome",
-  grounding: NativeOkfDiagramGrounding,
+function graphErrors(
+  plan: SynthesisPlan,
   errors: string[],
-): SynthesisPlanNode | null {
-  if (value === null) return null;
-  return parsePlanNode(value, kind, grounding, errors, kind);
-}
-
-function graphErrors(plan: SynthesisPlan, errors: string[]): void {
+  requireRpfPath: boolean,
+): void {
   const nodes = [
     ...plan.requirements,
     ...plan.principles,
     ...plan.features,
-    ...(plan.artifact ? [plan.artifact] : []),
-    ...(plan.evaluation ? [plan.evaluation] : []),
-    ...(plan.outcome ? [plan.outcome] : []),
+    ...plan.artifact,
+    ...plan.evaluation,
+    ...plan.outcome,
   ];
   const keys = new Set(["problem", ...nodes.map((node) => node.key)]);
+  if (nodes.length === 0) errors.push("plan:missing-design-node");
   if (keys.size !== nodes.length + 1) errors.push("plan:duplicate-node-key");
   const semanticLabels = new Set<string>();
   for (const node of nodes) {
@@ -401,9 +412,9 @@ function graphErrors(plan: SynthesisPlan, errors: string[]): void {
   plan.requirements.forEach((node) => stageRank.set(node.key, 1));
   plan.principles.forEach((node) => stageRank.set(node.key, 2));
   plan.features.forEach((node) => stageRank.set(node.key, 3));
-  if (plan.artifact) stageRank.set(plan.artifact.key, 4);
-  if (plan.evaluation) stageRank.set(plan.evaluation.key, 5);
-  if (plan.outcome) stageRank.set(plan.outcome.key, 6);
+  plan.artifact.forEach((node) => stageRank.set(node.key, 4));
+  plan.evaluation.forEach((node) => stageRank.set(node.key, 5));
+  plan.outcome.forEach((node) => stageRank.set(node.key, 6));
   const relationshipKeys = new Set<string>();
   for (const relationship of plan.relationships) {
     if (!keys.has(relationship.sourceKey) || !keys.has(relationship.targetKey)) {
@@ -461,22 +472,25 @@ function graphErrors(plan: SynthesisPlan, errors: string[]): void {
     return false;
   };
   if ([...keys].some(cyclic)) errors.push("plan:cycle");
-  const requirementKeys = new Set(plan.requirements.map((node) => node.key));
-  const principleKeys = new Set(plan.principles.map((node) => node.key));
-  const featureKeys = new Set(plan.features.map((node) => node.key));
-  const hasPath = [...(outgoing.get("problem") ?? [])].some((requirement) =>
-    requirementKeys.has(requirement) &&
-    [...(outgoing.get(requirement) ?? [])].some((principle) =>
-      principleKeys.has(principle) &&
-      [...(outgoing.get(principle) ?? [])].some((feature) => featureKeys.has(feature))
-    )
-  );
-  if (!hasPath) errors.push("plan:missing-rpf-path");
+  if (requireRpfPath) {
+    const requirementKeys = new Set(plan.requirements.map((node) => node.key));
+    const principleKeys = new Set(plan.principles.map((node) => node.key));
+    const featureKeys = new Set(plan.features.map((node) => node.key));
+    const hasPath = [...(outgoing.get("problem") ?? [])].some((requirement) =>
+      requirementKeys.has(requirement) &&
+      [...(outgoing.get(requirement) ?? [])].some((principle) =>
+        principleKeys.has(principle) &&
+        [...(outgoing.get(principle) ?? [])].some((feature) => featureKeys.has(feature))
+      )
+    );
+    if (!hasPath) errors.push("plan:missing-rpf-path");
+  }
 }
 
 export function validateNativeOkfSynthesisPlan(
   value: unknown,
   grounding: NativeOkfDiagramGrounding,
+  options: { requireRpfPath?: boolean } = {},
 ): { ok: true; plan: SynthesisPlan } | { ok: false; errors: string[] } {
   const errors: string[] = [];
   if (!isRecord(value) || !onlyKeys(value, PLAN_KEYS)) {
@@ -492,8 +506,8 @@ export function validateNativeOkfSynthesisPlan(
   const requirements = parsePlanArray(
     value.requirements,
     "requirement",
-    SYNTHESIS_PLAN_LIMITS.minRequirements,
-    SYNTHESIS_PLAN_LIMITS.maxRequirements,
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
     grounding,
     errors,
     "requirements",
@@ -501,8 +515,8 @@ export function validateNativeOkfSynthesisPlan(
   const principles = parsePlanArray(
     value.principles,
     "principle",
-    SYNTHESIS_PLAN_LIMITS.minPrinciples,
-    SYNTHESIS_PLAN_LIMITS.maxPrinciples,
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
     grounding,
     errors,
     "principles",
@@ -510,19 +524,43 @@ export function validateNativeOkfSynthesisPlan(
   const features = parsePlanArray(
     value.features,
     "feature",
-    SYNTHESIS_PLAN_LIMITS.minFeatures,
-    SYNTHESIS_PLAN_LIMITS.maxFeatures,
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
     grounding,
     errors,
     "features",
   );
-  const artifact = parseOptionalNode(value.artifact, "artifact", grounding, errors);
-  const evaluation = parseOptionalNode(value.evaluation, "evaluation", grounding, errors);
-  const outcome = parseOptionalNode(value.outcome, "outcome", grounding, errors);
+  const artifact = parsePlanArray(
+    value.artifact,
+    "artifact",
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+    grounding,
+    errors,
+    "artifact",
+  );
+  const evaluation = parsePlanArray(
+    value.evaluation,
+    "evaluation",
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+    grounding,
+    errors,
+    "evaluation",
+  );
+  const outcome = parsePlanArray(
+    value.outcome,
+    "outcome",
+    0,
+    SYNTHESIS_PLAN_LIMITS.maxNodesPerStage,
+    grounding,
+    errors,
+    "outcome",
+  );
   const relationships: SynthesisPlanRelationship[] = [];
   if (
     !Array.isArray(value.relationships) ||
-    value.relationships.length < 3 ||
+    value.relationships.length < 1 ||
     value.relationships.length > SYNTHESIS_PLAN_LIMITS.maxRelationships
   ) {
     errors.push("relationships:invalid-count");
@@ -574,14 +612,14 @@ export function validateNativeOkfSynthesisPlan(
     outcome,
     relationships,
   };
-  graphErrors(plan, errors);
+  graphErrors(plan, errors, options.requireRpfPath === true);
   return errors.length > 0
     ? { ok: false, errors: [...new Set(errors)] }
     : { ok: true, plan };
 }
 
 function truncate(value: string, maximum: number): string {
-  const normalized = value.replace(/\s+/gu, " ").trim();
+  const normalized = sanitizeGeneratedProse(value).replace(/\s+/gu, " ").trim();
   return normalized.length <= maximum
     ? normalized
     : normalized.slice(0, maximum - 3).trimEnd() + "...";
@@ -594,27 +632,27 @@ function planNodes(plan: SynthesisPlan): Array<{
   category: string;
 }> {
   return [
-    ...plan.requirements.map((node, index) => ({
+    ...plan.requirements.map((node) => ({
       node,
       stage: "design-requirement" as const,
-      order: 20 + index,
+      order: 20,
       category: "Design requirement",
     })),
-    ...plan.principles.map((node, index) => ({
+    ...plan.principles.map((node) => ({
       node,
       stage: "design-principle" as const,
-      order: 40 + index,
+      order: 40,
       category: "Design principle",
     })),
-    ...plan.features.map((node, index) => ({
+    ...plan.features.map((node) => ({
       node,
       stage: "design-feature" as const,
-      order: 60 + index,
+      order: 60,
       category: "Design feature",
     })),
-    ...(plan.artifact ? [{ node: plan.artifact, stage: "artifact" as const, order: 75, category: "Artifact" }] : []),
-    ...(plan.evaluation ? [{ node: plan.evaluation, stage: "evaluation" as const, order: 85, category: "Evaluation" }] : []),
-    ...(plan.outcome ? [{ node: plan.outcome, stage: "outcome" as const, order: 95, category: "Outcome" }] : []),
+    ...plan.artifact.map((node) => ({ node, stage: "artifact" as const, order: 75, category: "Artifact" })),
+    ...plan.evaluation.map((node) => ({ node, stage: "evaluation" as const, order: 85, category: "Evaluation" })),
+    ...plan.outcome.map((node) => ({ node, stage: "outcome" as const, order: 95, category: "Outcome" })),
   ];
 }
 
@@ -641,6 +679,12 @@ function convertedNode(
       synthesis: false,
     };
   }
+  const supportingTitles = entry.node.supportConceptIds
+    .flatMap((id) => {
+      const concept = grounding.conceptsById.get(id);
+      return concept ? [concept.title] : [];
+    })
+    .slice(0, 3);
   return {
     id: `plan-${entry.node.key}`,
     label: truncate(entry.node.label, 90),
@@ -653,7 +697,12 @@ function convertedNode(
     sourcePaths: [...entry.node.supportConceptIds],
     supportConceptIds: [...entry.node.supportConceptIds],
     synthesisRationale:
-      "A problem-specific proposal grounded by the cited native OKF concepts.",
+      truncate(
+        supportingTitles.length > 0
+          ? `This problem-specific proposal adapts the stored concepts ${supportingTitles.join("; ")}.`
+          : "This problem-specific proposal is grounded by the listed stored concepts.",
+        240,
+      ),
     synthesis: true,
   };
 }
@@ -698,6 +747,7 @@ export function convertNativeOkfSynthesisPlan(
   plan: SynthesisPlan,
   grounding: NativeOkfDiagramGrounding,
   validatedProblemStatement: string = plan.problemSummary,
+  requireRpfPath = false,
 ): { diagram: GeneratedDiagram; usedSupportConceptIds: string[] } | null {
   const problem = createNativeOkfSynthesisProblemNode(
     validatedProblemStatement,
@@ -745,7 +795,7 @@ export function convertNativeOkfSynthesisPlan(
   };
   const validation = validateGeneratedDiagram(candidate, grounding, {
     mode: "synthesized",
-    requireRpfPath: true,
+    requireRpfPath,
     requireDisplayedStoredSupport: false,
   });
   if (!validation.ok) return null;
@@ -758,8 +808,7 @@ export function convertNativeOkfSynthesisPlan(
   }
   const usedSupportConceptIds = [...frequency]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "en"))
-    .map(([id]) => id)
-    .slice(0, 12);
+    .map(([id]) => id);
   return { diagram: validation.diagram, usedSupportConceptIds };
 }
 
@@ -772,7 +821,7 @@ export function deterministicNativeOkfSynthesisSummary(
   const supportCount = new Set(
     diagram.nodes.flatMap((node) => node.supportConceptIds),
   ).size;
-  const optional = [plan.artifact, plan.evaluation, plan.outcome].filter(Boolean).length;
+  const optional = plan.artifact.length + plan.evaluation.length + plan.outcome.length;
   const boundedProblem = synthesisProblemSummaryPhrase(plan.problemSummary)
     .split(/\s+/u)
     .slice(0, 20)
@@ -843,13 +892,18 @@ function refused(response: Response): boolean {
 function parseResponse(
   response: Response,
   grounding: NativeOkfDiagramGrounding,
+  requireRpfPath: boolean,
 ): { ok: true; plan: SynthesisPlan } | { ok: false; errors: string[] } {
   if (refused(response)) return { ok: false, errors: ["response:refused"] };
   if (response.status === "incomplete") return { ok: false, errors: ["response:incomplete"] };
   const raw = response.output_text?.trim() ?? "";
   if (!raw) return { ok: false, errors: ["response:empty"] };
   try {
-    return validateNativeOkfSynthesisPlan(JSON.parse(raw) as unknown, grounding);
+    return validateNativeOkfSynthesisPlan(
+      JSON.parse(raw) as unknown,
+      grounding,
+      { requireRpfPath },
+    );
   } catch {
     return { ok: false, errors: ["response:invalid-json"] };
   }
@@ -876,7 +930,38 @@ async function createPlanResponse(
 export async function generateNativeOkfSynthesisPlan(
   options: GenerateNativeOkfSynthesisPlanOptions,
 ): Promise<GeneratedNativeOkfSynthesisPlan> {
-  const first = parseResponse(await createPlanResponse(options), options.grounding);
+  if (options.priorDraft) {
+    const { generateNativeOkfSynthesisRefinement } = await import(
+      "./synthesis-refinement.ts"
+    );
+    const refinement = await generateNativeOkfSynthesisRefinement({
+      client: options.client,
+      environment: options.environment,
+      refinementRequest: options.refinementRequest,
+      problemStatement: options.problemStatement,
+      grounding: options.grounding,
+      priorDraft: options.priorDraft,
+      requireRpfPath: options.requireRpfPath === true,
+    });
+    if ("diagram" in refinement) {
+      return {
+        diagram: refinement.diagram,
+        usedSupportConceptIds: refinement.usedSupportConceptIds,
+        deterministicSummary: refinement.deterministicSummary,
+        warnings: refinement.warnings,
+      };
+    }
+    return {
+      usedSupportConceptIds: [],
+      warnings: [],
+      diagnosticCode: "synthesis-plan-repair-failed",
+    };
+  }
+  const first = parseResponse(
+    await createPlanResponse(options),
+    options.grounding,
+    options.requireRpfPath === true,
+  );
   if (first.ok) {
     const acceptedPlan = {
       ...first.plan,
@@ -886,6 +971,7 @@ export async function generateNativeOkfSynthesisPlan(
       acceptedPlan,
       options.grounding,
       options.problemStatement,
+      options.requireRpfPath === true,
     );
     if (converted) {
       return {
@@ -901,6 +987,7 @@ export async function generateNativeOkfSynthesisPlan(
   const second = parseResponse(
     await createPlanResponse(options, firstErrors),
     options.grounding,
+    options.requireRpfPath === true,
   );
   if (second.ok) {
     const acceptedPlan = {
@@ -911,6 +998,7 @@ export async function generateNativeOkfSynthesisPlan(
       acceptedPlan,
       options.grounding,
       options.problemStatement,
+      options.requireRpfPath === true,
     );
     if (converted) {
       return {

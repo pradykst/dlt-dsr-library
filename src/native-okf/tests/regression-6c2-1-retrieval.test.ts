@@ -28,6 +28,7 @@ import {
 } from "../server/openai/answer-policy.ts";
 import { buildStoredPaperDesignMap } from "../server/openai/stored-source-map.ts";
 import { retrieveOkfContext } from "../server/retrieval.ts";
+import { DEFAULT_RETRIEVAL_LIMITS } from "../server/retrieval-config.ts";
 import { inferStoredPaperMapIntent } from "../shared/diagram-intent.ts";
 import type { NativeOkfConversationState } from "../shared/chat-types.ts";
 
@@ -143,7 +144,10 @@ test("4 bounded paper metadata cannot crowd out requested principles", async () 
   const ids = retrieval.finalConcepts.map((concept) => concept.conceptId);
   assert.ok(PRINCIPLE_IDS.every((id) => ids.includes(id)));
   assert.ok(ids.indexOf(PAPER_ID) > ids.indexOf(PRINCIPLE_IDS[3]!));
-  assert.ok(retrieval.contextCharacterEstimate <= 35_000);
+  assert.ok(
+    retrieval.contextCharacterEstimate <=
+      DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters,
+  );
 });
 
 test("5 requested records are ordered before broad context", async () => {
@@ -159,12 +163,18 @@ test("5 requested records are ordered before broad context", async () => {
 test("6 lower-priority context is dropped before requested records", async () => {
   const { retrieval } = await principlesFixture;
   const dropped = retrieval.debug.droppedConcepts;
-  assert.ok(dropped.some((item) => item.reason === "context-limit"));
   assert.ok(PRINCIPLE_IDS.every((id) => !dropped.some((item) => item.conceptId === id)));
-  assert.ok(
+  const contextLimited = dropped.some((item) => item.reason === "context-limit");
+  assert.equal(
     retrieval.warnings.includes(
       "One or more concepts were omitted because the context limit was exhausted.",
     ),
+    contextLimited,
+  );
+  assert.ok(
+    contextLimited ||
+      retrieval.contextCharacterEstimate <=
+        DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters,
   );
 });
 

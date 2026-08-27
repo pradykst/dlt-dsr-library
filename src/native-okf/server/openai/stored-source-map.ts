@@ -14,12 +14,23 @@ import {
   projectSemanticLink,
 } from "../paper-design-map.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
+import {
+  nativeOkfRequestedKindForType,
+  type NativeOkfRequestedConceptKind,
+} from "../retrieval.ts";
 import type { OkfBundle, OkfConcept, OkfLink } from "../types.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
-import { buildNativeOkfDiagramGrounding } from "./diagram-grounding.ts";
+import {
+  buildNativeOkfDiagramGrounding,
+  extendNativeOkfDiagramGrounding,
+} from "./diagram-grounding.ts";
+import {
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+} from "../../shared/chat-types.ts";
 
-const MAX_FALLBACK_NODES = 14;
-const MAX_FALLBACK_EDGES = 20;
+const MAX_FALLBACK_NODES = MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES;
+const MAX_FALLBACK_EDGES = MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES;
 
 const STAGE_BY_TYPE: Readonly<Record<string, DiagramStage>> = {
   "design-goal": "design-goal",
@@ -239,11 +250,31 @@ function selectConnectedNodes(
  */
 export async function buildStoredPaperDesignMap(
   paperConceptId: string,
+  requestedKinds: readonly NativeOkfRequestedConceptKind[] = [],
 ): Promise<GeneratedDiagram | undefined> {
   const bundle = await getOkfBundle();
   const paper = bundle.conceptsById.get(paperConceptId);
   if (!paper || paper.type !== "paper") return undefined;
-  const map = buildPaperDesignMapFromBundle(bundle, paper);
+  const completeMap = buildPaperDesignMapFromBundle(bundle, paper);
+  const requested = new Set(requestedKinds);
+  const selectedMapNodes = requested.size === 0
+    ? completeMap.nodes
+    : completeMap.nodes.filter((node) => {
+        const concept = bundle.conceptsById.get(node.id);
+        const kind = concept
+          ? nativeOkfRequestedKindForType(concept.type)
+          : null;
+        return kind !== null && requested.has(kind);
+      });
+  const selectedNodeIds = new Set(selectedMapNodes.map((node) => node.id));
+  const map = {
+    ...completeMap,
+    nodes: selectedMapNodes,
+    edges: completeMap.edges.filter((edge) =>
+      selectedNodeIds.has(edge.sourceId) &&
+      selectedNodeIds.has(edge.targetId)
+    ),
+  };
 
   const nodeIds = new Set(map.nodes.map((node) => node.id));
   if (
@@ -292,7 +323,9 @@ export async function buildStoredPaperDesignMap(
   return {
     title: `${displayTitle(paper)} design map`,
     explanation:
-      "An exact deterministic projection of the stored requirements, principles, features, and canonical native relationships for this paper.",
+      requested.size === 0
+        ? "An exact deterministic projection of all stored design-knowledge concepts and canonical native relationships for this paper."
+        : "An exact deterministic projection of every stored concept in the explicitly requested categories and all canonical relationships among them.",
     nodes,
     edges,
   };
@@ -430,13 +463,14 @@ export async function buildComparativePaperDesignMap(
 
 export async function buildGroundedStoredSourceMap(
   retrieval: RetrievalResult,
+  options: { allowNarrowExactRelationship?: boolean } = {},
 ): Promise<GeneratedDiagram | undefined> {
   const bundle = await getOkfBundle();
   const retrievalRank = new Map(
     retrieval.finalConcepts.map((concept, index) => [concept.conceptId, index]),
   );
   const allowlist = new Set(retrievalRank.keys());
-  const concepts = [...allowlist]
+  const rankedConcepts = [...allowlist]
     .flatMap((id) => {
       const concept = bundle.conceptsById.get(id);
       return concept &&
@@ -444,6 +478,46 @@ export async function buildGroundedStoredSourceMap(
           concept.type !== "reference"
         ? [concept]
         : [];
+    })
+    .sort(
+      (left, right) =>
+        (retrievalRank.get(left.id) ?? 10_000) -
+          (retrievalRank.get(right.id) ?? 10_000) ||
+        compareStrings(left.id, right.id),
+    );
+  const expandedIds = new Set(rankedConcepts.map((concept) => concept.id));
+  if (!options.allowNarrowExactRelationship) {
+    for (const concept of rankedConcepts) {
+      const links = [
+        ...(bundle.outgoing.get(concept.id) ?? []),
+        ...(bundle.incoming.get(concept.id) ?? []),
+      ].sort((left, right) =>
+        compareStrings(left.sourceId, right.sourceId) ||
+        compareStrings(left.targetId ?? "", right.targetId ?? "")
+      );
+      for (const link of links) {
+        if (!projectSemanticLink(link, bundle)) continue;
+        const neighborId = link.sourceId === concept.id
+          ? link.targetId
+          : link.sourceId;
+        const neighbor = neighborId
+          ? bundle.conceptsById.get(neighborId)
+          : undefined;
+        if (
+          !neighbor ||
+          neighbor.type === "paper" ||
+          neighbor.type === "reference"
+        ) continue;
+        expandedIds.add(neighbor.id);
+        if (expandedIds.size >= MAX_FALLBACK_NODES) break;
+      }
+      if (expandedIds.size >= MAX_FALLBACK_NODES) break;
+    }
+  }
+  const concepts = [...expandedIds]
+    .flatMap((id) => {
+      const concept = bundle.conceptsById.get(id);
+      return concept ? [concept] : [];
     })
     .sort(
       (left, right) =>
@@ -510,7 +584,10 @@ export async function buildGroundedStoredSourceMap(
     nodes,
     edges,
   };
-  const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+  const grounding = await extendNativeOkfDiagramGrounding(
+    await buildNativeOkfDiagramGrounding(retrieval),
+    selectedIds,
+  );
   const validation = validateGeneratedDiagram(
     candidate,
     grounding,

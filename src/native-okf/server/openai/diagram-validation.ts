@@ -724,12 +724,6 @@ function validateGraph(
     }
   }
 
-  for (const [source, targets] of outgoing) {
-    if (targets.size > DIAGRAM_LIMITS.maxParallelBranches) {
-      errors.push("Node " + JSON.stringify(source) + " has too many parallel branches.");
-    }
-  }
-
   if (context.options.requireRpfPath) {
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const isProblem = (stage: DiagramStage) =>

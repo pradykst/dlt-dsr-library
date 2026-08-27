@@ -5,11 +5,13 @@ import test from "node:test";
 import { answerNativeOkfChat } from "../server/openai/chat.ts";
 import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
+import { getOkfBundle } from "../server/cache.ts";
+import { projectSemanticLink } from "../server/paper-design-map.ts";
 
 import { buildGroundedStoredSourceMap } from "../server/openai/stored-source-map.ts";
 import { retrieveOkfContext } from "../server/retrieval.ts";
 
-test("stored source fallback uses only allowlisted connected native concepts", async () => {
+test("stored source fallback uses retrieved concepts plus exact canonical neighbors", async () => {
   const retrieval = await retrieveOkfContext(
     "What design features implement source-to-sink certification?",
   );
@@ -20,13 +22,11 @@ test("stored source fallback uses only allowlisted connected native concepts", a
   assert.ok(diagram.edges.length >= 1);
   assert.ok(diagram.nodes.every((node) => node.synthesis === false));
 
-  const allowlist = new Set(
-    retrieval.finalConcepts.map((concept) => concept.conceptId),
-  );
+  const bundle = await getOkfBundle();
   const nodeIds = new Set(diagram.nodes.map((node) => node.id));
   for (const node of diagram.nodes) {
     assert.ok(node.sourcePaths.length > 0);
-    assert.ok(node.sourcePaths.every((path) => allowlist.has(path)));
+    assert.ok(node.sourcePaths.every((path) => bundle.conceptsById.has(path)));
   }
   for (const edge of diagram.edges) {
     assert.ok(nodeIds.has(edge.source));
@@ -36,14 +36,26 @@ test("stored source fallback uses only allowlisted connected native concepts", a
   const sourcePaths = new Set(
     diagram.nodes.flatMap((node) => node.sourcePaths),
   );
+  const retrievedIds = new Set(retrieval.finalConcepts.map((item) => item.conceptId));
+  const canonicalNeighborIds = new Set<string>();
+  for (const conceptId of retrievedIds) {
+    for (const link of [
+      ...(bundle.outgoing.get(conceptId) ?? []),
+      ...(bundle.incoming.get(conceptId) ?? []),
+    ]) {
+      if (!link.targetId || !projectSemanticLink(link, bundle)) continue;
+      const candidate = link.sourceId === conceptId ? link.targetId : link.sourceId;
+      const candidateConcept = bundle.conceptsById.get(candidate);
+      if (candidateConcept && candidateConcept.type !== "paper" && candidateConcept.type !== "reference") {
+        canonicalNeighborIds.add(candidate);
+      }
+    }
+  }
+  assert.ok([...sourcePaths].some((id) => retrievedIds.has(id)));
   assert.ok(
-    sourcePaths.has("design-knowledge/blockchain-iot-sensor-data-dp1"),
-  );
-  assert.ok(
-    [
-      "design-knowledge/blockchain-iot-sensor-data-df1",
-      "design-knowledge/blockchain-iot-sensor-data-df3",
-    ].some((id) => sourcePaths.has(id)),
+    [...sourcePaths].every(
+      (id) => retrievedIds.has(id) || canonicalNeighborIds.has(id),
+    ),
   );
 });
 

@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   applyManualDiagramToggle,
+  diagramPreferenceForRequest,
   inferDiagramIntent,
   INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
   reconcileDiagramIntentToggle,
@@ -98,7 +99,28 @@ test("a materially changed diagram question can be suggested again", () => {
   assert.equal(changed.manuallyDisabledFor, null);
 });
 
-test("chat request payload follows the same state shown by the checkbox", async () => {
+test("request preference distinguishes auto inference from explicit suppression", () => {
+  assert.equal(
+    diagramPreferenceForRequest(
+      INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
+      "Add another requirement to the active design.",
+    ),
+    "auto",
+  );
+  const inferred = reconcileDiagramIntentToggle(
+    INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
+    FLOW_QUESTION,
+  );
+  assert.equal(diagramPreferenceForRequest(inferred, FLOW_QUESTION), "requested");
+  const suppressed = applyManualDiagramToggle(inferred, FLOW_QUESTION, false);
+  assert.equal(diagramPreferenceForRequest(suppressed, FLOW_QUESTION), "suppressed");
+  assert.equal(
+    diagramPreferenceForRequest(suppressed, "Explain a different stored concept."),
+    "auto",
+  );
+});
+
+test("chat request payload sends tri-state preference and visible history context", async () => {
   const source = await readFile(
     resolve(process.cwd(), "src/native-okf/components/chat/ChatWorkbench.tsx"),
     "utf8",
@@ -107,8 +129,9 @@ test("chat request payload follows the same state shown by the checkbox", async 
   assert.match(source, /checked=\{includeDiagram\}/u);
   assert.match(
     source,
-    /const request: NativeOkfChatRequest = \{[\s\S]*?includeDiagram,[\s\S]*?\};/u,
+    /const request: NativeOkfChatRequest = \{[\s\S]*?diagramPreference:\s*diagramPreferenceForRequest\([\s\S]*?visibleHistoryMessageCount:\s*priorEntries\.length[\s\S]*?\};/u,
   );
   assert.match(source, /Diagram enabled based on your request\./u);
   assert.doesNotMatch(source, /includeDiagram:\s*inferDiagramIntent/u);
+  assert.doesNotMatch(source, /includeDiagram,\s*\n\s*conversationState/u);
 });

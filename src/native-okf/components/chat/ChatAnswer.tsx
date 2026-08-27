@@ -6,12 +6,14 @@ import type {
   NativeOkfChatResponse,
   NativeOkfSourceCard,
 } from "../../shared/chat-types.ts";
+import { assistantResponseClipboardText } from "../../shared/assistant-copy.ts";
 import {
   conceptHref,
   isSafeExternalHref,
 } from "../../shared/links.ts";
 import { TypeBadge } from "../TypeBadge.tsx";
 import { GeneratedDiagramView } from "./GeneratedDiagramView.tsx";
+import { CopyAssistantResponseButton } from "./CopyAssistantResponseButton.tsx";
 
 function citationMarkdown(
   markdown: string,
@@ -280,10 +282,10 @@ export function ChatAnswer({
     response.sources,
     anchorPrefix,
   );
-  const diagramPrimary = response.presentationMode === "diagram-primary";
   const evidenceFallback = response.diagramStatus === "evidence-fallback";
   const diagramFailed = response.diagramStatus === "failed";
   const showDiagnostics = response.retrievalDebug !== undefined;
+  const clipboardText = assistantResponseClipboardText(primaryMarkdown);
 
   return (
     <div className="space-y-6">
@@ -297,6 +299,10 @@ export function ChatAnswer({
           a supported answer.
         </div>
       ) : null}
+
+      <div className="flex justify-end">
+        <CopyAssistantResponseButton text={clipboardText} />
+      </div>
 
       <article className="min-w-0">
         <ReactMarkdown
@@ -315,7 +321,7 @@ export function ChatAnswer({
 
       {response.diagram ? (
         <div className="space-y-3">
-          <GeneratedDiagramView diagram={response.diagram} />
+          <GeneratedDiagramView diagram={response.diagram} sources={response.sources} />
           {evidenceFallback ? (
             <div
               role="status"
@@ -365,7 +371,7 @@ export function ChatAnswer({
         <SourceCollection
           sources={response.sources}
           anchorPrefix={anchorPrefix}
-          collapsed={diagramPrimary}
+          collapsed
         />
       ) : null}
       {showDiagnostics ? (

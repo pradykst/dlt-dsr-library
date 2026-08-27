@@ -10,6 +10,9 @@ import {
 
 import {
   createInitialNativeOkfConversationState,
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
+  nativeOkfVisibleHistoryExceedsModelContext,
   type NativeOkfChatHistoryMessage,
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
@@ -28,6 +31,7 @@ import type { NativeOkfGuidedStarterPaper } from "../../shared/guided-starters.t
 import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "../../shared/public-links.ts";
 import {
   applyManualDiagramToggle,
+  diagramPreferenceForRequest,
   INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
   reconcileDiagramIntentToggle,
 } from "../../shared/diagram-intent.ts";
@@ -36,8 +40,6 @@ import { ChatAnswer } from "./ChatAnswer.tsx";
 import { GuidedChatStarters } from "./GuidedChatStarters.tsx";
 
 const MAX_QUESTION_LENGTH = 2_000;
-const MAX_CLIENT_HISTORY_CONTENT = 2_000;
-const HISTORY_LIMIT = 8;
 
 interface ChatEntry {
   id: string;
@@ -117,9 +119,12 @@ function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistory
   return entries
     .map((entry) => ({
       role: entry.role,
-      content: entry.content.slice(0, MAX_CLIENT_HISTORY_CONTENT),
+      content: entry.content.slice(
+        0,
+        MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
+      ),
     }))
-    .slice(-HISTORY_LIMIT);
+    .slice(-MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES);
 }
 
 export function ChatWorkbench({
@@ -155,6 +160,8 @@ export function ChatWorkbench({
     trimmedQuestion.length >= 3 &&
     question.length <= MAX_QUESTION_LENGTH;
   const includeDiagram = diagramIntentToggle.enabled;
+  const historyContextTruncated =
+    nativeOkfVisibleHistoryExceedsModelContext(entries.length);
 
   function updateComposerQuestion(nextQuestion: string) {
     setQuestion(nextQuestion);
@@ -257,11 +264,17 @@ export function ChatWorkbench({
     const request: NativeOkfChatRequest = {
       question: submittedQuestion,
       history: historyFromEntries(priorEntries),
-      includeDiagram,
+      diagramPreference: diagramPreferenceForRequest(
+        diagramIntentToggle,
+        submittedQuestion,
+      ),
+      visibleHistoryMessageCount: priorEntries.length,
       conversationState,
     };
     if (guidedSubmission) {
-      request.includeDiagram = guidedSubmission.includeDiagram;
+      request.diagramPreference = guidedSubmission.includeDiagram
+        ? "requested"
+        : "auto";
     }
 
     setEntries((current) => [...current, userEntry]);
@@ -456,6 +469,27 @@ export function ChatWorkbench({
                   </div>
                 ) : null}
               </div>
+              {historyContextTruncated ? (
+                <aside
+                  role="status"
+                  className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="max-w-3xl text-xs leading-5 text-slate-700 sm:text-sm">
+                      Earlier messages are no longer included in the assistant&apos;s
+                      active context. Start a New chat if your next question depends on
+                      them.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearConversation}
+                      className="rounded-full border border-amber/40 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-amber hover:bg-amber/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                    >
+                      New chat
+                    </button>
+                  </div>
+                </aside>
+              ) : null}
               <ol className="space-y-7">
               {entries.map((entry) => (
                 <li key={entry.id}>

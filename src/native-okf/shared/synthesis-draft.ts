@@ -4,6 +4,8 @@ import {
   GENERATED_DIAGRAM_STAGES,
   MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINT_CHARACTERS,
   MAX_NATIVE_OKF_SYNTHESIS_CONSTRAINTS,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
   MAX_NATIVE_OKF_SYNTHESIS_DOMAIN_CHARACTERS,
   MAX_NATIVE_OKF_SYNTHESIS_OBJECTIVE_CHARACTERS,
   MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS,
@@ -48,8 +50,6 @@ const EDGE_KEYS = new Set([
   "supportConceptIds",
 ]);
 
-const MAX_DRAFT_NODES = 14;
-const MAX_DRAFT_EDGES = 20;
 const MAX_ID_CHARACTERS = 64;
 const MAX_LABEL_CHARACTERS = 100;
 const MAX_DESCRIPTION_CHARACTERS = 360;
@@ -336,9 +336,9 @@ export function parseSynthesisDraftState(
     objective === undefined ||
     constraints === null ||
     !Array.isArray(value.nodes) ||
-    value.nodes.length > MAX_DRAFT_NODES ||
+    value.nodes.length > MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES ||
     !Array.isArray(value.edges) ||
-    value.edges.length > MAX_DRAFT_EDGES
+    value.edges.length > MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES
   ) {
     return null;
   }

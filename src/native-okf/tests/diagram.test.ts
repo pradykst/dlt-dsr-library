@@ -448,11 +448,13 @@ test("uses Responses Structured Outputs without tools or storage", async () => {
   assert.equal(request.text?.format?.type, "json_schema");
   assert.equal(request.text?.format?.strict, true);
   assert.match(String(request.instructions), /compact decision-support flow/);
-  assert.match(String(request.instructions), /7 to 12 nodes/);
+  assert.match(String(request.instructions), /Unequal stage sizes/);
+  assert.match(String(request.instructions), /many-to-many/);
   assert.match(String(request.instructions), /short canvas label/);
   assert.match(String(request.instructions), /one concise sentence/);
   assert.match(String(request.instructions), /same weakly connected flow/);
-  assert.match(String(request.instructions), /no more than three major parallel branches/);
+  assert.match(String(request.instructions), /emergency safety guards, not output targets/);
+  assert.doesNotMatch(String(request.instructions), /7 to 12 nodes|three major parallel branches/);
   assert.match(String(request.instructions), /Do not output coordinates/);
 });
 

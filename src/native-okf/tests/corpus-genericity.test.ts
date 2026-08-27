@@ -31,6 +31,7 @@ import {
 } from "../server/openai/context.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
 import { buildStoredPaperDesignMap } from "../server/openai/stored-source-map.ts";
+import { DEFAULT_RETRIEVAL_LIMITS } from "../server/retrieval-config.ts";
 import {
   retrieveOkfContext,
   type NativeOkfRequestedConceptKind,
@@ -39,7 +40,7 @@ import type { RetrievalResult } from "../server/retrieval-types.ts";
 import type { OkfBundle, OkfConcept } from "../server/types.ts";
 import type { NativeOkfConversationState } from "../shared/chat-types.ts";
 
-const MAX_CONTEXT_CHARACTERS = 35_000;
+const MAX_CONTEXT_CHARACTERS = DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters;
 const PAPER_MARKDOWN_LIMIT = 300;
 
 const ENVIRONMENT: NativeOpenAiEnvironment = {

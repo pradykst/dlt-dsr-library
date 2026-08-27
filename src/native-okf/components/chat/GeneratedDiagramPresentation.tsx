@@ -22,9 +22,13 @@ import ReactFlow, {
 import type {
   GeneratedDiagram,
   GeneratedDiagramNode as DiagramNode,
+  NativeOkfSourceCard,
 } from "../../shared/chat-types.ts";
 import { conceptHref } from "../../shared/links.ts";
-import { equivalentSemanticLabels } from "../../shared/presentation.ts";
+import {
+  equivalentSemanticLabels,
+  formatConceptType,
+} from "../../shared/presentation.ts";
 import { SemanticColumnHeadings } from "../SemanticColumnHeadings.tsx";
 import {
   StraightFlowEdge,
@@ -89,15 +93,17 @@ function relatedNodeIds(
 
 export function GeneratedDiagramDetailsPanel({
   node,
+  sourcesByConceptId,
   onClose,
 }: {
   node: DiagramNode;
+  sourcesByConceptId: ReadonlyMap<string, NativeOkfSourceCard>;
   onClose: () => void;
 }) {
   return (
     <aside
       aria-label={`Details for ${node.label}`}
-      className="absolute inset-x-2 bottom-2 z-30 max-h-[72%] overflow-y-auto rounded-xl border border-line bg-white/98 p-5 shadow-2xl motion-reduce:transition-none sm:inset-y-2 sm:left-auto sm:right-2 sm:max-h-none sm:w-[22rem]"
+      className="absolute isolate inset-x-2 bottom-2 z-40 max-h-[72%] overflow-y-auto rounded-xl border border-slate-300 bg-white p-5 opacity-100 shadow-2xl ring-1 ring-slate-900/10 motion-reduce:transition-none sm:inset-y-2 sm:left-auto sm:right-2 sm:max-h-none sm:w-[22rem]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -119,6 +125,18 @@ export function GeneratedDiagramDetailsPanel({
         </button>
       </div>
 
+      {node.provenance === "synthesized" ? (
+        <div className="mt-4 rounded-lg border border-purple/30 bg-purple/10 px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-purple">
+            Synthesized proposal
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-700">
+            This node is generated for the current design problem. It is not stored
+            directly in the source corpus.
+          </p>
+        </div>
+      ) : null}
+
       <p className="mt-4 text-sm leading-6 text-slate-700">{node.description}</p>
 
       <dl className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
@@ -138,12 +156,6 @@ export function GeneratedDiagramDetailsPanel({
         ) : null}
         <dt className="font-bold uppercase tracking-wide text-muted">Provenance</dt>
         <dd className="font-semibold text-ink">{formatProvenance(node)}</dd>
-        {node.provenance !== "user-provided" ? (
-          <>
-            <dt className="font-bold uppercase tracking-wide text-muted">Sources</dt>
-            <dd className="font-semibold text-ink">{node.sourcePaths.length}</dd>
-          </>
-        ) : null}
       </dl>
 
       {node.provenance === "user-provided" ? (
@@ -152,23 +164,25 @@ export function GeneratedDiagramDetailsPanel({
         </p>
       ) : (
         <>
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-            {node.provenance === "stored"
-              ? "Exact source path"
-              : "Grounding source paths"}
-          </p>
-          <ul className="mt-2 space-y-2">
-            {node.sourcePaths.map((sourcePath) => (
-              <li key={sourcePath}>
-                <Link
-                  href={conceptHref(sourcePath)}
-                  className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
-                >
-                  {sourcePath}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {node.provenance === "stored" ? (
+            <>
+              <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                Exact stored knowledge
+              </p>
+              <ul className="mt-2 space-y-2">
+                {node.sourcePaths.map((sourcePath) => (
+                  <li key={sourcePath}>
+                    <Link
+                      href={conceptHref(sourcePath)}
+                      className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
+                    >
+                      {sourcePath}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </>
       )}
       {node.provenance === "synthesized" ? (
@@ -176,17 +190,27 @@ export function GeneratedDiagramDetailsPanel({
           <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
             Supporting stored concepts
           </p>
-          <ul className="mt-2 space-y-2">
-            {node.supportConceptIds.map((conceptId) => (
-              <li key={conceptId}>
-                <Link
-                  href={conceptHref(conceptId)}
-                  className="break-all font-mono text-xs leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
-                >
-                  {conceptId}
-                </Link>
-              </li>
-            ))}
+          <ul className="mt-2 space-y-3">
+            {node.supportConceptIds.map((conceptId) => {
+              const source = sourcesByConceptId.get(conceptId);
+              return (
+                <li key={conceptId} className="rounded-lg border border-line bg-paper p-3">
+                  <p className="text-xs font-semibold leading-5 text-ink">
+                    {source?.title ?? conceptId}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-muted">
+                    {source ? formatConceptType(source.type) : "Stored concept"}
+                    {source?.sourcePaper ? ` · ${source.sourcePaper}` : ""}
+                  </p>
+                  <Link
+                    href={conceptHref(conceptId)}
+                    className="mt-1 block break-all font-mono text-[0.68rem] leading-5 text-blue underline decoration-blue/30 underline-offset-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2"
+                  >
+                    {conceptId}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
           {node.synthesisRationale ? (
             <>
@@ -322,6 +346,7 @@ function DiagramToolbar({
 
 function GeneratedDiagramCanvas({
   diagram,
+  sourcesByConceptId,
   layout,
   orientation,
   selectedId,
@@ -334,6 +359,7 @@ function GeneratedDiagramCanvas({
   onToggleFullscreen,
 }: {
   diagram: GeneratedDiagram;
+  sourcesByConceptId: ReadonlyMap<string, NativeOkfSourceCard>;
   layout: GeneratedDiagramLayout;
   orientation: DiagramOrientation;
   selectedId: string | undefined;
@@ -560,6 +586,7 @@ function GeneratedDiagramCanvas({
         {selectedNode ? (
           <GeneratedDiagramDetailsPanel
             node={selectedNode}
+            sourcesByConceptId={sourcesByConceptId}
             onClose={() => onSelect(undefined)}
           />
         ) : null}
@@ -575,8 +602,10 @@ function GeneratedDiagramCanvas({
 
 export function GeneratedDiagramPresentation({
   diagram,
+  sources = [],
 }: {
   diagram: GeneratedDiagram;
+  sources?: readonly NativeOkfSourceCard[];
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const orientationTouched = useRef(false);
@@ -666,6 +695,10 @@ export function GeneratedDiagramPresentation({
     ],
     [diagram.nodes],
   );
+  const sourcesByConceptId = useMemo(
+    () => new Map(sources.map((source) => [source.conceptId, source])),
+    [sources],
+  );
 
   return (
     <section
@@ -716,6 +749,7 @@ export function GeneratedDiagramPresentation({
         <ReactFlowProvider>
           <GeneratedDiagramCanvas
             diagram={diagram}
+            sourcesByConceptId={sourcesByConceptId}
             layout={layout}
             orientation={orientation}
             selectedId={selectedId}

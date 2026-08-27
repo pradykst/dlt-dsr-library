@@ -27,6 +27,7 @@ import {
   nativeOkfRequestedKindForType,
   retrieveOkfContext,
 } from "../server/retrieval.ts";
+import type { StructuredPaperEvidence } from "../server/retrieval-types.ts";
 import {
   createInitialNativeOkfConversationState,
   type NativeOkfConversationState,
@@ -731,8 +732,9 @@ test("named multi-paper comparisons retain balanced canonical skeletons independ
     assert.equal(analysis?.papers.length, 2);
     const signature: Record<string, unknown> = {};
     for (const expected of pair) {
-      const row = analysis?.papers.find(
-        (item) => item.paperConceptId === expected.paper.conceptId,
+      const row: StructuredPaperEvidence | undefined = analysis?.papers.find(
+        (item: StructuredPaperEvidence) =>
+          item.paperConceptId === expected.paper.conceptId,
       );
       assert.ok(row, expected.paper.title);
       assert.equal(row.relevantConceptCount, expected.concepts.length);

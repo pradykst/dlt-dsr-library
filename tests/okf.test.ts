@@ -121,7 +121,8 @@ test("Workbench stored flows use compact explicit graph recommendations without 
   for (const paper of kb.papers) {
     const flow = await getWorkbenchFlowGraph(paper.paper_id, { knowledgeBase: kb });
     const metadata = loadStoredPaperFlowMetadata(paper.paper_id);
-    const expectedSource = metadata?.recommendedPaths.length ? "graph_json" : "okf_relations_fallback";
+    assert.ok(metadata, paper.paper_id);
+    const expectedSource = metadata.recommendedPaths.length ? "graph_json" : "okf_relations_fallback";
     assert.ok(flow, paper.paper_id);
     assert.equal(flow.stored_flow_source, expectedSource, paper.paper_id);
     assert.ok(flow.recommended.nodes.length <= 14, paper.paper_id + " recommended graph is not compact");

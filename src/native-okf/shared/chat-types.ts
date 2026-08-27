@@ -5,12 +5,45 @@ export interface NativeOkfChatHistoryMessage {
   content: string;
 }
 
+/** Shared browser/server boundary for conversational context sent to the model. */
+export const MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES = 8;
+export const MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS = 2_000;
+
+export function nativeOkfVisibleHistoryExceedsModelContext(
+  visibleMessageCount: number,
+): boolean {
+  return Number.isFinite(visibleMessageCount) &&
+    visibleMessageCount > MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES;
+}
+
+/** Emergency guards for model-generated diagrams, not desired topology targets. */
+export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES = 48;
+export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES = 96;
+
 export interface NativeOkfChatRequest {
   question: string;
   history?: NativeOkfChatHistoryMessage[];
+  /**
+   * `auto` lets the server resolve conversational diagram intent. `suppressed`
+   * is reserved for an explicit user opt-out; it must not be inferred from an
+   * unchecked auto-suggestion.
+   */
+  diagramPreference?: NativeOkfDiagramPreference;
+  /** Number of browser-visible messages before this request was submitted. */
+  visibleHistoryMessageCount?: number;
+  /** @deprecated Compatibility for older clients; prefer diagramPreference. */
   includeDiagram?: boolean;
   conversationState?: NativeOkfConversationState;
 }
+
+export const NATIVE_OKF_DIAGRAM_PREFERENCES = [
+  "auto",
+  "requested",
+  "suppressed",
+] as const;
+
+export type NativeOkfDiagramPreference =
+  (typeof NATIVE_OKF_DIAGRAM_PREFERENCES)[number];
 
 export const NATIVE_OKF_CONVERSATION_STATE_VERSION = 1 as const;
 export const MAX_NATIVE_OKF_ACTIVE_PAPERS = 3;
