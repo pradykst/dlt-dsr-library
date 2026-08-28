@@ -367,11 +367,16 @@ test("synthesis summary is deterministic, proposal-oriented, and concise", () =>
   assert.equal(first.includes("Selective continuity proof"), false);
 });
 
-test("plan generation uses the content-only schema, makes no answer call, and repairs once without raw replay", async () => {
+test("invalid first synthesis plan is repaired once from the candidate and deterministic errors", async () => {
   const calls: Array<Record<string, unknown>> = [];
-  const marker = "RAW_INVALID_PLAN_MUST_NOT_BE_REPLAYED";
+  const invalidPlan = clonePlan();
+  invalidPlan.requirements[1]!.supportConceptIds = ["fixture/unknown-support"];
   const result = await generateNativeOkfSynthesisPlan({
-    client: queuedClient([marker, JSON.stringify(validPlan()), JSON.stringify(validPlan())], calls),
+    client: queuedClient([
+      JSON.stringify(invalidPlan),
+      JSON.stringify(validPlan()),
+      JSON.stringify(validPlan()),
+    ], calls),
     environment: ENVIRONMENT,
     problemStatement: "Validated fragmented identity problem.",
     refinementRequest: "Add a privacy-preserving evaluation.",
@@ -383,11 +388,14 @@ test("plan generation uses the content-only schema, makes no answer call, and re
   });
   assert.equal(calls.length, 3);
   assert.ok(result.diagram);
+  assert.ok(result.plan);
   assert.equal(result.diagram?.nodes[0]?.label, "Validated fragmented identity problem");
   assert.equal((calls[0]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(JSON.stringify(calls[0]).includes("native_okf_generated_diagram"), false);
-  assert.equal(JSON.stringify(calls[1]).includes(marker), false);
+  assert.match(String(calls[1]?.input), /invalidPlan/);
+  assert.match(String(calls[1]?.input), /fixture\/unknown-support/);
   assert.match(String(calls[1]?.input), /validationErrors/);
+  assert.match(String(calls[1]?.instructions), /one bounded repair/);
   assert.match(String(calls[2]?.instructions), /Review the supplied DesignProposalPlan/);
   assert.equal((calls[2]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(result.warnings.length, 2);
@@ -396,7 +404,10 @@ test("plan generation uses the content-only schema, makes no answer call, and re
 
   const failedCalls: Array<Record<string, unknown>> = [];
   const failed = await generateNativeOkfSynthesisPlan({
-    client: queuedClient([marker, marker], failedCalls),
+    client: queuedClient([
+      JSON.stringify(invalidPlan),
+      JSON.stringify(invalidPlan),
+    ], failedCalls),
     environment: ENVIRONMENT,
     problemStatement: "Validated fragmented identity problem.",
     refinementRequest: "Retry.",
@@ -441,7 +452,9 @@ test("an invalid optional quality revision cannot discard a convertible validate
   assert.match(result.warnings.join(" "), /original validated plan was retained/);
 });
 
-test("repair input remains bounded to problem, constraints, allowlist descriptions, and error codes", () => {
+test("repair input remains bounded to the invalid plan, problem, allowlist, and error codes", () => {
+  const invalidPlan = clonePlan();
+  invalidPlan.relationships[0]!.targetKey = "missing-node";
   const input = buildNativeOkfSynthesisPlanInput({
     client: queuedClient([], []),
     environment: ENVIRONMENT,
@@ -452,9 +465,14 @@ test("repair input remains bounded to problem, constraints, allowlist descriptio
     constraints: ["one constraint"],
     grounding: grounding(),
     priorDraft: null,
-  }, ["plan:missing-rpf-path"]);
+  }, {
+    validationErrors: ["relationships:unknown-endpoint"],
+    invalidPlan,
+  });
   assert.match(input, /allowlistedConcepts/);
-  assert.match(input, /plan:missing-rpf-path/);
+  assert.match(input, /relationships:unknown-endpoint/);
+  assert.match(input, /invalidPlan/);
+  assert.match(input, /missing-node/);
   assert.equal(input.includes("MARKDOWN_BODY"), false);
   assert.equal(input.includes("priorValidatedDraft"), false);
 });
@@ -583,6 +601,77 @@ test("failed synthesis preserves intent and problem without creating a validated
     "Make the flow privacy preserving and add an evaluation stage.",
     result.conversationState!,
   ), true);
+});
+
+test("text-only design synthesis survives optional plan failure and can retry on a later visual turn", async () => {
+  const answerCalls: Array<Record<string, unknown>> = [];
+  let optionalPlanAttempts = 0;
+  const first = await answerNativeOkfChat(
+    {
+      question:
+        "I need help designing a verifiable record exchange across independent service platforms.",
+      diagramPreference: "auto",
+    },
+    {
+      environment: ENVIRONMENT,
+      client: queuedClient([
+        "Use a shared verification boundary with independently checkable records, scoped disclosure, and explicit actor accountability [[S1]]. Treat this as a design proposal and validate the trust assumptions in the target service network.",
+      ], answerCalls),
+      generateDiagram: async () => {
+        optionalPlanAttempts += 1;
+        return {
+          warnings: [],
+          diagnosticCode: "synthesis-plan-repair-failed",
+        };
+      },
+    },
+  );
+  assert.equal(optionalPlanAttempts, 1);
+  assert.equal(answerCalls.length, 1);
+  assert.equal(first.presentationMode, "text-primary");
+  assert.match(first.answerMarkdown, /shared verification boundary/iu);
+  assert.doesNotMatch(first.answerMarkdown, /validated synthesized flow could not be produced/iu);
+  assert.equal(first.diagram, undefined);
+  assert.equal(first.synthesisDraft, undefined);
+  assert.equal(first.conversationState?.latestValidatedSynthesisDraft, null);
+  assert.ok(first.conversationState?.lastSynthesisProblem);
+
+  let visualAttempts = 0;
+  const second = await answerNativeOkfChat(
+    {
+      question: "show me the diagram",
+      includeDiagram: true,
+      conversationState: first.conversationState,
+    },
+    {
+      environment: ENVIRONMENT,
+      client: queuedClient([], []),
+      generateDiagram: async (input) => {
+        visualAttempts += 1;
+        const plan = {
+          ...planForGrounding(input.grounding),
+          problemSummary: input.synthesisProblem ?? input.question,
+        };
+        const converted = convertNativeOkfSynthesisPlan(
+          plan,
+          input.grounding,
+          input.synthesisProblem ?? input.question,
+        );
+        assert.ok(converted);
+        return {
+          diagram: converted.diagram,
+          usedSupportConceptIds: converted.usedSupportConceptIds,
+          warnings: [],
+        };
+      },
+    },
+  );
+  assert.equal(visualAttempts, 1);
+  assert.equal(second.diagramStatus, "success");
+  assert.equal(second.diagramMode, "synthesized");
+  assert.ok(second.diagram);
+  assert.ok(second.synthesisDraft);
+  assert.ok(second.conversationState?.latestValidatedSynthesisDraft);
 });
 
 test("refinement without a problem or validated draft asks one clarification", async () => {

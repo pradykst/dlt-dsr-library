@@ -74,6 +74,7 @@ import {
   NATIVE_OKF_SYSTEM_PROMPT,
   NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION,
   NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION,
+  NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION,
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import {
@@ -927,53 +928,36 @@ export async function answerNativeOkfChat(
       };
     }
 
-    let evidenceMap: GeneratedDiagram | undefined;
-    try {
-      evidenceMap = includeDiagram
-        ? await buildGroundedStoredSourceMap(retrieval)
-        : undefined;
-    } catch {
-      evidenceMap = undefined;
-    }
-    const evidenceIds = evidenceMap
-      ? [...new Set(evidenceMap.nodes.flatMap((node) => node.supportConceptIds))]
-      : [];
-    const fallbackEvidenceIds = evidenceIds.length > 0
-      ? evidenceIds
-      : retrieval.finalConcepts
+    if (includeDiagram) {
+      const sourceCards = sourceCardsForConceptIds(
+        context,
+        retrieval.finalConcepts
           .filter(
             (concept) =>
               concept.type !== "paper" && concept.type !== "reference",
           )
-          .map((concept) => concept.conceptId);
-    const sourceCards = sourceCardsForConceptIds(
-      context,
-      fallbackEvidenceIds,
-    );
-    const deterministicSummary = deterministicSynthesisFailureSummary(
-      evidenceMap !== undefined,
-    );
-    return {
-      kind: "answer",
-      presentationMode: includeDiagram ? "diagram-primary" : "safe-error",
-      answerMarkdown: deterministicSummary,
-      deterministicSummary,
-      sources: sourceCards,
-      ...(evidenceMap ? { diagram: evidenceMap } : {}),
-      diagramMode: includeDiagram ? "synthesized" : null,
-      diagramStatus: includeDiagram
-        ? evidenceMap ? "evidence-fallback" : "failed"
-        : null,
-      diagnosticCode:
-        diagramResult.diagnosticCode ?? "synthesis-plan-repair-failed",
-      insufficientContext: false,
-      conversationState: completedConversationState(
-        prepared,
-        retrieval,
-        sourceCards,
-      ),
-      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
-    };
+          .map((concept) => concept.conceptId),
+      );
+      const deterministicSummary = deterministicSynthesisFailureSummary(false);
+      return {
+        kind: "answer",
+        presentationMode: "safe-error",
+        answerMarkdown: deterministicSummary,
+        deterministicSummary,
+        sources: sourceCards,
+        diagramMode: "synthesized",
+        diagramStatus: "failed",
+        diagnosticCode:
+          diagramResult.diagnosticCode ?? "synthesis-plan-repair-failed",
+        insufficientContext: false,
+        conversationState: completedConversationState(
+          prepared,
+          retrieval,
+          sourceCards,
+        ),
+        ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+      };
+    }
   }
 
   const answerPolicyMode = prepared.answerMode;
@@ -982,6 +966,8 @@ export async function answerNativeOkfChat(
     answerModeInstruction(prepared.answerMode),
     turnPlan.mode === "ACTIVE_DIAGRAM_QA" && turnPlan.activeProposalDraft
       ? NATIVE_OKF_ACTIVE_DIAGRAM_QA_INSTRUCTION
+      : prepared.intent === "synthesized-flow" && !includeDiagram
+        ? NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION
       : includeDiagram
         ? NATIVE_OKF_DIAGRAM_TEXT_ANSWER_INSTRUCTION
         : NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,

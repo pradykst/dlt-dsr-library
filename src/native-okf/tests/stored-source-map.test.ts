@@ -74,7 +74,7 @@ test("no connected retrieved native subgraph preserves text-only fallback", asyn
 });
 
 
-test("chat returns the grounded source map after synthesized diagram failure", async () => {
+test("explicit synthesis failure stays fail-closed even when connected stored evidence exists", async () => {
   const environment: NativeOpenAiEnvironment = {
     apiKey: "mock-only",
     model: "mock-model",
@@ -114,10 +114,11 @@ test("chat returns the grounded source map after synthesized diagram failure", a
   );
 
   assert.equal(responseCalls, 0);
-  assert.equal(result.diagram?.title, "Stored source map");
-  assert.ok(result.diagram?.nodes.every((node) => !node.synthesis));
+  assert.equal(result.diagram, undefined);
   assert.equal(result.diagramMode, "synthesized");
-  assert.equal(result.diagramStatus, "evidence-fallback");
+  assert.equal(result.diagramStatus, "failed");
+  assert.equal(result.presentationMode, "safe-error");
+  assert.match(result.answerMarkdown, /validated synthesized flow could not be produced/iu);
   assert.equal(result.warnings, undefined);
 });
 
