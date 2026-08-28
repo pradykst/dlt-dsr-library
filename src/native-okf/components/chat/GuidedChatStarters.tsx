@@ -44,7 +44,7 @@ const WORKFLOWS: ReadonlyArray<{
   },
   {
     kind: "grounded-solution",
-    label: "Build a grounded solution",
+    label: "Build a design proposal",
     description:
       "Use the library to generate a problem-specific decision-support flow.",
     requiresDiagram: true,
@@ -334,7 +334,7 @@ export function GuidedChatStarters({
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs leading-5 text-muted">
               {generatedDiagramIntent
-                ? "This workflow will request the existing grounded diagram path."
+                ? "This workflow will request the existing design-proposal diagram path."
                 : "This workflow is text-only unless you enable the existing diagram control."}
             </p>
             <button

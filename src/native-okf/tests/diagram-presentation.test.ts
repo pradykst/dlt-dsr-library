@@ -54,23 +54,24 @@ test("drawer starts closed and selection does not rerun semantic layout", async 
   assert.match(presentation, /onClose=\{\(\) => onSelect\(undefined\)\}/u);
 });
 
-test("generated diagrams use dynamic columns and direct straight edges", async () => {
+test("generated diagrams use dynamic ELK columns and routed orthogonal edges", async () => {
   const [presentation, layout, edge, edgeHelper, headings] = await Promise.all([
     componentSource("chat/GeneratedDiagramPresentation.tsx"),
     componentSource("chat/diagram-layout.ts"),
-    componentSource("StraightFlowEdge.tsx"),
-    componentSource("straight-edge.ts"),
+    componentSource("chat/ElkFlowEdge.tsx"),
+    componentSource("chat/ElkFlowEdge.tsx"),
     componentSource("SemanticColumnHeadings.tsx"),
   ]);
 
-  assert.match(presentation, /StraightFlowEdge/u);
-  assert.match(presentation, /type: "straight"/u);
+  assert.match(presentation, /ElkFlowEdge/u);
+  assert.match(presentation, /type: "routed"/u);
   assert.match(presentation, /<SemanticColumnHeadings/u);
-  assert.doesNotMatch(presentation, /ElkFlowEdge/u);
+  assert.doesNotMatch(presentation, /StraightFlowEdge/u);
   assert.match(layout, /GENERATED_DIAGRAM_STAGES\.filter/u);
+  assert.match(layout, /new ELK\(\)\.layout/u);
   assert.match(layout, /layoutSemanticColumns/u);
-  assert.match(edgeHelper, /M \$\{start\.x\} \$\{start\.y\} L \$\{end\.x\} \$\{end\.y\}/u);
-  assert.doesNotMatch(edgeHelper, /bezier|orthogonalPolylinePath/iu);
+  assert.match(edgeHelper, /orthogonalPolylinePath/u);
+  assert.doesNotMatch(edgeHelper, /bezier/iu);
   assert.match(edge, /markerEnd=\{markerEnd\}/u);
   assert.match(headings, /pointer-events-none/u);
   assert.match(headings, /nearestGap - 4/u);

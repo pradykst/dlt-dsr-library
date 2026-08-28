@@ -234,7 +234,7 @@ function SourceCollection({
     return (
       <details className="rounded-xl border border-line bg-paper">
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
-          View {sources.length} grounding source{sources.length === 1 ? "" : "s"}
+          View {sources.length} source{sources.length === 1 ? "" : "s"}
         </summary>
         <div className="border-t border-line p-4">{content}</div>
       </details>
@@ -295,29 +295,30 @@ export function ChatAnswer({
           className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3 text-sm leading-6 text-slate-700"
         >
           <strong className="text-ink">Insufficient native OKF context.</strong>{" "}
-          The local retrieval pipeline did not find enough grounded material for
+          The local retrieval pipeline did not find enough supported material for
           a supported answer.
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <CopyAssistantResponseButton text={clipboardText} />
+      <div className="min-w-0 space-y-2">
+        <div className="flex min-h-8 items-center justify-end">
+          <CopyAssistantResponseButton text={clipboardText} />
+        </div>
+        <article className="min-w-0">
+          <ReactMarkdown
+            components={answerComponents(anchorPrefix)}
+            remarkPlugins={[remarkGfm]}
+            skipHtml
+            urlTransform={(url, key) => {
+              if (key !== "href") return "";
+              if (url.startsWith(`#${anchorPrefix}-source-`)) return url;
+              return isSafeExternalHref(url) ? url : "";
+            }}
+          >
+            {markdown}
+          </ReactMarkdown>
+        </article>
       </div>
-
-      <article className="min-w-0">
-        <ReactMarkdown
-          components={answerComponents(anchorPrefix)}
-          remarkPlugins={[remarkGfm]}
-          skipHtml
-          urlTransform={(url, key) => {
-            if (key !== "href") return "";
-            if (url.startsWith(`#${anchorPrefix}-source-`)) return url;
-            return isSafeExternalHref(url) ? url : "";
-          }}
-        >
-          {markdown}
-        </ReactMarkdown>
-      </article>
 
       {response.diagram ? (
         <div className="space-y-3">

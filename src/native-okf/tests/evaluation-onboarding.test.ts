@@ -96,7 +96,7 @@ test("starter questions preserve canonical titles and researcher problem content
   const problem = "reducing coordination gaps without removing human oversight";
   assert.equal(
     groundedSolutionStarterQuestion(problem),
-    `Generate a grounded decision-support flow for ${problem}.`,
+    `Generate a decision-support flow for ${problem}.`,
   );
 });
 

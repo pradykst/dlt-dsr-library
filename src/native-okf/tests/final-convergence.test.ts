@@ -10,10 +10,14 @@ import {
 import { getOkfBundle } from "../server/cache.ts";
 import { associatedConceptsForPaper } from "../server/paper-design-map.ts";
 import {
+  inferActiveDiagramQa,
+  inferActiveProposalRerender,
   inferActiveSynthesisDiagramRefinement,
   loadNativeOkfConversationCatalog,
   prepareNativeOkfChatRequest,
 } from "../server/conversation.ts";
+import type { NativeOpenAiClient } from "../server/openai/client.ts";
+import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
 import {
   answerNativeOkfChat,
   validateNativeOkfChatRequest,
@@ -21,6 +25,27 @@ import {
 import { retrieveOkfContext } from "../server/retrieval.ts";
 import { nativeOkfRequestedKindForType } from "../server/retrieval.ts";
 import { buildStoredPaperDesignMap } from "../server/openai/stored-source-map.ts";
+
+const MOCK_OPENAI_ENVIRONMENT: NativeOpenAiEnvironment = {
+  apiKey: "sk-test-do-not-expose",
+  model: "test-model",
+  reasoningEffort: "medium",
+  moderationEnabled: false,
+  maxOutputTokens: 800,
+  diagramMaxOutputTokens: 600,
+};
+
+function completedTextResponse(outputText: string): Record<string, unknown> {
+  return {
+    id: "response-active-diagram-qa",
+    object: "response",
+    created_at: 0,
+    model: MOCK_OPENAI_ENVIRONMENT.model,
+    output: [],
+    output_text: outputText,
+    status: "completed",
+  };
+}
 
 async function activeDraftFixture(): Promise<{
   state: NativeOkfConversationState;
@@ -113,10 +138,151 @@ test("active validated drafts route semantic edit paraphrases to refinement", as
     });
     assert.equal(prepared.turnPlan.activeDraftRefinement, true, question);
     assert.equal(prepared.turnPlan.includeDiagram, true, question);
+    assert.equal(prepared.turnPlan.diagramAction, "RENDER_UPDATED", question);
     assert.equal(prepared.turnPlan.diagramMode, "synthesized", question);
     assert.equal(prepared.priorSynthesisDraft?.nodes.length, draft.nodes.length, question);
     assert.equal(prepared.priorSynthesisDraft?.edges.length, draft.edges.length, question);
   }
+});
+
+test("active-diagram explanation families are text-only turns over the same proposal", async () => {
+  const { state, draft } = await activeDraftFixture();
+  for (const question of [
+    "Can you explain each element?",
+    "Walk me through this flow.",
+    "Why is this feature connected to the artifact?",
+    "Why did you connect these principles to these features?",
+    "What evidence supports these proposed nodes?",
+    "What does this principle mean?",
+  ]) {
+    assert.equal(inferActiveDiagramQa(question, state), true, question);
+    const prepared = await prepareNativeOkfChatRequest({
+      question,
+      // A retained client toggle must not turn explanation into a source map.
+      diagramPreference: "requested",
+      conversationState: state,
+    });
+    assert.equal(prepared.turnPlan.mode, "ACTIVE_DIAGRAM_QA", question);
+    assert.equal(prepared.turnPlan.diagramAction, "NONE", question);
+    assert.equal(prepared.includeDiagram, false, question);
+    assert.equal(prepared.diagramMode, null, question);
+    assert.deepEqual(prepared.turnPlan.activeProposalDraft, draft, question);
+    assert.deepEqual(prepared.validatedState.latestValidatedSynthesisDraft, draft, question);
+  }
+});
+
+test("active proposals distinguish text QA, refinement, and exact rerender actions", async () => {
+  const { state, draft } = await activeDraftFixture();
+  const ordinary = await prepareNativeOkfChatRequest({
+    question: "What are privacy risks of immutable transaction records?",
+    diagramPreference: "auto",
+    conversationState: state,
+  });
+  assert.equal(ordinary.turnPlan.mode, "TEXT_QA");
+  assert.equal(ordinary.turnPlan.diagramAction, "NONE");
+  assert.equal(ordinary.includeDiagram, false);
+
+  const refinement = await prepareNativeOkfChatRequest({
+    question: "Add another requirement concerning institutional oversight.",
+    diagramPreference: "auto",
+    conversationState: state,
+  });
+  assert.equal(refinement.turnPlan.mode, "DESIGN_REFINEMENT");
+  assert.equal(refinement.turnPlan.diagramAction, "RENDER_UPDATED");
+
+  const rerender = await prepareNativeOkfChatRequest({
+    question: "Show me the diagram again.",
+    diagramPreference: "auto",
+    conversationState: state,
+  });
+  assert.equal(inferActiveProposalRerender(rerender.effectiveQuestion, state), true);
+  assert.equal(rerender.turnPlan.mode, "DESIGN_SYNTHESIS");
+  assert.equal(rerender.turnPlan.diagramAction, "RENDER_EXISTING");
+  assert.deepEqual(rerender.priorSynthesisDraft, draft);
+});
+
+test("active proposal QA sends the existing plan to text generation and emits no graph", async () => {
+  const { state, draft } = await activeDraftFixture();
+  const prepared = await prepareNativeOkfChatRequest({
+    question: "Explain each element and its role.",
+    diagramPreference: "requested",
+    conversationState: state,
+  });
+  let responseCalls = 0;
+  let diagramCalls = 0;
+  let serializedInput = "";
+  let serializedInstructions = "";
+  const client = {
+    responses: {
+      create: async (request: { input?: unknown; instructions?: unknown }) => {
+        responseCalls += 1;
+        serializedInput = JSON.stringify(request.input);
+        serializedInstructions = String(request.instructions);
+        return completedTextResponse(
+          "The displayed proposal retains the verification problem and its existing requirement [[S1]].",
+        );
+      },
+    },
+    moderations: {
+      create: async () => ({ results: [{ flagged: false }] }),
+    },
+  } as unknown as NativeOpenAiClient;
+  const response = await answerNativeOkfChat(prepared.request, {
+    prepared,
+    retrieve: () => retrieveOkfContext(prepared.retrievalQuestion),
+    environment: MOCK_OPENAI_ENVIRONMENT,
+    client,
+    generateDiagram: async () => {
+      diagramCalls += 1;
+      return { warnings: [] };
+    },
+  });
+  assert.equal(responseCalls, 1);
+  assert.equal(diagramCalls, 0);
+  assert.equal(response.diagram, undefined);
+  assert.equal(response.diagramMode, null);
+  assert.equal(response.diagramStatus, null);
+  assert.match(serializedInput, /ACTIVE_VALIDATED_PROPOSAL/u);
+  assert.match(serializedInput, /Existing requirement/u);
+  assert.match(serializedInstructions, /existing visual remains available/u);
+  assert.doesNotMatch(serializedInstructions, /diagram option must be enabled/u);
+  assert.deepEqual(response.conversationState?.latestValidatedSynthesisDraft, draft);
+});
+
+test("explicit proposal rerender returns identical graph identities without synthesis", async () => {
+  const { state, draft } = await activeDraftFixture();
+  const prepared = await prepareNativeOkfChatRequest({
+    question: "Display the current flow again.",
+    diagramPreference: "auto",
+    conversationState: state,
+  });
+  let diagramCalls = 0;
+  const response = await answerNativeOkfChat(prepared.request, {
+    prepared,
+    retrieve: () => retrieveOkfContext(prepared.retrievalQuestion),
+    environment: MOCK_OPENAI_ENVIRONMENT,
+    client: {
+      responses: {
+        create: async () => {
+          throw new Error("Rerender must not call text or diagram synthesis.");
+        },
+      },
+      moderations: {
+        create: async () => ({ results: [{ flagged: false }] }),
+      },
+    } as unknown as NativeOpenAiClient,
+    generateDiagram: async () => {
+      diagramCalls += 1;
+      return { warnings: [] };
+    },
+  });
+  assert.equal(diagramCalls, 0);
+  assert.deepEqual(response.diagram?.nodes.map((node) => node.id), draft.nodes.map((node) => node.id));
+  assert.deepEqual(
+    response.diagram?.edges.map((edge) => `${edge.source}\u0000${edge.target}\u0000${edge.label}`),
+    draft.edges.map((edge) => `${edge.source}\u0000${edge.target}\u0000${edge.label}`),
+  );
+  assert.equal(response.conversationState?.latestValidatedSynthesisDraft?.version, draft.version);
 });
 
 test("tri-state request validation preserves auto, requested, and suppressed semantics", async () => {
@@ -227,6 +393,44 @@ test("category-only single-paper follow-ups use complete deterministic category 
   );
   assert.ok(singleCategoryWithNoEdges);
   assert.equal(singleCategoryWithNoEdges.edges.length, 0);
+});
+
+test("stored-map explanation is text-only while an explicit rerender stays deterministic", async () => {
+  const catalog = await loadNativeOkfConversationCatalog();
+  let paper = catalog.papers[0];
+  for (const candidate of catalog.papers) {
+    if (await buildStoredPaperDesignMap(candidate.conceptId)) {
+      paper = candidate;
+      break;
+    }
+  }
+  assert.ok(paper);
+  const state: NativeOkfConversationState = {
+    ...createInitialNativeOkfConversationState(),
+    activePaperSlugs: [paper.slug],
+    lastIntent: "stored-diagram",
+    lastDiagramRequested: true,
+  };
+  const explanation = await prepareNativeOkfChatRequest({
+    question: "Explain its first design principle.",
+    diagramPreference: "requested",
+    conversationState: state,
+  }, catalog);
+  assert.equal(explanation.turnPlan.mode, "ACTIVE_DIAGRAM_QA");
+  assert.equal(explanation.turnPlan.diagramAction, "NONE");
+  assert.equal(explanation.includeDiagram, false);
+  assert.equal(explanation.diagramMode, null);
+
+  const rerender = await prepareNativeOkfChatRequest({
+    question: "Show me the complete map again.",
+    diagramPreference: "auto",
+    conversationState: state,
+  }, catalog);
+  assert.equal(rerender.turnPlan.mode, "STORED_FULL_MAP");
+  assert.equal(rerender.turnPlan.diagramAction, "RENDER_STORED");
+  const first = await buildStoredPaperDesignMap(paper.conceptId);
+  const second = await buildStoredPaperDesignMap(paper.conceptId);
+  assert.deepEqual(first, second);
 });
 
 test("history-boundary policy gives explicit focus priority and clarifies stale ambiguity", async () => {

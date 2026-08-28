@@ -229,6 +229,7 @@ test("validated refinement patches preserve prior graph elements and ground new 
     source: "user-problem",
     target: "refine-governance-requirement",
     label: "requires",
+    rationale: "The problem requires accountable governance.",
     supportConceptIds: [freshSupportId],
   });
   const added = await applyNativeOkfSynthesisRefinementPatch(
@@ -253,8 +254,9 @@ test("validated refinement patches preserve prior graph elements and ground new 
   const addEdge = emptyPatch();
   addEdge.addEdges.push({
     source: "r1",
-    target: "f1",
-    label: "also informs",
+    target: "p1",
+    label: "addresses",
+    rationale: "The requirement also addresses the principle.",
     supportConceptIds: [freshSupportId],
   });
   const edged = await applyNativeOkfSynthesisRefinementPatch(
@@ -264,7 +266,7 @@ test("validated refinement patches preserve prior graph elements and ground new 
     prior.problemStatement,
     false,
   );
-  assert.equal(edged.ok, true);
+  assert.equal(edged.ok, true, edged.ok ? "" : edged.errors.join("\n"));
   if (edged.ok) assert.deepEqual(edged.diagram.edges.slice(0, prior.edges.length), prior.edges);
 
   const unknownSupport = validateNativeOkfSynthesisRefinementPatch(
@@ -399,6 +401,90 @@ test("stored-map paraphrases route deterministically and New Chat has an empty d
     assert.equal(prepared.preferDeterministicPaperMap, true, question);
   }
   assert.equal(createInitialNativeOkfConversationState().latestValidatedSynthesisDraft, null);
+});
+
+test("repository-derived all-paper oracle routes direct and focused map paraphrases to exact stored maps", async () => {
+  const catalog = await loadNativeOkfConversationCatalog();
+  const bundle = await getOkfBundle();
+  assert.equal(catalog.papers.length, 34);
+
+  for (const paper of catalog.papers) {
+    const canonicalPaper = bundle.conceptsById.get(paper.conceptId);
+    assert.ok(canonicalPaper, paper.slug);
+    const oracle = buildPaperDesignMapFromBundle(bundle, canonicalPaper);
+    const categoryCounts = new Map<string, number>();
+    for (const node of oracle.nodes) {
+      categoryCounts.set(node.type, (categoryCounts.get(node.type) ?? 0) + 1);
+    }
+    const rendered = await buildStoredPaperDesignMap(paper.conceptId);
+    assert.ok(rendered, paper.slug);
+    assert.deepEqual(
+      new Set(rendered.nodes.map((node) => node.id)),
+      new Set(oracle.nodes.map((node) => node.id)),
+      `${paper.slug}:nodes`,
+    );
+    assert.deepEqual(
+      new Set(rendered.edges.map((edge) => JSON.stringify([edge.source, edge.target, edge.label]))),
+      new Set(oracle.edges.map((edge) => JSON.stringify([edge.sourceId, edge.targetId, edge.label]))),
+      `${paper.slug}:edges`,
+    );
+    assert.equal(rendered.edges.length, oracle.edges.length, `${paper.slug}:relationship-count`);
+    const renderedIds = new Set(rendered.nodes.map((node) => node.id));
+    for (const [type, count] of categoryCounts) {
+      assert.equal(
+        oracle.nodes.filter((node) => node.type === type && renderedIds.has(node.id)).length,
+        count,
+        `${paper.slug}:${type}`,
+      );
+    }
+
+    for (const question of [
+      `Show the DSR grid for ${paper.title}.`,
+      `Give me the complete design graph of ${paper.title}.`,
+      `Visualize the represented design knowledge in ${paper.title}.`,
+    ]) {
+      const prepared = await prepareNativeOkfChatRequest({ question }, catalog);
+      assert.equal(prepared.turnPlan.mode, "STORED_FULL_MAP", `${paper.slug}:${question}`);
+      assert.equal(prepared.turnPlan.resolvedPaperSlug, paper.slug, question);
+    }
+
+    const focusedState = {
+      ...createInitialNativeOkfConversationState(),
+      activePaperSlugs: [paper.slug],
+      lastIntent: "answer" as const,
+      lastDiagramRequested: false,
+    };
+    for (const question of [
+      "Show me the diagram for this paper.",
+      "Show its design map.",
+      "Give me the complete graph.",
+      "Visualize the whole thing.",
+    ]) {
+      const prepared = await prepareNativeOkfChatRequest({
+        question,
+        conversationState: focusedState,
+      }, catalog);
+      assert.equal(prepared.turnPlan.mode, "STORED_FULL_MAP", `${paper.slug}:${question}`);
+      assert.equal(prepared.turnPlan.resolvedPaperSlug, paper.slug, question);
+    }
+  }
+});
+
+test("authoritative turn modes separate text, stored, evidence, synthesis, refinement, and scope paths", async () => {
+  const catalog = await loadNativeOkfConversationCatalog();
+  const paper = catalog.papers[0]!;
+  const cases = [
+    [`What formal concepts does ${paper.title} contribute?`, "TEXT_QA"],
+    [`Show the complete design map for ${paper.title}.`, "STORED_FULL_MAP"],
+    [`Show only the principles in ${paper.title}.`, "STORED_FILTERED_MAP"],
+    ["Map relationships across the relevant library evidence.", "EVIDENCE_MAP"],
+    ["Help me design a cross-organizational verification artifact.", "DESIGN_SYNTHESIS"],
+    ["What is the current weather?", "SCOPE_GUARDRAIL"],
+  ] as const;
+  for (const [question, mode] of cases) {
+    const prepared = await prepareNativeOkfChatRequest({ question }, catalog);
+    assert.equal(prepared.turnPlan.mode, mode, question);
+  }
 });
 
 test("narrow relationships may use two nodes while broad evidence expands canonical neighbors", async () => {

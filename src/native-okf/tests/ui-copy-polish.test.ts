@@ -59,7 +59,7 @@ test("homepage uses the approved hero and removes superseded public sections", a
   ]);
   assert.match(
     compact(homepage),
-    /The DSR Knowledge Library represents design knowledge in the form of requirements, principles, features, and their relationships\. Researchers can inspect individual papers, compare reusable knowledge across studies, and interact with a source-grounded chatbot\./u,
+    /The DSR Knowledge Library represents design knowledge in the form of requirements, principles, features, and their relationships\. Researchers can inspect individual papers, compare reusable knowledge across studies, and interact with a source-linked chatbot\./u,
   );
   assert.match(homepage, /Browse the library/u);
   assert.match(homepage, /Open chat/u);
@@ -321,7 +321,7 @@ test("chat page and assistant panel use concise researcher-facing copy", async (
   assert.match(page, /Chat with the design knowledge library/u);
   assert.match(
     page,
-    /Ask about papers and represented design knowledge, compare studies, or build a source-grounded decision-support flow\./u,
+    /Ask about papers and represented design knowledge, compare studies, or build an evidence-linked decision-support flow\./u,
   );
   assert.match(workbench, /Design knowledge assistant/u);
   assert.match(
@@ -347,7 +347,7 @@ test("guided starter question generation remains unchanged", () => {
   );
   assert.equal(
     groundedSolutionStarterQuestion("a generic coordination problem"),
-    "Generate a grounded decision-support flow for a generic coordination problem.",
+    "Generate a decision-support flow for a generic coordination problem.",
   );
 });
 

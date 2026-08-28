@@ -54,6 +54,21 @@ function compareStrings(left: string, right: string): number {
   return left.localeCompare(right, "en");
 }
 
+function sameStringSet(left: Iterable<string>, right: Iterable<string>): boolean {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return leftSet.size === rightSet.size &&
+    [...leftSet].every((value) => rightSet.has(value));
+}
+
+function storedEdgeIdentity(edge: StoredEdge): string {
+  return JSON.stringify([edge.sourceId, edge.targetId, edge.label]);
+}
+
+function renderedEdgeIdentity(edge: GeneratedDiagramEdge): string {
+  return JSON.stringify([edge.source, edge.target, edge.label]);
+}
+
 function boundedText(value: string, maximum: number): string {
   const normalized = value.replace(/\s+/gu, " ").trim();
   if (normalized.length <= maximum) return normalized;
@@ -320,6 +335,19 @@ export async function buildStoredPaperDesignMap(
     supportConceptIds: [edge.sourceId, edge.targetId],
   }));
 
+  if (
+    !sameStringSet(
+      map.nodes.map((node) => node.id),
+      nodes.map((node) => node.id),
+    ) ||
+    !sameStringSet(
+      map.edges.map(storedEdgeIdentity),
+      edges.map(renderedEdgeIdentity),
+    )
+  ) {
+    return undefined;
+  }
+
   return {
     title: `${displayTitle(paper)} design map`,
     explanation:
@@ -578,7 +606,7 @@ export async function buildGroundedStoredSourceMap(
   });
 
   const candidate: GeneratedDiagram = {
-    title: "Grounded source map",
+    title: "Stored source map",
     explanation:
       "A deterministic view of connected relationships stored in the retrieved native OKF sources.",
     nodes,

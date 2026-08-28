@@ -90,6 +90,8 @@ function summaryFixture(): { plan: SynthesisPlan; diagram: GeneratedDiagram } {
     plan: {
       title: "Ignored model title",
       problemSummary: RAW_PROBLEM,
+      supportingStoredConceptIds: entries.map((entry) => entry.supportConceptIds[0]!),
+      coverageRationale: "The fixture covers every selected proposal stage.",
       requirements,
       principles,
       features,
@@ -200,16 +202,14 @@ test("release polish problem node is normalized, user-provided, and source-free"
   assert.equal(node.synthesisRationale, null);
 });
 
-test("release polish synthesis summary normalizes the problem and derives all counts", () => {
+test("release polish synthesis summary normalizes the problem without mechanical counts", () => {
   const { plan, diagram } = summaryFixture();
   const summary = deterministicNativeOkfSynthesisSummary(plan, diagram);
-  assert.match(summary, /^This grounded proposal addresses fragmented product identity/iu);
-  assert.doesNotMatch(summary, /addresses Generate/iu);
+  assert.match(summary, /^This diagram translates the proposed design for fragmented product identity/iu);
+  assert.doesNotMatch(summary, /for Generate/iu);
   assert.doesNotMatch(summary, /\.\./u);
-  assert.match(summary, /3 requirements, 3 principles, and 4 features/iu);
-  assert.match(summary, /3 downstream artifact, evaluation, or outcome elements/iu);
-  assert.match(summary, /5 elements reuse exact stored knowledge/iu);
-  assert.match(summary, /8 are synthesized adaptations/iu);
+  assert.doesNotMatch(summary, /\b\d+ requirements|\b\d+ principles|\b\d+ features/iu);
+  assert.match(summary, /Stored concepts are reused where applicable/iu);
   assert.ok(summary.trim().split(/\s+/u).length < 100);
 });
 
@@ -217,7 +217,7 @@ test("release polish enforces the concise text-only synthesis policy", () => {
   assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /120 to 220 words/iu);
   assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /never exceed 280 words/iu);
   assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /three to five concise design statements/iu);
-  assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /grounded proposal rather than a validated theory/iu);
+  assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /design proposal rather than a validated theory/iu);
   assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /ASCII, Mermaid, DOT, Graphviz, PlantUML, or JSON/iu);
   assert.equal(NATIVE_OKF_ANSWER_HARD_WORD_LIMITS["synthesis-outline"], 280);
   assert.equal(NATIVE_OKF_ANSWER_HARD_WORD_LIMITS.detailed, 900);

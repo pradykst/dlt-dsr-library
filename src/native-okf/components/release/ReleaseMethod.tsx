@@ -42,12 +42,12 @@ const METHOD_SECTIONS = [
   {
     id: "evaluation",
     title: "Researcher-evaluation status",
-    body: "The prototype is being evaluated with researchers. Participants should explore the library and grounded assistant before responding in the external survey. Generated output remains non-authoritative, and generated synthesis remains subject to researcher review against cited concepts and the original papers.",
+    body: "The prototype is being evaluated with researchers. Participants should explore the library and research assistant before responding in the external survey. Generated output remains non-authoritative, and generated synthesis remains subject to researcher review against cited concepts and the original papers.",
   },
   {
     id: "privacy",
     title: "Operational privacy",
-    body: "The grounded assistant is available directly from the public Chat page. Questions, answers, conversation history, and retrieved source text are not persisted by the server. Chat history remains bounded in browser session storage for the current tab and is cleared by New Chat.",
+    body: "The research assistant is available directly from the public Chat page. Questions, answers, conversation history, and retrieved source text are not persisted by the server. Chat history remains bounded in browser session storage for the current tab and is cleared by New Chat.",
   },
 ] as const;
 
@@ -77,7 +77,7 @@ export function ReleaseMethod() {
               href={CANONICAL_ROUTES.chat}
               className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 outline-none transition hover:border-blue/50 hover:text-blue focus-visible:ring-2 focus-visible:ring-blue/30 focus-visible:ring-offset-2"
             >
-              Open grounded chat
+              Open research chat
             </Link>
           </div>
         </div>

@@ -38,7 +38,7 @@ export default function HomePage() {
               A structured library for reusing design knowledge from distributed ledger technology research.
             </p>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-muted sm:text-base">
-              The library transforms DSR papers into reviewable design knowledge grids and flow representations, connecting problems, requirements, design principles, features, artifacts, evaluations, and evidence. It helps researchers compare prior DLT instantiations and reuse grounded design knowledge for new research projects.
+              The library transforms DSR papers into reviewable design knowledge grids and flow representations, connecting problems, requirements, design principles, features, artifacts, evaluations, and evidence. It helps researchers compare prior DLT instantiations and reuse supported design knowledge for new research projects.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link href="/explore" className="inline-flex items-center justify-center gap-2 border border-ink bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue">
@@ -52,7 +52,7 @@ export default function HomePage() {
           <Card className="min-w-0 bg-paper/80 p-4 sm:p-5">
             <div className="mb-3 flex flex-col gap-1 text-xs uppercase tracking-[0.12em] text-muted sm:flex-row sm:items-center sm:justify-between">
               <span>Structured DSR chain</span>
-              <span>Grounded in papers</span>
+              <span>Linked to papers</span>
             </div>
             <MiniFlowStrip />
           </Card>

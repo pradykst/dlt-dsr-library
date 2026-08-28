@@ -36,6 +36,18 @@ test("generic intent detection is case-insensitive and covers supported forms", 
   }
 });
 
+test("generic rendering verbs and imperative map quantifiers activate visual intent", () => {
+  for (const question of [
+    "Render the requirements, principles, and features map for a study.",
+    "Chart the canonical design knowledge of this work.",
+    "Show all formal layers and links for the paper.",
+    "Map every stored concept and relationship in the publication.",
+    "Lay out the represented relationships in this article.",
+  ]) {
+    assert.equal(inferDiagramIntent(question), true, question);
+  }
+});
+
 test("non-visual questions and unrelated substrings do not trigger intent", () => {
   assert.equal(inferDiagramIntent("Compare two papers"), false);
   for (const question of [
@@ -132,6 +144,10 @@ test("chat request payload sends tri-state preference and visible history contex
     /const request: NativeOkfChatRequest = \{[\s\S]*?diagramPreference:\s*diagramPreferenceForRequest\([\s\S]*?visibleHistoryMessageCount:\s*priorEntries\.length[\s\S]*?\};/u,
   );
   assert.match(source, /Diagram enabled based on your request\./u);
+  assert.match(
+    source,
+    /setQuestion\(""\);\s*setDiagramIntentToggle\(INITIAL_DIAGRAM_INTENT_TOGGLE_STATE\);/u,
+  );
   assert.doesNotMatch(source, /includeDiagram:\s*inferDiagramIntent/u);
   assert.doesNotMatch(source, /includeDiagram,\s*\n\s*conversationState/u);
 });

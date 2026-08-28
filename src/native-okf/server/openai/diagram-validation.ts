@@ -4,6 +4,8 @@ import {
   DIAGRAM_EDGE_PROVENANCE,
   DIAGRAM_NODE_PROVENANCE,
   GENERATED_DIAGRAM_STAGES,
+  SYNTHESIS_DIAGRAM_STAGES,
+  SYNTHESIS_RELATIONSHIP_TYPES,
   type DiagramEdgeProvenance,
   type DiagramNodeProvenance,
   type DiagramStage,
@@ -71,6 +73,8 @@ const EDGE_KEYS = new Set([
 ]);
 const LEGACY_EDGE_KEYS = new Set(["source", "target", "label"]);
 const STAGES = new Set<string>(GENERATED_DIAGRAM_STAGES);
+const SYNTHESIS_STAGES = new Set<string>(SYNTHESIS_DIAGRAM_STAGES);
+const SYNTHESIS_RELATIONSHIPS = new Set<string>(SYNTHESIS_RELATIONSHIP_TYPES);
 const NODE_PROVENANCE = new Set<string>(DIAGRAM_NODE_PROVENANCE);
 const EDGE_PROVENANCE = new Set<string>(DIAGRAM_EDGE_PROVENANCE);
 
@@ -293,6 +297,13 @@ function validateNode(
     errors,
   );
   const stage = stageValue(value.stage, path + ".stage", errors);
+  if (
+    stage &&
+    context.options.mode === "synthesized" &&
+    !SYNTHESIS_STAGES.has(stage)
+  ) {
+    errors.push(path + ".stage is not part of the proposal stage ontology.");
+  }
   const order = value.order;
   if (
     !Number.isInteger(order) ||
@@ -516,6 +527,14 @@ function validateEdge(
     path,
     errors,
   );
+  if (
+    context.options.mode === "synthesized" &&
+    provenance === "synthesized" &&
+    label !== undefined &&
+    !SYNTHESIS_RELATIONSHIPS.has(label)
+  ) {
+    errors.push(path + ".label is not a supported synthesis relationship type.");
+  }
   const legacySupport = [
     ...(sourceNode?.supportConceptIds ?? []),
     ...(targetNode?.supportConceptIds ?? []),
@@ -674,6 +693,46 @@ function validateGraph(
     adjacency.get(edge.source)?.add(edge.target);
     adjacency.get(edge.target)?.add(edge.source);
     outgoing.get(edge.source)?.add(edge.target);
+  }
+  if (context.options.mode === "synthesized") {
+    const rank: ReadonlyMap<DiagramStage, number> = new Map(
+      SYNTHESIS_DIAGRAM_STAGES.map((stage, index) => [stage, index]),
+    );
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+    const hasAlternativePath = (source: string, target: string): boolean => {
+      const visited = new Set([source]);
+      const queue = [source];
+      for (let cursor = 0; cursor < queue.length; cursor += 1) {
+        const current = queue[cursor]!;
+        for (const next of outgoing.get(current) ?? []) {
+          if (current === source && next === target) continue;
+          if (next === target) return true;
+          if (!visited.has(next)) {
+            visited.add(next);
+            queue.push(next);
+          }
+        }
+      }
+      return false;
+    };
+    for (const edge of edges) {
+      if (edge.provenance !== "synthesized") continue;
+      const source = nodeById.get(edge.source);
+      const target = nodeById.get(edge.target);
+      const sourceRank = source ? rank.get(source.stage) : undefined;
+      const targetRank = target ? rank.get(target.stage) : undefined;
+      if (
+        sourceRank !== undefined &&
+        targetRank !== undefined &&
+        targetRank - sourceRank > 1 &&
+        hasAlternativePath(edge.source, edge.target)
+      ) {
+        errors.push(
+          "Synthesized relationship " + JSON.stringify(edge.label) +
+            " duplicates an existing intermediate path.",
+        );
+      }
+    }
   }
   for (const [nodeId, neighbors] of adjacency) {
     if (neighbors.size === 0) {

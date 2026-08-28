@@ -127,7 +127,7 @@ export const PHASE5_VALID_MOCK_DIAGRAM: GeneratedDiagram = {
       description:
         "Ground governance of exchanged data in the retrieved marketplace-interface principle.",
       category: "design-principle",
-      stage: "governance",
+      stage: "design-principle",
       order: 45,
       group: "identity",
       sourcePaths: ["design-knowledge/bemi-marketplace-interfaces-dp6"],

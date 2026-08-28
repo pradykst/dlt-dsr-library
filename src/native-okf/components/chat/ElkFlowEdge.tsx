@@ -14,6 +14,7 @@ export interface ElkFlowEdgeData {
   showLabel: boolean;
   highlighted: boolean;
   dimmed: boolean;
+  dashed: boolean;
 }
 
 function finitePoint(point: XYPosition): boolean {
@@ -88,6 +89,7 @@ export function ElkFlowEdge({
           strokeWidth: data.highlighted ? 2.25 : 1.6,
           strokeLinecap: "round",
           strokeLinejoin: "round",
+          strokeDasharray: data.dashed ? "7 5" : undefined,
           opacity,
         }}
       />
@@ -108,4 +110,3 @@ export function ElkFlowEdge({
     </>
   );
 }
-

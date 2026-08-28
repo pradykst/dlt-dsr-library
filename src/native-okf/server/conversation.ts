@@ -18,10 +18,12 @@ import {
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
   nativeOkfVisibleHistoryExceedsModelContext,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+  SYNTHESIS_DIAGRAM_STAGES,
 } from "../shared/chat-types.ts";
 import { normalizeSynthesisProblemDisplay } from "../shared/synthesis-problem-display.ts";
 import {
   inferDiagramIntent,
+  inferFocusedPaperMapFollowUpIntent,
   inferStoredPaperMapIntent,
 } from "../shared/diagram-intent.ts";
 import { getAllConcepts, getAllPapers } from "./repository.ts";
@@ -33,6 +35,7 @@ import {
 import { applyNativeOkfStructuredAnalysis } from "./structured-analysis.ts";
 import type { RetrievalResult } from "./retrieval-types.ts";
 import type { OkfConcept } from "./types.ts";
+import { isNativeOkfLiveDataRequest } from "./live-data-gate.ts";
 
 const COMPARISON_PATTERN =
   /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differences?|versus|vs\.?)\b/iu;
@@ -63,14 +66,24 @@ const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
 const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN =
   /\b(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
+const ACTIVE_DIAGRAM_EXPLICIT_EDIT_REQUEST_PATTERN =
+  /^\s*(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b|\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
 const ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN =
   /\b(?:nodes?|edges?|relationships?|connections?|requirements?|meta[\s-]+requirements?|principles?|features?|goals?|objectives?|artifacts?|mechanisms?|evaluations?|outcomes?|steps?|stages?|branches?|elements?|labels?)\b/iu;
 const ACTIVE_DIAGRAM_CONNECT_PATTERN =
   /\b(?:connect|link|attach)\b[^.!?]{0,160}\b(?:to|with|between|both|same)\b/iu;
+const ACTIVE_DIAGRAM_QA_ACTION_PATTERN =
+  /\b(?:explain|describe|interpret|why|what\s+(?:does|do|is|are)|role\s+of|walk\s+(?:me|us)\s+through|how\s+does|what\s+evidence\s+supports?)\b/iu;
+const ACTIVE_DIAGRAM_QA_REFERENT_PATTERN =
+  /\b(?:this|that|it|its|these|those|diagram|flow|proposal|what\s+you\s+(?:generated|created|proposed)|each\s+element|elements?|nodes?|arrows?|connections?|relationships?|requirements?|principles?|features?|artifacts?)\b/iu;
+const ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN =
+  /\b(?:show|display|open|render|draw|visuali[sz]e)\b/iu;
+const ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN =
+  /\b(?:this|that|it|current|existing|same|again|diagram|flow|graph|proposal)\b/iu;
 const SYNTHESIS_STANDALONE_MUTATION_PATTERN =
   /\b(?:make|add|remove|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
 const DESIGN_PROBLEM_GUIDANCE_PATTERN =
-  /\b(?:i|we)\s+(?:(?:want|need|would\s+like)\s+help\s+(?:to\s+)?(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?)|(?:am|are)\s+(?:building|designing|creating|developing|constructing)|(?:want|need|plan|intend|aim|am\s+trying|are\s+trying)\s+to\s+(?:build|design|create|develop|construct))\b|\b(?:can|could|would)\s+you\s+(?:guide|help)\s+(?:me|us)(?:\s+(?:in|with|to)\s+(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?))?\b|\bhow\s+should\s+(?:i|we)\s+(?:build|design|create|develop|construct)\b|\bguide\s+(?:me|us)\s+(?:in|with)\s+(?:building|designing|creating|developing|constructing)\b/iu;
+  /\b(?:i|we)\s+(?:(?:want|need|would\s+like)\s+help\s+(?:to\s+)?(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?)|(?:am|are)\s+(?:building|designing|creating|developing|constructing)|(?:want|need|plan|intend|aim|am\s+trying|are\s+trying)\s+to\s+(?:build|design|create|develop|construct))\b|\b(?:can|could|would)\s+you\s+(?:guide|help)\s+(?:me|us)(?:\s+(?:in|with|to)\s+(?:build(?:ing)?|design(?:ing)?|creat(?:e|ing)|develop(?:ing)?|construct(?:ing)?))?\b|\bhow\s+should\s+(?:i|we)\s+(?:build|design|create|develop|construct)\b|\b(?:please\s+)?(?:help|guide)\s+(?:me|us)\s+(?:to\s+)?(?:build|design|create|develop|construct)\b|\bguide\s+(?:me|us)\s+(?:in|with)\s+(?:building|designing|creating|developing|constructing)\b/iu;
 const CORPUS_QUERY_PATTERN =
   /\b(?:which|what)\s+(?:of\s+the\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bfind\s+examples?\b|\bfind\s+(?:examples?\s+(?:of|from)\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\b(?:all|every|each)\s+(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bacross\s+(?:the\s+)?(?:library|corpus|papers?|studies|articles?|works?|publications?)\b/iu;
 const STRUCTURED_QUERY_PATTERN =
@@ -133,6 +146,25 @@ export type NativeOkfQueryMode =
   | "COMPARATIVE_EVIDENCE_DIAGRAM"
   | "SYNTHESIZED_DESIGN_DIAGRAM";
 
+export type NativeOkfAuthoritativeTurnMode =
+  | "TEXT_QA"
+  | "ACTIVE_DIAGRAM_QA"
+  | "STORED_FULL_MAP"
+  | "STORED_FILTERED_MAP"
+  | "STORED_COMPARISON_MAP"
+  | "EVIDENCE_MAP"
+  | "DESIGN_SYNTHESIS"
+  | "DESIGN_REFINEMENT"
+  | "CLARIFICATION"
+  | "SCOPE_GUARDRAIL";
+
+export type NativeOkfDiagramAction =
+  | "NONE"
+  | "RENDER_EXISTING"
+  | "RENDER_UPDATED"
+  | "RENDER_STORED"
+  | "RENDER_NEW_SYNTHESIS";
+
 export interface NativeOkfConversationPaper {
   slug: string;
   conceptId: string;
@@ -180,14 +212,22 @@ export interface PreparedNativeOkfChatRequest {
 
 /** One authoritative subject/mode resolution shared by answer and diagram paths. */
 export interface ResolvedNativeOkfTurnPlan {
+  mode: NativeOkfAuthoritativeTurnMode;
+  diagramAction: NativeOkfDiagramAction;
   effectiveQuestion: string;
+  resolvedPaperSlug: string | null;
+  resolvedPaperSlugs: string[];
   focusedPaperSlugs: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
+  activeDesignProblem: string | null;
+  activeProposalDraft: SynthesisDraftState | null;
+  evidenceScope: "paper" | "comparison" | "proposal" | "corpus" | "retrieval";
   diagramPreference: NativeOkfDiagramPreference;
   includeDiagram: boolean;
   diagramMode: NativeOkfDiagramMode | null;
   queryMode: NativeOkfQueryMode;
   activeDraftRefinement: boolean;
+  refinementIntent: boolean;
   categoryStoredMapFollowUp: boolean;
   historyContextTruncated: boolean;
 }
@@ -312,6 +352,12 @@ function validateSynthesisDraftAgainstCatalog(
       (sourcePaths.length !== 1 ||
         supportConceptIds.length !== 1 ||
         sourcePaths[0] !== supportConceptIds[0])
+    ) {
+      return [];
+    }
+    if (
+      node.provenance === "synthesized" &&
+      !SYNTHESIS_DIAGRAM_STAGES.some((stage) => stage === node.stage)
     ) {
       return [];
     }
@@ -724,6 +770,13 @@ export function inferActiveSynthesisDiagramRefinement(
 ): boolean {
   if (!state.latestValidatedSynthesisDraft) return false;
   if (!ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN.test(question)) return false;
+  if (
+    ACTIVE_DIAGRAM_QA_ACTION_PATTERN.test(question) &&
+    ACTIVE_DIAGRAM_QA_REFERENT_PATTERN.test(question) &&
+    !ACTIVE_DIAGRAM_EXPLICIT_EDIT_REQUEST_PATTERN.test(question)
+  ) {
+    return false;
+  }
   return ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN.test(question) ||
     ACTIVE_DIAGRAM_CONNECT_PATTERN.test(question);
 }
@@ -1174,10 +1227,16 @@ export async function prepareNativeOkfChatRequest(
     effectiveQuestion,
     contextBase,
   );
-  let synthesisIntent = activeDraftRefinement || inferNativeOkfSynthesisIntent(
+  const activeDiagramQa = inferActiveDiagramQa(effectiveQuestion, contextBase);
+  const activeProposalRerender = inferActiveProposalRerender(
     effectiveQuestion,
     contextBase,
   );
+  let synthesisIntent = activeDraftRefinement || activeProposalRerender ||
+    !activeDiagramQa && inferNativeOkfSynthesisIntent(
+      effectiveQuestion,
+      contextBase,
+    );
   if (corpusQuery) synthesisIntent = false;
   const restrictedPaperSlugs = resolvedPaperRestriction(
     effectiveQuestion,
@@ -1188,9 +1247,10 @@ export async function prepareNativeOkfChatRequest(
   const retrievalPaperSlugs = restrictedPaperSlugs.length > 0
     ? restrictedPaperSlugs
     : focusedPaperSlugs;
-  const priorSynthesisDraft = synthesisIntent
+  const priorSynthesisDraft =
+    (synthesisIntent || activeDiagramQa) && contextBase.latestValidatedSynthesisDraft
     ? priorDraftForRequest(
-        contextBase.latestValidatedSynthesisDraft ?? null,
+        contextBase.latestValidatedSynthesisDraft,
         restrictedPaperSlugs,
         catalog,
       )
@@ -1203,17 +1263,20 @@ export async function prepareNativeOkfChatRequest(
     requestedKinds,
   );
   const automaticDiagramIntent =
-    inferDiagramIntent(effectiveQuestion) ||
+    !activeDiagramQa && inferDiagramIntent(effectiveQuestion) ||
     activeDraftRefinement ||
     categoryStoredMapFollowUp ||
     (synthesisIntent && contextBase.lastDiagramRequested);
-  const includeDiagram = diagramPreference === "requested" ||
-    (diagramPreference === "auto" && automaticDiagramIntent);
+  const includeDiagram = !activeDiagramQa &&
+    (diagramPreference === "requested" ||
+      (diagramPreference === "auto" && automaticDiagramIntent));
   const storedPaperDiagram =
     includeDiagram && focusedPaperSlugs.length === 1 &&
     (
       inferStoredPaperMapIntent(effectiveQuestion) ||
-      categoryStoredMapFollowUp
+      categoryStoredMapFollowUp ||
+      contextBase.lastIntent !== "synthesized-flow" &&
+        inferFocusedPaperMapFollowUpIntent(effectiveQuestion)
     );
   const comparativeDiagram =
     includeDiagram &&
@@ -1299,10 +1362,56 @@ export async function prepareNativeOkfChatRequest(
       contextBase.lastSynthesisProblem?.problemStatement ??
       effectiveQuestion.slice(0, 800)
     : null;
+  const authoritativeMode: NativeOkfAuthoritativeTurnMode = clarification
+    ? "CLARIFICATION"
+    : isNativeOkfLiveDataRequest(effectiveQuestion)
+      ? "SCOPE_GUARDRAIL"
+      : activeDiagramQa
+        ? "ACTIVE_DIAGRAM_QA"
+      : preferDeterministicPaperMap
+        ? requestedKinds.length > 0
+          ? "STORED_FILTERED_MAP"
+          : "STORED_FULL_MAP"
+        : preferDeterministicComparativeMap
+          ? "STORED_COMPARISON_MAP"
+          : activeDraftRefinement
+            ? "DESIGN_REFINEMENT"
+            : synthesisIntent
+              ? "DESIGN_SYNTHESIS"
+              : includeDiagram
+                ? "EVIDENCE_MAP"
+                : "TEXT_QA";
+  const diagramAction: NativeOkfDiagramAction =
+    authoritativeMode === "DESIGN_REFINEMENT" && includeDiagram
+      ? "RENDER_UPDATED"
+      : activeProposalRerender && includeDiagram
+        ? "RENDER_EXISTING"
+        : ["STORED_FULL_MAP", "STORED_FILTERED_MAP", "STORED_COMPARISON_MAP", "EVIDENCE_MAP"]
+            .includes(authoritativeMode) && includeDiagram
+          ? "RENDER_STORED"
+          : authoritativeMode === "DESIGN_SYNTHESIS" && includeDiagram
+            ? "RENDER_NEW_SYNTHESIS"
+            : "NONE";
+  const evidenceScope: ResolvedNativeOkfTurnPlan["evidenceScope"] =
+    focusedPaperSlugs.length === 1
+      ? "paper"
+      : focusedPaperSlugs.length > 1
+        ? "comparison"
+        : synthesisIntent || activeDiagramQa
+          ? "proposal"
+          : corpusQuery
+            ? "corpus"
+            : "retrieval";
   const synthesisRetrievalQuestion =
-    synthesisIntent && contextBase.lastSynthesisProblem
+    (synthesisIntent || activeDiagramQa) && contextBase.lastSynthesisProblem
       ? `${effectiveQuestion}\nActive design problem: ${contextBase.lastSynthesisProblem.problemStatement}`
       : effectiveQuestion;
+  const activeProposalSupportIds = activeDiagramQa && priorSynthesisDraft
+    ? [...new Set([
+        ...priorSynthesisDraft.nodes.flatMap((node) => node.supportConceptIds),
+        ...priorSynthesisDraft.edges.flatMap((edge) => edge.supportConceptIds),
+      ])]
+    : [];
   return {
     request,
     catalog,
@@ -1311,7 +1420,7 @@ export async function prepareNativeOkfChatRequest(
     retrievalQuestion: contextualRetrievalQuestion(
       synthesisRetrievalQuestion,
       retrievalPaperSlugs,
-      focusedConceptIds,
+      [...focusedConceptIds, ...activeProposalSupportIds],
       catalog,
     ),
     explicitPaperSlugs,
@@ -1340,14 +1449,25 @@ export async function prepareNativeOkfChatRequest(
     priorSynthesisDraft,
     clarification,
     turnPlan: {
+      mode: authoritativeMode,
+      diagramAction,
       effectiveQuestion,
+      resolvedPaperSlug: focusedPaperSlugs.length === 1
+        ? focusedPaperSlugs[0]!
+        : null,
+      resolvedPaperSlugs: [...focusedPaperSlugs],
       focusedPaperSlugs: [...focusedPaperSlugs],
       requestedConceptKinds: [...requestedKinds],
+      activeDesignProblem:
+        synthesisProblem ?? priorSynthesisDraft?.problemStatement ?? null,
+      activeProposalDraft: priorSynthesisDraft,
+      evidenceScope,
       diagramPreference,
       includeDiagram,
       diagramMode,
       queryMode,
       activeDraftRefinement,
+      refinementIntent: activeDraftRefinement,
       categoryStoredMapFollowUp,
       historyContextTruncated,
     },
@@ -1391,6 +1511,69 @@ function paperSlugsFromRetrieval(
   );
 }
 
+function hasActiveDiagramSubject(state: NativeOkfConversationState): boolean {
+  return Boolean(state.latestValidatedSynthesisDraft) ||
+    (state.lastIntent === "stored-diagram" && state.activePaperSlugs.length === 1) ||
+    (state.lastIntent === "comparative-diagram" && state.activePaperSlugs.length >= 2);
+}
+
+/** Textual questions about the currently displayed graph are not visual actions. */
+export function inferActiveDiagramQa(
+  question: string,
+  state: NativeOkfConversationState,
+): boolean {
+  if (!hasActiveDiagramSubject(state)) return false;
+  if (inferActiveSynthesisDiagramRefinement(question, state)) return false;
+  if (ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN.test(question) &&
+      ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN.test(question)) return false;
+  return ACTIVE_DIAGRAM_QA_ACTION_PATTERN.test(question) &&
+    ACTIVE_DIAGRAM_QA_REFERENT_PATTERN.test(question);
+}
+
+/** An affirmative request to display the already validated proposal again. */
+export function inferActiveProposalRerender(
+  question: string,
+  state: NativeOkfConversationState,
+): boolean {
+  return Boolean(state.latestValidatedSynthesisDraft) &&
+    ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN.test(question) &&
+    ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN.test(question) &&
+    inferDiagramIntent(question);
+}
+
+/**
+ * Retain one implicit paper focus only when the retrieved evidence itself is
+ * unambiguous. This prevents a single-paper answer from being followed by a
+ * multi-paper generic evidence map merely because secondary retrieval records
+ * came from other papers.
+ */
+function unambiguousPaperSlugFromRetrieval(
+  retrieval: RetrievalResult,
+  catalog: NativeOkfConversationCatalog,
+): string | null {
+  const conceptsById = new Map(
+    catalog.concepts.map((concept) => [concept.conceptId, concept]),
+  );
+  const explicitPaperRecords = new Set(
+    retrieval.finalConcepts.flatMap((concept) => {
+      const catalogConcept = conceptsById.get(concept.conceptId);
+      return catalogConcept?.type === "paper" && catalogConcept.paperSlug
+        ? [catalogConcept.paperSlug]
+        : [];
+    }),
+  );
+  if (explicitPaperRecords.size === 1) return [...explicitPaperRecords][0]!;
+  if (explicitPaperRecords.size > 1) return null;
+
+  const evidencePapers = new Set(
+    retrieval.finalConcepts.flatMap((concept) => {
+      const paperSlug = conceptsById.get(concept.conceptId)?.paperSlug;
+      return paperSlug ? [paperSlug] : [];
+    }),
+  );
+  return evidencePapers.size === 1 ? [...evidencePapers][0]! : null;
+}
+
 function relevantConceptIds(
   requestedKinds: readonly NativeOkfRequestedConceptKind[],
   retrieval: RetrievalResult,
@@ -1427,13 +1610,21 @@ export function completedConversationState(
     ? prepared.restrictedPaperSlugs
     : explicitTopic || authoritativeFocusedTurn
       ? prepared.focusedPaperSlugs
-    : uniqueBounded(
-        [
-          ...prepared.focusedPaperSlugs,
-          ...paperSlugsFromRetrieval(retrieval, prepared.catalog),
-        ],
-        MAX_NATIVE_OKF_ACTIVE_PAPERS,
-      );
+      : (() => {
+          const unambiguous = unambiguousPaperSlugFromRetrieval(
+            retrieval,
+            prepared.catalog,
+          );
+          return unambiguous
+            ? [unambiguous]
+            : uniqueBounded(
+                [
+                  ...prepared.focusedPaperSlugs,
+                  ...paperSlugsFromRetrieval(retrieval, prepared.catalog),
+                ],
+                MAX_NATIVE_OKF_ACTIVE_PAPERS,
+              );
+        })();
   const concepts = uniqueBounded(
     [
       ...relevantConceptIds(prepared.requestedConceptKinds, retrieval),

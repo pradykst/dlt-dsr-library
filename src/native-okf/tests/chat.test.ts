@@ -710,7 +710,7 @@ test("diagram requests suppress textual diagram syntax on both answer paths", as
       assert.match(instructions, /Graphviz, DOT/);
       assert.match(instructions, /pseudo-tables used as diagrams/);
       assert.match(instructions, /code-block flowcharts/);
-      assert.match(instructions, /grounded diagram option must be enabled/);
+      assert.match(instructions, /diagram option must be enabled/);
     }
   }
 });

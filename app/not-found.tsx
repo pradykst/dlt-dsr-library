@@ -14,7 +14,7 @@ export default function NotFound() {
           This public route is not available.
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">
-          The research library and grounded assistant remain available through the current public routes.
+          The research library and research assistant remain available through the current public routes.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link

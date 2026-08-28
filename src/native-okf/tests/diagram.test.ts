@@ -108,7 +108,7 @@ function validTwelveNodeDiagram(): GeneratedDiagram {
       node("feature-b", "Build feature B", "features", 41, "branch-b"),
       node("feature-c", "Build feature C", "features", 42, "branch-c"),
       node("artifact", "Integrate artifact", "artifact", 60, null, true),
-      node("governance", "Apply governance", "governance", 70, null, true),
+      node("governance", "Apply governance", "artifact", 70, null, true),
       node("evaluation", "Evaluate artifact", "evaluation", 80, null, true),
       node("outcome", "Assess outcome", "outcome", 90, null, true),
     ],

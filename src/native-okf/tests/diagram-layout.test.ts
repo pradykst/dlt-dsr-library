@@ -10,7 +10,6 @@ import {
   GENERATED_DIAGRAM_NODE_WIDTH,
   layoutGeneratedDiagram,
 } from "../components/chat/diagram-layout.ts";
-import { straightLinePath } from "../components/straight-edge.ts";
 
 function fixture(): GeneratedDiagram {
   const definitions = [
@@ -23,7 +22,7 @@ function fixture(): GeneratedDiagram {
     ["n7", "Signed records", "features", 1, false],
     ["n8", "Access policies", "features", 2, false],
     ["n9", "Artifact integration", "artifact", 0, true],
-    ["n10", "Stewardship model", "governance", 0, true],
+    ["n10", "Stewardship model", "artifact", 1, true],
     ["n11", "Evaluate traceability", "evaluation", 0, true],
     ["n12", "Trusted exchange", "outcome", 0, true],
   ] as const;
@@ -84,7 +83,7 @@ test("generated stage columns are deterministic and contain every validated node
   assert.equal(first.nodes.length, 12);
   assert.deepEqual(
     first.lanes.map((lane) => lane.stage),
-    ["problem", "requirements", "principles", "features", "artifact", "governance", "evaluation", "outcome"],
+    ["problem", "requirements", "principles", "features", "artifact", "evaluation", "outcome"],
   );
   assert.ok(first.nodes.every((node) =>
     Number.isFinite(node.position.x) &&
@@ -98,7 +97,7 @@ test("generated stage columns are deterministic and contain every validated node
   ));
 });
 
-test("semantic column nodes do not overlap and shorter columns are centred", async () => {
+test("ELK stage layout prevents overlap and preserves forward stage order", async () => {
   const layout = await layoutGeneratedDiagram(fixture());
   for (let left = 0; left < layout.nodes.length; left += 1) {
     for (let right = left + 1; right < layout.nodes.length; right += 1) {
@@ -106,27 +105,34 @@ test("semantic column nodes do not overlap and shorter columns are centred", asy
     }
   }
 
-  const requirementNodes = layout.nodes.filter((node) =>
-    node.node.stage === "requirements"
-  );
-  const problemNode = layout.nodes.find((node) => node.node.stage === "problem");
-  assert.ok(problemNode);
-  const requirementsCenter =
-    (Math.min(...requirementNodes.map((node) => node.position.y)) +
-      Math.max(...requirementNodes.map((node) => node.position.y + node.height))) / 2;
-  assert.equal(problemNode.position.y + problemNode.height / 2, requirementsCenter);
+  for (let index = 1; index < layout.lanes.length; index += 1) {
+    assert.ok(
+      layout.lanes[index]!.bounds.x > layout.lanes[index - 1]!.bounds.x,
+      `${layout.lanes[index]!.stage} must follow ${layout.lanes[index - 1]!.stage}`,
+    );
+  }
 });
 
-test("generated edges use direct straight segments with valid endpoints", async () => {
+test("generated edges use routed orthogonal polylines with valid endpoints", async () => {
   const layout = await layoutGeneratedDiagram(fixture());
   const nodeIds = new Set(layout.nodes.map((node) => node.id));
 
   for (const edge of layout.edges) {
     assert.ok(nodeIds.has(edge.source));
     assert.ok(nodeIds.has(edge.target));
-    assert.equal(edge.points.length, 2);
-    const path = straightLinePath(edge.points);
-    assert.match(path, /^M [-\d.]+ [-\d.]+ L [-\d.]+ [-\d.]+$/u);
+    assert.ok(edge.points.length >= 2);
+    for (let index = 1; index < edge.points.length; index += 1) {
+      const previous = edge.points[index - 1]!;
+      const current = edge.points[index]!;
+      assert.ok(
+        Math.abs(previous.x - current.x) < 0.01 ||
+          Math.abs(previous.y - current.y) < 0.01,
+      );
+    }
+    const path = edge.points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+    assert.match(path, /^M [-\d.]+ [-\d.]+(?: L [-\d.]+ [-\d.]+)+$/u);
     assert.doesNotMatch(path, /[CQ]/u);
   }
 });
@@ -160,7 +166,7 @@ test("orientation changes the dominant flow direction and dynamic headings", asy
   assert.notDeepEqual(horizontal.bounds, vertical.bounds);
   assert.deepEqual(
     horizontal.lanes.map((lane) => lane.label),
-    ["Problem", "Requirements", "Principles", "Features", "Artifact", "Governance", "Evaluation", "Outcome"],
+    ["Problem", "Requirements", "Principles", "Features", "Artifact", "Evaluation", "Outcome"],
   );
 });
 
@@ -178,6 +184,41 @@ test("relationship-label visibility is presentation-only", async () => {
     shown.edges.map((edge) => edge.points),
     hidden.edges.map((edge) => edge.points),
   );
+});
+
+test("adding one refinement node preserves the relative order of existing nodes", async () => {
+  const original = fixture();
+  const refined: GeneratedDiagram = {
+    ...original,
+    nodes: [
+      ...original.nodes,
+      {
+        ...original.nodes.find((node) => node.id === "n2")!,
+        id: "n2-added",
+        label: "Additional accountability requirement",
+        description: "An added, independently supported requirement.",
+        order: 2,
+      },
+    ],
+    edges: [
+      ...original.edges,
+      { source: "n1", target: "n2-added", label: "requires", provenance: "synthesized", supportConceptIds: [] },
+      { source: "n2-added", target: "n5", label: "addresses", provenance: "synthesized", supportConceptIds: [] },
+    ],
+  };
+  const before = await layoutGeneratedDiagram(original);
+  const after = await layoutGeneratedDiagram(refined);
+  for (const lane of before.lanes) {
+    const beforeIds = before.nodes
+      .filter((node) => node.node.stage === lane.stage)
+      .sort((left, right) => left.position.y - right.position.y)
+      .map((node) => node.id);
+    const afterIds = after.nodes
+      .filter((node) => node.node.stage === lane.stage && beforeIds.includes(node.id))
+      .sort((left, right) => left.position.y - right.position.y)
+      .map((node) => node.id);
+    assert.deepEqual(afterIds, beforeIds, lane.stage);
+  }
 });
 
 test("layout-engine failure activates the deterministic column fallback", async () => {

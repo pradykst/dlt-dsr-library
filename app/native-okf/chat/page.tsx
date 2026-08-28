@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Chat",
   description:
-    "Ask source-grounded questions across the DSR Knowledge Library.",
+    "Ask source-linked questions across the DSR Knowledge Library.",
   alternates: { canonical: "/chat" },
 };
 
@@ -22,7 +22,7 @@ export default async function NativeOkfChatPage() {
     <NativeOkfShell
       title="Chat with the design knowledge library"
       eyebrow=""
-      description="Ask about papers and represented design knowledge, compare studies, or build a source-grounded decision-support flow."
+      description="Ask about papers and represented design knowledge, compare studies, or build an evidence-linked decision-support flow."
       breadcrumbs={[{ label: "Chat" }]}
       actions={
         <Link

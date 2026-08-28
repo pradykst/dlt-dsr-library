@@ -20,6 +20,27 @@ export function nativeOkfVisibleHistoryExceedsModelContext(
 export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES = 48;
 export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES = 96;
 
+/** Semantic proposal relationships. These are meanings, not layout hints. */
+export const SYNTHESIS_RELATIONSHIP_TYPES = [
+  "motivates",
+  "requires",
+  "informs",
+  "addresses",
+  "addressed by",
+  "implements",
+  "implemented by",
+  "instantiates",
+  "instantiated in",
+  "evaluates",
+  "evaluated by",
+  "supports",
+  "enables",
+  "validates",
+] as const;
+
+export type SynthesisRelationshipType =
+  (typeof SYNTHESIS_RELATIONSHIP_TYPES)[number];
+
 export interface NativeOkfChatRequest {
   question: string;
   history?: NativeOkfChatHistoryMessage[];
@@ -142,13 +163,33 @@ export const GENERATED_DIAGRAM_STAGES = [
   "design-feature",
   "features",
   "artifact",
-  "governance",
   "evaluation",
   "outcome",
   "other",
 ] as const;
 
 export type DiagramStage = (typeof GENERATED_DIAGRAM_STAGES)[number];
+
+/**
+ * Closed ontology for problem-specific proposals. The broader renderer list
+ * remains available for exact stored producer types, but models and refinement
+ * patches may only choose an established DSR stage from this set.
+ */
+export const SYNTHESIS_DIAGRAM_STAGES = [
+  "problem",
+  "design-goal",
+  "design-objective",
+  "meta-requirement",
+  "design-requirement",
+  "design-principle",
+  "design-feature",
+  "artifact",
+  "evaluation",
+  "outcome",
+] as const satisfies readonly DiagramStage[];
+
+export type SynthesisDiagramStage =
+  (typeof SYNTHESIS_DIAGRAM_STAGES)[number];
 
 export const DIAGRAM_NODE_PROVENANCE = [
   "user-provided",

@@ -17,7 +17,7 @@ const CAPABILITIES = [
       "Retrieve linked concepts across the corpus and compare represented mechanisms, requirements, and design approaches.",
   },
   {
-    title: "Generate grounded decision-support flows",
+    title: "Generate evidence-linked decision-support flows",
     description:
       "Combine retrieved knowledge into proposed artifact directions while keeping stored concepts visibly distinct from synthesis.",
   },
@@ -45,7 +45,7 @@ export function ReleaseHomepage({ viewModel }: { viewModel: ReleaseHomeViewModel
               The DSR Knowledge Library represents design knowledge in the form of
               requirements, principles, features, and their relationships. Researchers can
               inspect individual papers, compare reusable knowledge across studies, and
-              interact with a source-grounded chatbot.
+              interact with a source-linked chatbot.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link

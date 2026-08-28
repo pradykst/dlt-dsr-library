@@ -82,7 +82,7 @@ export function validateDistinctGuidedPapers(
 export function groundedSolutionStarterQuestion(problem: string): string {
   const trimmed = problem.trim();
   const ending = /[.!?]$/u.test(trimmed) ? "" : ".";
-  return `Generate a grounded decision-support flow for ${trimmed}${ending}`;
+  return `Generate a decision-support flow for ${trimmed}${ending}`;
 }
 
 export function isGuidedQuestionWithinBounds(question: string): boolean {

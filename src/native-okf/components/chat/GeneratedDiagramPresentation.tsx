@@ -31,9 +31,9 @@ import {
 } from "../../shared/presentation.ts";
 import { SemanticColumnHeadings } from "../SemanticColumnHeadings.tsx";
 import {
-  StraightFlowEdge,
-  type StraightFlowEdgeData,
-} from "../StraightFlowEdge.tsx";
+  ElkFlowEdge,
+  type ElkFlowEdgeData,
+} from "./ElkFlowEdge.tsx";
 import {
   GeneratedDiagramNodeRenderer,
   type GeneratedDiagramNodeData,
@@ -55,7 +55,7 @@ const NODE_TYPES = {
 } satisfies NodeTypes;
 
 const EDGE_TYPES = {
-  straight: StraightFlowEdge,
+  routed: ElkFlowEdge,
 } satisfies EdgeTypes;
 
 const MANUAL_MAX_ZOOM = 1.7;
@@ -375,7 +375,7 @@ function GeneratedDiagramCanvas({
   const [flowReady, setFlowReady] = useState(false);
   const { setViewport, zoomIn, zoomOut } = useReactFlow<
     GeneratedDiagramNodeData,
-    StraightFlowEdgeData
+    ElkFlowEdgeData
   >();
   const connectedIds = useMemo(
     () => relatedNodeIds(diagram, selectedId),
@@ -409,7 +409,7 @@ function GeneratedDiagramCanvas({
     [connectedIds, layout.nodes, orientation, selectedId],
   );
 
-  const edges = useMemo<Edge<StraightFlowEdgeData>[]>(
+  const edges = useMemo<Edge<ElkFlowEdgeData>[]>(
     () =>
       layout.edges.map((layoutEdge) => {
         const highlighted = Boolean(
@@ -421,7 +421,7 @@ function GeneratedDiagramCanvas({
           id: layoutEdge.id,
           source: layoutEdge.source,
           target: layoutEdge.target,
-          type: "straight",
+          type: "routed",
           data: {
             points: layoutEdge.points,
             label: layoutEdge.label,
@@ -641,7 +641,7 @@ export function GeneratedDiagramPresentation({
       .catch(() => {
         if (!active) return;
         setLayoutError(
-          "The diagram layout could not be rendered. The grounded answer and sources remain available.",
+          "The diagram layout could not be rendered. The answer and sources remain available.",
         );
       })
       .finally(() => {
@@ -703,14 +703,14 @@ export function GeneratedDiagramPresentation({
   return (
     <section
       ref={sectionRef}
-      aria-label="Grounded generated diagram"
+      aria-label="Generated decision-support diagram"
       className="overflow-hidden rounded-2xl border border-line bg-white shadow-research fullscreen:rounded-none fullscreen:border-0"
     >
       <div className="border-b border-line bg-paper px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
-              Grounded decision-support flow
+              Decision-support flow
             </p>
             <h3 className="mt-1 font-serif text-xl font-semibold text-ink">
               {diagram.title}
@@ -769,7 +769,7 @@ export function GeneratedDiagramPresentation({
         >
           {layoutError ??
             (layoutPending
-              ? "Arranging a readable grounded diagram..."
+              ? "Arranging a readable diagram..."
               : "The diagram could not be arranged.")}
         </div>
       )}

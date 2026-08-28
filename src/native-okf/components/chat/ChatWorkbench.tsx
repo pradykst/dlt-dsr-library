@@ -279,7 +279,8 @@ export function ChatWorkbench({
 
     setEntries((current) => [...current, userEntry]);
     setStartersOpen(false);
-    updateComposerQuestion("");
+    setQuestion("");
+    setDiagramIntentToggle(INITIAL_DIAGRAM_INTENT_TOGGLE_STATE);
     setError(null);
     setPending(true);
 
@@ -642,7 +643,7 @@ export function ChatWorkbench({
                   disabled={pending}
                   className="h-4 w-4 rounded border-slate-300 text-blue focus:ring-blue"
                 />
-                Include grounded diagram
+                Include diagram
               </label>
 
               {diagramIntentToggle.enabled && diagramIntentToggle.autoEnabled ? (

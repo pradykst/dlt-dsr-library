@@ -17,7 +17,7 @@ test("stored source fallback uses retrieved concepts plus exact canonical neighb
   );
   const diagram = await buildGroundedStoredSourceMap(retrieval);
   assert.ok(diagram);
-  assert.equal(diagram.title, "Grounded source map");
+  assert.equal(diagram.title, "Stored source map");
   assert.ok(diagram.nodes.length >= 2);
   assert.ok(diagram.edges.length >= 1);
   assert.ok(diagram.nodes.every((node) => node.synthesis === false));
@@ -114,7 +114,7 @@ test("chat returns the grounded source map after synthesized diagram failure", a
   );
 
   assert.equal(responseCalls, 0);
-  assert.equal(result.diagram?.title, "Grounded source map");
+  assert.equal(result.diagram?.title, "Stored source map");
   assert.ok(result.diagram?.nodes.every((node) => !node.synthesis));
   assert.equal(result.diagramMode, "synthesized");
   assert.equal(result.diagramStatus, "evidence-fallback");

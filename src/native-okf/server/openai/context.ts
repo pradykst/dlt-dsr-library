@@ -3,6 +3,7 @@ import "server-only";
 import type {
   NativeOkfChatHistoryMessage,
   NativeOkfSourceCard,
+  SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import type {
   CorpusPaperOverview,
@@ -145,6 +146,7 @@ export function buildNativeOkfGroundedContext(
   retrieval: RetrievalResult,
   question: string,
   requiredConceptIds: readonly string[] = [],
+  activeProposalDraft: SynthesisDraftState | null = null,
 ): NativeOkfGroundedContext {
   const maximumCharacters = retrieval.debug.limits.maxContextCharacters;
   const requiredIds = new Set(requiredConceptIds);
@@ -169,6 +171,7 @@ export function buildNativeOkfGroundedContext(
     markdownLimit,
     includeDetails,
     includeOverview,
+    activeProposalDraft,
   );
 
   let rendered = render();
@@ -334,6 +337,7 @@ function renderGroundedPrompt(
   markdownLimit: number,
   includeDetails: boolean,
   includeOverview: boolean,
+  activeProposalDraft: SynthesisDraftState | null,
 ): { sources: NativeOkfGroundedSource[]; prompt: string } {
   const sources = concepts.map((concept, index) => {
     const sourceId = `S${index + 1}`;
@@ -368,7 +372,39 @@ function renderGroundedPrompt(
   const overviewBlock = includeOverview
     ? `<OKF_CORPUS_OVERVIEW>\n${overview}\n</OKF_CORPUS_OVERVIEW>\n\n`
     : "";
-  const prompt = `${overviewBlock}${structuredBlock}${sourceText}\n\n<USER_QUESTION>\n${escapeXmlText(question)}\n</USER_QUESTION>`;
+  const activeProposalBlock = activeProposalDraft
+    ? `<ACTIVE_VALIDATED_PROPOSAL>\n${escapeXmlText(JSON.stringify({
+        notice:
+          "This validated proposal is conversation design context, not scholarly evidence. Explain only its existing nodes and edges; do not redesign it.",
+        problemStatement: activeProposalDraft.problemStatement,
+        domain: activeProposalDraft.domain,
+        objective: activeProposalDraft.objective,
+        constraints: activeProposalDraft.constraints,
+        nodes: activeProposalDraft.nodes.map((node) => ({
+          id: node.id,
+          label: node.label,
+          description: node.description,
+          stage: node.stage,
+          provenance: node.provenance,
+          supportSourceIds: node.supportConceptIds.flatMap((conceptId) => {
+            const sourceId = sourceIdByConceptId.get(conceptId);
+            return sourceId ? [sourceId] : [];
+          }),
+          synthesisRationale: node.synthesisRationale,
+        })),
+        edges: activeProposalDraft.edges.map((edge) => ({
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          provenance: edge.provenance,
+          supportSourceIds: edge.supportConceptIds.flatMap((conceptId) => {
+            const sourceId = sourceIdByConceptId.get(conceptId);
+            return sourceId ? [sourceId] : [];
+          }),
+        })),
+      }))}\n</ACTIVE_VALIDATED_PROPOSAL>\n\n`
+    : "";
+  const prompt = `${overviewBlock}${structuredBlock}${sourceText}\n\n${activeProposalBlock}<USER_QUESTION>\n${escapeXmlText(question)}\n</USER_QUESTION>`;
   return {
     sources,
     prompt,

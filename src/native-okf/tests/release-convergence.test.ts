@@ -64,6 +64,11 @@ function validPlan(): SynthesisPlan {
   return {
     title: "Grounded cross-context proposal",
     problemSummary: "Model-written problem text that the server must not trust.",
+    supportingStoredConceptIds: [
+      "fixture/r1", "fixture/r2", "fixture/p1", "fixture/p2",
+      "fixture/f1", "fixture/f2", "fixture/e1",
+    ],
+    coverageRationale: "Uses all stored concepts selected for the proposal fixture.",
     requirements: [
       {
         key: "requirement-one",
@@ -122,14 +127,14 @@ function validPlan(): SynthesisPlan {
     }],
     outcome: [],
     relationships: [
-      { sourceKey: "problem", targetKey: "requirement-one", label: "requires", supportConceptIds: ["fixture/r1"] },
-      { sourceKey: "problem", targetKey: "requirement-two", label: "requires", supportConceptIds: ["fixture/r2"] },
-      { sourceKey: "requirement-one", targetKey: "principle-one", label: "addressed by", supportConceptIds: ["fixture/r1", "fixture/p1"] },
-      { sourceKey: "requirement-two", targetKey: "principle-two", label: "addressed by", supportConceptIds: ["fixture/r2", "fixture/p2"] },
-      { sourceKey: "principle-one", targetKey: "feature-one", label: "implemented by", supportConceptIds: ["fixture/p1", "fixture/f1"] },
-      { sourceKey: "principle-two", targetKey: "feature-two", label: "implemented by", supportConceptIds: ["fixture/p2", "fixture/f2"] },
-      { sourceKey: "feature-one", targetKey: "evaluation-one", label: "evaluated by", supportConceptIds: ["fixture/f1", "fixture/e1"] },
-      { sourceKey: "feature-two", targetKey: "evaluation-one", label: "evaluated by", supportConceptIds: ["fixture/f2", "fixture/e1"] },
+      { id: "e1", sourceKey: "problem", targetKey: "requirement-one", relationshipType: "requires", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r1"] },
+      { id: "e2", sourceKey: "problem", targetKey: "requirement-two", relationshipType: "requires", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r2"] },
+      { id: "e3", sourceKey: "requirement-one", targetKey: "principle-one", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: ["fixture/r1", "fixture/p1"] },
+      { id: "e4", sourceKey: "requirement-two", targetKey: "principle-two", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: ["fixture/r2", "fixture/p2"] },
+      { id: "e5", sourceKey: "principle-one", targetKey: "feature-one", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: ["fixture/p1", "fixture/f1"] },
+      { id: "e6", sourceKey: "principle-two", targetKey: "feature-two", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: ["fixture/p2", "fixture/f2"] },
+      { id: "e7", sourceKey: "feature-one", targetKey: "evaluation-one", relationshipType: "evaluated by", rationale: "The evaluation tests the feature.", supportConceptIds: ["fixture/f1", "fixture/e1"] },
+      { id: "e8", sourceKey: "feature-two", targetKey: "evaluation-one", relationshipType: "evaluated by", rationale: "The evaluation tests the feature.", supportConceptIds: ["fixture/f2", "fixture/e1"] },
     ],
   };
 }
@@ -181,6 +186,8 @@ function planForGrounding(value: NativeOkfDiagramGrounding): SynthesisPlan {
   return {
     title: "Validated problem-specific synthesis",
     problemSummary: "A model summary that is replaced by validated server input.",
+    supportingStoredConceptIds: [...new Set([support(0)[0]!, support(1)[0]!])],
+    coverageRationale: "Uses both allowlisted fixture concepts across the proposal.",
     requirements: [
       { key: "r-one", label: "Bound the first requirement", description: "A grounded synthesized requirement.", supportConceptIds: support(0), reuseStoredConceptId: null },
       { key: "r-two", label: "Bound the second requirement", description: "A second grounded synthesized requirement.", supportConceptIds: support(1), reuseStoredConceptId: null },
@@ -197,12 +204,12 @@ function planForGrounding(value: NativeOkfDiagramGrounding): SynthesisPlan {
     evaluation: [],
     outcome: [],
     relationships: [
-      { sourceKey: "problem", targetKey: "r-one", label: "requires", supportConceptIds: support(0) },
-      { sourceKey: "problem", targetKey: "r-two", label: "requires", supportConceptIds: support(1) },
-      { sourceKey: "r-one", targetKey: "p-one", label: "addressed by", supportConceptIds: support(0) },
-      { sourceKey: "r-two", targetKey: "p-two", label: "addressed by", supportConceptIds: support(1) },
-      { sourceKey: "p-one", targetKey: "f-one", label: "implemented by", supportConceptIds: support(0) },
-      { sourceKey: "p-two", targetKey: "f-two", label: "implemented by", supportConceptIds: support(1) },
+      { id: "e1", sourceKey: "problem", targetKey: "r-one", relationshipType: "requires", rationale: "The problem requires this response.", supportConceptIds: support(0) },
+      { id: "e2", sourceKey: "problem", targetKey: "r-two", relationshipType: "requires", rationale: "The problem requires this response.", supportConceptIds: support(1) },
+      { id: "e3", sourceKey: "r-one", targetKey: "p-one", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: support(0) },
+      { id: "e4", sourceKey: "r-two", targetKey: "p-two", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: support(1) },
+      { id: "e5", sourceKey: "p-one", targetKey: "f-one", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: support(0) },
+      { id: "e6", sourceKey: "p-two", targetKey: "f-two", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: support(1) },
     ],
   };
 }
@@ -224,6 +231,10 @@ test("SynthesisPlan schema exposes content only and excludes renderer-owned fiel
     assert.equal(schema.includes(`\"${forbidden}\"`), false, forbidden);
   }
   assert.match(schema, /supportConceptIds/);
+  assert.match(schema, /supportingStoredConceptIds/);
+  assert.match(schema, /coverageRationale/);
+  assert.match(schema, /relationshipType/);
+  assert.match(schema, /rationale/);
   assert.match(schema, /reuseStoredConceptId/);
 });
 
@@ -287,13 +298,18 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
     },
     {
       name: "cycle or backward jump",
-      mutate: (plan) => { plan.relationships.push({ sourceKey: "feature-one", targetKey: "requirement-one", label: "loops to", supportConceptIds: ["fixture/f1"] }); },
+      mutate: (plan) => { plan.relationships.push({ id: "e9", sourceKey: "feature-one", targetKey: "requirement-one", relationshipType: "informs", rationale: "Invalid backward fixture edge.", supportConceptIds: ["fixture/f1"] }); },
       code: /backward-stage-jump|cycle/,
     },
     {
       name: "duplicate semantic node",
       mutate: (plan) => { plan.features[1]!.label = plan.features[0]!.label; },
       code: /duplicate-semantic-node/,
+    },
+    {
+      name: "exact stored title without explicit reuse",
+      mutate: (plan) => { plan.requirements[1]!.label = "Canonical requirement two"; },
+      code: /exact-stored-label-requires-reuse/,
     },
   ];
   for (const item of cases) {
@@ -334,7 +350,7 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
   });
 });
 
-test("synthesis summary is deterministic, count-derived, provenance-aware, and concise", () => {
+test("synthesis summary is deterministic, proposal-oriented, and concise", () => {
   const converted = convertNativeOkfSynthesisPlan(
     validPlan(),
     grounding(),
@@ -344,9 +360,9 @@ test("synthesis summary is deterministic, count-derived, provenance-aware, and c
   const first = deterministicNativeOkfSynthesisSummary(validPlan(), converted.diagram);
   const second = deterministicNativeOkfSynthesisSummary(validPlan(), converted.diagram);
   assert.equal(first, second);
-  assert.match(first, /2 requirements, 2 principles, and 2 features/);
-  assert.match(first, /exact stored knowledge/);
-  assert.match(first, /synthesized adaptations/);
+  assert.match(first, /translates the proposed design/);
+  assert.match(first, /Stored concepts are reused where applicable/);
+  assert.doesNotMatch(first, /\b\d+ requirements|\b\d+ principles|\b\d+ features/);
   assert.ok(first.trim().split(/\s+/u).length < 100);
   assert.equal(first.includes("Selective continuity proof"), false);
 });
@@ -355,7 +371,7 @@ test("plan generation uses the content-only schema, makes no answer call, and re
   const calls: Array<Record<string, unknown>> = [];
   const marker = "RAW_INVALID_PLAN_MUST_NOT_BE_REPLAYED";
   const result = await generateNativeOkfSynthesisPlan({
-    client: queuedClient([marker, JSON.stringify(validPlan())], calls),
+    client: queuedClient([marker, JSON.stringify(validPlan()), JSON.stringify(validPlan())], calls),
     environment: ENVIRONMENT,
     problemStatement: "Validated fragmented identity problem.",
     refinementRequest: "Add a privacy-preserving evaluation.",
@@ -365,14 +381,18 @@ test("plan generation uses the content-only schema, makes no answer call, and re
     grounding: grounding(),
     priorDraft: null,
   });
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
   assert.ok(result.diagram);
   assert.equal(result.diagram?.nodes[0]?.label, "Validated fragmented identity problem");
   assert.equal((calls[0]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(JSON.stringify(calls[0]).includes("native_okf_generated_diagram"), false);
   assert.equal(JSON.stringify(calls[1]).includes(marker), false);
   assert.match(String(calls[1]?.input), /validationErrors/);
-  assert.equal(result.warnings.length, 1);
+  assert.match(String(calls[2]?.instructions), /Review the supplied DesignProposalPlan/);
+  assert.equal((calls[2]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
+  assert.equal(result.warnings.length, 2);
+  assert.match(result.warnings.join(" "), /bounded structural repair/);
+  assert.match(result.warnings.join(" "), /bounded evidence-constrained quality revision/);
 
   const failedCalls: Array<Record<string, unknown>> = [];
   const failed = await generateNativeOkfSynthesisPlan({
@@ -389,6 +409,36 @@ test("plan generation uses the content-only schema, makes no answer call, and re
   assert.equal(failedCalls.length, 2);
   assert.equal(failed.diagram, undefined);
   assert.equal(failed.diagnosticCode, "synthesis-plan-repair-failed");
+});
+
+test("an invalid optional quality revision cannot discard a convertible validated plan", async () => {
+  const invalidReview = clonePlan();
+  invalidReview.requirements[1]!.label = "Canonical requirement one response";
+  const calls: Array<Record<string, unknown>> = [];
+  const result = await generateNativeOkfSynthesisPlan({
+    client: queuedClient(
+      [JSON.stringify(validPlan()), JSON.stringify(invalidReview)],
+      calls,
+    ),
+    environment: ENVIRONMENT,
+    problemStatement: "Validated fragmented identity problem.",
+    refinementRequest: "Create the proposal.",
+    domain: null,
+    objective: null,
+    constraints: [],
+    grounding: grounding(),
+    priorDraft: null,
+  });
+  assert.equal(calls.length, 2);
+  assert.ok(result.diagram);
+  assert.equal(
+    result.diagram.nodes.some((node) =>
+      node.label === "Canonical requirement one response" &&
+      node.provenance === "synthesized"
+    ),
+    false,
+  );
+  assert.match(result.warnings.join(" "), /original validated plan was retained/);
 });
 
 test("repair input remains bounded to problem, constraints, allowlist descriptions, and error codes", () => {
@@ -474,7 +524,7 @@ test("successful synthesis skips the normal answer model and returns used suppor
   assert.equal(result.presentationMode, "diagram-primary");
   assert.equal(result.diagramMode, "synthesized");
   assert.equal(result.diagramStatus, "success");
-  assert.match(result.diagram?.title ?? "", /^Grounded proposal: Fragmented product identity/iu);
+  assert.match(result.diagram?.title ?? "", /^Design proposal: Fragmented product identity/iu);
   const problemNode = result.diagram?.nodes.find((node) => node.id === "user-problem");
   assert.equal(
     problemNode?.label,
@@ -484,7 +534,7 @@ test("successful synthesis skips the normal answer model and returns used suppor
     problemNode?.description,
     "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
   );
-  assert.match(result.answerMarkdown, /^This grounded proposal addresses fragmented product identity/iu);
+  assert.match(result.answerMarkdown, /^This design proposal addresses fragmented product identity/iu);
   assert.doesNotMatch(result.answerMarkdown, /addresses Generate|\.\./iu);
   assert.ok(result.synthesisDraft);
   assert.ok(result.conversationState?.lastSynthesisProblem);
@@ -518,7 +568,7 @@ test("failed synthesis preserves intent and problem without creating a validated
   assert.ok(result.conversationState?.lastSynthesisProblem?.problemStatement.includes("fragmented product identity"));
   assert.equal(result.conversationState?.latestValidatedSynthesisDraft ?? null, null);
   assert.equal(result.conversationState?.synthesisDraft, null);
-  if (result.diagram) assert.equal(result.diagram.title, "Grounded source map");
+  if (result.diagram) assert.equal(result.diagram.title, "Stored source map");
 
   const refinement = await prepareNativeOkfChatRequest({
     question: "Make the flow privacy preserving and add an evaluation stage.",
@@ -598,7 +648,7 @@ test("diagram-primary UI orders summary, diagram, limitation, and collapsed acce
   const sources = component.indexOf("<SourceCollection");
   assert.ok(summary >= 0 && diagram > summary && limitation > diagram && sources > limitation);
   assert.match(source, /<details/);
-  assert.match(source, /<summary[^>]*>[\s\S]*View \{sources\.length\} grounding source/);
+  assert.match(source, /<summary[^>]*>[\s\S]*View \{sources\.length\} source/);
   assert.match(source, /<SourceCollection[\s\S]*collapsed[\s\S]*\/>/);
 });
 

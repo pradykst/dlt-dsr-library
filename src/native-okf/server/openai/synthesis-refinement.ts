@@ -3,14 +3,16 @@ import "server-only";
 import type { Response } from "openai/resources/responses/responses";
 
 import {
-  GENERATED_DIAGRAM_STAGES,
   MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
   MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+  SYNTHESIS_DIAGRAM_STAGES,
+  SYNTHESIS_RELATIONSHIP_TYPES,
   type DiagramStage,
   type GeneratedDiagram,
   type GeneratedDiagramEdge,
   type GeneratedDiagramNode,
   type SynthesisDraftState,
+  type SynthesisRelationshipType,
 } from "../../shared/chat-types.ts";
 import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import type { NativeOpenAiClient } from "./client.ts";
@@ -60,7 +62,8 @@ export interface SynthesisRefinementNodeUpdate {
 export interface SynthesisRefinementEdge {
   source: string;
   target: string;
-  label: string;
+  label: SynthesisRelationshipType;
+  rationale: string;
   supportConceptIds: string[];
 }
 
@@ -116,7 +119,7 @@ const ADD_NODE_SCHEMA = {
       minLength: 1,
       maxLength: MAX_CATEGORY_CHARACTERS,
     },
-    stage: { type: "string", enum: GENERATED_DIAGRAM_STAGES },
+    stage: { type: "string", enum: SYNTHESIS_DIAGRAM_STAGES },
     supportConceptIds: SUPPORT_SCHEMA,
     reuseStoredConceptId: {
       anyOf: [
@@ -157,7 +160,7 @@ const UPDATE_NODE_SCHEMA = {
       minLength: 1,
       maxLength: MAX_CATEGORY_CHARACTERS,
     },
-    stage: { type: "string", enum: GENERATED_DIAGRAM_STAGES },
+    stage: { type: "string", enum: SYNTHESIS_DIAGRAM_STAGES },
     supportConceptIds: SUPPORT_SCHEMA,
     synthesisRationale: {
       type: "string",
@@ -170,14 +173,15 @@ const UPDATE_NODE_SCHEMA = {
 const EDGE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["source", "target", "label", "supportConceptIds"],
+  required: ["source", "target", "label", "rationale", "supportConceptIds"],
   properties: {
     source: { type: "string", minLength: 1, maxLength: 64 },
     target: { type: "string", minLength: 1, maxLength: 64 },
-    label: {
+    label: { enum: SYNTHESIS_RELATIONSHIP_TYPES },
+    rationale: {
       type: "string",
       minLength: 1,
-      maxLength: MAX_EDGE_LABEL_CHARACTERS,
+      maxLength: MAX_RATIONALE_CHARACTERS,
     },
     supportConceptIds: SUPPORT_SCHEMA,
   },
@@ -250,7 +254,7 @@ export const NATIVE_OKF_SYNTHESIS_REFINEMENT_INSTRUCTIONS = `Return only a graph
 
 By default preserve every existing node and edge. Add only requested information. Use updateNodes only when the user explicitly asks to change or replace a node. Use removeNodeIds or removeEdges only when the user explicitly asks to remove, exclude, delete, or replace something. An added node ID is "refine-" followed by its key; use that ID in added edges.
 
-Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist. The prior draft is design context, never scholarly evidence for a new operation. Set reuseStoredConceptId only when the new node exactly reuses that current-turn stored concept. Do not alter an exact stored node with updateNodes. Preserve connectedness, forward semantic-stage order, acyclicity, provenance, and all unmentioned elements. Unequal stage sizes and real fan-in or fan-out are valid. Do not add filler or balance stages. The schema ceilings are emergency safety guards, not output targets. Do not use em dashes in generated prose.`;
+Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist. Give each added edge a schema-defined semantic label and a concise evidence-linked rationale. The prior draft is design context, never scholarly evidence for a new operation. Set reuseStoredConceptId only when the new node exactly reuses that current-turn stored concept. Do not alter an exact stored node with updateNodes. Preserve connectedness, forward semantic-stage order, acyclicity, provenance, and all unmentioned elements. Unequal stage sizes and real fan-in or fan-out are valid. Do not add filler or balance stages. The schema ceilings are emergency safety guards, not output targets. Every domain adjective modifies node content, not the stage. A requested thematic requirement remains a design-requirement. Never create a thematic or application-domain stage. Do not use em dashes in generated prose.`;
 
 const PATCH_KEYS = new Set([
   "addNodes",
@@ -304,7 +308,7 @@ function supportIds(
 
 function stage(value: unknown): DiagramStage | null {
   return typeof value === "string" &&
-      GENERATED_DIAGRAM_STAGES.some((candidate) => candidate === value)
+      SYNTHESIS_DIAGRAM_STAGES.some((candidate) => candidate === value)
     ? value as DiagramStage
     : null;
 }
@@ -384,9 +388,18 @@ function parseEdge(
   const source = bounded(value.source, 64);
   const target = bounded(value.target, 64);
   const label = bounded(value.label, MAX_EDGE_LABEL_CHARACTERS);
+  const rationale = bounded(value.rationale, MAX_RATIONALE_CHARACTERS);
   const supports = supportIds(value.supportConceptIds, grounding);
-  return source && target && source !== target && label && supports
-    ? { source, target, label, supportConceptIds: supports }
+  return source && target && source !== target && label &&
+      SYNTHESIS_RELATIONSHIP_TYPES.includes(label as SynthesisRelationshipType) &&
+      rationale && supports
+    ? {
+        source,
+        target,
+        label: label as SynthesisRelationshipType,
+        rationale,
+        supportConceptIds: supports,
+      }
     : null;
 }
 
@@ -500,7 +513,6 @@ function orderForStage(value: DiagramStage): number {
     "design-feature": 60,
     features: 60,
     artifact: 70,
-    governance: 75,
     evaluation: 85,
     outcome: 95,
     other: 50,
@@ -679,9 +691,9 @@ export async function applyNativeOkfSynthesisRefinementPatch(
     preservedSupport,
   );
   const candidate: GeneratedDiagram = {
-    title: `Grounded proposal refinement`,
+    title: `Design proposal refinement`,
     explanation:
-      "A validated edit of the prior grounded proposal. Unmentioned nodes and relationships are preserved; new or changed elements use fresh current-turn stored support.",
+      "A validated edit of the prior design proposal. Unmentioned nodes and relationships are preserved; new or changed elements use fresh current-turn stored support.",
     nodes,
     edges,
   };
@@ -807,7 +819,7 @@ export async function generateNativeOkfSynthesisRefinement(
   ) => ({
     ...result,
     deterministicSummary:
-      `This validated refinement preserves the prior grounded design flow and applies the requested edit. The updated diagram contains ${result.diagram.nodes.length} nodes and ${result.diagram.edges.length} relationships; new or changed elements use fresh current-turn stored support.`,
+      "This diagram applies the requested refinement to the existing design proposal. Unmentioned elements are preserved, and new or changed elements use current-turn stored support.",
     warnings,
   });
   const first = parseResponse(await createResponse(options), options);

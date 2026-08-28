@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s | DSR Knowledge Library",
   },
   description:
-    "A research prototype for exploring and reusing source-grounded design knowledge from Design Science Research publications.",
+    "A research prototype for exploring and reusing source-linked design knowledge from Design Science Research publications.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

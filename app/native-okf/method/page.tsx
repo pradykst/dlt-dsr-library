@@ -5,7 +5,7 @@ import { ReleaseMethod } from "@/src/native-okf/components/release/ReleaseMethod
 export const metadata: Metadata = {
   title: "Method and limitations",
   description:
-    "How the DSR Knowledge Library represents, retrieves, validates, and presents source-grounded design knowledge.",
+    "How the DSR Knowledge Library represents, retrieves, validates, and presents source-linked design knowledge.",
   alternates: { canonical: "/method" },
 };
 

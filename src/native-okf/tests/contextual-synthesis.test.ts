@@ -25,9 +25,7 @@ import {
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
 import {
-  NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION,
   NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION,
-  NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION,
 } from "../server/openai/prompts.ts";
 import {
   createInitialNativeOkfConversationState,
@@ -330,31 +328,11 @@ test("manual diagram disable returns synthesis intent without diagram mode", asy
   assert.equal(prepared.diagramMode, null);
 });
 
-test("text-only synthesis uses the concise outline policy while explicit detail retains the larger bound", async () => {
-  const calls: Array<Record<string, unknown>> = [];
+test("text-only synthesis and its later diagram are projections of the same validated proposal", async () => {
+  let modelCalls = 0;
   const client: NativeOpenAiClient = {
     responses: {
-      create: async (request) => {
-        calls.push(request as unknown as Record<string, unknown>);
-        return {
-          id: "mock-text-outline",
-          object: "response",
-          created_at: 0,
-          model: "mock",
-          output: [],
-          output_text: "Use a bounded identity-continuity proposal grounded in the retrieved design knowledge [[S1]].\n\n- Preserve continuity as a requirement [[S1]].\n- Minimize disclosure through the stored principle [[S2]].\n- Implement signed review records as the feature [[S3]].\n\nThis is a grounded proposal, not a validated theory.",
-          status: "completed",
-          error: null,
-          incomplete_details: null,
-          usage: {
-            input_tokens: 20,
-            input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
-            output_tokens: 30,
-            output_tokens_details: { reasoning_tokens: 0 },
-            total_tokens: 50,
-          },
-        } as unknown as Response;
-      },
+      create: async () => { modelCalls += 1; throw new Error("normal answer model must not run"); },
     },
     moderations: {
       create: async () => ({ results: [{ flagged: false }] }) as never,
@@ -375,34 +353,28 @@ test("text-only synthesis uses the concise outline policy while explicit detail 
   );
   const response = await answerNativeOkfChat(
     { question, includeDiagram: false },
-    { prepared, retrieve: async () => retrieval(), environment, client },
-  );
-  assert.equal(response.kind, "answer");
-  assert.equal(calls.length, 1);
-  assert.match(String(calls[0]?.instructions), /120 to 220 words/iu);
-  assert.match(String(calls[0]?.instructions), /never exceed 280 words/iu);
-  assert.match(String(calls[0]?.instructions), /three to five concise design statements/iu);
-
-  const detailedQuestion = "Create a detailed design solution for fragmented identity across marketplaces.";
-  const detailedPrepared = await prepareNativeOkfChatRequest(
-    { question: detailedQuestion, includeDiagram: false },
-    catalog,
-  );
-  await answerNativeOkfChat(
-    { question: detailedQuestion, includeDiagram: false },
     {
-      prepared: detailedPrepared,
+      prepared,
       retrieve: async () => retrieval(),
       environment,
       client,
+      generateDiagram: async () => ({
+        diagram: synthesisDiagram(),
+        usedSupportConceptIds: [C1, C2, C3],
+        deterministicSummary: "A validated design proposal.",
+        warnings: [],
+      }),
     },
   );
-  assert.equal(calls.length, 2);
-  assert.match(String(calls[1]?.instructions), /below 900 words/iu);
-  assert.doesNotMatch(String(calls[1]?.instructions), /never exceed 280 words/iu);
-  assert.equal(detailedPrepared.answerMode, "detailed");
-  assert.match(NATIVE_OKF_SYNTHESIS_OUTLINE_INSTRUCTION, /120 to 220 words/iu);
-  assert.match(NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION, /below 900 words/iu);
+  assert.equal(response.kind, "answer");
+  assert.equal(modelCalls, 0);
+  assert.equal(response.diagram, undefined);
+  assert.ok(response.synthesisDraft);
+  assert.deepEqual(response.synthesisDraft?.nodes, synthesisDiagram().nodes);
+  assert.deepEqual(response.synthesisDraft?.edges, synthesisDiagram().edges);
+  assert.match(response.answerMarkdown, /Identity continuity requirement/iu);
+  assert.match(response.answerMarkdown, /Selective disclosure principle/iu);
+  assert.match(response.answerMarkdown, /Signed review record/iu);
 });
 test("vague synthesis asks one deterministic question and a concrete problem proceeds", async () => {
   const vague = await prepareNativeOkfChatRequest(
@@ -608,6 +580,9 @@ test("synthesis prompts are concise, provenance-aware, and never use prior draft
   assert.match(NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION, /80 to 180 words/);
   assert.match(NATIVE_OKF_SYNTHESIS_ANSWER_INSTRUCTION, /not make the proposal a validated design theory/);
   assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /supportConceptIds/);
+  assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /DesignProposalPlan/);
+  assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /relationshipType/);
+  assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /coverageRationale/);
   assert.match(NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS, /Do not emit diagram coordinates, layout[\s\S]*provenance, renderer fields/iu);
 });
 
@@ -672,7 +647,7 @@ test("generated-diagram presentation exposes provenance without a competing rend
     "utf8",
   );
   const edgeSource = await readFile(
-    new URL("../components/StraightFlowEdge.tsx", import.meta.url),
+    new URL("../components/chat/ElkFlowEdge.tsx", import.meta.url),
     "utf8",
   );
   assert.match(nodeSource, /User-provided/);

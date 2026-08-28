@@ -7,11 +7,13 @@ import type {
   GeneratedDiagram,
   GeneratedDiagramEdge,
   GeneratedDiagramNode,
+  SynthesisRelationshipType,
   SynthesisDraftState,
 } from "../../shared/chat-types.ts";
 import {
   MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
   MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+  SYNTHESIS_RELATIONSHIP_TYPES,
 } from "../../shared/chat-types.ts";
 import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import { formatConceptType } from "../../shared/presentation.ts";
@@ -48,15 +50,19 @@ export interface SynthesisPlanNode {
 }
 
 export interface SynthesisPlanRelationship {
+  id: string;
   sourceKey: string;
   targetKey: string;
-  label: string;
+  relationshipType: SynthesisRelationshipType;
+  rationale: string;
   supportConceptIds: string[];
 }
 
 export interface SynthesisPlan {
   title: string;
   problemSummary: string;
+  supportingStoredConceptIds: string[];
+  coverageRationale: string;
   requirements: SynthesisPlanNode[];
   principles: SynthesisPlanNode[];
   features: SynthesisPlanNode[];
@@ -65,6 +71,8 @@ export interface SynthesisPlan {
   outcome: SynthesisPlanNode[];
   relationships: SynthesisPlanRelationship[];
 }
+
+export type DesignProposalPlan = SynthesisPlan;
 
 export interface GenerateNativeOkfSynthesisPlanOptions {
   client: NativeOpenAiClient;
@@ -91,6 +99,8 @@ export interface GeneratedNativeOkfSynthesisPlan {
 const PLAN_KEYS = new Set([
   "title",
   "problemSummary",
+  "supportingStoredConceptIds",
+  "coverageRationale",
   "requirements",
   "principles",
   "features",
@@ -107,12 +117,15 @@ const NODE_KEYS = new Set([
   "reuseStoredConceptId",
 ]);
 const RELATIONSHIP_KEYS = new Set([
+  "id",
   "sourceKey",
   "targetKey",
-  "label",
+  "relationshipType",
+  "rationale",
   "supportConceptIds",
 ]);
 const KEY_PATTERN = /^[a-z][a-z0-9-]*$/u;
+const RELATIONSHIP_TYPES = new Set<string>(SYNTHESIS_RELATIONSHIP_TYPES);
 const MAX_REPAIR_ERRORS = 12;
 
 const PLAN_NODE_SCHEMA = {
@@ -163,6 +176,8 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
   required: [
     "title",
     "problemSummary",
+    "supportingStoredConceptIds",
+    "coverageRationale",
     "requirements",
     "principles",
     "features",
@@ -181,6 +196,17 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
       type: "string",
       minLength: 1,
       maxLength: SYNTHESIS_PLAN_LIMITS.maxProblemSummaryCharacters,
+    },
+    supportingStoredConceptIds: {
+      type: "array",
+      minItems: 1,
+      maxItems: SYNTHESIS_PLAN_LIMITS.maxRenderedNodes,
+      items: { type: "string", minLength: 1, maxLength: 320 },
+    },
+    coverageRationale: {
+      type: "string",
+      minLength: 1,
+      maxLength: SYNTHESIS_PLAN_LIMITS.maxDescriptionCharacters,
     },
     requirements: {
       type: "array",
@@ -226,12 +252,20 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
         type: "object",
         additionalProperties: false,
         required: [
+          "id",
           "sourceKey",
           "targetKey",
-          "label",
+          "relationshipType",
+          "rationale",
           "supportConceptIds",
         ],
         properties: {
+          id: {
+            type: "string",
+            minLength: 1,
+            maxLength: SYNTHESIS_PLAN_LIMITS.maxKeyCharacters,
+            pattern: "^[a-z][a-z0-9-]*$",
+          },
           sourceKey: {
             type: "string",
             minLength: 1,
@@ -242,10 +276,11 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
             minLength: 1,
             maxLength: SYNTHESIS_PLAN_LIMITS.maxKeyCharacters,
           },
-          label: {
+          relationshipType: { enum: SYNTHESIS_RELATIONSHIP_TYPES },
+          rationale: {
             type: "string",
             minLength: 1,
-            maxLength: SYNTHESIS_PLAN_LIMITS.maxRelationshipLabelCharacters,
+            maxLength: SYNTHESIS_PLAN_LIMITS.maxDescriptionCharacters,
           },
           supportConceptIds: {
             type: "array",
@@ -268,11 +303,15 @@ export const SYNTHESIS_PLAN_RESPONSE_FORMAT = {
   schema: SYNTHESIS_PLAN_JSON_SCHEMA,
 } as const;
 
-export const NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS = `Return only a grounded SynthesisPlan matching the strict schema. Do not emit diagram coordinates, layout, paths, stages, ordering, groups, provenance, renderer fields, Markdown, or prose outside the response.
+export const NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS = `Return only a DesignProposalPlan matching the strict schema. Do not emit diagram coordinates, layout, paths, stages, ordering, groups, provenance, renderer fields, Markdown, or prose outside the response.
 
-Use only the supplied current-turn allowlisted stored concepts. Each proposed node and relationship needs one to three allowlisted supportConceptIds. Set reuseStoredConceptId only when the node should reuse that exact canonical stored concept; otherwise use null. Derive the number and distribution of nodes from the design problem and evidence. Unequal stage sizes, omitted irrelevant stages, one-to-many, many-to-one, and many-to-many relationships are valid. Do not add filler, duplicate, or weakly rephrased concepts to balance the stages. The schema ceilings are emergency safety guards, not output targets.
+Use only the supplied current-turn allowlisted stored concepts. List the plan's used evidence in supportingStoredConceptIds and explain coverage briefly in coverageRationale. Each proposed node and relationship needs one to three allowlisted supportConceptIds. Give every relationship a stable id, a schema-defined relationshipType, and a concise evidence-linked rationale. Set reuseStoredConceptId only when the node should reuse that exact canonical stored concept; otherwise use null. Derive the number and distribution of nodes from the design problem and evidence. Unequal stage sizes, omitted irrelevant stages, one-to-many, many-to-one, and many-to-many relationships are valid. Do not add filler, duplicate, or weakly rephrased concepts to balance the stages. The schema ceilings are emergency safety guards, not output targets.
 
 Use the reserved relationship endpoint key "problem" for the user problem. Produce one connected acyclic forward flow. Include a complete problem -> requirement -> principle -> feature path only when the request actually requires all of those stages. The plan is a proposal grounded by stored knowledge, not stored knowledge itself. Do not use em dashes in generated prose. Use commas, semicolons, colons, parentheses, or ordinary hyphens.`;
+
+export const NATIVE_OKF_SYNTHESIS_QUALITY_REVIEW_INSTRUCTIONS = `Review the supplied DesignProposalPlan against the research problem and the same allowlisted stored evidence. Return one complete corrected plan using the exact synthesis-plan schema, even when no correction is needed.
+
+Check problem coverage, strongest applicable stored concepts, redundant or filler nodes, missing major recommendations, unrelated elements, semantic edge direction, unsupported synthesis, and redundant skip-level relationships. Preserve useful many-to-many structure. A direct skip-level edge is acceptable only when it communicates a distinct claim that is not already represented by an intermediate path. Do not add external knowledge or concept IDs outside the allowlist. Do not target a node count. Do not use em dashes.`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -354,6 +393,13 @@ function parsePlanNode(
     ) {
       errors.push(`${path}:invalid-reuse`);
     }
+  } else if (
+    label &&
+    [...grounding.conceptsById.values()].some((concept) =>
+      normalize(concept.title) === normalize(label)
+    )
+  ) {
+    errors.push(`${path}:exact-stored-label-requires-reuse`);
   }
   return key && label && description
     ? { key, label, description, supportConceptIds: supports, reuseStoredConceptId: reuse }
@@ -428,7 +474,7 @@ function graphErrors(
     const relationshipKey = JSON.stringify([
       relationship.sourceKey,
       relationship.targetKey,
-      normalize(relationship.label),
+      relationship.relationshipType,
     ]);
     if (relationshipKeys.has(relationshipKey)) {
       errors.push("relationships:duplicate");
@@ -448,6 +494,34 @@ function graphErrors(
     adjacency.get(relationship.sourceKey)?.add(relationship.targetKey);
     adjacency.get(relationship.targetKey)?.add(relationship.sourceKey);
     outgoing.get(relationship.sourceKey)?.add(relationship.targetKey);
+  }
+  const hasAlternativePath = (source: string, target: string): boolean => {
+    const visited = new Set([source]);
+    const queue = [source];
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const current = queue[cursor]!;
+      for (const next of outgoing.get(current) ?? []) {
+        if (current === source && next === target) continue;
+        if (next === target) return true;
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    return false;
+  };
+  for (const relationship of plan.relationships) {
+    const sourceRank = stageRank.get(relationship.sourceKey);
+    const targetRank = stageRank.get(relationship.targetKey);
+    if (
+      sourceRank !== undefined &&
+      targetRank !== undefined &&
+      targetRank - sourceRank > 1 &&
+      hasAlternativePath(relationship.sourceKey, relationship.targetKey)
+    ) {
+      errors.push("relationships:redundant-skip-level-edge");
+    }
   }
   const visited = new Set(["problem"]);
   const queue = ["problem"];
@@ -501,8 +575,26 @@ export function validateNativeOkfSynthesisPlan(
     value.problemSummary,
     SYNTHESIS_PLAN_LIMITS.maxProblemSummaryCharacters,
   );
+  const coverageRationale = bounded(
+    value.coverageRationale,
+    SYNTHESIS_PLAN_LIMITS.maxDescriptionCharacters,
+  );
+  const supportingStoredConceptIds = Array.isArray(value.supportingStoredConceptIds)
+    ? [...new Set(value.supportingStoredConceptIds.flatMap((support) => {
+        const id = bounded(support, 320);
+        return id ? [id] : [];
+      }))]
+    : [];
   if (!title) errors.push("plan:invalid-title");
   if (!problemSummary) errors.push("plan:invalid-problem-summary");
+  if (!coverageRationale) errors.push("plan:invalid-coverage-rationale");
+  if (
+    supportingStoredConceptIds.length < 1 ||
+    supportingStoredConceptIds.length > SYNTHESIS_PLAN_LIMITS.maxRenderedNodes ||
+    !supportingStoredConceptIds.every((id) => grounding.eligibleStoredConceptIds.has(id))
+  ) {
+    errors.push("plan:invalid-supporting-stored-concepts");
+  }
   const requirements = parsePlanArray(
     value.requirements,
     "requirement",
@@ -570,9 +662,17 @@ export function validateNativeOkfSynthesisPlan(
         errors.push(`relationships[${index}]:invalid-shape`);
         return;
       }
+      const id = bounded(item.id, SYNTHESIS_PLAN_LIMITS.maxKeyCharacters);
       const sourceKey = bounded(item.sourceKey, SYNTHESIS_PLAN_LIMITS.maxKeyCharacters);
       const targetKey = bounded(item.targetKey, SYNTHESIS_PLAN_LIMITS.maxKeyCharacters);
-      const label = bounded(item.label, SYNTHESIS_PLAN_LIMITS.maxRelationshipLabelCharacters);
+      const relationshipType = bounded(
+        item.relationshipType,
+        SYNTHESIS_PLAN_LIMITS.maxRelationshipLabelCharacters,
+      );
+      const rationale = bounded(
+        item.rationale,
+        SYNTHESIS_PLAN_LIMITS.maxDescriptionCharacters,
+      );
       const supportConceptIds = Array.isArray(item.supportConceptIds)
         ? [...new Set(item.supportConceptIds.flatMap((support) => {
             const id = bounded(support, 320);
@@ -580,9 +680,13 @@ export function validateNativeOkfSynthesisPlan(
           }))]
         : [];
       if (
+        !id ||
+        !KEY_PATTERN.test(id) ||
         !sourceKey ||
         !targetKey ||
-        !label ||
+        !relationshipType ||
+        !RELATIONSHIP_TYPES.has(relationshipType) ||
+        !rationale ||
         supportConceptIds.length < 1 ||
         supportConceptIds.length > SYNTHESIS_PLAN_LIMITS.maxSupportConceptIds ||
         !supportConceptIds.every((id) =>
@@ -593,17 +697,42 @@ export function validateNativeOkfSynthesisPlan(
         return;
       }
       relationships.push({
+        id,
         sourceKey,
         targetKey,
-        label,
+        relationshipType: relationshipType as SynthesisRelationshipType,
+        rationale,
         supportConceptIds,
       });
     });
   }
-  if (!title || !problemSummary) return { ok: false, errors };
+  const relationshipIds = relationships.map((relationship) => relationship.id);
+  if (new Set(relationshipIds).size !== relationshipIds.length) {
+    errors.push("relationships:duplicate-id");
+  }
+  const usedSupportIds = new Set([
+    ...requirements,
+    ...principles,
+    ...features,
+    ...artifact,
+    ...evaluation,
+    ...outcome,
+  ].flatMap((node) => node.supportConceptIds));
+  for (const relationship of relationships) {
+    for (const id of relationship.supportConceptIds) usedSupportIds.add(id);
+  }
+  if (
+    usedSupportIds.size !== supportingStoredConceptIds.length ||
+    supportingStoredConceptIds.some((id) => !usedSupportIds.has(id))
+  ) {
+    errors.push("plan:supporting-stored-concepts-mismatch");
+  }
+  if (!title || !problemSummary || !coverageRationale) return { ok: false, errors };
   const plan: SynthesisPlan = {
     title,
     problemSummary,
+    supportingStoredConceptIds,
+    coverageRationale,
     requirements,
     principles,
     features,
@@ -700,7 +829,7 @@ function convertedNode(
       truncate(
         supportingTitles.length > 0
           ? `This problem-specific proposal adapts the stored concepts ${supportingTitles.join("; ")}.`
-          : "This problem-specific proposal is grounded by the listed stored concepts.",
+          : "This problem-specific proposal is supported by the listed stored concepts.",
         240,
       ),
     synthesis: true,
@@ -781,15 +910,15 @@ export function convertNativeOkfSynthesisPlan(
     return [{
       source: source.id,
       target: target.id,
-      label: truncate(relationship.label, 32),
+      label: relationship.relationshipType,
       provenance: "synthesized" as const,
       supportConceptIds,
     }];
   });
   const candidate: GeneratedDiagram = {
-    title: `Grounded proposal: ${problemDisplay.label}`,
+    title: `Design proposal: ${problemDisplay.label}`,
     explanation:
-      "A problem-specific grounded synthesis. Dashed elements are proposed adaptations; solid elements are exact stored native OKF knowledge.",
+      "A problem-specific design proposal. Dashed elements are proposed adaptations; solid elements are exact stored native OKF knowledge.",
     nodes,
     edges,
   };
@@ -814,19 +943,13 @@ export function convertNativeOkfSynthesisPlan(
 
 export function deterministicNativeOkfSynthesisSummary(
   plan: SynthesisPlan,
-  diagram: GeneratedDiagram,
+  _diagram: GeneratedDiagram,
 ): string {
-  const stored = diagram.nodes.filter((node) => node.provenance === "stored").length;
-  const proposed = diagram.nodes.filter((node) => node.provenance === "synthesized").length;
-  const supportCount = new Set(
-    diagram.nodes.flatMap((node) => node.supportConceptIds),
-  ).size;
-  const optional = plan.artifact.length + plan.evaluation.length + plan.outcome.length;
   const boundedProblem = synthesisProblemSummaryPhrase(plan.problemSummary)
     .split(/\s+/u)
     .slice(0, 20)
     .join(" ");
-  return `This grounded proposal addresses ${boundedProblem}. It connects ${plan.requirements.length} requirements, ${plan.principles.length} principles, and ${plan.features.length} features${optional > 0 ? ` with ${optional} downstream artifact, evaluation, or outcome element${optional === 1 ? "" : "s"}` : ""}. ${stored} element${stored === 1 ? " reuses" : "s reuse"} exact stored knowledge; ${proposed} ${proposed === 1 ? "is a synthesized adaptation" : "are synthesized adaptations"}. Dashed elements are proposals supported by the listed sources, not claims of stored theory. The flow uses ${supportCount} current-turn stored support concept${supportCount === 1 ? "" : "s"}.`;
+  return `This diagram translates the proposed design for ${boundedProblem} into a decision-support flow. Stored concepts are reused where applicable; proposed adaptations are distinguished visually and supported by the listed sources.`;
 }
 
 function compactGrounding(grounding: NativeOkfDiagramGrounding) {
@@ -857,9 +980,10 @@ function compactPriorDraft(draft: SynthesisDraftState | null) {
         : null,
     })),
     relationships: draft.edges.map((edge) => ({
+      id: `prior-${edge.source}-${edge.target}`.slice(0, SYNTHESIS_PLAN_LIMITS.maxKeyCharacters),
       source: edge.source,
       target: edge.target,
-      label: edge.label,
+      relationshipType: edge.label,
     })),
   };
 }
@@ -927,6 +1051,52 @@ async function createPlanResponse(
   });
 }
 
+async function reviewValidatedPlan(
+  options: GenerateNativeOkfSynthesisPlanOptions,
+  plan: SynthesisPlan,
+): Promise<{ plan: SynthesisPlan; warnings: string[] }> {
+  try {
+    const response = await options.client.responses.create({
+      model: options.environment.model,
+      instructions: NATIVE_OKF_SYNTHESIS_QUALITY_REVIEW_INSTRUCTIONS,
+      input: JSON.stringify({
+        problem: truncate(options.problemStatement, 300),
+        allowlistedConcepts: compactGrounding(options.grounding),
+        proposalPlan: plan,
+      }),
+      reasoning: { effort: options.environment.reasoningEffort },
+      max_output_tokens: options.environment.diagramMaxOutputTokens,
+      text: { format: SYNTHESIS_PLAN_RESPONSE_FORMAT },
+      tools: [],
+      tool_choice: "none",
+      parallel_tool_calls: false,
+      store: false,
+    });
+    const reviewed = parseResponse(
+      response,
+      options.grounding,
+      options.requireRpfPath === true,
+    );
+    if (reviewed.ok) {
+      return {
+        plan: {
+          ...reviewed.plan,
+          problemSummary: truncate(options.problemStatement, 300),
+        },
+        warnings: JSON.stringify(reviewed.plan) === JSON.stringify(plan)
+          ? []
+          : ["The proposal plan received one bounded evidence-constrained quality revision."],
+      };
+    }
+  } catch {
+    // The deterministically valid generated plan remains the safe fallback.
+  }
+  return {
+    plan,
+    warnings: ["The optional proposal quality review was unavailable; deterministic validation still passed."],
+  };
+}
+
 export async function generateNativeOkfSynthesisPlan(
   options: GenerateNativeOkfSynthesisPlanOptions,
 ): Promise<GeneratedNativeOkfSynthesisPlan> {
@@ -963,23 +1133,41 @@ export async function generateNativeOkfSynthesisPlan(
     options.requireRpfPath === true,
   );
   if (first.ok) {
-    const acceptedPlan = {
+    const generatedPlan = {
       ...first.plan,
       problemSummary: truncate(options.problemStatement, 300),
     };
-    const converted = convertNativeOkfSynthesisPlan(
+    const reviewed = await reviewValidatedPlan(options, generatedPlan);
+    let acceptedPlan = reviewed.plan;
+    let reviewWarnings = reviewed.warnings;
+    let converted = convertNativeOkfSynthesisPlan(
       acceptedPlan,
       options.grounding,
       options.problemStatement,
       options.requireRpfPath === true,
     );
+    if (
+      !converted &&
+      JSON.stringify(reviewed.plan) !== JSON.stringify(generatedPlan)
+    ) {
+      acceptedPlan = generatedPlan;
+      converted = convertNativeOkfSynthesisPlan(
+        acceptedPlan,
+        options.grounding,
+        options.problemStatement,
+        options.requireRpfPath === true,
+      );
+      reviewWarnings = [
+        "The optional proposal quality revision could not be applied safely; the original validated plan was retained.",
+      ];
+    }
     if (converted) {
       return {
         plan: acceptedPlan,
         diagram: converted.diagram,
         usedSupportConceptIds: converted.usedSupportConceptIds,
         deterministicSummary: deterministicNativeOkfSynthesisSummary(acceptedPlan, converted.diagram),
-        warnings: [],
+        warnings: reviewWarnings,
       };
     }
   }
@@ -990,23 +1178,44 @@ export async function generateNativeOkfSynthesisPlan(
     options.requireRpfPath === true,
   );
   if (second.ok) {
-    const acceptedPlan = {
+    const generatedPlan = {
       ...second.plan,
       problemSummary: truncate(options.problemStatement, 300),
     };
-    const converted = convertNativeOkfSynthesisPlan(
+    const reviewed = await reviewValidatedPlan(options, generatedPlan);
+    let acceptedPlan = reviewed.plan;
+    let reviewWarnings = reviewed.warnings;
+    let converted = convertNativeOkfSynthesisPlan(
       acceptedPlan,
       options.grounding,
       options.problemStatement,
       options.requireRpfPath === true,
     );
+    if (
+      !converted &&
+      JSON.stringify(reviewed.plan) !== JSON.stringify(generatedPlan)
+    ) {
+      acceptedPlan = generatedPlan;
+      converted = convertNativeOkfSynthesisPlan(
+        acceptedPlan,
+        options.grounding,
+        options.problemStatement,
+        options.requireRpfPath === true,
+      );
+      reviewWarnings = [
+        "The optional proposal quality revision could not be applied safely; the original validated plan was retained.",
+      ];
+    }
     if (converted) {
       return {
         plan: acceptedPlan,
         diagram: converted.diagram,
         usedSupportConceptIds: converted.usedSupportConceptIds,
         deterministicSummary: deterministicNativeOkfSynthesisSummary(acceptedPlan, converted.diagram),
-        warnings: ["The synthesis plan required one bounded repair."],
+        warnings: [
+          "The synthesis plan required one bounded structural repair.",
+          ...reviewWarnings,
+        ],
       };
     }
   }

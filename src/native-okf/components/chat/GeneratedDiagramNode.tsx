@@ -71,7 +71,7 @@ export function GeneratedDiagramNodeRenderer({
       aria-label={`${diagramNode.label}. ${stageCaption(diagramNode.stage)}. ${provenance}. ${
         diagramNode.provenance === "user-provided"
           ? "Provided in the research question."
-          : `${diagramNode.sourcePaths.length} grounding source${diagramNode.sourcePaths.length === 1 ? "" : "s"}.`
+          : `${diagramNode.sourcePaths.length} supporting source${diagramNode.sourcePaths.length === 1 ? "" : "s"}.`
       }`}
       className={`flex w-56 flex-col rounded-xl border-2 px-3.5 py-3 text-left shadow-md motion-safe:transition-[border-color,box-shadow,opacity] motion-safe:duration-150 ${semanticClass(
         diagramNode.stage,
