@@ -130,24 +130,33 @@ function parseNode(value: unknown): GeneratedDiagramNode | null {
   const label = boundedString(value.label, MAX_LABEL_CHARACTERS);
   const description = boundedString(value.description, MAX_DESCRIPTION_CHARACTERS);
   const category = boundedString(value.category, MAX_CATEGORY_CHARACTERS);
-  const group = nullableBoundedString(value.group, MAX_GROUP_CHARACTERS);
-  const rationale = nullableBoundedString(
-    value.synthesisRationale,
-    MAX_RATIONALE_CHARACTERS,
-  );
-  const sourcePaths = boundedStrings(
-    value.sourcePaths,
-    MAX_SUPPORT_IDS,
-    MAX_SOURCE_ID_CHARACTERS,
-    true,
-  );
+  const group = value.group === undefined
+    ? null
+    : nullableBoundedString(value.group, MAX_GROUP_CHARACTERS);
+  const rationale = value.synthesisRationale === undefined
+    ? null
+    : nullableBoundedString(
+        value.synthesisRationale,
+        MAX_RATIONALE_CHARACTERS,
+      );
   const supportConceptIds = boundedStrings(
     value.supportConceptIds,
     MAX_SUPPORT_IDS,
     MAX_SOURCE_ID_CHARACTERS,
     true,
   );
+  const sourcePaths = value.sourcePaths === undefined
+    ? supportConceptIds
+    : boundedStrings(
+        value.sourcePaths,
+        MAX_SUPPORT_IDS,
+        MAX_SOURCE_ID_CHARACTERS,
+        true,
+      );
   const order = value.order;
+  const synthesis = value.synthesis === undefined
+    ? value.provenance === "synthesized"
+    : value.synthesis;
   if (
     !id ||
     !label ||
@@ -162,8 +171,8 @@ function parseNode(value: unknown): GeneratedDiagramNode | null {
     sourcePaths === null ||
     supportConceptIds === null ||
     rationale === undefined ||
-    typeof value.synthesis !== "boolean" ||
-    value.synthesis !== (value.provenance === "synthesized")
+    typeof synthesis !== "boolean" ||
+    synthesis !== (value.provenance === "synthesized")
   ) {
     return null;
   }
@@ -191,7 +200,7 @@ function parseNode(value: unknown): GeneratedDiagramNode | null {
     sourcePaths,
     supportConceptIds,
     synthesisRationale: rationale,
-    synthesis: value.synthesis,
+    synthesis,
   };
 }
 

@@ -8,8 +8,21 @@ import {
   handlePublicNativeOkfChat,
   resetPublicNativeOkfChatConcurrencyForTests,
 } from "../server/public-chat.ts";
-import type { NativeOkfChatResponse } from "../shared/chat-types.ts";
-import { createInitialNativeOkfConversationState } from "../shared/chat-types.ts";
+import { MAX_NATIVE_OKF_REQUEST_BYTES } from "../server/openai/chat.ts";
+import {
+  createInitialNativeOkfConversationState,
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
+  MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+  MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+  type NativeOkfChatResponse,
+  type NativeOkfConversationState,
+  type SynthesisDraftState,
+} from "../shared/chat-types.ts";
+import {
+  compactNativeOkfConversationStateForRequest,
+  parseNativeOkfConversationState,
+} from "../shared/conversation-state.ts";
 import { LEGACY_PUBLIC_REDIRECTS } from "../shared/routes.ts";
 
 const PUBLIC_CHAT_URL = "https://library.example/api/native-okf/chat";
@@ -31,6 +44,97 @@ function request(
     },
     body: JSON.stringify(body),
   });
+}
+
+function rawRequest(body: string): Request {
+  return new Request(PUBLIC_CHAT_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: "https://library.example",
+      "sec-fetch-site": "same-origin",
+    },
+    body,
+  });
+}
+
+function proposalDraft(nodeCount: number, edgeCount: number): SynthesisDraftState {
+  const supportConceptIds = [
+    "design-knowledge/stored-requirement",
+    "design-knowledge/stored-principle",
+    "design-knowledge/stored-feature",
+  ];
+  const stages = [
+    "design-requirement",
+    "design-principle",
+    "design-feature",
+    "artifact",
+  ] as const;
+  const nodes = Array.from({ length: nodeCount }, (_, index) => ({
+    id: `proposal-node-${index}`,
+    label: `Proposal element ${index}`,
+    description:
+      `A bounded proposal description for element ${index} that retains the semantic information required for explanation and refinement.`,
+    category: "Proposal element",
+    stage: stages[index % stages.length]!,
+    order: index,
+    group: index % 5 === 0 ? `Branch ${index % 5}` : null,
+    provenance: index === 0 ? "user-provided" as const : "synthesized" as const,
+    sourcePaths: index === 0 ? [] : supportConceptIds,
+    supportConceptIds: index === 0 ? [] : supportConceptIds,
+    synthesisRationale: index === 0
+      ? null
+      : "The stored concepts support this problem-specific proposal element.",
+    synthesis: index !== 0,
+  }));
+  const edges = Array.from({ length: edgeCount }, (_, index) => ({
+    source: nodes[index % nodeCount]!.id,
+    target: nodes[
+      (index + 1 + Math.floor(index / nodeCount)) % nodeCount
+    ]!.id,
+    label: "supports",
+    provenance: "synthesized" as const,
+    supportConceptIds,
+  }));
+  return {
+    version: 1,
+    problemStatement:
+      "A realistic substantial design problem requiring a validated proposal.",
+    domain: "A cross-organizational research domain",
+    objective: "Create a verifiable and auditable decision-support artifact.",
+    constraints: [
+      "Preserve privacy",
+      "Support interoperability",
+      "Maintain auditability",
+    ],
+    nodes,
+    edges,
+  };
+}
+
+function proposalState(nodeCount: number, edgeCount: number): NativeOkfConversationState {
+  return {
+    ...createInitialNativeOkfConversationState(),
+    lastIntent: "synthesized-flow",
+    lastDiagramRequested: true,
+    lastSynthesisProblem: {
+      version: 1,
+      problemStatement:
+        "A realistic substantial design problem requiring a validated proposal.",
+      displayProblem:
+        "A realistic substantial design problem requiring a validated proposal.",
+      domain: "A cross-organizational research domain",
+      objective: "Create a verifiable and auditable decision-support artifact.",
+      outputType: "design-solution",
+      constraints: [
+        "Preserve privacy",
+        "Support interoperability",
+        "Maintain auditability",
+      ],
+      sourcePaperSlugs: [],
+    },
+    latestValidatedSynthesisDraft: proposalDraft(nodeCount, edgeCount),
+  };
 }
 
 function response(
@@ -149,6 +253,93 @@ test("public chat keeps same-origin, JSON, kill-switch, and request-size control
     { environment: {}, answer: async () => response() },
   );
   assert.equal(oversized.status, 413);
+});
+
+test("compact proposal requests retain semantic refinement state below the transport ceiling", () => {
+  const state = proposalState(18, 24);
+  const compactState = compactNativeOkfConversationStateForRequest(state);
+  const history = Array.from(
+    { length: MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES },
+    (_, index) => ({
+      role: index % 2 === 0 ? "user" as const : "assistant" as const,
+      content: "h".repeat(MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS),
+    }),
+  );
+  const fullBody = JSON.stringify({
+    question: "Explain the requirement you just added.",
+    history,
+    diagramPreference: "auto",
+    visibleHistoryMessageCount: 10,
+    conversationState: state,
+  });
+  const compactBody = JSON.stringify({
+    question: "Explain the requirement you just added.",
+    history,
+    diagramPreference: "auto",
+    visibleHistoryMessageCount: 10,
+    conversationState: compactState,
+  });
+  const byteLength = (value: string) =>
+    new TextEncoder().encode(value).byteLength;
+
+  assert.ok(byteLength(compactBody) < byteLength(fullBody));
+  assert.ok(byteLength(compactBody) < MAX_NATIVE_OKF_REQUEST_BYTES);
+  assert.doesNotMatch(compactBody, /"sourcePaths"|"synthesisDraft"/u);
+  const restored = parseNativeOkfConversationState(compactState);
+  assert.ok(restored?.latestValidatedSynthesisDraft);
+  assert.equal(restored.latestValidatedSynthesisDraft.nodes.length, 18);
+  assert.equal(restored.latestValidatedSynthesisDraft.edges.length, 24);
+  const synthesizedNode = restored.latestValidatedSynthesisDraft.nodes[1]!;
+  assert.deepEqual(
+    synthesizedNode.sourcePaths,
+    synthesizedNode.supportConceptIds,
+  );
+  assert.equal(synthesizedNode.synthesis, true);
+});
+
+test("the emergency-maximum semantic proposal plus retained history fits the request guard", () => {
+  const compactState = compactNativeOkfConversationStateForRequest(
+    proposalState(
+      MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES,
+      MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
+    ),
+  );
+  const body = JSON.stringify({
+    question: "q".repeat(2_000),
+    history: Array.from(
+      { length: MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES },
+      (_, index) => ({
+        role: index % 2 === 0 ? "user" : "assistant",
+        content: "h".repeat(MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS),
+      }),
+    ),
+    diagramPreference: "requested",
+    visibleHistoryMessageCount: 20,
+    conversationState: compactState,
+  });
+
+  assert.ok(
+    new TextEncoder().encode(body).byteLength < MAX_NATIVE_OKF_REQUEST_BYTES,
+  );
+});
+
+test("request transport accepts bytes below and rejects bytes above its hard ceiling", async () => {
+  const bodyAt = (byteLength: number) => {
+    const prefix = '{"padding":"';
+    const suffix = '"}';
+    return `${prefix}${"x".repeat(byteLength - prefix.length - suffix.length)}${suffix}`;
+  };
+  const below = await handlePublicNativeOkfChat(
+    rawRequest(bodyAt(MAX_NATIVE_OKF_REQUEST_BYTES - 1)),
+    { answer: async () => response() },
+  );
+  const above = await handlePublicNativeOkfChat(
+    rawRequest(bodyAt(MAX_NATIVE_OKF_REQUEST_BYTES + 1)),
+    { answer: async () => response() },
+  );
+
+  assert.notEqual(below.status, 413);
+  assert.equal(above.status, 413);
 });
 
 test("stored and comparative deterministic diagrams are available anonymously", async () => {

@@ -615,6 +615,10 @@ test("drawer, source disclosure, copy, and history UI expose the reviewed behavi
     new URL("../components/chat/ChatWorkbench.tsx", import.meta.url),
     "utf8",
   );
+  const homepage = await readFile(
+    new URL("../components/release/ReleaseHomepage.tsx", import.meta.url),
+    "utf8",
+  );
   assert.match(presentation, /z-40[\s\S]*bg-white[\s\S]*opacity-100/);
   assert.doesNotMatch(presentation, /bg-white\/98/);
   assert.match(presentation, /Synthesized proposal/);
@@ -629,6 +633,29 @@ test("drawer, source disclosure, copy, and history UI expose the reviewed behavi
   assert.match(copyButton, /Copied/);
   assert.match(workbench, /Earlier messages are no longer included/);
   assert.match(workbench, /nativeOkfVisibleHistoryExceedsModelContext/);
+  const formIndex = workbench.indexOf("<form");
+  const historyWarningIndex = workbench.indexOf(
+    "Earlier messages are no longer included",
+  );
+  const composerLabelIndex = workbench.indexOf(
+    'htmlFor="native-okf-chat-question"',
+  );
+  assert.ok(formIndex >= 0 && formIndex < historyWarningIndex);
+  assert.ok(historyWarningIndex < composerLabelIndex);
+  assert.equal(
+    workbench.match(/Earlier messages are no longer included/gu)?.length,
+    1,
+  );
+  assert.equal(
+    workbench.match(/Current corpus: Blockchain-related Design Science Research papers only\./gu)?.length,
+    1,
+  );
+  assert.match(homepage, /aria-label="Corpus scope"/u);
+  assert.equal(
+    homepage.match(/blockchain-related Design Science\s+Research papers only/giu)?.length,
+    1,
+  );
+  assert.doesNotMatch(answer, /Current corpus|Corpus scope/u);
 
   const copied = assistantResponseClipboardText(
     "## Answer\n\n- Stored evidence [[S1]]\n- Ordinary S1 and S10 text stays [[S10]]",

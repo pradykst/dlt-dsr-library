@@ -5,17 +5,20 @@ import type {
   NativeOkfClarification,
   NativeOkfConversationIntent,
   NativeOkfConversationState,
+  NativeOkfConversationStateInput,
   NativeOkfDiagramPreference,
   NativeOkfDiagramMode,
   NativeOkfSourceCard,
   SynthesisDraftState,
   SynthesisProblemState,
 } from "../shared/chat-types.ts";
+import { parseNativeOkfConversationState } from "../shared/conversation-state.ts";
 import {
   createInitialNativeOkfConversationState,
   MAX_NATIVE_OKF_ACTIVE_CONCEPTS,
   MAX_NATIVE_OKF_ACTIVE_PAPERS,
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
+  MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
   nativeOkfVisibleHistoryExceedsModelContext,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
   SYNTHESIS_DIAGRAM_STAGES,
@@ -51,9 +54,22 @@ const FIRST_CONCEPT_PATTERN =
   /\b(?:the\s+)?first\s+(?:principle|feature|requirement|concept|one)\b/iu;
 const SECOND_CONCEPT_PATTERN =
   /\b(?:the\s+)?second\s+(?:principle|feature|requirement|concept|one)\b/iu;
-const PAPER_REFERENCE_PATTERN = /\b(?:this|that|the previous)\s+paper\b/iu;
-const PRINCIPLE_REFERENCE_PATTERN = /\b(?:this|that)\s+principle\b/iu;
-const FEATURES_REFERENCE_PATTERN = /\bthose\s+features\b/iu;
+const PAPER_REFERENCE_PATTERN =
+  /\b(?:this|that|the previous|the current)\s+(?:paper|study|article|work|publication)\b/iu;
+const ACTIVE_COMPARISON_REFERENCE_PATTERN =
+  /\b(?:(?:both|these|those)\s+(?:papers?|studies|articles?|works?|publications?)|(?:this|that|the current|the previous)\s+comparison|their\s+(?:requirements?|principles?|features?|relationships?))\b/iu;
+const STRUCTURED_RESULT_REFERENCE_PATTERN =
+  /\b(?:(?:which|what|how many)\s+of\s+(?:these|those)|(?:among|from|of)\s+(?:these|those)\s+(?:papers?|studies|articles?|works?|publications?)|(?:these|those)\s+(?:also|additionally|further))\b/iu;
+const SINGULAR_CONCEPT_REFERENCE_PATTERN =
+  /\b(?:this|that|the previous|the current)\s+(?:design\s+)?(?:principle|feature|requirement|meta[\s-]+requirement|objective|goal|concept|mechanism)\b/iu;
+const PLURAL_CONCEPT_REFERENCE_PATTERN =
+  /\b(?:these|those|their|its|both)\s+(?:design\s+)?(?:principles|features|requirements|meta[\s-]+requirements|objectives|goals|concepts|mechanisms)\b/iu;
+const CONCEPT_REFERENCE_PATTERN =
+  /\b(?:this|that|these|those|their|its|both|the previous|the current)\s+(?:design\s+)?(?:principles?|features?|requirements?|meta[\s-]+requirements?|objectives?|goals?|concepts?|mechanisms?)\b/iu;
+const PRINCIPLE_REFERENCE_PATTERN =
+  /\b(?:this|that|these|those|their|its|both|the previous|the current)\s+(?:design\s+)?principles?\b/iu;
+const FEATURES_REFERENCE_PATTERN =
+  /\b(?:this|that|these|those|their|its|both|the previous|the current)\s+(?:design\s+)?features?\b/iu;
 const GENERIC_DIAGRAM_PATTERN =
   /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:a\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
 const SYNTHESIS_ACTION_PATTERN =
@@ -190,7 +206,10 @@ export interface PreparedNativeOkfChatRequest {
   effectiveQuestion: string;
   retrievalQuestion: string;
   explicitPaperSlugs: string[];
+  explicitConceptIds: string[];
   focusedPaperSlugs: string[];
+  activeComparisonPaperSlugs: string[];
+  structuredReferentPaperSlugs: string[];
   restrictedPaperSlugs: string[];
   focusedConceptIds: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
@@ -384,10 +403,12 @@ function validateSynthesisDraftAgainstCatalog(
 
 
 export function validateNativeOkfConversationState(
-  state: NativeOkfConversationState | undefined,
+  input: NativeOkfConversationStateInput | undefined,
   catalog: NativeOkfConversationCatalog,
 ): NativeOkfConversationState {
   const initial = createInitialNativeOkfConversationState();
+  if (!input) return initial;
+  const state = parseNativeOkfConversationState(input);
   if (!state) return initial;
   const paperSlugs = new Set(catalog.papers.map((paper) => paper.slug));
   const conceptIds = new Set(
@@ -417,6 +438,18 @@ export function validateNativeOkfConversationState(
     activePaperSlugs: uniqueBounded(
       state.activePaperSlugs.filter((slug) => paperSlugs.has(slug)),
       MAX_NATIVE_OKF_ACTIVE_PAPERS,
+    ),
+    activeComparisonPaperSlugs: uniqueBounded(
+      (state.activeComparisonPaperSlugs ?? []).filter((slug) =>
+        paperSlugs.has(slug)
+      ),
+      MAX_NATIVE_OKF_ACTIVE_PAPERS,
+    ),
+    activeStructuredResultPaperSlugs: uniqueBounded(
+      (state.activeStructuredResultPaperSlugs ?? []).filter((slug) =>
+        paperSlugs.has(slug)
+      ),
+      MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
     ),
     activeConceptIds: uniqueBounded(
       state.activeConceptIds.filter((id) => conceptIds.has(id)),
@@ -576,15 +609,59 @@ function findExplicitConceptIds(
   return catalog.concepts
     .filter((concept) => {
       const title = normalize(concept.title);
+      const titleWithoutProducerLabel = normalize(
+        concept.title.replace(
+          /^\s*(?=[\p{L}\d._-]{1,16}\s*[-:])(?=[\p{L}\d._-]*\d)[\p{L}\d._-]+\s*[-:]\s*/u,
+          "",
+        ),
+      );
       const id = normalize(concept.conceptId);
       return (
         (title.length >= 8 && normalizedQuestion.includes(title)) ||
+        (titleWithoutProducerLabel.length >= 8 &&
+          normalizedQuestion.includes(titleWithoutProducerLabel)) ||
         normalizedQuestion.includes(id)
       );
     })
     .filter((concept) => concept.type !== "paper")
     .map((concept) => concept.conceptId)
     .slice(0, MAX_NATIVE_OKF_ACTIVE_CONCEPTS);
+}
+
+function questionWithoutResolvedPaperMentions(
+  question: string,
+  paperSlugs: readonly string[],
+  catalog: NativeOkfConversationCatalog,
+): string {
+  let remaining = normalize(question);
+  const paperBySlug = new Map(
+    catalog.papers.map((paper) => [paper.slug, paper]),
+  );
+  for (const slug of paperSlugs) {
+    const paper = paperBySlug.get(slug);
+    if (!paper) continue;
+    const terms = titleTerms(paper.title);
+    const contiguousPhrases = terms.flatMap((_, start) =>
+      terms.slice(start + 1).map((__, offset) =>
+        terms.slice(start, start + offset + 2).join(" ")
+      )
+    );
+    const candidates = [
+      normalize(paper.title),
+      normalize(paper.title.split(":", 1)[0] ?? ""),
+      normalize(paper.slug),
+      ...contiguousPhrases,
+    ].filter((candidate) => candidate.length >= 6);
+    for (const candidate of [...new Set(candidates)].sort(
+      (left, right) => right.length - left.length,
+    )) {
+      if (remaining.includes(candidate)) {
+        remaining = remaining.replaceAll(candidate, " ");
+        break;
+      }
+    }
+  }
+  return normalize(remaining);
 }
 
 function conceptKind(
@@ -683,16 +760,20 @@ function selectConceptIds(
   if (FIRST_CONCEPT_PATTERN.test(question)) return ofKind.slice(0, 1);
   if (SECOND_CONCEPT_PATTERN.test(question)) return ofKind.slice(1, 2);
   if (FEATURES_REFERENCE_PATTERN.test(question)) {
-    return active.filter(
+    const features = active.filter(
       (id) => conceptKind(byId.get(id)?.type ?? "") === "feature",
     );
+    return SINGULAR_CONCEPT_REFERENCE_PATTERN.test(question)
+      ? features.slice(0, 1)
+      : features;
   }
   if (PRINCIPLE_REFERENCE_PATTERN.test(question)) {
-    return active
-      .filter(
-        (id) => conceptKind(byId.get(id)?.type ?? "") === "principle",
-      )
-      .slice(0, 1);
+    const principles = active.filter(
+      (id) => conceptKind(byId.get(id)?.type ?? "") === "principle",
+    );
+    return PLURAL_CONCEPT_REFERENCE_PATTERN.test(question)
+      ? principles
+      : principles.slice(0, 1);
   }
   if (
     IMPLEMENTS_REFERENCE_PATTERN.test(question) ||
@@ -701,6 +782,22 @@ function selectConceptIds(
     return active.slice(0, 1);
   }
   return [];
+}
+
+function paperSlugsForConceptIds(
+  conceptIds: readonly string[],
+  catalog: NativeOkfConversationCatalog,
+): string[] {
+  const byId = new Map(
+    catalog.concepts.map((concept) => [concept.conceptId, concept]),
+  );
+  return uniqueBounded(
+    conceptIds.flatMap((id) => {
+      const slug = byId.get(id)?.paperSlug;
+      return slug ? [slug] : [];
+    }),
+    MAX_NATIVE_OKF_ACTIVE_PAPERS,
+  );
 }
 
 function resolvePaperFocus(
@@ -1035,18 +1132,22 @@ export async function assembleNativeOkfContextualRetrieval(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
 ): Promise<RetrievalResult> {
-  const paperSlugs = prepared.explicitPaperSlugs.length > 0
-    ? prepared.explicitPaperSlugs
-    : prepared.restrictedPaperSlugs.length > 0
-      ? prepared.restrictedPaperSlugs
-      : [
-          "PAPER_QA",
-          "MULTI_PAPER_QA",
-          "STORED_PAPER_DIAGRAM",
-          "COMPARATIVE_EVIDENCE_DIAGRAM",
-        ].includes(prepared.queryMode)
-        ? prepared.focusedPaperSlugs
-        : [];
+  const paperSlugs = prepared.structuredReferentPaperSlugs.length > 0
+    ? prepared.structuredReferentPaperSlugs
+    : prepared.activeComparisonPaperSlugs.length >= 2
+      ? prepared.activeComparisonPaperSlugs
+    : prepared.explicitPaperSlugs.length > 0
+      ? prepared.explicitPaperSlugs
+      : prepared.restrictedPaperSlugs.length > 0
+        ? prepared.restrictedPaperSlugs
+        : [
+            "PAPER_QA",
+            "MULTI_PAPER_QA",
+            "STORED_PAPER_DIAGRAM",
+            "COMPARATIVE_EVIDENCE_DIAGRAM",
+          ].includes(prepared.queryMode)
+          ? prepared.focusedPaperSlugs
+          : [];
   const paperBySlug = new Map(
     prepared.catalog.papers.map((paper) => [paper.slug, paper]),
   );
@@ -1061,12 +1162,16 @@ export async function assembleNativeOkfContextualRetrieval(
       requestedConceptKinds: prepared.requestedConceptKinds,
     },
   );
-  const evidencePaperSlugs = prepared.restrictedPaperSlugs.length > 0
-    ? prepared.restrictedPaperSlugs
-    : prepared.explicitPaperSlugs.length > 0 &&
-        prepared.requestedConceptKinds.length > 0
-      ? prepared.explicitPaperSlugs
-      : [];
+  const evidencePaperSlugs = prepared.structuredReferentPaperSlugs.length > 0
+    ? prepared.structuredReferentPaperSlugs
+    : prepared.activeComparisonPaperSlugs.length >= 2
+      ? prepared.activeComparisonPaperSlugs
+    : prepared.restrictedPaperSlugs.length > 0
+      ? prepared.restrictedPaperSlugs
+      : prepared.explicitPaperSlugs.length > 0 &&
+          prepared.requestedConceptKinds.length > 0
+        ? prepared.explicitPaperSlugs
+        : [];
   const scoped = restrictNativeOkfRetrievalToPaperSlugs(
     prepared,
     prioritized,
@@ -1076,7 +1181,8 @@ export async function assembleNativeOkfContextualRetrieval(
     question: prepared.effectiveQuestion,
     paperConceptIds,
     requestedConceptKinds: prepared.requestedConceptKinds,
-    corpusQuery: prepared.corpusQuery,
+    corpusQuery: prepared.corpusQuery &&
+      prepared.structuredReferentPaperSlugs.length === 0,
     multiPaperComparison: prepared.queryMode === "MULTI_PAPER_QA",
   });
 }
@@ -1163,7 +1269,7 @@ export async function prepareNativeOkfChatRequest(
   const effectiveQuestion = pendingOriginal
     ? `${pendingOriginal}\nClarification response: ${request.question}`
     : request.question;
-  const corpusQuery = CORPUS_QUERY_PATTERN.test(effectiveQuestion);
+  const directCorpusQuery = CORPUS_QUERY_PATTERN.test(effectiveQuestion);
   const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
     effectiveQuestion,
     catalog,
@@ -1192,26 +1298,106 @@ export async function prepareNativeOkfChatRequest(
       : Number.MAX_SAFE_INTEGER;
     return leftPosition - rightPosition;
   });
-  const explicitConceptIds = findExplicitConceptIds(
-    effectiveQuestion,
+  const detectedExplicitConceptIds = findExplicitConceptIds(
+    questionWithoutResolvedPaperMentions(
+      effectiveQuestion,
+      explicitPaperSlugs,
+      catalog,
+    ),
     catalog,
   );
-  const contextBase =
-    (corpusQuery ||
-      explicitPaperSlugs.length > 0 &&
-        !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion))
-      ? {
-          ...validatedState,
-          activePaperSlugs: [],
-          activeConceptIds: [],
-          activeSourceIds: [],
-        }
-      : validatedState;
-  const focusedPaperSlugs = resolvePaperFocus(
+  const currentTurnComparisonRequested = COMPARISON_PATTERN.test(
     effectiveQuestion,
-    explicitPaperSlugs,
-    contextBase,
   );
+  const paperScopedExplicitConceptIds = explicitPaperSlugs.length > 0 &&
+      !currentTurnComparisonRequested
+    ? detectedExplicitConceptIds.filter((id) => {
+        const concept = catalog.concepts.find(
+          (candidate) => candidate.conceptId === id,
+        );
+        return concept?.paperSlug !== undefined &&
+          explicitPaperSlugs.includes(concept.paperSlug);
+      })
+    : [];
+  const explicitConceptIds = paperScopedExplicitConceptIds.length > 0
+    ? paperScopedExplicitConceptIds
+    : detectedExplicitConceptIds;
+  const explicitConceptPaperSlugs = paperSlugsForConceptIds(
+    explicitConceptIds,
+    catalog,
+  );
+  const structuredReferentPaperSlugs =
+    explicitPaperSlugs.length === 0 &&
+      STRUCTURED_RESULT_REFERENCE_PATTERN.test(effectiveQuestion)
+      ? [...(validatedState.activeStructuredResultPaperSlugs ?? [])]
+      : [];
+  const conceptReference = CONCEPT_REFERENCE_PATTERN.test(effectiveQuestion);
+  const referencedConceptPaperSlugs = conceptReference
+    ? paperSlugsForConceptIds(validatedState.activeConceptIds, catalog)
+    : [];
+  const comparisonRequested = currentTurnComparisonRequested;
+  const comparisonConceptPaperSlugs = explicitConceptPaperSlugs.length > 0
+    ? explicitConceptPaperSlugs
+    : referencedConceptPaperSlugs;
+  const comparisonUsesPriorConcept =
+    comparisonRequested &&
+    explicitPaperSlugs.length === 1 &&
+    comparisonConceptPaperSlugs.length > 0;
+  const activeComparisonPaperSlugs = comparisonRequested &&
+      explicitPaperSlugs.length >= 2
+    ? [...explicitPaperSlugs]
+    : comparisonUsesPriorConcept
+      ? uniqueBounded(
+          [...comparisonConceptPaperSlugs, ...explicitPaperSlugs],
+          MAX_NATIVE_OKF_ACTIVE_PAPERS,
+        )
+      : !directCorpusQuery &&
+          structuredReferentPaperSlugs.length === 0 &&
+          explicitPaperSlugs.length === 0 &&
+          explicitConceptIds.length === 0 &&
+          (validatedState.activeComparisonPaperSlugs?.length ?? 0) >= 2
+        ? [...(validatedState.activeComparisonPaperSlugs ?? [])]
+        : [];
+  const corpusQuery = directCorpusQuery ||
+    structuredReferentPaperSlugs.length > 0;
+  const explicitSubjectChange =
+    (explicitPaperSlugs.length > 0 || explicitConceptIds.length > 0) &&
+    !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion) &&
+    !comparisonUsesPriorConcept;
+  const clearPriorConcepts =
+    directCorpusQuery || explicitSubjectChange;
+  const contextBase = {
+    ...validatedState,
+    activePaperSlugs: structuredReferentPaperSlugs.length > 0
+      ? structuredReferentPaperSlugs
+      : activeComparisonPaperSlugs.length > 0
+        ? activeComparisonPaperSlugs
+        : directCorpusQuery || explicitSubjectChange
+          ? []
+          : validatedState.activePaperSlugs,
+    activeComparisonPaperSlugs: activeComparisonPaperSlugs.length > 0
+      ? activeComparisonPaperSlugs
+      : directCorpusQuery || explicitSubjectChange
+        ? []
+        : validatedState.activeComparisonPaperSlugs ?? [],
+    activeConceptIds: clearPriorConcepts
+      ? []
+      : validatedState.activeConceptIds,
+    activeSourceIds: directCorpusQuery || explicitSubjectChange
+      ? []
+      : validatedState.activeSourceIds,
+  };
+  const focusedPaperSlugs = structuredReferentPaperSlugs.length > 0
+    ? structuredReferentPaperSlugs
+    : activeComparisonPaperSlugs.length > 0
+      ? activeComparisonPaperSlugs
+      : explicitConceptPaperSlugs.length > 0
+        ? explicitConceptPaperSlugs
+      : resolvePaperFocus(
+          effectiveQuestion,
+          explicitPaperSlugs,
+          contextBase,
+        );
   const focusedConceptIds =
     explicitConceptIds.length > 0
       ? explicitConceptIds
@@ -1284,7 +1470,8 @@ export async function prepareNativeOkfChatRequest(
     (
       COMPARISON_PATTERN.test(effectiveQuestion) ||
       explicitPaperSlugs.length === 0 &&
-        (contextBase.lastIntent === "comparison" ||
+        ((contextBase.activeComparisonPaperSlugs?.length ?? 0) >= 2 ||
+          contextBase.lastIntent === "comparison" ||
           contextBase.lastIntent === "comparative-diagram") &&
         COMPARISON_DIAGRAM_FOLLOW_UP_PATTERN.test(effectiveQuestion)
     );
@@ -1424,7 +1611,10 @@ export async function prepareNativeOkfChatRequest(
       catalog,
     ),
     explicitPaperSlugs,
+    explicitConceptIds,
     focusedPaperSlugs,
+    activeComparisonPaperSlugs,
+    structuredReferentPaperSlugs,
     restrictedPaperSlugs,
     focusedConceptIds,
     requestedConceptKinds: requestedKinds,
@@ -1491,24 +1681,6 @@ export function clarificationConversationState(
       ),
     },
   };
-}
-
-function paperSlugsFromRetrieval(
-  retrieval: RetrievalResult,
-  catalog: NativeOkfConversationCatalog,
-): string[] {
-  const conceptsById = new Map(
-    catalog.concepts.map((concept) => [concept.conceptId, concept]),
-  );
-  return uniqueBounded(
-    retrieval.finalConcepts.flatMap((concept) => {
-      const catalogConcept = conceptsById.get(concept.conceptId);
-      return catalogConcept?.paperSlug
-        ? [catalogConcept.paperSlug]
-        : [];
-    }),
-    MAX_NATIVE_OKF_ACTIVE_PAPERS,
-  );
 }
 
 function hasActiveDiagramSubject(state: NativeOkfConversationState): boolean {
@@ -1588,6 +1760,39 @@ function relevantConceptIds(
       );
   return concepts.map((concept) => concept.conceptId);
 }
+
+function validatedStructuredResultPaperSlugs(
+  retrieval: RetrievalResult,
+  catalog: NativeOkfConversationCatalog,
+): string[] {
+  const analysis = retrieval.structuredAnalysis;
+  if (!analysis?.exhaustiveForScope) return [];
+  const selectedRows = analysis.exactTerm !== null
+    ? analysis.papers
+    : analysis.relationshipCheckComplete
+      ? analysis.absenceCheckComplete
+        ? analysis.papers.filter((paper) =>
+            paper.relationshipStatus === "unmapped" ||
+            paper.relationshipStatus === "missing-layer"
+          )
+        : analysis.papers.filter((paper) =>
+            paper.relationshipStatus === "mapped"
+          )
+      : analysis.requestedKinds.length > 0
+        ? analysis.papers.filter((paper) => paper.relevantConceptCount > 0)
+        : [];
+  const slugByPaperConceptId = new Map(
+    catalog.papers.map((paper) => [paper.conceptId, paper.slug]),
+  );
+  return uniqueBounded(
+    selectedRows.flatMap((paper) => {
+      const slug = slugByPaperConceptId.get(paper.paperConceptId);
+      return slug ? [slug] : [];
+    }),
+    MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
+  );
+}
+
 export function completedConversationState(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
@@ -1596,8 +1801,11 @@ export function completedConversationState(
     prepared.validatedState.latestValidatedSynthesisDraft ?? null,
 ): NativeOkfConversationState {
   const explicitTopic =
-    prepared.explicitPaperSlugs.length > 0 &&
+    (prepared.explicitPaperSlugs.length > 0 ||
+      prepared.explicitConceptIds.length > 0) &&
     !EXCLUDE_PAPER_PATTERN.test(prepared.effectiveQuestion);
+  const freshCorpusSubject = prepared.corpusQuery &&
+    prepared.structuredReferentPaperSlugs.length === 0;
   const authoritativeFocusedTurn =
     prepared.focusedPaperSlugs.length > 0 &&
     [
@@ -1606,10 +1814,31 @@ export function completedConversationState(
       "STORED_PAPER_DIAGRAM",
       "COMPARATIVE_EVIDENCE_DIAGRAM",
     ].includes(prepared.turnPlan.queryMode);
+  const comparisonPapers = prepared.activeComparisonPaperSlugs.length >= 2
+    ? prepared.activeComparisonPaperSlugs
+    : [];
+  const currentStructuredResults = validatedStructuredResultPaperSlugs(
+    retrieval,
+    prepared.catalog,
+  );
+  const activeStructuredResultPaperSlugs = currentStructuredResults.length > 0 ||
+      retrieval.structuredAnalysis?.exhaustiveForScope === true
+    ? currentStructuredResults
+    : explicitTopic || freshCorpusSubject
+      ? []
+      : prepared.validatedState.activeStructuredResultPaperSlugs ?? [];
   const papers = prepared.restrictedPaperSlugs.length > 0
     ? prepared.restrictedPaperSlugs
-    : explicitTopic || authoritativeFocusedTurn
+    : comparisonPapers.length > 0
+      ? comparisonPapers
+    : explicitTopic ||
+        authoritativeFocusedTurn &&
+          prepared.structuredReferentPaperSlugs.length === 0
       ? prepared.focusedPaperSlugs
+      : prepared.structuredReferentPaperSlugs.length > 0 || freshCorpusSubject
+        ? []
+      : prepared.validatedState.activePaperSlugs.length > 0
+        ? prepared.validatedState.activePaperSlugs
       : (() => {
           const unambiguous = unambiguousPaperSlugFromRetrieval(
             retrieval,
@@ -1617,18 +1846,17 @@ export function completedConversationState(
           );
           return unambiguous
             ? [unambiguous]
-            : uniqueBounded(
-                [
-                  ...prepared.focusedPaperSlugs,
-                  ...paperSlugsFromRetrieval(retrieval, prepared.catalog),
-                ],
-                MAX_NATIVE_OKF_ACTIVE_PAPERS,
-              );
+            : [];
         })();
+  const resetPriorConceptSubject = freshCorpusSubject ||
+    explicitTopic && prepared.focusedConceptIds.length === 0;
   const concepts = uniqueBounded(
     [
-      ...relevantConceptIds(prepared.requestedConceptKinds, retrieval),
       ...prepared.focusedConceptIds,
+      ...(resetPriorConceptSubject
+        ? []
+        : prepared.validatedState.activeConceptIds),
+      ...relevantConceptIds(prepared.requestedConceptKinds, retrieval),
     ],
     MAX_NATIVE_OKF_ACTIVE_CONCEPTS,
   );
@@ -1652,6 +1880,8 @@ export function completedConversationState(
   return {
     version: 1,
     activePaperSlugs: papers,
+    activeComparisonPaperSlugs: comparisonPapers,
+    activeStructuredResultPaperSlugs,
     activeConceptIds: concepts,
     activeSourceIds: sourceIds,
     lastIntent: prepared.intent,

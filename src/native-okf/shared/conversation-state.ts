@@ -3,12 +3,14 @@ import {
   MAX_NATIVE_OKF_ACTIVE_CONCEPTS,
   MAX_NATIVE_OKF_ACTIVE_PAPERS,
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
+  MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
   NATIVE_OKF_CLARIFICATION_KINDS,
   NATIVE_OKF_CONVERSATION_INTENTS,
   type NativeOkfClarificationKind,
   type NativeOkfConversationIntent,
   type NativeOkfConversationState,
+  type NativeOkfConversationStateInput,
 } from "./chat-types.ts";
 import {
   parseSynthesisDraftState,
@@ -19,6 +21,8 @@ import { normalizeSynthesisProblemDisplay } from "./synthesis-problem-display.ts
 const STATE_KEYS = new Set([
   "version",
   "activePaperSlugs",
+  "activeComparisonPaperSlugs",
+  "activeStructuredResultPaperSlugs",
   "activeConceptIds",
   "activeSourceIds",
   "lastIntent",
@@ -108,16 +112,33 @@ export function parseNativeOkfConversationState(
     value.activePaperSlugs,
     MAX_NATIVE_OKF_ACTIVE_PAPERS,
   );
+  const activeComparisonPaperSlugs = value.activeComparisonPaperSlugs === undefined
+    ? []
+    : boundedStrings(
+        value.activeComparisonPaperSlugs,
+        MAX_NATIVE_OKF_ACTIVE_PAPERS,
+      );
+  const activeStructuredResultPaperSlugs =
+    value.activeStructuredResultPaperSlugs === undefined
+      ? []
+      : boundedStrings(
+          value.activeStructuredResultPaperSlugs,
+          MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
+        );
   const activeConceptIds = boundedStrings(
     value.activeConceptIds,
     MAX_NATIVE_OKF_ACTIVE_CONCEPTS,
   );
-  const activeSourceIds = boundedStrings(
-    value.activeSourceIds,
-    MAX_NATIVE_OKF_ACTIVE_SOURCES,
-  );
+  const activeSourceIds = value.activeSourceIds === undefined
+    ? []
+    : boundedStrings(
+        value.activeSourceIds,
+        MAX_NATIVE_OKF_ACTIVE_SOURCES,
+      );
   if (
     activePaperSlugs === null ||
+    activeComparisonPaperSlugs === null ||
+    activeStructuredResultPaperSlugs === null ||
     activeConceptIds === null ||
     activeSourceIds === null ||
     !isIntent(value.lastIntent) ||
@@ -196,6 +217,8 @@ export function parseNativeOkfConversationState(
   return {
     version: 1,
     activePaperSlugs,
+    activeComparisonPaperSlugs,
+    activeStructuredResultPaperSlugs,
     activeConceptIds,
     activeSourceIds,
     lastIntent: value.lastIntent,
@@ -204,6 +227,56 @@ export function parseNativeOkfConversationState(
     lastSynthesisProblem,
     latestValidatedSynthesisDraft,
     synthesisDraft: null,
+  };
+}
+
+/**
+ * Remove request-only duplication while retaining the complete semantic draft.
+ * The in-tab response/session state remains unchanged and fully descriptive.
+ */
+export function compactNativeOkfConversationStateForRequest(
+  state: NativeOkfConversationState,
+): NativeOkfConversationStateInput {
+  const draft = state.latestValidatedSynthesisDraft ?? state.synthesisDraft;
+  const compactDraft = draft
+    ? {
+        version: draft.version,
+        problemStatement: draft.problemStatement,
+        domain: draft.domain,
+        objective: draft.objective,
+        constraints: draft.constraints,
+        nodes: draft.nodes.map((node) => ({
+          id: node.id,
+          label: node.label,
+          description: node.description,
+          category: node.category,
+          stage: node.stage,
+          order: node.order,
+          ...(node.group === null ? {} : { group: node.group }),
+          provenance: node.provenance,
+          supportConceptIds: node.supportConceptIds,
+          ...(node.synthesisRationale === null
+            ? {}
+            : { synthesisRationale: node.synthesisRationale }),
+        })),
+        edges: draft.edges,
+      }
+    : null;
+  return {
+    version: state.version,
+    activePaperSlugs: state.activePaperSlugs,
+    activeComparisonPaperSlugs: state.activeComparisonPaperSlugs ?? [],
+    activeStructuredResultPaperSlugs:
+      state.activeStructuredResultPaperSlugs ?? [],
+    activeConceptIds: state.activeConceptIds,
+    lastIntent: state.lastIntent,
+    lastDiagramRequested: state.lastDiagramRequested,
+    pendingClarification: state.pendingClarification,
+    ...(compactDraft
+      ? { latestValidatedSynthesisDraft: compactDraft }
+      : state.lastSynthesisProblem
+        ? { lastSynthesisProblem: state.lastSynthesisProblem }
+        : {}),
   };
 }
 

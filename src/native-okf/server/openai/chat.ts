@@ -89,7 +89,8 @@ export const MAX_NATIVE_OKF_HISTORY_MESSAGES =
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES;
 export const MAX_NATIVE_OKF_HISTORY_MESSAGE_CHARACTERS =
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS;
-export const MAX_NATIVE_OKF_REQUEST_BYTES = 32_000;
+/** Hard transport guard; valid compact history plus a maximum proposal stays below it. */
+export const MAX_NATIVE_OKF_REQUEST_BYTES = 96_000;
 
 const MIN_MEANINGFUL_QUESTION_CHARACTERS = 3;
 const ALLOWED_REQUEST_KEYS = new Set([

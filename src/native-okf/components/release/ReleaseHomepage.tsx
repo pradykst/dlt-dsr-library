@@ -47,6 +47,15 @@ export function ReleaseHomepage({ viewModel }: { viewModel: ReleaseHomeViewModel
               inspect individual papers, compare reusable knowledge across studies, and
               interact with a source-linked chatbot.
             </p>
+            <aside
+              aria-label="Corpus scope"
+              className="mt-5 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+            >
+              <strong>Corpus scope.</strong>{" "}
+              This research prototype currently contains blockchain-related Design Science
+              Research papers only. Chat responses and design-support suggestions are based
+              on this collection.
+            </aside>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href={CANONICAL_ROUTES.library}

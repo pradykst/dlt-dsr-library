@@ -6,11 +6,15 @@ import test from "node:test";
 import type { Response } from "openai/resources/responses/responses";
 
 import {
+  assembleNativeOkfContextualRetrieval,
   completedConversationState,
+  loadNativeOkfConversationCatalog,
   prepareNativeOkfChatRequest,
   validateNativeOkfConversationState,
   type NativeOkfConversationCatalog,
 } from "../server/conversation.ts";
+import { retrieveOkfContext } from "../server/retrieval.ts";
+import { buildComparativePaperDesignMap } from "../server/openai/stored-source-map.ts";
 import {
   answerNativeOkfChat,
   validateNativeOkfChatRequest,
@@ -356,21 +360,329 @@ test("comparison paper order resolves only the second paper", async () => {
   );
 });
 
+test("validated comparison subject survives unrelated retrieval and drives the next map", async () => {
+  const catalog = await loadNativeOkfConversationCatalog();
+  const [paperA, paperB, paperC] = catalog.papers;
+  assert.ok(paperA && paperB && paperC);
+  const comparison = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: `Compare ${paperA.title} and ${paperB.title}.`,
+    }),
+    catalog,
+  );
+  const thirdPaperRetrieval: RetrievalResult = {
+    ...retrievalFixture(),
+    finalConcepts: [finalConcept(paperC.conceptId, "paper", paperC.title)],
+    corpusOverview: {
+      paperCount: catalog.papers.length,
+      papers: catalog.papers.map((paper) => ({
+        conceptId: paper.conceptId,
+        title: paper.title,
+        tags: [],
+        linkedConceptCounts: {},
+      })),
+    },
+  };
+  const comparisonState = completedConversationState(
+    comparison,
+    thirdPaperRetrieval,
+    [],
+  );
+  assert.deepEqual(comparisonState.activeComparisonPaperSlugs, [
+    paperA.slug,
+    paperB.slug,
+  ]);
+
+  const followUp = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Compare their privacy principles.",
+      conversationState: comparisonState,
+    }),
+    catalog,
+  );
+  const followUpState = completedConversationState(
+    followUp,
+    thirdPaperRetrieval,
+    [],
+  );
+  assert.deepEqual(followUpState.activeComparisonPaperSlugs, [
+    paperA.slug,
+    paperB.slug,
+  ]);
+  assert.equal(followUpState.activePaperSlugs.includes(paperC.slug), false);
+
+  const visual = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Visualize this comparison.",
+      diagramPreference: "requested",
+      conversationState: followUpState,
+    }),
+    catalog,
+  );
+  assert.equal(visual.preferDeterministicComparativeMap, true);
+  assert.deepEqual(visual.turnPlan.resolvedPaperSlugs, [
+    paperA.slug,
+    paperB.slug,
+  ]);
+  const map = await buildComparativePaperDesignMap([
+    paperA.conceptId,
+    paperB.conceptId,
+  ]);
+  assert.ok(map);
+  assert.equal(map.diagram.title.includes(paperA.title), true);
+  assert.equal(map.diagram.title.includes(paperB.title), true);
+  assert.equal(map.diagram.title.includes(paperC.title), false);
+});
+
+test("validated concept referents combine with a newly named comparison paper", async () => {
+  for (const question of [
+    "Compare this principle with Other Paper.",
+    "Contrast the current design principle against Other Paper.",
+  ]) {
+    const prepared = await prepareNativeOkfChatRequest(
+      validateNativeOkfChatRequest({
+        question,
+        conversationState: {
+          ...establishedState(),
+          activeConceptIds: ["design-knowledge/iot-dp1"],
+        },
+      }),
+      CATALOG,
+    );
+    assert.equal(prepared.clarification, null, question);
+    assert.deepEqual(prepared.focusedConceptIds, [
+      "design-knowledge/iot-dp1",
+    ], question);
+    assert.deepEqual(prepared.focusedPaperSlugs, [
+      "blockchain-for-the-iot",
+      "other-paper",
+    ], question);
+  }
+});
+
+test("structured set follow-ups stay scoped to the validated prior result set", async () => {
+  const firstPrepared = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Which papers contribute design principles?",
+    }),
+    CATALOG,
+  );
+  const firstRetrieval: RetrievalResult = {
+    ...retrievalFixture(),
+    structuredAnalysis: {
+      scope: "corpus",
+      checkedPaperCount: 3,
+      exhaustiveForScope: true,
+      requestedKinds: ["principle"],
+      exactTerm: null,
+      relationshipCheckComplete: false,
+      absenceCheckComplete: false,
+      papers: CATALOG.papers.map((paper, index) => ({
+        paperConceptId: paper.conceptId,
+        title: paper.title,
+        representedTypeCounts: {},
+        relevantConceptCount: index < 2 ? 1 : 0,
+        relevantConcepts: [],
+        relevantRelationshipCount: 0,
+        relevantRelationships: [],
+        relationshipStatus: "not-requested",
+        explicitTermMatchCount: 0,
+      })),
+    },
+  };
+  const firstState = completedConversationState(
+    firstPrepared,
+    firstRetrieval,
+    [],
+  );
+  assert.deepEqual(firstState.activeStructuredResultPaperSlugs, [
+    "peer-review-token-incentives",
+    "blockchain-for-the-iot",
+  ]);
+
+  const secondPrepared = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Which of these also contribute design features?",
+      conversationState: firstState,
+    }),
+    CATALOG,
+  );
+  assert.equal(secondPrepared.queryMode, "STRUCTURED_CORPUS_ANALYSIS");
+  assert.deepEqual(secondPrepared.structuredReferentPaperSlugs, [
+    "peer-review-token-incentives",
+    "blockchain-for-the-iot",
+  ]);
+  assert.equal(secondPrepared.focusedPaperSlugs.includes("other-paper"), false);
+
+  const secondRetrieval: RetrievalResult = {
+    ...retrievalFixture(),
+    finalConcepts: [
+      finalConcept("papers/other-paper", "paper", "Other Paper"),
+    ],
+    structuredAnalysis: {
+      scope: "multi-paper",
+      checkedPaperCount: 2,
+      exhaustiveForScope: true,
+      requestedKinds: ["feature"],
+      exactTerm: null,
+      relationshipCheckComplete: false,
+      absenceCheckComplete: false,
+      papers: CATALOG.papers.slice(0, 2).map((paper, index) => ({
+        paperConceptId: paper.conceptId,
+        title: paper.title,
+        representedTypeCounts: {},
+        relevantConceptCount: index === 0 ? 1 : 0,
+        relevantConcepts: [],
+        relevantRelationshipCount: 0,
+        relevantRelationships: [],
+        relationshipStatus: "not-requested",
+        explicitTermMatchCount: 0,
+      })),
+    },
+  };
+  const secondState = completedConversationState(
+    secondPrepared,
+    secondRetrieval,
+    [],
+  );
+  assert.deepEqual(secondState.activeStructuredResultPaperSlugs, [
+    "peer-review-token-incentives",
+  ]);
+  assert.equal(secondState.activePaperSlugs.includes("other-paper"), false);
+});
+
 test("an explicit new paper replaces unrelated stale focus", async () => {
   const prepared = await prepareNativeOkfChatRequest(
     validateNativeOkfChatRequest({
       question: "Explain Other Paper.",
-      conversationState: establishedState(),
+      conversationState: {
+        ...establishedState(),
+        activePaperSlugs: [
+          "blockchain-for-the-iot",
+          "peer-review-token-incentives",
+        ],
+        activeComparisonPaperSlugs: [
+          "blockchain-for-the-iot",
+          "peer-review-token-incentives",
+        ],
+      },
     }),
     CATALOG,
   );
 
   assert.deepEqual(prepared.focusedPaperSlugs, ["other-paper"]);
+  assert.deepEqual(prepared.activeComparisonPaperSlugs, []);
   assert.deepEqual(prepared.focusedConceptIds, []);
   assert.doesNotMatch(
     prepared.retrievalQuestion,
     /design-knowledge\/iot-dp1/u,
   );
+});
+
+test("an explicitly named concept takes precedence over an older comparison", async () => {
+  const prepared = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: "Explain Flexible reviewer incentives.",
+      conversationState: {
+        ...establishedState(),
+        activePaperSlugs: ["blockchain-for-the-iot", "other-paper"],
+        activeComparisonPaperSlugs: [
+          "blockchain-for-the-iot",
+          "other-paper",
+        ],
+      },
+    }),
+    CATALOG,
+  );
+
+  assert.deepEqual(prepared.explicitConceptIds, [
+    "design-knowledge/peer-dp1",
+  ]);
+  assert.deepEqual(prepared.focusedConceptIds, [
+    "design-knowledge/peer-dp1",
+  ]);
+  assert.deepEqual(prepared.focusedPaperSlugs, [
+    "peer-review-token-incentives",
+  ]);
+  assert.deepEqual(prepared.activeComparisonPaperSlugs, []);
+});
+
+test("producer-labelled repository concepts resolve from their researcher-facing title", async () => {
+  const catalog = await loadNativeOkfConversationCatalog();
+  const concept = catalog.concepts.find((candidate) =>
+    /principle/iu.test(candidate.type) &&
+    /^\s*(?=[\p{L}\d._-]{1,16}\s*[-:])(?=[\p{L}\d._-]*\d)[\p{L}\d._-]+\s*[-:]\s*/u.test(
+      candidate.title,
+    )
+  );
+  assert.ok(concept);
+  const paper = catalog.papers.find(
+    (candidate) => candidate.slug === concept.paperSlug,
+  );
+  assert.ok(paper);
+  const researcherFacingTitle = concept.title.replace(
+    /^\s*(?=[\p{L}\d._-]{1,16}\s*[-:])(?=[\p{L}\d._-]*\d)[\p{L}\d._-]+\s*[-:]\s*/u,
+    "",
+  );
+  const prepared = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: `Explain the principle ${researcherFacingTitle} from ${paper.title}.`,
+    }),
+    catalog,
+  );
+
+  assert.deepEqual(prepared.explicitConceptIds, [concept.conceptId]);
+  assert.deepEqual(prepared.focusedConceptIds, [concept.conceptId]);
+  assert.deepEqual(prepared.focusedPaperSlugs, [paper.slug]);
+
+  const normalizeTitle = (value: string) => value.toLocaleLowerCase("en")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+  const target = catalog.papers.find((candidate) =>
+    candidate.slug !== paper.slug &&
+    catalog.concepts.some((targetConcept) => {
+      if (targetConcept.paperSlug !== candidate.slug) return false;
+      const displayTitle = targetConcept.title.replace(
+        /^\s*(?=[\p{L}\d._-]{1,16}\s*[-:])(?=[\p{L}\d._-]*\d)[\p{L}\d._-]+\s*[-:]\s*/u,
+        "",
+      );
+      return displayTitle.length >= 8 &&
+        normalizeTitle(candidate.title).includes(normalizeTitle(displayTitle));
+    })
+  );
+  assert.ok(target);
+  const comparison = await prepareNativeOkfChatRequest(
+    validateNativeOkfChatRequest({
+      question: `Compare that principle with ${target.title}.`,
+      conversationState: {
+        ...establishedState(),
+        activePaperSlugs: [paper.slug],
+        activeConceptIds: [concept.conceptId],
+      },
+    }),
+    catalog,
+  );
+  assert.deepEqual(comparison.explicitConceptIds, []);
+  assert.deepEqual(comparison.focusedConceptIds, [concept.conceptId]);
+  assert.deepEqual(comparison.activeComparisonPaperSlugs, [
+    paper.slug,
+    target.slug,
+  ]);
+  const contextualRetrieval = await assembleNativeOkfContextualRetrieval(
+    comparison,
+    await retrieveOkfContext(comparison.retrievalQuestion),
+  );
+  const conceptById = new Map(
+    catalog.concepts.map((candidate) => [candidate.conceptId, candidate]),
+  );
+  const evidencePaperSlugs = new Set(
+    contextualRetrieval.finalConcepts.flatMap((candidate) => {
+      const slug = conceptById.get(candidate.conceptId)?.paperSlug;
+      return slug ? [slug] : [];
+    }),
+  );
+  assert.equal(evidencePaperSlugs.has(paper.slug), true);
+  assert.equal(evidencePaperSlugs.has(target.slug), true);
 });
 
 test("unknown client paper, concept, and source IDs are discarded", () => {

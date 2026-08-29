@@ -24,6 +24,7 @@ import {
   writeNativeOkfChatSession,
 } from "../../shared/chat-session.ts";
 import {
+  compactNativeOkfConversationStateForRequest,
   parseNativeOkfConversationState,
 } from "../../shared/conversation-state.ts";
 import { shouldShowNativeOkfEvaluationCallout } from "../../shared/evaluation-onboarding.ts";
@@ -269,7 +270,9 @@ export function ChatWorkbench({
         submittedQuestion,
       ),
       visibleHistoryMessageCount: priorEntries.length,
-      conversationState,
+      conversationState: compactNativeOkfConversationStateForRequest(
+        conversationState,
+      ),
     };
     if (guidedSubmission) {
       request.diagramPreference = guidedSubmission.includeDiagram
@@ -403,6 +406,9 @@ export function ChatWorkbench({
               Answers use retrieved library sources. Conversation content remains in this
               browser tab and is not stored by the server.
             </p>
+            <p className="mt-2 inline-flex rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs leading-5 text-amber-950">
+              Current corpus: Blockchain-related Design Science Research papers only.
+            </p>
           </div>
           <button
             type="button"
@@ -470,27 +476,6 @@ export function ChatWorkbench({
                   </div>
                 ) : null}
               </div>
-              {historyContextTruncated ? (
-                <aside
-                  role="status"
-                  className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="max-w-3xl text-xs leading-5 text-slate-700 sm:text-sm">
-                      Earlier messages are no longer included in the assistant&apos;s
-                      active context. Start a New chat if your next question depends on
-                      them.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={clearConversation}
-                      className="rounded-full border border-amber/40 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-amber hover:bg-amber/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
-                    >
-                      New chat
-                    </button>
-                  </div>
-                </aside>
-              ) : null}
               <ol className="space-y-7">
               {entries.map((entry) => (
                 <li key={entry.id}>
@@ -606,6 +591,27 @@ export function ChatWorkbench({
           onSubmit={(event) => void submitQuestion(event)}
           className="border-t border-line bg-paper px-4 py-4 sm:px-6"
         >
+          {historyContextTruncated ? (
+            <aside
+              role="status"
+              className="mb-3 rounded-xl border border-amber/35 bg-amber/10 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="max-w-3xl text-xs leading-5 text-slate-700 sm:text-sm">
+                  Earlier messages are no longer included in the assistant&apos;s
+                  active context. Start a New chat if your next question depends on
+                  them.
+                </p>
+                <button
+                  type="button"
+                  onClick={clearConversation}
+                  className="rounded-full border border-amber/40 bg-white px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-amber hover:bg-amber/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                >
+                  New chat
+                </button>
+              </div>
+            </aside>
+          ) : null}
           <label
             htmlFor="native-okf-chat-question"
             className="text-xs font-bold uppercase tracking-[0.12em] text-ink"

@@ -54,7 +54,7 @@ export interface NativeOkfChatRequest {
   visibleHistoryMessageCount?: number;
   /** @deprecated Compatibility for older clients; prefer diagramPreference. */
   includeDiagram?: boolean;
-  conversationState?: NativeOkfConversationState;
+  conversationState?: NativeOkfConversationStateInput;
 }
 
 export const NATIVE_OKF_DIAGRAM_PREFERENCES = [
@@ -68,6 +68,7 @@ export type NativeOkfDiagramPreference =
 
 export const NATIVE_OKF_CONVERSATION_STATE_VERSION = 1 as const;
 export const MAX_NATIVE_OKF_ACTIVE_PAPERS = 3;
+export const MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS = 64;
 export const MAX_NATIVE_OKF_ACTIVE_CONCEPTS = 8;
 export const MAX_NATIVE_OKF_ACTIVE_SOURCES = 12;
 export const MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS = 500;
@@ -107,6 +108,10 @@ export interface NativeOkfPendingClarification {
 export interface NativeOkfConversationState {
   version: typeof NATIVE_OKF_CONVERSATION_STATE_VERSION;
   activePaperSlugs: string[];
+  /** Explicitly compared papers; supporting retrieval never expands this set. */
+  activeComparisonPaperSlugs?: string[];
+  /** Exhaustive paper identities returned by the latest structured set query. */
+  activeStructuredResultPaperSlugs?: string[];
   activeConceptIds: string[];
   activeSourceIds: string[];
   lastIntent: NativeOkfConversationIntent;
@@ -121,6 +126,41 @@ export interface NativeOkfConversationState {
   synthesisDraft: SynthesisDraftState | null;
 }
 
+/**
+ * Compact browser-to-server form. Omitted draft fields are deterministically
+ * reconstructed by the shared parser and do not carry layout or UI state.
+ */
+export interface CompactNativeOkfSynthesisDraftNode extends Omit<
+  GeneratedDiagramNode,
+  "group" | "sourcePaths" | "synthesisRationale" | "synthesis"
+> {
+  group?: string | null;
+  synthesisRationale?: string | null;
+}
+
+export interface CompactNativeOkfSynthesisDraftState extends Omit<
+  SynthesisDraftState,
+  "nodes"
+> {
+  nodes: CompactNativeOkfSynthesisDraftNode[];
+}
+
+export interface NativeOkfConversationStateInput extends Omit<
+  NativeOkfConversationState,
+  | "activeSourceIds"
+  | "lastSynthesisProblem"
+  | "latestValidatedSynthesisDraft"
+  | "synthesisDraft"
+> {
+  activeSourceIds?: string[];
+  lastSynthesisProblem?: SynthesisProblemState | null;
+  latestValidatedSynthesisDraft?:
+    | SynthesisDraftState
+    | CompactNativeOkfSynthesisDraftState
+    | null;
+  synthesisDraft?: SynthesisDraftState | null;
+}
+
 export interface NativeOkfClarification {
   question: string;
   kind: NativeOkfClarificationKind;
@@ -130,6 +170,8 @@ export function createInitialNativeOkfConversationState(): NativeOkfConversation
   return {
     version: NATIVE_OKF_CONVERSATION_STATE_VERSION,
     activePaperSlugs: [],
+    activeComparisonPaperSlugs: [],
+    activeStructuredResultPaperSlugs: [],
     activeConceptIds: [],
     activeSourceIds: [],
     lastIntent: "answer",
