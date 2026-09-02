@@ -477,12 +477,35 @@ test("repair input remains bounded to the invalid plan, problem, allowlist, and 
   assert.equal(input.includes("priorValidatedDraft"), false);
 });
 
-test("exact stored paper map is diagram-primary and bypasses both model paths", async () => {
+test("exact stored paper map stays deterministic while the answer text is a real grounded model call", async () => {
+  // Regression: the diagram must remain a zero-model-call deterministic projection
+  // (unchanged), but the answer text must no longer be replaced by a generic
+  // "N concepts, M relationships" summary — the user asked a real question and must
+  // get a real answer, with the deterministic diagram attached alongside it.
   let responses = 0;
   let moderations = 0;
   const client: NativeOpenAiClient = {
-    responses: { create: async () => { responses += 1; throw new Error("must not run"); } },
-    moderations: { create: async () => { moderations += 1; throw new Error("must not run"); } },
+    responses: {
+      create: async () => {
+        responses += 1;
+        return {
+          id: "mock-response",
+          object: "response",
+          created_at: 0,
+          model: ENVIRONMENT.model,
+          output: [],
+          output_text:
+            "Blockchain for the IoT defines its stored requirements, principles, and features as shown.",
+          status: "completed",
+        } as unknown as Response;
+      },
+    },
+    moderations: {
+      create: async () => {
+        moderations += 1;
+        return { results: [{ flagged: false }] } as never;
+      },
+    },
   };
   const result = await answerNativeOkfChat(
     {
@@ -491,17 +514,24 @@ test("exact stored paper map is diagram-primary and bypasses both model paths", 
     },
     { environment: ENVIRONMENT, client },
   );
-  assert.equal(responses, 0);
-  assert.equal(moderations, 0);
+  // The diagram construction itself never called the model — only real text generation did.
+  // (ENVIRONMENT above disables moderation, so moderations legitimately stays 0 here.)
+  assert.ok(responses >= 1, "expected the real answer-text model path to run");
+  void moderations;
   assert.equal(result.presentationMode, "diagram-primary");
   assert.equal(result.diagramMode, "stored");
   assert.equal(result.diagramStatus, "success");
-  assert.equal(result.diagram?.nodes.length, 17);
-  assert.equal(result.diagram?.edges.length, 14);
-  assert.equal(result.sources.length, 17);
+  assert.equal(result.diagram?.nodes.length, 17, "diagram remains the exact deterministic 17-node map");
+  assert.equal(result.diagram?.edges.length, 14, "diagram remains the exact deterministic 14-edge map");
+  assert.equal(result.sources.length, 17, "source disclosure covers the complete deterministic map");
   assert.equal(result.answerMarkdown.includes("grounded answer could not be presented"), false);
-  assert.match(result.answerMarkdown, /17 native design concepts/);
-  assert.match(result.answerMarkdown, /14 canonical stored relationships/);
+  // The answer is no longer the generic count-only sentence...
+  assert.doesNotMatch(result.answerMarkdown, /^This exact stored map for/u);
+  // ...but the deterministic count summary is still available as supplementary metadata.
+  assert.match(result.deterministicSummary ?? "", /17 native design concepts/);
+  assert.match(result.deterministicSummary ?? "", /14 canonical stored relationships/);
+  // A deterministic provenance sentence about the diagram is always appended.
+  assert.match(result.answerMarkdown, /no synthesized design knowledge was added/iu);
 });
 
 test("successful synthesis skips the normal answer model and returns used support sources only", async () => {

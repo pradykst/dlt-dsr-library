@@ -10,6 +10,11 @@ import {
 } from "../server/public-chat.ts";
 import { MAX_NATIVE_OKF_REQUEST_BYTES } from "../server/openai/chat.ts";
 import {
+  clearOpenAiClientForTests,
+  setOpenAiClientForTests,
+} from "../server/openai/client.ts";
+import { clearOpenAiEnvironmentCacheForTests } from "../server/openai/env.ts";
+import {
   createInitialNativeOkfConversationState,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
@@ -343,29 +348,60 @@ test("request transport accepts bytes below and rejects bytes above its hard cei
 });
 
 test("stored and comparative deterministic diagrams are available anonymously", async () => {
-  const stored = await handlePublicNativeOkfChat(request({
-    question:
-      "Create a design diagram for Blockchain for the IoT showing its requirements, principles, features, and their relationships.",
-    includeDiagram: true,
-  }), { environment: {} });
-  assert.equal(stored.status, 200);
-  assert.equal(stored.headers.get("set-cookie"), null);
-  const storedPayload = await stored.json() as NativeOkfChatResponse;
-  assert.equal(storedPayload.diagramMode, "stored");
-  assert.equal(storedPayload.diagramStatus, "success");
-  assert.ok((storedPayload.diagram?.nodes.length ?? 0) > 0);
+  // The diagram itself is still built with zero LLM involvement (unchanged, guaranteed
+  // canonical), but the turn now also generates a real grounded answer alongside it, so
+  // this end-to-end anonymous-transport test needs a working (mocked) model client.
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalModel = process.env.OPENAI_MODEL;
+  process.env.OPENAI_API_KEY = "sk-test-do-not-expose";
+  process.env.OPENAI_MODEL = "test-model";
+  clearOpenAiEnvironmentCacheForTests();
+  setOpenAiClientForTests({
+    responses: {
+      create: async () => ({
+        id: "mock-response",
+        object: "response",
+        created_at: 0,
+        model: "test-model",
+        output: [],
+        output_text: "The stored records support this request.",
+        status: "completed",
+      }),
+    },
+    moderations: {
+      create: async () => ({ results: [{ flagged: false }] }),
+    },
+  } as unknown as Parameters<typeof setOpenAiClientForTests>[0]);
+  try {
+    const stored = await handlePublicNativeOkfChat(request({
+      question:
+        "Create a design diagram for Blockchain for the IoT showing its requirements, principles, features, and their relationships.",
+      includeDiagram: true,
+    }), { environment: {} });
+    assert.equal(stored.status, 200);
+    assert.equal(stored.headers.get("set-cookie"), null);
+    const storedPayload = await stored.json() as NativeOkfChatResponse;
+    assert.equal(storedPayload.diagramMode, "stored");
+    assert.equal(storedPayload.diagramStatus, "success");
+    assert.ok((storedPayload.diagram?.nodes.length ?? 0) > 0);
 
-  const comparative = await handlePublicNativeOkfChat(request({
-    question:
-      "Create a diagram comparing how trust is operationalized in the trust-enabling capacity-exchange paper and the consent self-management paper. Keep the two papers distinguishable.",
-    includeDiagram: true,
-  }), { environment: {} });
-  assert.equal(comparative.status, 200);
-  assert.equal(comparative.headers.get("set-cookie"), null);
-  const comparativePayload = await comparative.json() as NativeOkfChatResponse;
-  assert.equal(comparativePayload.diagramMode, "comparative");
-  assert.equal(comparativePayload.diagramStatus, "success");
-  assert.ok((comparativePayload.diagram?.nodes.length ?? 0) > 0);
+    const comparative = await handlePublicNativeOkfChat(request({
+      question:
+        "Create a diagram comparing how trust is operationalized in the trust-enabling capacity-exchange paper and the consent self-management paper. Keep the two papers distinguishable.",
+      includeDiagram: true,
+    }), { environment: {} });
+    assert.equal(comparative.status, 200);
+    assert.equal(comparative.headers.get("set-cookie"), null);
+    const comparativePayload = await comparative.json() as NativeOkfChatResponse;
+    assert.equal(comparativePayload.diagramMode, "comparative");
+    assert.equal(comparativePayload.diagramStatus, "success");
+    assert.ok((comparativePayload.diagram?.nodes.length ?? 0) > 0);
+  } finally {
+    clearOpenAiClientForTests();
+    process.env.OPENAI_API_KEY = originalApiKey;
+    process.env.OPENAI_MODEL = originalModel;
+    clearOpenAiEnvironmentCacheForTests();
+  }
 });
 
 test("public transport preserves the synthesized validated-diagram response path", async () => {

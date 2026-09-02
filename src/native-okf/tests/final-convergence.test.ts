@@ -503,6 +503,18 @@ test("answer and deterministic diagram consume the same resolved turn plan", asy
       capturedKinds = requestedKinds ?? [];
       return await buildStoredPaperDesignMap(paperConceptId, requestedKinds);
     },
+    environment: MOCK_OPENAI_ENVIRONMENT,
+    client: {
+      responses: {
+        create: async () =>
+          completedTextResponse(
+            `${paper.title} defines its represented design principles as stored.`,
+          ),
+      },
+      moderations: {
+        create: async () => ({ results: [{ flagged: false }] }),
+      },
+    } as unknown as NativeOpenAiClient,
   });
   assert.equal(capturedPaperId, paper.conceptId);
   assert.deepEqual(capturedKinds, prepared.turnPlan.requestedConceptKinds);

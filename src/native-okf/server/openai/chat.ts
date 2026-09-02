@@ -757,6 +757,23 @@ export async function answerNativeOkfChat(
     };
   }
 
+  // For STORED_FULL_MAP / STORED_FILTERED_MAP / STORED_COMPARISON_MAP, the diagram
+  // itself is always built deterministically here (zero LLM involvement, guaranteed
+  // canonical-complete) and fails closed exactly as before. What changed: on success
+  // we no longer substitute the graph's count summary as the entire answer — the turn
+  // falls through into the normal grounded-answer pipeline below so the user's actual
+  // question gets a real, specific answer, with this deterministic diagram attached
+  // (see "earlyDeterministicDiagram" near the diagram-attachment step further down).
+  // Text must never be replaced by "here is what the diagram contains."
+  let earlyDeterministicDiagram:
+    | {
+      diagram: GeneratedDiagram;
+      sources: NativeOkfChatResponse["sources"];
+      mode: "stored" | "comparative";
+      summary: string;
+    }
+    | undefined;
+
   if (
     turnPlan.mode === "STORED_FULL_MAP" ||
     turnPlan.mode === "STORED_FILTERED_MAP"
@@ -765,50 +782,40 @@ export async function answerNativeOkfChat(
     const focusedPaper = prepared.catalog.papers.find(
       (paper) => paper.slug === focusedSlug,
     );
+    let builtDiagram: GeneratedDiagram | undefined;
     if (focusedPaper) {
       try {
-        const diagram = await (
+        builtDiagram = await (
           dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
         )(focusedPaper.conceptId, turnPlan.requestedConceptKinds);
-        if (diagram) {
-          const presentation = await storedPaperMapPresentation(
-            focusedPaper.conceptId,
-            diagram,
-          );
-          return {
-            kind: "answer",
-            presentationMode: "diagram-primary",
-            answerMarkdown: presentation.summary,
-            deterministicSummary: presentation.summary,
-            sources: presentation.sources,
-            diagram,
-            diagramMode: "stored",
-            diagramStatus: "success",
-            insufficientContext: false,
-            conversationState: completedConversationState(
-              prepared,
-              retrieval,
-              presentation.sources,
-            ),
-            ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
-          };
-        }
       } catch {
-        // The content-free diagnostic below is the only client-visible detail.
+        builtDiagram = undefined;
       }
     }
-    return {
-      kind: "answer",
-      presentationMode: "safe-error",
-      answerMarkdown:
-        "The exact stored paper map could not be assembled safely. No model-generated substitute was used.",
-      sources: [],
-      diagramMode: "stored",
-      diagramStatus: "failed",
-      diagnosticCode: "stored-map-unavailable",
-      insufficientContext: false,
-      conversationState: completedConversationState(prepared, retrieval, []),
-      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+    if (!builtDiagram) {
+      return {
+        kind: "answer",
+        presentationMode: "safe-error",
+        answerMarkdown:
+          "The exact stored paper map could not be assembled safely. No model-generated substitute was used.",
+        sources: [],
+        diagramMode: "stored",
+        diagramStatus: "failed",
+        diagnosticCode: "stored-map-unavailable",
+        insufficientContext: false,
+        conversationState: completedConversationState(prepared, retrieval, []),
+        ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+      };
+    }
+    const presentation = await storedPaperMapPresentation(
+      focusedPaper!.conceptId,
+      builtDiagram,
+    );
+    earlyDeterministicDiagram = {
+      diagram: builtDiagram,
+      sources: presentation.sources,
+      mode: "stored",
+      summary: presentation.summary,
     };
   }
 
@@ -820,44 +827,34 @@ export async function answerNativeOkfChat(
       const paper = paperBySlug.get(slug);
       return paper ? [paper.conceptId] : [];
     });
+    let presentation: Awaited<ReturnType<typeof buildComparativePaperDesignMap>>;
     try {
-      const presentation = await (
+      presentation = await (
         dependencies.buildComparativePaperMap ?? buildComparativePaperDesignMap
       )(paperConceptIds);
-      if (presentation) {
-        return {
-          kind: "answer",
-          presentationMode: "diagram-primary",
-          answerMarkdown: presentation.summary,
-          deterministicSummary: presentation.summary,
-          sources: presentation.sources,
-          diagram: presentation.diagram,
-          diagramMode: "comparative",
-          diagramStatus: "success",
-          insufficientContext: false,
-          conversationState: completedConversationState(
-            prepared,
-            retrieval,
-            presentation.sources,
-          ),
-          ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
-        };
-      }
     } catch {
-      // The content-free diagnostic below is the only client-visible detail.
+      presentation = undefined;
     }
-    return {
-      kind: "answer",
-      presentationMode: "safe-error",
-      answerMarkdown:
-        "The comparative stored evidence map could not be assembled safely. No model-generated substitute was used.",
-      sources: [],
-      diagramMode: "comparative",
-      diagramStatus: "failed",
-      diagnosticCode: "stored-map-unavailable",
-      insufficientContext: false,
-      conversationState: completedConversationState(prepared, retrieval, []),
-      ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+    if (!presentation) {
+      return {
+        kind: "answer",
+        presentationMode: "safe-error",
+        answerMarkdown:
+          "The comparative stored evidence map could not be assembled safely. No model-generated substitute was used.",
+        sources: [],
+        diagramMode: "comparative",
+        diagramStatus: "failed",
+        diagnosticCode: "stored-map-unavailable",
+        insufficientContext: false,
+        conversationState: completedConversationState(prepared, retrieval, []),
+        ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
+      };
+    }
+    earlyDeterministicDiagram = {
+      diagram: presentation.diagram,
+      sources: presentation.sources,
+      mode: "comparative",
+      summary: presentation.summary,
     };
   }
 
@@ -1159,7 +1156,20 @@ export async function answerNativeOkfChat(
   let diagram: GeneratedDiagram | undefined;
   let responseDiagramMode: NativeOkfDiagramMode | null = null;
   let diagramStatus: NativeOkfChatResponse["diagramStatus"] = null;
-  if (presentationSafe && includeDiagram && prepared.diagramMode === "stored") {
+  if (earlyDeterministicDiagram) {
+    // Already built deterministically above (guaranteed canonical-complete, zero LLM
+    // node/edge selection). Never re-derive it from evidence or an LLM call, and never
+    // let it depend on presentationSafe — the diagram's correctness never depended on
+    // the LLM's prose validating cleanly.
+    diagram = earlyDeterministicDiagram.diagram;
+    responseDiagramMode = earlyDeterministicDiagram.mode;
+    diagramStatus = "success";
+    await moderateNativeOkfText(
+      JSON.stringify(diagram),
+      environment,
+      client,
+    );
+  } else if (presentationSafe && includeDiagram && prepared.diagramMode === "stored") {
     try {
       diagram = await buildGroundedStoredSourceMap(retrieval, {
         allowNarrowExactRelationship:
@@ -1211,6 +1221,19 @@ export async function answerNativeOkfChat(
   if (presentationSafe) {
     sourceCards = citationResult.sources;
   }
+  if (earlyDeterministicDiagram) {
+    // The deterministic diagram's own source set is guaranteed complete for what it
+    // shows; the LLM's cited sources answer the user's specific question and may be a
+    // subset (or, rarely, reference a related concept the diagram doesn't include).
+    // Keep both so source disclosure never shows less than the diagram itself does.
+    sourceCards = mergeSourceCards(earlyDeterministicDiagram.sources, sourceCards);
+    if (presentationSafe) {
+      const provenanceSentence = earlyDeterministicDiagram.mode === "comparative"
+        ? "The diagram below shows the complete canonical stored design-knowledge relationships for both papers, kept in separate paper-labelled groups. No synthesized or invented cross-paper knowledge was added."
+        : "The diagram below shows the complete stored design-knowledge concepts and canonical relationships from the paper. No synthesized design knowledge was added.";
+      answerMarkdown = `${answerMarkdown}\n\n${provenanceSentence}`;
+    }
+  }
   const conversationState = completedConversationState(
     prepared,
     retrieval,
@@ -1229,6 +1252,9 @@ export async function answerNativeOkfChat(
     ...(diagram ? { diagram } : {}),
     diagramMode: responseDiagramMode,
     diagramStatus,
+    ...(earlyDeterministicDiagram
+      ? { deterministicSummary: earlyDeterministicDiagram.summary }
+      : {}),
     ...(!presentationSafe
       ? { diagnosticCode: "answer-presentation-invalid" as const }
       : {}),

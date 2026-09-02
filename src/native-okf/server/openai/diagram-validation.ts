@@ -685,6 +685,24 @@ function validateGraph(
       }
     }
   }
+  if (context.options.mode === "synthesized") {
+    // A design-synthesis turn proposes something for the user's problem — an all-stored
+    // graph is a retrieval/evidence dump, not a proposal. Require at least one genuinely
+    // synthesized or adapted node. This applies regardless of requireDisplayedStoredSupport
+    // (refinement patches disable that narrower grounding rule, but still edit a proposal
+    // that must remain a proposal). There is deliberately no "exact reuse" bypass here:
+    // the schema carries no validated marker proving a proposal is a verbatim reuse of a
+    // complete stored artifact, so that exception is not inferred casually.
+    const proposalNodes = nodes.filter((node) => node.stage !== "problem");
+    const hasSynthesizedNode = proposalNodes.some(
+      (node) => node.provenance === "synthesized",
+    );
+    if (proposalNodes.length > 0 && !hasSynthesizedNode) {
+      errors.push(
+        "A synthesized design proposal must include at least one synthesized or adapted node; an all-stored graph does not represent a new proposal.",
+      );
+    }
+  }
   if (nodes.length <= 1) return;
 
   const adjacency = new Map(nodes.map((node) => [node.id, new Set<string>()]));

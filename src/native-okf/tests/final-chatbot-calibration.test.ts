@@ -18,10 +18,12 @@ import {
   userFacingRetrievalWarnings,
   validateNativeOkfChatRequest,
 } from "../server/openai/chat.ts";
+import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import {
   buildNativeOkfGroundedContext,
   buildNativeOkfModelInput,
 } from "../server/openai/context.ts";
+import type { NativeOpenAiEnvironment } from "../server/openai/env.ts";
 import { buildStoredPaperDesignMap } from "../server/openai/stored-source-map.ts";
 import {
   nativeOkfRequestedKindForType,
@@ -32,6 +34,37 @@ import {
   createInitialNativeOkfConversationState,
   type NativeOkfConversationState,
 } from "../shared/chat-types.ts";
+
+const MOCK_ENVIRONMENT: NativeOpenAiEnvironment = {
+  apiKey: "mock-only-not-a-live-key",
+  model: "mock-model",
+  reasoningEffort: "low",
+  moderationEnabled: false,
+  maxOutputTokens: 900,
+  diagramMaxOutputTokens: 4_096,
+};
+
+/** A stable, policy-safe answer for tests that only assert on the deterministic diagram. */
+function mockAnswerClient(
+  text = "The stored records support this request.",
+): NativeOpenAiClient {
+  return {
+    responses: {
+      create: async () => ({
+        id: "mock-response",
+        object: "response",
+        created_at: 0,
+        model: "mock-model",
+        output: [],
+        output_text: text,
+        status: "completed",
+      }) as unknown as import("openai/resources/responses/responses").Response,
+    },
+    moderations: {
+      create: async () => ({ results: [{ flagged: false }] }) as never,
+    },
+  };
+}
 
 async function preparedRetrieval(question: string) {
   const request = validateNativeOkfChatRequest({ question });
@@ -453,7 +486,10 @@ test("resolved single-paper diagram uses the complete canonical stored map", asy
   assert.ok(paper);
   const expected = await buildStoredPaperDesignMap(paper.conceptId);
   assert.ok(expected);
-  const response = await answerNativeOkfChat({ question });
+  const response = await answerNativeOkfChat(
+    { question },
+    { environment: MOCK_ENVIRONMENT, client: mockAnswerClient() },
+  );
   assert.equal(response.diagramMode, "stored");
   assert.equal(response.diagramStatus, "success");
   assert.equal(response.diagram?.nodes.length, expected.nodes.length);
@@ -474,7 +510,10 @@ test("resolved cross-paper diagram is deterministic and paper-distinguishable", 
   assert.equal(prepared.queryMode, "COMPARATIVE_EVIDENCE_DIAGRAM");
   assert.equal(prepared.preferDeterministicComparativeMap, true);
   assert.equal(prepared.clarification, null);
-  const response = await answerNativeOkfChat({ question });
+  const response = await answerNativeOkfChat(
+    { question },
+    { environment: MOCK_ENVIRONMENT, client: mockAnswerClient() },
+  );
   assert.equal(response.diagramMode, "comparative");
   assert.equal(response.diagramStatus, "success");
   assert.equal(new Set(response.diagram?.nodes.map((node) => node.group)).size, 2);

@@ -41,7 +41,7 @@ import type { OkfConcept } from "./types.ts";
 import { isNativeOkfLiveDataRequest } from "./live-data-gate.ts";
 
 const COMPARISON_PATTERN =
-  /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differences?|versus|vs\.?)\b/iu;
+  /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differ(?:s|ing|ed)?|differences?|versus|vs\.?)\b/iu;
 const DETAIL_PATTERN =
   /\b(?:in detail|detailed|exhaustive|step[\s-]*by[\s-]*step|literature review|full methodological discussion)\b/iu;
 const IMPLEMENTS_REFERENCE_PATTERN =
@@ -73,15 +73,31 @@ const FEATURES_REFERENCE_PATTERN =
 const GENERIC_DIAGRAM_PATTERN =
   /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:me\s+)?(?:a\s+|the\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture|maps?)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
 const SYNTHESIS_ACTION_PATTERN =
-  /\b(?:propos(?:e|ing)|creat(?:e|ing)|generat(?:e|ing)|construct(?:ing)?|develop(?:ing)?|formulat(?:e|ing)|build(?:ing)?|combin(?:e|ing)|designing)\b|^\s*(?:please\s+)?design\b/iu;
+  /\b(?:propos(?:e|ing)|creat(?:e|ing)|generat(?:e|ing)|construct(?:ing)?|develop(?:ing)?|formulat(?:e|ing)|build(?:ing)?|combin(?:e|ing)|designing|solv(?:e|ing))\b|^\s*(?:please\s+)?design\b/iu;
 const SYNTHESIS_OUTPUT_PATTERN =
   /\b(?:framework|solution|architecture|flow|theory|artifact|approach|design)\b/iu;
 const SYNTHESIS_NOVELTY_PATTERN =
   /\b(?:new|my problem|this (?:new )?(?:idea|problem|use case)|problem-specific|how should .+ be solved|across|fragmented|privacy-preserving)\b/iu;
+// "How do I/we/you solve X" and "help me/us solve X" are unambiguous first-person
+// requests for a solution to a stated problem, independent of whether X happens to
+// contain any of the narrower output/novelty vocabulary above (e.g. plain domain
+// phrases like "marketplace fragmentation" or "consent management" contain neither
+// "framework"/"solution"/etc. nor "new"/"across"/"fragmented"). This is a linguistic
+// pattern on the requester's own phrasing, not tied to any specific domain or paper.
+const SOLVE_PROBLEM_QUESTION_PATTERN =
+  /\bhow\s+(?:do|can|could|should|might)\s+(?:i|we|you)\s+solve\b|\bhelp\s+(?:me|us)\s+(?:to\s+)?solve\b/iu;
+// An imperative request to create a named artifact ("make/build/create/design [me] a
+// system/tool/solution ...") is a synthesis request even when it uses "make"/"build",
+// which alone are too generic to gate on (they also appear in ordinary causative
+// phrasing like "make the system more secure"). Requiring the indefinite article
+// immediately before a generic artifact noun keeps this specific to genuine creation
+// requests without depending on any domain- or paper-specific vocabulary.
+const MAKE_ARTIFACT_REQUEST_PATTERN =
+  /\b(?:make|build|creat(?:e|ing)|design(?:ing)?)\s+(?:me\s+|us\s+)?(?:a|an)\s+(?:system|solution|approach|tool|app|application|platform|process|mechanism|framework|architecture)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
 const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN =
-  /\b(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
+  /\b(?:make|add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
 const ACTIVE_DIAGRAM_EXPLICIT_EDIT_REQUEST_PATTERN =
   /^\s*(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b|\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
 const ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN =
@@ -642,9 +658,22 @@ function rankedPaperMentions(
   const candidates = anchored.length === 0
     ? mentions
     : MULTI_PAPER_MENTION_PATTERN.test(question)
-      ? mentions.filter(({ paper, score }) =>
-          score >= 8_000 || hasExplicitLoosePaperPhrase(question, paper)
-        )
+      ? (() => {
+          // A comparison question already quotes the anchored papers' own titles
+          // verbatim; those titles routinely contain two-word fragments that
+          // coincidentally match an unrelated third paper's title. Strip the
+          // already-anchored titles out before loose-matching any other candidate,
+          // so a real paper's own title text never gets misread as a passing
+          // mention of some other paper.
+          const looseMatchText = stripExplicitPaperTitles(
+            question,
+            anchored.map(({ paper }) => paper.slug),
+            catalog,
+          );
+          return mentions.filter(({ paper, score }) =>
+            score >= 8_000 || hasExplicitLoosePaperPhrase(looseMatchText, paper)
+          );
+        })()
       : anchored;
   return candidates.sort((left, right) => {
     if (
@@ -933,6 +962,8 @@ export function inferNativeOkfSynthesisIntent(
 ): boolean {
   if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
+  if (SOLVE_PROBLEM_QUESTION_PATTERN.test(question)) return true;
+  if (MAKE_ARTIFACT_REQUEST_PATTERN.test(question)) return true;
   if (
     state.lastSynthesisProblem &&
     state.lastIntent === "synthesized-flow" &&
@@ -980,8 +1011,14 @@ export function inferActiveSynthesisDiagramRefinement(
   ) {
     return false;
   }
-  return ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN.test(question) ||
-    ACTIVE_DIAGRAM_CONNECT_PATTERN.test(question);
+  // A named structural object ("add another feature", "connect both requirements") or an
+  // explicit connect phrase is the clearest signal, but requiring one unconditionally
+  // rejected natural refinements that name a topical concern instead of a formal layer
+  // ("add stronger privacy", "make this more robust") — with an active validated draft
+  // already required above, an edit-action verb that isn't a pure explain-only question
+  // is itself sufficient; the object-noun/connect check only adds confidence, it does not
+  // gate acceptance.
+  return true;
 }
 
 function inferCategoryStoredMapFollowUp(
@@ -1120,7 +1157,15 @@ function clarificationFor(
     synthesisIntent &&
     SYNTHESIS_REFINEMENT_PATTERN.test(question) &&
     !state.lastSynthesisProblem &&
-    !state.latestValidatedSynthesisDraft
+    !state.latestValidatedSynthesisDraft &&
+    // A first-turn request can itself use a mutation-shaped verb ("make a system for
+    // consent management") without being an ambiguous follow-up refinement — only ask
+    // for the domain when the question doesn't already name one explicitly (via the
+    // same "for <domain>" / cross-organizational framing used elsewhere). This
+    // deliberately excludes the looser "3 meaningful words" fallback used by
+    // hasConcreteSynthesisProblem below: a bare mutation request like "make the flow
+    // privacy preserving" can reach that word count without stating any real domain.
+    inferredSynthesisDomain(question, null) === null
   ) {
     return {
       kind: "missing-domain",
@@ -1529,11 +1574,13 @@ export async function prepareNativeOkfChatRequest(
     effectiveQuestion,
     contextBase,
   );
-  // With >=2 explicitly named papers, classify intent from the question with their
+  // With >=1 explicitly named paper, classify intent from the question with their
   // own title text removed — real titles routinely contain words ("Designing",
   // "Privacy-Preserving", "Framework") that would otherwise be misread as the
-  // user's own synthesis-shaped request. See stripExplicitPaperTitles for why.
-  const synthesisClassificationQuestion = explicitPaperSlugs.length >= 2
+  // user's own synthesis-shaped request, even for a single stored-paper question
+  // (e.g. "What design principles are represented in \"<a quoted paper title>\"?").
+  // See stripExplicitPaperTitles for why.
+  const synthesisClassificationQuestion = explicitPaperSlugs.length >= 1
     ? stripExplicitPaperTitles(effectiveQuestion, explicitPaperSlugs, catalog)
     : effectiveQuestion;
   let synthesisIntent = activeDraftRefinement || activeProposalRerender ||
@@ -1582,7 +1629,10 @@ export async function prepareNativeOkfChatRequest(
     requestedKinds,
   );
   const automaticDiagramIntent =
-    !activeDiagramQa && inferDiagramIntent(effectiveQuestion) ||
+    // Same title-stripped text used for synthesis classification: a paper title
+    // containing "architecture"/"flow"/"graph"/etc. must not silently auto-enable a
+    // diagram for a plain content question about that paper.
+    !activeDiagramQa && inferDiagramIntent(synthesisClassificationQuestion) ||
     activeDraftRefinement ||
     categoryStoredMapFollowUp ||
     (synthesisIntent && contextBase.lastDiagramRequested);
@@ -1590,6 +1640,11 @@ export async function prepareNativeOkfChatRequest(
     (diagramPreference === "requested" ||
       (diagramPreference === "auto" && automaticDiagramIntent));
   const storedPaperDiagram =
+    // An edit-shaped utterance already recognized as refining the active validated
+    // synthesis draft must never be reinterpreted as a request for some retrieved
+    // paper's stored map — "this"/"it" in e.g. "make this more robust and give an
+    // updated diagram" otherwise satisfies the generic stored-map subject pattern.
+    !activeDraftRefinement &&
     includeDiagram && focusedPaperSlugs.length === 1 &&
     (
       inferStoredPaperMapIntent(effectiveQuestion) ||
@@ -1598,6 +1653,7 @@ export async function prepareNativeOkfChatRequest(
         inferFocusedPaperMapFollowUpIntent(effectiveQuestion)
     );
   const comparativeDiagram =
+    !activeDraftRefinement &&
     includeDiagram &&
     focusedPaperSlugs.length >= 2 &&
     (
