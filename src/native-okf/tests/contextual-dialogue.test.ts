@@ -1052,7 +1052,7 @@ test("conversation state is always versioned and bounded", () => {
     8,
   );
   assert.equal(
-    parsed.conversationState?.activeSourceIds.length,
+    parsed.conversationState?.activeSourceIds?.length,
     12,
   );
 });

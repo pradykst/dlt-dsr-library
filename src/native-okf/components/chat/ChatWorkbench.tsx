@@ -47,6 +47,8 @@ interface ChatEntry {
   role: "user" | "assistant";
   content: string;
   response?: NativeOkfChatResponse;
+  /** Set on a user turn whose request failed — kept visible as a distinct marker, never resent. */
+  failed?: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,14 +97,16 @@ function isChatResponse(value: unknown): value is NativeOkfChatResponse {
 }
 
 function nativeOkfChatErrorMessage(payload: unknown, status: number): string {
-  if (status === 429) {
-    return "The assistant is handling other requests. Please try again shortly.";
-  }
-  if (status === 503) {
-    return "The native OKF assistant is temporarily unavailable.";
-  }
+  // Prefer the server's own differentiated, safe message (it already distinguishes
+  // provider outages, rate limits, quota limits, and validation failures) over a
+  // generic status-code bucket — the bucket below is only a fallback for a missing
+  // or malformed error payload.
   if (isRecord(payload)) {
-    if (typeof payload.error === "string" && payload.error.length <= 500) {
+    if (
+      typeof payload.error === "string" &&
+      payload.error.length > 0 &&
+      payload.error.length <= 500
+    ) {
       return payload.error;
     }
     if (
@@ -113,11 +117,20 @@ function nativeOkfChatErrorMessage(payload: unknown, status: number): string {
       return payload.error.message;
     }
   }
+  if (status === 429) {
+    return "The assistant is handling other requests. Please try again shortly.";
+  }
+  if (status === 503) {
+    return "The native OKF assistant is temporarily unavailable.";
+  }
   return "The native OKF assistant could not complete this request.";
 }
 
 function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistoryMessage[] {
   return entries
+    // A failed turn never received an assistant reply; sending it would put two
+    // consecutive user messages in the model's history with nothing answering the first.
+    .filter((entry) => !entry.failed)
     .map((entry) => ({
       role: entry.role,
       content: entry.content.slice(
@@ -330,6 +343,13 @@ export function ChatWorkbench({
           ? caught.message
           : "The design knowledge assistant could not complete this request.",
       );
+      // Mark the turn that failed in place rather than leaving an unlabeled orphan —
+      // a retry then adds a new, visually distinct entry instead of an identical twin.
+      setEntries((current) =>
+        current.map((entry) =>
+          entry.id === userEntry.id ? { ...entry, failed: true } : entry
+        )
+      );
       updateComposerQuestion(submittedQuestion);
     } finally {
       if (requestController.current === controller) {
@@ -480,13 +500,29 @@ export function ChatWorkbench({
               {entries.map((entry) => (
                 <li key={entry.id}>
                   {entry.role === "user" ? (
-                    <article className="ml-auto max-w-3xl rounded-2xl rounded-br-md bg-ink px-5 py-4 text-white shadow-sm">
-                      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                        You
+                    <article
+                      className={`ml-auto max-w-3xl rounded-2xl rounded-br-md px-5 py-4 shadow-sm ${
+                        entry.failed
+                          ? "border border-dashed border-red-300 bg-white text-ink opacity-70"
+                          : "bg-ink text-white"
+                      }`}
+                    >
+                      <p
+                        className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                          entry.failed ? "text-red-500" : "text-slate-400"
+                        }`}
+                      >
+                        {entry.failed ? "You · not sent" : "You"}
                       </p>
                       <p className="whitespace-pre-wrap text-sm leading-6">
                         {entry.content}
                       </p>
+                      {entry.failed ? (
+                        <p className="mt-2 text-xs text-red-500">
+                          This message failed to send and was not answered. It has been
+                          placed back in the composer to retry.
+                        </p>
+                      ) : null}
                     </article>
                   ) : (
                     <article className="rounded-2xl rounded-tl-md border border-line bg-white px-5 py-5 shadow-sm sm:px-6">

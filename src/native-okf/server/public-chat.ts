@@ -7,9 +7,15 @@ import {
 } from "./openai/chat.ts";
 import {
   NativeOkfRequestError,
+  normalizeOpenAiError,
   publicNativeOkfChatError,
+  RequestTooLargeError,
 } from "./openai/errors.ts";
 import { getNativeOkfPublicOrigin } from "./public-origin.ts";
+import {
+  createNativeOkfRequestId,
+  logNativeOkfChatOutcome,
+} from "./request-log.ts";
 
 const MAX_CONCURRENT_PUBLIC_CHAT_REQUESTS = 4;
 
@@ -113,18 +119,32 @@ export async function handlePublicNativeOkfChat(
     );
   }
 
+  const requestId = createNativeOkfRequestId();
+  const startedAtMs = Date.now();
+  const tooLarge = () =>
+    jsonResponse(
+      publicNativeOkfChatError(
+        new RequestTooLargeError(
+          `Request body must not exceed ${MAX_NATIVE_OKF_REQUEST_BYTES} bytes.`,
+        ),
+      ).body,
+      413,
+      { "X-Request-Id": requestId },
+    );
+
   const requestBytes = contentLength(request);
   if (
     requestBytes !== undefined &&
     requestBytes > MAX_NATIVE_OKF_REQUEST_BYTES
   ) {
-    return jsonResponse(
-      {
-        error: `Request body must not exceed ${MAX_NATIVE_OKF_REQUEST_BYTES} bytes.`,
-        code: "invalid_request",
-      },
-      413,
-    );
+    logNativeOkfChatOutcome({
+      requestId,
+      status: "error",
+      httpStatus: 413,
+      durationMs: Date.now() - startedAtMs,
+      errorCode: "request_too_large",
+    });
+    return tooLarge();
   }
 
   let body: unknown;
@@ -134,13 +154,14 @@ export async function handlePublicNativeOkfChat(
       new TextEncoder().encode(rawBody).byteLength >
       MAX_NATIVE_OKF_REQUEST_BYTES
     ) {
-      return jsonResponse(
-        {
-          error: `Request body must not exceed ${MAX_NATIVE_OKF_REQUEST_BYTES} bytes.`,
-          code: "invalid_request",
-        },
-        413,
-      );
+      logNativeOkfChatOutcome({
+        requestId,
+        status: "error",
+        httpStatus: 413,
+        durationMs: Date.now() - startedAtMs,
+        errorCode: "request_too_large",
+      });
+      return tooLarge();
     }
     body = JSON.parse(rawBody) as unknown;
   } catch {
@@ -150,27 +171,60 @@ export async function handlePublicNativeOkfChat(
     const publicError = publicNativeOkfChatError(
       new NativeOkfRequestError("Request body must contain valid JSON."),
     );
-    return jsonResponse(publicError.body, publicError.status);
+    logNativeOkfChatOutcome({
+      requestId,
+      status: "error",
+      httpStatus: publicError.status,
+      durationMs: Date.now() - startedAtMs,
+      errorCode: publicError.body.code,
+    });
+    return jsonResponse(publicError.body, publicError.status, {
+      "X-Request-Id": requestId,
+    });
   }
 
   if (activePublicChatRequests >= MAX_CONCURRENT_PUBLIC_CHAT_REQUESTS) {
+    logNativeOkfChatOutcome({
+      requestId,
+      status: "error",
+      httpStatus: 429,
+      durationMs: Date.now() - startedAtMs,
+      errorCode: "concurrency_limited",
+    });
     return jsonResponse(
       {
         error: "The assistant is handling other requests. Please try again shortly.",
-        code: "rate_limited",
+        code: "concurrency_limited",
       },
       429,
-      { "Retry-After": "1" },
+      { "Retry-After": "1", "X-Request-Id": requestId },
     );
   }
 
   activePublicChatRequests += 1;
   try {
     const response = await (dependencies.answer ?? answerNativeOkfChat)(body);
-    return jsonResponse(response, 200);
+    logNativeOkfChatOutcome({
+      requestId,
+      status: "success",
+      httpStatus: 200,
+      durationMs: Date.now() - startedAtMs,
+    });
+    return jsonResponse(response, 200, { "X-Request-Id": requestId });
   } catch (error) {
     const publicError = publicNativeOkfChatError(error);
-    return jsonResponse(publicError.body, publicError.status);
+    const upstreamStatus = normalizeOpenAiError(error).upstreamStatus;
+    logNativeOkfChatOutcome({
+      requestId,
+      status: "error",
+      httpStatus: publicError.status,
+      durationMs: Date.now() - startedAtMs,
+      errorCode: publicError.body.code,
+      ...(upstreamStatus === undefined ? {} : { upstreamStatus }),
+    });
+    return jsonResponse(publicError.body, publicError.status, {
+      "X-Request-Id": requestId,
+    });
   } finally {
     activePublicChatRequests -= 1;
   }

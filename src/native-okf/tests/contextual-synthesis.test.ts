@@ -372,9 +372,17 @@ test("text-only synthesis and its later diagram are projections of the same vali
   assert.ok(response.synthesisDraft);
   assert.deepEqual(response.synthesisDraft?.nodes, synthesisDiagram().nodes);
   assert.deepEqual(response.synthesisDraft?.edges, synthesisDiagram().edges);
-  assert.match(response.answerMarkdown, /Identity continuity requirement/iu);
+  // The full node set already lives in the validated plan (asserted above) and is
+  // rendered by the diagram; the text projection is deliberately concise rather than
+  // restating every node under every stage — it highlights the explanatory (principle)
+  // layer and states stored-vs-synthesized provenance, not a duplicate node dump.
   assert.match(response.answerMarkdown, /Selective disclosure principle/iu);
-  assert.match(response.answerMarkdown, /Signed review record/iu);
+  assert.doesNotMatch(response.answerMarkdown, /###/u);
+  assert.match(response.answerMarkdown, /stored|synthesized/iu);
+  assert.ok(
+    response.answerMarkdown.length < 700,
+    `expected a concise synthesis answer, got ${response.answerMarkdown.length} characters`,
+  );
 });
 test("vague synthesis asks one deterministic question and a concrete problem proceeds", async () => {
   const vague = await prepareNativeOkfChatRequest(

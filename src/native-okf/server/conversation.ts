@@ -71,7 +71,7 @@ const PRINCIPLE_REFERENCE_PATTERN =
 const FEATURES_REFERENCE_PATTERN =
   /\b(?:this|that|these|those|their|its|both|the previous|the current)\s+(?:design\s+)?features?\b/iu;
 const GENERIC_DIAGRAM_PATTERN =
-  /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:a\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
+  /^\s*(?:please\s+)?(?:generate|create|show|draw|visuali[sz]e)\s+(?:me\s+)?(?:a\s+|the\s+)?(?:grounded\s+)?(?:decision[\s-]+support\s+)?(?:flow|flowchart|diagram|graph|architecture|maps?)(?:\s+for\s+(?:a\s+)?(?:proposed\s+)?artifact)?[?.!\s]*$/iu;
 const SYNTHESIS_ACTION_PATTERN =
   /\b(?:propos(?:e|ing)|creat(?:e|ing)|generat(?:e|ing)|construct(?:ing)?|develop(?:ing)?|formulat(?:e|ing)|build(?:ing)?|combin(?:e|ing)|designing)\b|^\s*(?:please\s+)?design\b/iu;
 const SYNTHESIS_OUTPUT_PATTERN =
@@ -185,6 +185,8 @@ export interface NativeOkfConversationPaper {
   slug: string;
   conceptId: string;
   title: string;
+  /** Full author names as listed in the paper's frontmatter, e.g. "Arthur Carvalho". Optional for callers/fixtures that predate author resolution. */
+  authors?: string[];
 }
 
 export interface NativeOkfConversationConcept {
@@ -290,6 +292,21 @@ function stringMetadata(concept: OkfConcept, key: string): string | undefined {
   )?.trim();
 }
 
+/** Frontmatter `authors` is a single comma/semicolon-separated string or an array of names. */
+function authorNamesMetadata(concept: OkfConcept): string[] {
+  const value = concept.frontmatter.authors;
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/\s*[,;]\s*/u)
+      : [];
+  return [...new Set(
+    values
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item !== ""),
+  )];
+}
+
 function paperForReference(
   reference: string | undefined,
   papers: readonly NativeOkfConversationPaper[],
@@ -316,6 +333,7 @@ export async function loadNativeOkfConversationCatalog(): Promise<NativeOkfConve
     slug: paperSlug(paper.id),
     conceptId: paper.id,
     title: paper.title?.trim() || paper.id,
+    authors: authorNamesMetadata(paper),
   }));
   const paperIdToSlug = new Map(
     papers.map((paper) => [paper.conceptId, paper.slug]),
@@ -468,12 +486,79 @@ export function validateNativeOkfConversationState(
   };
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+/**
+ * Removes explicitly-named papers' own title text from a question before it is used
+ * for intent classification (e.g. synthesis-intent detection).
+ *
+ * Real paper titles routinely contain words like "Designing", "Privacy-Preserving", or
+ * "Framework" — a natural comparison question that quotes two such titles verbatim
+ * (e.g. "How do \"Designing X\" and \"Y: A Framework\" differ?") would otherwise trip
+ * synthesis-intent regexes on the TITLES' own vocabulary rather than the user's actual
+ * request, silently converting a comparison into a design-synthesis turn. Stripping the
+ * already-resolved title spans neutralizes that without needing an ever-growing list of
+ * comparison-phrase patterns.
+ */
+function stripExplicitPaperTitles(
+  question: string,
+  explicitPaperSlugs: readonly string[],
+  catalog: NativeOkfConversationCatalog,
+): string {
+  if (explicitPaperSlugs.length === 0) return question;
+  const slugs = new Set(explicitPaperSlugs);
+  let stripped = question;
+  for (const paper of catalog.papers) {
+    if (!slugs.has(paper.slug)) continue;
+    const candidates = [paper.title, paper.title.split(":", 1)[0] ?? ""]
+      .filter((candidate) => candidate.trim().length >= 10);
+    for (const candidate of candidates) {
+      stripped = stripped.replace(
+        new RegExp(escapeRegExp(candidate), "giu"),
+        " ",
+      );
+    }
+  }
+  return stripped;
+}
+
 function titleTerms(title: string): string[] {
   return normalize(title)
     .split(" ")
     .filter(
       (term) => term.length >= 3 && !PAPER_TITLE_MATCH_STOP_WORDS.has(term),
     );
+}
+
+const MIN_AUTHOR_FULL_NAME_LENGTH = 6;
+const MIN_AUTHOR_SURNAME_LENGTH = 3;
+
+/** Last whitespace-separated token of a full name, e.g. "Carvalho" from "Arthur Carvalho". */
+function authorSurname(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/u);
+  return parts.at(-1) ?? fullName;
+}
+
+function paperAuthorFullNames(paper: NativeOkfConversationPaper): string[] {
+  // Defensive against fixtures/catalogs built without `authors` — never assume it is set.
+  return (paper.authors ?? [])
+    .map((name) => normalize(name))
+    .filter((name) => name.length >= MIN_AUTHOR_FULL_NAME_LENGTH);
+}
+
+/** Surnames distinctive enough to anchor a mention on their own (excludes short/common tokens). */
+function paperAuthorSurnames(paper: NativeOkfConversationPaper): string[] {
+  return [...new Set(
+    (paper.authors ?? [])
+      .map((name) => normalize(authorSurname(name)))
+      .filter(
+        (surname) =>
+          surname.length >= MIN_AUTHOR_SURNAME_LENGTH &&
+          !PAPER_TITLE_MATCH_STOP_WORDS.has(surname),
+      ),
+  )];
 }
 
 function paperMentionScore(
@@ -490,11 +575,28 @@ function paperMentionScore(
   if (titlePrefix.length >= 10 && normalizedQuestion.includes(titlePrefix)) {
     return 9_000 + titlePrefix.length;
   }
+  // A full author name is as distinctive as a slug match — resolves even without
+  // an accompanying word like "paper" or "study".
+  const authorNameMatch = paperAuthorFullNames(paper).find((name) =>
+    normalizedQuestion.includes(name)
+  );
+  if (authorNameMatch) {
+    return 8_500 + authorNameMatch.length;
+  }
   if (normalizedQuestion.includes(normalizedSlug)) {
     return 8_000 + normalizedSlug.length;
   }
 
   const questionTerms = new Set(normalizedQuestion.split(" "));
+  // A bare surname is a weaker, single-word signal — required to appear as a whole
+  // token (never a substring of an unrelated word) and ranked below slug matches.
+  const surnameMatch = paperAuthorSurnames(paper).find((surname) =>
+    questionTerms.has(surname)
+  );
+  if (surnameMatch) {
+    return 7_000 + surnameMatch.length;
+  }
+
   const terms = titleTerms(paper.title);
   const matches = terms.filter((term) => questionTerms.has(term));
   if (matches.length < 2) return 0;
@@ -590,12 +692,16 @@ function orderedPaperMentionPosition(
     normalize(paper.title),
     normalize(paper.title.split(":", 1)[0] ?? ""),
     normalize(paper.slug),
+    ...paperAuthorFullNames(paper),
   ]
     .filter((candidate) => candidate.length >= 3)
     .map((candidate) => normalizedQuestion.indexOf(candidate))
     .filter((position) => position >= 0);
   if (exactCandidates.length > 0) return Math.min(...exactCandidates);
-  const termPositions = titleTerms(paper.title)
+  const termPositions = [
+    ...titleTerms(paper.title),
+    ...paperAuthorSurnames(paper),
+  ]
     .map((term) => normalizedQuestion.indexOf(term))
     .filter((position) => position >= 0);
   return termPositions.length > 0 ? Math.min(...termPositions) : -1;
@@ -1090,7 +1196,12 @@ function clarificationFor(
   }
   if (
     GENERIC_DIAGRAM_PATTERN.test(question) &&
-    state.activePaperSlugs.length === 0
+    state.activePaperSlugs.length === 0 &&
+    // A synthesis conversation already in progress is handled by the synthesis-specific
+    // check above (which validates against the concrete problem already on file); this
+    // generic catch-all is only for a bare diagram request with no active paper AND no
+    // ongoing design-problem context at all.
+    !synthesisIntent
   ) {
     return {
       kind: "missing-domain",
@@ -1418,12 +1529,34 @@ export async function prepareNativeOkfChatRequest(
     effectiveQuestion,
     contextBase,
   );
+  // With >=2 explicitly named papers, classify intent from the question with their
+  // own title text removed — real titles routinely contain words ("Designing",
+  // "Privacy-Preserving", "Framework") that would otherwise be misread as the
+  // user's own synthesis-shaped request. See stripExplicitPaperTitles for why.
+  const synthesisClassificationQuestion = explicitPaperSlugs.length >= 2
+    ? stripExplicitPaperTitles(effectiveQuestion, explicitPaperSlugs, catalog)
+    : effectiveQuestion;
   let synthesisIntent = activeDraftRefinement || activeProposalRerender ||
     !activeDiagramQa && inferNativeOkfSynthesisIntent(
-      effectiveQuestion,
+      synthesisClassificationQuestion,
       contextBase,
     );
   if (corpusQuery) synthesisIntent = false;
+  // A comparison of >=2 explicitly named papers is not a new-design request merely
+  // because the comparison-flavored question also contains a build/design-shaped word
+  // (e.g. asking about "reusable mechanisms" or "which approach transfers better").
+  // Only an explicit new-artifact framing should still route to synthesis here.
+  const explicitMultiPaperComparison =
+    explicitPaperSlugs.length >= 2 && comparisonRequested;
+  if (
+    explicitMultiPaperComparison &&
+    !activeDraftRefinement &&
+    !activeProposalRerender &&
+    !DESIGN_PROBLEM_GUIDANCE_PATTERN.test(effectiveQuestion) &&
+    !SYNTHESIS_NOVELTY_PATTERN.test(effectiveQuestion)
+  ) {
+    synthesisIntent = false;
+  }
   const restrictedPaperSlugs = resolvedPaperRestriction(
     effectiveQuestion,
     explicitPaperSlugs,
@@ -1579,6 +1712,12 @@ export async function prepareNativeOkfChatRequest(
           : authoritativeMode === "DESIGN_SYNTHESIS" && includeDiagram
             ? "RENDER_NEW_SYNTHESIS"
             : "NONE";
+  // CLARIFICATION and SCOPE_GUARDRAIL always short-circuit before any diagram is
+  // built, regardless of the raw diagram preference for this turn (e.g. an ambiguous
+  // "<surname> paper, diagram pls" request). Derive the authoritative includeDiagram
+  // from diagramAction so the two can never disagree, instead of special-casing each
+  // short-circuit mode individually.
+  const resolvedIncludeDiagram = diagramAction !== "NONE";
   const evidenceScope: ResolvedNativeOkfTurnPlan["evidenceScope"] =
     focusedPaperSlugs.length === 1
       ? "paper"
@@ -1620,7 +1759,7 @@ export async function prepareNativeOkfChatRequest(
     requestedConceptKinds: requestedKinds,
     queryMode,
     corpusQuery,
-    includeDiagram,
+    includeDiagram: resolvedIncludeDiagram,
     diagramMode,
     preferDeterministicPaperMap,
     preferDeterministicComparativeMap,
@@ -1653,7 +1792,7 @@ export async function prepareNativeOkfChatRequest(
       activeProposalDraft: priorSynthesisDraft,
       evidenceScope,
       diagramPreference,
-      includeDiagram,
+      includeDiagram: resolvedIncludeDiagram,
       diagramMode,
       queryMode,
       activeDraftRefinement,

@@ -59,9 +59,10 @@ import {
   readOpenAiEnvironment,
 } from "./env.ts";
 import {
+  AiProviderUnavailableError,
+  ModelOutputInvalidError,
   NativeOkfRequestError,
   normalizeOpenAiError,
-  OpenAiGenerationError,
   OpenAiRefusalError,
 } from "./errors.ts";
 import { moderateNativeOkfText } from "./moderation.ts";
@@ -295,17 +296,22 @@ function responseRefused(response: Response): boolean {
 
 export function extractNativeOkfResponseText(response: Response): string {
   if (responseRefused(response)) throw new OpenAiRefusalError();
-  if (
-    response.error ||
-    response.status === "failed" ||
-    response.status === "cancelled" ||
-    response.status === "incomplete" ||
-    response.incomplete_details
-  ) {
-    throw new OpenAiGenerationError();
+  // The Responses API reported a structured failure or non-completion in the response
+  // body itself (not as a thrown HTTP error) — this is a verified provider-side condition,
+  // not a defect in how we parsed a successful response.
+  if (response.error || response.status === "failed" || response.status === "cancelled") {
+    throw new AiProviderUnavailableError();
+  }
+  if (response.status === "incomplete" || response.incomplete_details) {
+    const reason = response.incomplete_details?.reason;
+    throw new ModelOutputInvalidError(
+      reason === "max_output_tokens"
+        ? "The model's response was cut off before it finished. Try a narrower question or ask for less detail."
+        : "The model's response ended before it could be used. Please try again.",
+    );
   }
   const answer = response.output_text.trim();
-  if (!answer) throw new OpenAiGenerationError();
+  if (!answer) throw new ModelOutputInvalidError();
   return answer;
 }
 
@@ -439,7 +445,49 @@ function proposalStageHeading(stage: GeneratedDiagram["nodes"][number]["stage"])
     .join(" ");
 }
 
-/** Deterministic prose projection of the same validated proposal graph. */
+const MAX_NARRATIVE_HIGHLIGHT_BULLETS = 6;
+const MAX_NARRATIVE_BULLET_DESCRIPTION_CHARS = 160;
+/** Preference order for which stage's nodes best explain the proposal's rationale —
+ *  principles generalize the "how" a requirement is addressed, so they lead when present. */
+const NARRATIVE_HIGHLIGHT_STAGE_PREFERENCE: readonly GeneratedDiagram["nodes"][number]["stage"][] = [
+  "design-principle",
+  "design-requirement",
+  "meta-requirement",
+  "design-goal",
+  "design-objective",
+  "design-feature",
+  "artifact",
+  "evaluation",
+  "outcome",
+];
+
+function firstSentence(text: string, maxChars: number): string {
+  const trimmed = text.trim();
+  const sentenceEndMatch = /[.!?](?:\s|$)/u.exec(trimmed);
+  const candidate = sentenceEndMatch
+    ? trimmed.slice(0, sentenceEndMatch.index + 1)
+    : trimmed;
+  return candidate.length > maxChars
+    ? `${candidate.slice(0, maxChars).trimEnd()}…`
+    : candidate;
+}
+
+function pluralStageLabel(
+  stage: GeneratedDiagram["nodes"][number]["stage"],
+  count: number,
+): string {
+  const heading = proposalStageHeading(stage);
+  return count === 1 ? heading : `${heading}s`;
+}
+
+/**
+ * Concise deterministic prose alongside the same validated proposal graph.
+ *
+ * Deliberately does not restate every node under every stage — the diagram already
+ * shows that in full. This surfaces a short introduction, a handful of the most
+ * explanatory nodes (never every node), and one sentence distinguishing stored from
+ * synthesized content.
+ */
 function designProposalNarrative(
   diagram: GeneratedDiagram,
   sources: NativeOkfChatResponse["sources"],
@@ -449,25 +497,55 @@ function designProposalNarrative(
     sources.map((source) => [source.conceptId, source.sourceId]),
   );
   const proposalNodes = diagram.nodes.filter((node) => node.stage !== "problem");
-  const stages = [...new Set(proposalNodes.map((node) => node.stage))];
-  const sections = stages.flatMap((stage) => {
-    const nodes = proposalNodes.filter((node) => node.stage === stage);
-    if (nodes.length === 0) return [];
-    const bullets = nodes.map((node) => {
+
+  const introduction = refined
+    ? "This refinement updates the existing design proposal while preserving all unmentioned elements."
+    : `This design proposal addresses ${diagram.nodes.find((node) => node.stage === "problem")?.label ?? "the research problem"}. Exact stored concepts are reused where applicable, and problem-specific adaptations remain visibly distinct.`;
+
+  const highlightStage = NARRATIVE_HIGHLIGHT_STAGE_PREFERENCE.find((stage) =>
+    proposalNodes.some((node) => node.stage === stage)
+  );
+  const bullets = (
+    highlightStage
+      ? proposalNodes.filter((node) => node.stage === highlightStage)
+      : []
+  )
+    .slice(0, MAX_NARRATIVE_HIGHLIGHT_BULLETS)
+    .map((node) => {
       const citations = [...new Set(
         node.supportConceptIds.flatMap((conceptId) => {
           const sourceId = sourceIdByConceptId.get(conceptId);
           return sourceId ? [`[[${sourceId}]]`] : [];
         }),
       )].join(" ");
-      return `- **${node.label}:** ${node.description}${citations ? ` ${citations}` : ""}`;
+      const description = firstSentence(
+        node.description,
+        MAX_NARRATIVE_BULLET_DESCRIPTION_CHARS,
+      );
+      return `- **${node.label}:** ${description}${citations ? ` ${citations}` : ""}`;
     });
-    return [`### ${proposalStageHeading(stage)}\n\n${bullets.join("\n")}`];
-  });
-  const introduction = refined
-    ? "This refinement updates the existing design proposal while preserving all unmentioned elements."
-    : `This design proposal addresses ${diagram.nodes.find((node) => node.stage === "problem")?.label ?? "the research problem"}. Exact stored concepts are reused where applicable, and problem-specific adaptations remain visibly distinct.`;
-  return [introduction, ...sections].join("\n\n");
+
+  const stageCounts = [...new Set(proposalNodes.map((node) => node.stage))]
+    .map((stage) => {
+      const count = proposalNodes.filter((node) => node.stage === stage).length;
+      return `${count} ${pluralStageLabel(stage, count).toLocaleLowerCase("en")}`;
+    })
+    .join(", ");
+  const storedCount = proposalNodes.filter((node) => node.provenance === "stored").length;
+  const synthesizedCount = proposalNodes.filter(
+    (node) => node.provenance === "synthesized",
+  ).length;
+  const provenanceSentence = storedCount > 0 && synthesizedCount > 0
+    ? `The diagram below distinguishes ${storedCount} exact stored concept${storedCount === 1 ? "" : "s"} from ${synthesizedCount} synthesized addition${synthesizedCount === 1 ? "" : "s"} across ${stageCounts}.`
+    : synthesizedCount > 0
+      ? `All elements below are synthesized for this problem (${stageCounts}); none are claimed as exact stored knowledge.`
+      : `The diagram below shows ${stageCounts}, reused directly from stored knowledge.`;
+
+  return [
+    introduction,
+    ...(bullets.length > 0 ? [bullets.join("\n")] : []),
+    provenanceSentence,
+  ].join("\n\n");
 }
 
 function sourceCardsForConceptIds(

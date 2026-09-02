@@ -11,6 +11,7 @@ import type {
   NativeOkfStructuredAnalysis,
   RetrievalResult,
 } from "../retrieval-types.ts";
+import { InternalNativeOkfError } from "./errors.ts";
 
 export interface NativeOkfGroundedSource {
   sourceId: string;
@@ -223,8 +224,10 @@ export function buildNativeOkfGroundedContext(
     rendered = render();
   }
   if (rendered.prompt.length > maximumCharacters) {
-    throw new Error(
-      `Native OKF grounded context cannot fit its required canonical evidence within ${maximumCharacters} characters.`,
+    // Our own context-packing budget, not a provider failure — must not surface as
+    // "the model did not return a usable response" or any AI-provider-shaped error.
+    throw new InternalNativeOkfError(
+      "This request references more required stored evidence than the assistant can safely include at once. Narrow the papers or categories and try again.",
     );
   }
 
