@@ -5,6 +5,7 @@ import {
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
   MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+  MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
   NATIVE_OKF_CLARIFICATION_KINDS,
   NATIVE_OKF_CONVERSATION_INTENTS,
   type NativeOkfClarificationKind,
@@ -28,6 +29,7 @@ const STATE_KEYS = new Set([
   "lastIntent",
   "lastDiagramRequested",
   "pendingClarification",
+  "synthesisClarificationRounds",
   "lastSynthesisProblem",
   "latestValidatedSynthesisDraft",
   "synthesisDraft",
@@ -214,6 +216,17 @@ export function parseNativeOkfConversationState(
     return null;
   }
 
+  // A bounded, self-limiting counter — clamp rather than reject so an older or
+  // hand-edited session never fails to parse over it.
+  const synthesisClarificationRounds =
+    typeof value.synthesisClarificationRounds === "number" &&
+      Number.isFinite(value.synthesisClarificationRounds)
+      ? Math.min(
+          MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
+          Math.max(0, Math.floor(value.synthesisClarificationRounds)),
+        )
+      : 0;
+
   return {
     version: 1,
     activePaperSlugs,
@@ -224,6 +237,7 @@ export function parseNativeOkfConversationState(
     lastIntent: value.lastIntent,
     lastDiagramRequested: value.lastDiagramRequested,
     pendingClarification,
+    synthesisClarificationRounds,
     lastSynthesisProblem,
     latestValidatedSynthesisDraft,
     synthesisDraft: null,
@@ -272,6 +286,9 @@ export function compactNativeOkfConversationStateForRequest(
     lastIntent: state.lastIntent,
     lastDiagramRequested: state.lastDiagramRequested,
     pendingClarification: state.pendingClarification,
+    ...(state.synthesisClarificationRounds
+      ? { synthesisClarificationRounds: state.synthesisClarificationRounds }
+      : {}),
     ...(compactDraft
       ? { latestValidatedSynthesisDraft: compactDraft }
       : state.lastSynthesisProblem

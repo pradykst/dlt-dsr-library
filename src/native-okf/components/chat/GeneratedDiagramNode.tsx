@@ -80,7 +80,8 @@ export function GeneratedDiagramNodeRenderer({
       } ${dimmed ? "opacity-40" : "opacity-100"}`}
       style={{
         width: GENERATED_DIAGRAM_NODE_WIDTH,
-        height: GENERATED_DIAGRAM_NODE_HEIGHT,
+        minHeight: GENERATED_DIAGRAM_NODE_HEIGHT,
+        height: "100%",
       }}
     >
       <Handle
@@ -111,7 +112,7 @@ export function GeneratedDiagramNodeRenderer({
       </div>
 
       <p
-        className="mt-1 line-clamp-3 min-h-0 flex-1 text-[15px] font-semibold leading-5 text-ink"
+        className="mt-1 min-h-0 flex-1 whitespace-normal break-words [overflow-wrap:anywhere] text-[15px] font-semibold leading-5 text-ink"
         title={diagramNode.label}
       >
         {diagramNode.label}

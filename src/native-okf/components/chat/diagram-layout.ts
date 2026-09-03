@@ -10,13 +10,36 @@ import {
   type SemanticOrientation,
   type SemanticPoint,
 } from "../semantic-column-layout.ts";
+import { measuredNodeBoxHeight } from "../diagram-node-metrics.ts";
 import ELK from "elkjs/lib/elk.bundled.js";
 import type { ElkNode, ElkPoint } from "elkjs/lib/elk-api";
 
 export const GENERATED_DIAGRAM_NODE_WIDTH = 224;
+/** Floor height: a label of up to three wrapped lines renders at exactly this. */
 export const GENERATED_DIAGRAM_NODE_HEIGHT = 112;
 export const GENERATED_DIAGRAM_OUTER_PADDING = 32;
 export const GENERATED_DIAGRAM_EDGE_LABEL_HEIGHT = 22;
+
+/** px 15 semibold label, wrapping inside a `w-56` card with `px-3.5` horizontal padding. */
+const GENERATED_DIAGRAM_NODE_LABEL_METRICS = {
+  labelWidth: GENERATED_DIAGRAM_NODE_WIDTH - 28,
+  characterWidth: 8.4,
+  lineHeight: 20,
+  // 112 floor - 3 label lines * 20 = 52 px of header row, footer row and padding.
+  chrome: GENERATED_DIAGRAM_NODE_HEIGHT - 60,
+  minHeight: GENERATED_DIAGRAM_NODE_HEIGHT,
+  maxLines: 6,
+} as const;
+
+/**
+ * Conservative rendered height for a generated-diagram card. Short labels keep
+ * the historical fixed height; only labels that wrap past the three-line floor
+ * grow, so ELK and the fallback engine reserve enough vertical space for the
+ * real wrapped text and neighbouring cards never overlap.
+ */
+export function generatedDiagramNodeHeight(label: string): number {
+  return measuredNodeBoxHeight(label, GENERATED_DIAGRAM_NODE_LABEL_METRICS);
+}
 
 const NODE_SPACING = 48;
 const COLUMN_SPACING = 132;
@@ -170,7 +193,7 @@ async function layoutWithElk(
     children: orderedNodes.map((node) => ({
       id: node.id,
       width: GENERATED_DIAGRAM_NODE_WIDTH,
-      height: GENERATED_DIAGRAM_NODE_HEIGHT,
+      height: generatedDiagramNodeHeight(node.label),
       layoutOptions: {
         "elk.partitioning.partition": String(stageIndex.get(node.stage) ?? 0),
       },
@@ -280,6 +303,7 @@ export async function layoutGeneratedDiagram(
       columnKey: node.stage,
       label: node.label,
       order: node.order,
+      height: generatedDiagramNodeHeight(node.label),
       value: node,
     })),
     diagram.edges.map((edge, index) => ({

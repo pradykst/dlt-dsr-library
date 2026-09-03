@@ -21,6 +21,8 @@ import {
   MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS,
   nativeOkfVisibleHistoryExceedsModelContext,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+  MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
+  MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS,
   SYNTHESIS_DIAGRAM_STAGES,
 } from "../shared/chat-types.ts";
 import { normalizeSynthesisProblemDisplay } from "../shared/synthesis-problem-display.ts";
@@ -502,6 +504,7 @@ export function validateNativeOkfConversationState(
     lastIntent: state.lastIntent,
     lastDiagramRequested: state.lastDiagramRequested,
     pendingClarification: state.pendingClarification,
+    synthesisClarificationRounds: state.synthesisClarificationRounds ?? 0,
     lastSynthesisProblem,
     latestValidatedSynthesisDraft,
     synthesisDraft: null,
@@ -1908,6 +1911,56 @@ export function clarificationConversationState(
   };
 }
 
+/**
+ * Conversation state for a recoverable DESIGN_SYNTHESIS validation failure that
+ * has been turned into a grounded follow-up question.
+ *
+ * It preserves the design problem (so the researcher never has to restate it),
+ * carries the bounded round counter forward, and — critically — never records a
+ * validated draft, active diagram subject, or `synthesized-flow` intent, because
+ * no valid proposal exists yet. `pendingClarification.originalQuestion` holds the
+ * preserved problem so the next turn resumes the same synthesis attempt via the
+ * shared pending-question continuation path.
+ */
+export function nativeOkfSynthesisClarificationState(
+  prepared: PreparedNativeOkfChatRequest,
+  round: number,
+): NativeOkfConversationState {
+  const problem =
+    prepared.turnPlan.activeDesignProblem ??
+    prepared.synthesisProblem ??
+    prepared.effectiveQuestion;
+  const boundedProblem = problem.slice(0, MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS);
+  const priorProblem = prepared.validatedState.lastSynthesisProblem ?? null;
+  return {
+    ...prepared.validatedState,
+    lastIntent: "clarification",
+    lastDiagramRequested: true,
+    pendingClarification: {
+      kind: "synthesis-constraint",
+      originalQuestion: problem.slice(0, MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS),
+    },
+    synthesisClarificationRounds: Math.min(
+      MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
+      Math.max(0, Math.floor(round)),
+    ),
+    lastSynthesisProblem: priorProblem ?? {
+      version: 1,
+      problemStatement: boundedProblem,
+      displayProblem: prepared.synthesisDisplayProblem ??
+        normalizeSynthesisProblemDisplay(boundedProblem),
+      domain: prepared.synthesisDomain,
+      objective: prepared.priorSynthesisDraft?.objective ?? null,
+      outputType: "design-solution",
+      constraints: prepared.priorSynthesisDraft?.constraints ?? [],
+      sourcePaperSlugs: prepared.restrictedPaperSlugs,
+    },
+    latestValidatedSynthesisDraft:
+      prepared.validatedState.latestValidatedSynthesisDraft ?? null,
+    synthesisDraft: null,
+  };
+}
+
 function hasActiveDiagramSubject(state: NativeOkfConversationState): boolean {
   return Boolean(state.latestValidatedSynthesisDraft) ||
     (state.lastIntent === "stored-diagram" && state.activePaperSlugs.length === 1) ||
@@ -2112,6 +2165,9 @@ export function completedConversationState(
     lastIntent: prepared.intent,
     lastDiagramRequested: prepared.includeDiagram,
     pendingClarification: null,
+    // Any completed (non-clarification) turn ends the current synthesis
+    // clarification cycle, so a later unrelated synthesis starts fresh.
+    synthesisClarificationRounds: 0,
     lastSynthesisProblem: prepared.intent === "synthesized-flow"
       ? {
           version: 1,

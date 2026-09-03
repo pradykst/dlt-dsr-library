@@ -1276,9 +1276,20 @@ export async function generateNativeOkfSynthesisPlan(
       };
     }
   }
+  // Carry a bounded, safe reason (our own validator category strings, never raw
+  // model output) so the caller can log why the plan and its one repair could
+  // not be validated.
+  const secondErrors = second.ok ? ["plan:conversion-invalid"] : second.errors;
   return {
     usedSupportConceptIds: [],
-    warnings: [],
+    warnings: [
+      `synthesis plan invalid after one bounded repair (${
+        [...new Set([...firstErrors, ...secondErrors])]
+          .slice(0, 4)
+          .join("; ")
+          .slice(0, 200)
+      })`,
+    ],
     diagnosticCode: "synthesis-plan-repair-failed",
   };
 }

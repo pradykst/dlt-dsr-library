@@ -95,7 +95,17 @@ export const NATIVE_OKF_CLARIFICATION_KINDS = [
   "missing-output-type",
   "ambiguous-reference",
   "missing-comparison-target",
+  // A recoverable DESIGN_SYNTHESIS validation failure that becomes a grounded
+  // follow-up question instead of a terminal synthesis error.
+  "synthesis-constraint",
 ] as const;
+
+/**
+ * Conservative conversation-level bound on how many times a single design
+ * problem may be turned into a synthesis-constraint follow-up before the system
+ * fails honestly. One initial attempt plus this many clarification cycles.
+ */
+export const MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS = 2;
 
 export type NativeOkfClarificationKind =
   (typeof NATIVE_OKF_CLARIFICATION_KINDS)[number];
@@ -117,6 +127,11 @@ export interface NativeOkfConversationState {
   lastIntent: NativeOkfConversationIntent;
   lastDiagramRequested: boolean;
   pendingClarification: NativeOkfPendingClarification | null;
+  /**
+   * How many synthesis-constraint follow-ups the current design problem has
+   * already produced. Reset to 0 whenever a non-clarification turn completes.
+   */
+  synthesisClarificationRounds?: number;
   lastSynthesisProblem?: SynthesisProblemState | null;
   latestValidatedSynthesisDraft?: SynthesisDraftState | null;
   /**
@@ -177,6 +192,7 @@ export function createInitialNativeOkfConversationState(): NativeOkfConversation
     lastIntent: "answer",
     lastDiagramRequested: false,
     pendingClarification: null,
+    synthesisClarificationRounds: 0,
     lastSynthesisProblem: null,
     latestValidatedSynthesisDraft: null,
     synthesisDraft: null,

@@ -8,6 +8,12 @@ export interface SemanticLayoutInputNode<T> {
   label: string;
   producerLabel?: string;
   order?: number;
+  /**
+   * Reserved rendered height for this node, in px. When omitted the shared
+   * `nodeHeight` option is used, so callers that do not measure their cards keep
+   * the previous uniform-height behaviour exactly.
+   */
+  height?: number;
   value: T;
 }
 
@@ -230,32 +236,48 @@ export function layoutSemanticColumns<TNode, TEdge>(
     edges,
     settings.crossingPasses,
   );
+  const nodeHeightOf = (node: SemanticLayoutInputNode<TNode>): number =>
+    finitePositive(node.height ?? settings.nodeHeight, settings.nodeHeight);
+  const columnNodesByKey = new Map(
+    columns.map((column) => [column.key, ordered.get(column.key) ?? []]),
+  );
+  const columnStackHeight = (
+    columnNodes: readonly SemanticLayoutInputNode<TNode>[],
+  ): number =>
+    columnNodes.reduce((sum, node) => sum + nodeHeightOf(node), 0) +
+    Math.max(0, columnNodes.length - 1) * settings.nodeGap;
   const maximumCount = Math.max(1, ...columns.map((column) =>
-    ordered.get(column.key)?.length ?? 0
+    columnNodesByKey.get(column.key)?.length ?? 0
   ));
-  const maximumStack = maximumCount * settings.nodeHeight +
-    Math.max(0, maximumCount - 1) * settings.nodeGap;
+  const maximumStack = Math.max(
+    settings.nodeHeight,
+    ...columns.map((column) =>
+      columnStackHeight(columnNodesByKey.get(column.key) ?? [])
+    ),
+  );
   const positionedNodes: SemanticPositionedNode<TNode>[] = [];
   const positionedColumns: SemanticPositionedColumn[] = [];
+  let verticalCursor = settings.outerPadding + settings.headingSpace;
 
   for (const [columnIndex, column] of columns.entries()) {
-    const columnNodes = ordered.get(column.key) ?? [];
-    const stack = columnNodes.length * settings.nodeHeight +
-      Math.max(0, columnNodes.length - 1) * settings.nodeGap;
+    const columnNodes = columnNodesByKey.get(column.key) ?? [];
+    const stack = columnStackHeight(columnNodes);
     if (settings.orientation === "horizontal") {
       const x = settings.outerPadding +
         columnIndex * (settings.nodeWidth + settings.columnGap);
-      const startY = settings.outerPadding + settings.headingSpace +
+      let cursorY = settings.outerPadding + settings.headingSpace +
         (maximumStack - stack) / 2;
-      columnNodes.forEach((node, index) => {
+      columnNodes.forEach((node) => {
+        const height = nodeHeightOf(node);
         positionedNodes.push({
           ...node,
-          position: { x, y: startY + index * (settings.nodeHeight + settings.nodeGap) },
+          position: { x, y: cursorY },
           width: settings.nodeWidth,
-          height: settings.nodeHeight,
+          height,
           sourcePosition: "right",
           targetPosition: "left",
         });
+        cursorY += height + settings.nodeGap;
       });
       positionedColumns.push({
         key: column.key,
@@ -270,19 +292,26 @@ export function layoutSemanticColumns<TNode, TEdge>(
         },
       });
     } else {
-      const y = settings.outerPadding + settings.headingSpace +
-        columnIndex * (settings.nodeHeight + settings.columnGap + settings.headingSpace);
+      const y = verticalCursor;
+      const bandHeight = Math.max(
+        settings.nodeHeight,
+        ...columnNodes.map((node) => nodeHeightOf(node)),
+      );
       const maximumRow = maximumCount * settings.nodeWidth +
         Math.max(0, maximumCount - 1) * settings.nodeGap;
       const row = columnNodes.length * settings.nodeWidth +
         Math.max(0, columnNodes.length - 1) * settings.nodeGap;
       const startX = settings.outerPadding + (maximumRow - row) / 2;
       columnNodes.forEach((node, index) => {
+        const height = nodeHeightOf(node);
         positionedNodes.push({
           ...node,
-          position: { x: startX + index * (settings.nodeWidth + settings.nodeGap), y },
+          position: {
+            x: startX + index * (settings.nodeWidth + settings.nodeGap),
+            y: y + (bandHeight - height) / 2,
+          },
           width: settings.nodeWidth,
-          height: settings.nodeHeight,
+          height,
           sourcePosition: "bottom",
           targetPosition: "top",
         });
@@ -296,9 +325,10 @@ export function layoutSemanticColumns<TNode, TEdge>(
           x: settings.outerPadding,
           y: y - settings.headingSpace,
           width: maximumRow,
-          height: settings.headingSpace + settings.nodeHeight,
+          height: settings.headingSpace + bandHeight,
         },
       });
+      verticalCursor = y + bandHeight + settings.columnGap + settings.headingSpace;
     }
   }
 

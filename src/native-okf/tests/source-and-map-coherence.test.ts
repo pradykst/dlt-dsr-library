@@ -160,7 +160,10 @@ test("source-ID uniqueness: comparison (diagram on) has zero duplicate source ID
   assert.equal(new Set(ids).size, ids.length, `duplicate source IDs: ${ids.join(", ")}`);
 });
 
-test("source-ID uniqueness: fresh synthesis (diagram on) has zero duplicate source IDs", async () => {
+test("source-ID uniqueness: synthesis with an unusable plan opens a grounded follow-up with no duplicate source IDs", async () => {
+  // The prose-only mock never returns a valid structured plan, so a real corpus
+  // synthesis request now becomes a grounded clarification rather than a
+  // terminal error. Its source set is empty and therefore trivially unique.
   const result = await answerNativeOkfChat(
     {
       question: "How do I solve cross-organizational credential portability for gig-economy platforms? Explain with a diagram.",
@@ -168,12 +171,15 @@ test("source-ID uniqueness: fresh synthesis (diagram on) has zero duplicate sour
     },
     { environment: MOCK_ENVIRONMENT, client: defaultCitingMockClient() },
   );
-  assert.equal(result.diagramMode, "synthesized");
+  assert.equal(result.kind, "clarification");
+  assert.equal(result.clarification?.kind, "synthesis-constraint");
+  assert.equal(result.diagram, undefined);
   const ids = result.sources.map((source) => source.sourceId);
   assert.equal(new Set(ids).size, ids.length, `duplicate source IDs: ${ids.join(", ")}`);
+  assertUniqueSourceIds(result);
 });
 
-test("source-ID uniqueness: refinement of an active proposal has zero duplicate source IDs", async () => {
+test("source-ID uniqueness: a follow-up answer to a synthesis clarification keeps unique source IDs", async () => {
   const first = await answerNativeOkfChat(
     {
       question: "How do I solve cross-organizational credential portability for gig-economy platforms? Explain with a diagram.",
@@ -181,10 +187,17 @@ test("source-ID uniqueness: refinement of an active proposal has zero duplicate 
     },
     { environment: MOCK_ENVIRONMENT, client: defaultCitingMockClient() },
   );
-  assert.equal(first.diagramMode, "synthesized");
+  assert.equal(first.kind, "clarification");
   const refined = await answerNativeOkfChat(
     {
-      question: "Add stronger privacy protections.",
+      question: "Focus on identity portability first.",
+      history: [
+        {
+          role: "user",
+          content: "How do I solve cross-organizational credential portability for gig-economy platforms? Explain with a diagram.",
+        },
+        { role: "assistant", content: first.clarification?.question ?? "" },
+      ],
       includeDiagram: true,
       conversationState: first.conversationState,
     },
@@ -192,6 +205,7 @@ test("source-ID uniqueness: refinement of an active proposal has zero duplicate 
   );
   const ids = refined.sources.map((source) => source.sourceId);
   assert.equal(new Set(ids).size, ids.length, `duplicate source IDs: ${ids.join(", ")}`);
+  assertUniqueSourceIds(refined);
 });
 
 // ---------------------------------------------------------------------------

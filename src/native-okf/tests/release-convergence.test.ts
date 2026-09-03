@@ -601,7 +601,7 @@ test("successful synthesis skips the normal answer model and returns used suppor
   assert.ok(result.answerMarkdown.trim().split(/\s+/u).length < 100);
 });
 
-test("failed synthesis preserves intent and problem without creating a validated draft", async () => {
+test("a recoverable synthesis failure becomes a grounded follow-up that preserves the problem", async () => {
   const result = await answerNativeOkfChat(
     {
       question: "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
@@ -616,13 +616,27 @@ test("failed synthesis preserves intent and problem without creating a validated
       }),
     },
   );
-  assert.equal(result.diagramMode, "synthesized");
-  assert.ok(result.diagramStatus === "evidence-fallback" || result.diagramStatus === "failed");
+  // A recoverable DESIGN_SYNTHESIS validation failure with grounded evidence is
+  // now a conversational clarification, not a terminal synthesis error.
+  assert.equal(result.kind, "clarification");
+  assert.equal(result.presentationMode, "clarification");
+  assert.equal(result.diagram, undefined);
+  assert.equal(result.diagramMode, null);
+  assert.equal(result.diagramStatus, null);
+  assert.equal(result.diagnosticCode, undefined);
+  assert.equal(result.clarification?.kind, "synthesis-constraint");
+  assert.ok((result.clarification?.question.trim().length ?? 0) > 0);
+  assert.doesNotMatch(result.answerMarkdown, /synthesis-plan-repair-failed/u);
+  assert.doesNotMatch(result.answerMarkdown, /could not be produced/iu);
   assert.equal(result.synthesisDraft, undefined);
   assert.ok(result.conversationState?.lastSynthesisProblem?.problemStatement.includes("fragmented product identity"));
   assert.equal(result.conversationState?.latestValidatedSynthesisDraft ?? null, null);
   assert.equal(result.conversationState?.synthesisDraft, null);
-  if (result.diagram) assert.equal(result.diagram.title, "Stored source map");
+  assert.equal(result.conversationState?.synthesisClarificationRounds, 1);
+  assert.equal(
+    result.conversationState?.pendingClarification?.kind,
+    "synthesis-constraint",
+  );
 
   const refinement = await prepareNativeOkfChatRequest({
     question: "Make the flow privacy preserving and add an evaluation stage.",

@@ -6,6 +6,7 @@ import {
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
+  MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
   type GeneratedDiagram,
   type NativeOkfChatHistoryMessage,
   type NativeOkfChatRequest,
@@ -33,9 +34,11 @@ import {
   clarificationConversationState,
   completedConversationState,
   hasSufficientNativeOkfSynthesisGrounding,
+  nativeOkfSynthesisClarificationState,
   nativeOkfSynthesisRequiresRpfPath,
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
+import { deriveNativeOkfSynthesisClarification } from "./synthesis-clarification.ts";
 import {
   type NativeOpenAiClient,
   getOpenAiClient,
@@ -773,6 +776,7 @@ async function answerNativeOkfChatUnchecked(
         lastIntent: "answer",
         lastDiagramRequested: false,
         pendingClarification: null,
+        synthesisClarificationRounds: 0,
       },
     };
   }
@@ -1014,11 +1018,13 @@ async function answerNativeOkfChatUnchecked(
           synthesisProblem: prepared.synthesisProblem,
           synthesisDomain: prepared.synthesisDomain,
         });
-      } catch {
-        diagramResult = {
-          warnings: [],
-          diagnosticCode: "synthesis-plan-repair-failed",
-        };
+      } catch (error) {
+        // A thrown error here is an infrastructure failure (the plan generator
+        // returns a diagnostic code for recoverable validation failures, it does
+        // not throw). Keep it truthfully differentiated — an AI provider outage,
+        // rate limit, quota, network, or size error must never be presented as a
+        // design follow-up question.
+        throw normalizeOpenAiError(error);
       }
     }
 
@@ -1064,6 +1070,69 @@ async function answerNativeOkfChatUnchecked(
         ),
         ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
       };
+    }
+
+    // A recoverable synthesis-plan / scholarly-validation failure with enough
+    // grounded evidence becomes a conversational follow-up instead of a terminal
+    // synthesis error. The failed attempt keeps the researcher's design problem
+    // in conversation state so the next turn resumes it; it never establishes a
+    // validated draft or active diagram because no valid proposal exists yet.
+    if (
+      includeDiagram &&
+      !diagramResult.diagram &&
+      hasSufficientNativeOkfSynthesisGrounding(retrieval)
+    ) {
+      const priorRounds =
+        prepared.validatedState.synthesisClarificationRounds ?? 0;
+      const clarificationNeed =
+        priorRounds < MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS
+          ? deriveNativeOkfSynthesisClarification({
+              problem:
+                prepared.turnPlan.activeDesignProblem ??
+                prepared.synthesisProblem ??
+                prepared.effectiveQuestion,
+              displayProblem: prepared.synthesisDisplayProblem,
+              retrieval,
+              validationReason: diagramResult.warnings[0] ?? null,
+              round: priorRounds,
+              priorConstraints:
+                prepared.priorSynthesisDraft?.constraints ??
+                prepared.validatedState.lastSynthesisProblem?.constraints ??
+                [],
+            })
+          : null;
+      if (clarificationNeed) {
+        // Safe server-side diagnostic only: correlation is carried by the route
+        // layer's request id, and `synthesis-plan-repair-failed` is never shown
+        // to the researcher once the turn becomes a clarification dialogue.
+        console.warn(
+          "native-okf synthesis clarification fallback",
+          JSON.stringify({
+            diagnosticCode:
+              diagramResult.diagnosticCode ?? "synthesis-plan-repair-failed",
+            missingDimension: clarificationNeed.missingDimension,
+            validationReason: clarificationNeed.reason,
+            round: priorRounds,
+          }),
+        );
+        return {
+          kind: "clarification",
+          presentationMode: "clarification",
+          answerMarkdown: clarificationNeed.question,
+          sources: [],
+          insufficientContext: false,
+          clarification: {
+            kind: "synthesis-constraint",
+            question: clarificationNeed.question,
+          },
+          conversationState: nativeOkfSynthesisClarificationState(
+            prepared,
+            priorRounds + 1,
+          ),
+          diagramMode: null,
+          diagramStatus: null,
+        };
+      }
     }
 
     if (includeDiagram) {

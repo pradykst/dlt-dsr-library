@@ -74,7 +74,7 @@ test("no connected retrieved native subgraph preserves text-only fallback", asyn
 });
 
 
-test("explicit synthesis failure stays fail-closed even when connected stored evidence exists", async () => {
+test("a recoverable synthesis failure with connected stored evidence opens a follow-up, never an unvalidated flow", async () => {
   const environment: NativeOpenAiEnvironment = {
     apiKey: "mock-only",
     model: "mock-model",
@@ -114,16 +114,21 @@ test("explicit synthesis failure stays fail-closed even when connected stored ev
   );
 
   assert.equal(responseCalls, 0);
+  assert.equal(result.kind, "clarification");
+  assert.equal(result.presentationMode, "clarification");
   assert.equal(result.diagram, undefined);
-  assert.equal(result.diagramMode, "synthesized");
-  assert.equal(result.diagramStatus, "failed");
-  assert.equal(result.presentationMode, "safe-error");
-  assert.match(result.answerMarkdown, /validated synthesized flow could not be produced/iu);
+  assert.equal(result.diagramMode, null);
+  assert.equal(result.diagramStatus, null);
+  assert.equal(result.diagnosticCode, undefined);
+  assert.equal(result.clarification?.kind, "synthesis-constraint");
+  assert.ok(/\?\s*$/u.test(result.clarification?.question.trim() ?? ""));
+  assert.doesNotMatch(result.answerMarkdown, /synthesized flow could not be produced/iu);
+  assert.deepEqual(result.sources, []);
   assert.equal(result.warnings, undefined);
 });
 
 
-test("failed synthesis without a connected evidence map retains grounding sources", async () => {
+test("a recoverable synthesis failure resumes the same design problem on the next turn", async () => {
   const base = await retrieveOkfContext("fragmented identity continuity design");
   const retrieval = {
     ...base,
@@ -176,12 +181,10 @@ test("failed synthesis without a connected evidence map retains grounding source
     },
   } as unknown as NativeOpenAiClient;
 
+  const originalQuestion =
+    "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.";
   const result = await answerNativeOkfChat(
-    {
-      question:
-        "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
-      includeDiagram: true,
-    },
+    { question: originalQuestion, includeDiagram: true },
     {
       retrieve: async () => retrieval,
       environment,
@@ -193,14 +196,48 @@ test("failed synthesis without a connected evidence map retains grounding source
     },
   );
 
+  assert.equal(result.kind, "clarification");
   assert.equal(result.diagram, undefined);
-  assert.equal(result.diagramMode, "synthesized");
-  assert.equal(result.diagramStatus, "failed");
-  assert.deepEqual(
-    result.sources.map((source) => source.conceptId).sort(),
-    [
-      "fixtures/unconnected-principle",
-      "fixtures/unconnected-requirement",
-    ],
+  assert.equal(result.diagramMode, null);
+  assert.equal(result.diagramStatus, null);
+  assert.equal(result.clarification?.kind, "synthesis-constraint");
+  // The grounded follow-up is built from the current-turn retrieved concepts.
+  assert.match(
+    result.clarification?.question ?? "",
+    /continuity requirement|continuity principle/iu,
+  );
+  assert.equal(result.conversationState?.synthesisClarificationRounds, 1);
+
+  // A short constraint answer, with the original problem still in history,
+  // resumes the same synthesis attempt without the user restating it.
+  let retriedProblem = "";
+  const resumed = await answerNativeOkfChat(
+    {
+      question: "keep the seller-specific offers separate",
+      history: [
+        { role: "user", content: originalQuestion },
+        { role: "assistant", content: result.clarification?.question ?? "" },
+      ],
+      conversationState: result.conversationState,
+    },
+    {
+      retrieve: async () => retrieval,
+      environment,
+      client,
+      generateDiagram: async (input) => {
+        retriedProblem = input.synthesisProblem ?? input.question;
+        return { warnings: [], diagnosticCode: "synthesis-plan-repair-failed" };
+      },
+    },
+  );
+
+  assert.match(retriedProblem, /fragmented product identity/iu);
+  assert.equal(resumed.kind, "clarification");
+  assert.equal(resumed.clarification?.kind, "synthesis-constraint");
+  assert.equal(resumed.conversationState?.synthesisClarificationRounds, 2);
+  assert.ok(
+    resumed.conversationState?.lastSynthesisProblem?.problemStatement.includes(
+      "fragmented product identity",
+    ),
   );
 });

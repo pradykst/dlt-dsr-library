@@ -19,6 +19,7 @@ import type {
   GraphNodeDto,
 } from "../shared/types.ts";
 import { titleWithoutRepeatedProducerLabel } from "../shared/presentation.ts";
+import { measuredNodeBoxHeight } from "./diagram-node-metrics.ts";
 import ConceptDrawer from "./ConceptDrawer.tsx";
 import GraphLegend, {
   colorsForGraphType,
@@ -27,9 +28,28 @@ import GraphLegend, {
 
 const NODE_WIDTH = 232;
 const NODE_X_GAP = 278;
-const NODE_Y_GAP = 116;
+/** Vertical clearance kept between stacked concept cards of any height. */
+const NODE_Y_GAP = 14;
 const LAYER_GAP = 70;
 const MAX_ROWS_PER_COLUMN = 10;
+
+/** px 14 semibold title wrapping inside a 232px card with `px-3.5` padding. */
+const CONCEPT_NODE_LABEL_METRICS = {
+  labelWidth: NODE_WIDTH - 28,
+  characterWidth: 7.8,
+  lineHeight: 20,
+  // type-label row, producer-label row and vertical padding around a 2-line floor.
+  chrome: 64,
+  minHeight: 104,
+  maxLines: 5,
+} as const;
+
+function conceptNodeHeight(concept: GraphNodeDto): number {
+  return measuredNodeBoxHeight(
+    titleWithoutRepeatedProducerLabel(concept.title, concept.label),
+    CONCEPT_NODE_LABEL_METRICS,
+  );
+}
 
 interface ConceptFlowNodeData {
   concept: GraphNodeDto;
@@ -121,29 +141,35 @@ function layoutGraphNodes(graph: GraphDto): Node<ConceptFlowNodeData>[] {
     const concepts = (layers.get(distance) ?? []).sort(compareNodes);
     const columnCount = Math.max(1, Math.ceil(concepts.length / MAX_ROWS_PER_COLUMN));
 
-    concepts.forEach((concept, index) => {
-      const column = Math.floor(index / MAX_ROWS_PER_COLUMN);
-      const row = index % MAX_ROWS_PER_COLUMN;
-      const columnSize = Math.min(
-        MAX_ROWS_PER_COLUMN,
-        concepts.length - column * MAX_ROWS_PER_COLUMN,
+    for (let column = 0; column < columnCount; column += 1) {
+      const columnConcepts = concepts.slice(
+        column * MAX_ROWS_PER_COLUMN,
+        (column + 1) * MAX_ROWS_PER_COLUMN,
       );
-
-      flowNodes.push({
-        id: concept.id,
-        type: "concept",
-        position: {
-          x: layerStartX + column * NODE_X_GAP,
-          y: (row - (columnSize - 1) / 2) * NODE_Y_GAP,
-        },
-        data: {
-          concept,
-          colors: colorsForGraphType(concept.type),
-        },
-        draggable: false,
-        selectable: true,
+      const heights = columnConcepts.map(conceptNodeHeight);
+      const stackHeight = heights.reduce((sum, height) => sum + height, 0) +
+        Math.max(0, columnConcepts.length - 1) * NODE_Y_GAP;
+      // Center each sub-column block around y = 0, as the fixed-pitch layout did,
+      // but advance by each card's real height so tall wrapped labels never overlap.
+      let cursorY = -stackHeight / 2;
+      columnConcepts.forEach((concept, rowIndex) => {
+        flowNodes.push({
+          id: concept.id,
+          type: "concept",
+          position: {
+            x: layerStartX + column * NODE_X_GAP,
+            y: cursorY,
+          },
+          data: {
+            concept,
+            colors: colorsForGraphType(concept.type),
+          },
+          draggable: false,
+          selectable: true,
+        });
+        cursorY += (heights[rowIndex] ?? 0) + NODE_Y_GAP;
       });
-    });
+    }
 
     layerStartX += columnCount * NODE_X_GAP + LAYER_GAP;
   }
@@ -191,7 +217,9 @@ function ConceptFlowNode({ data, selected }: NodeProps<ConceptFlowNodeData>) {
           </span>
         ) : null}
       </div>
-      <div className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-ink">{displayTitle}</div>
+      <div className="mt-2 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
+        {displayTitle}
+      </div>
       {concept.label ? (
         <div className="mt-2 font-mono text-[10px] text-muted">{concept.label}</div>
       ) : null}

@@ -27,6 +27,14 @@ import type {
 } from "../shared/types.ts";
 import { titleWithoutRepeatedProducerLabel } from "../shared/presentation.ts";
 import {
+  PAPER_DESIGN_COLUMN_GAP,
+  PAPER_DESIGN_NODE_GAP,
+  PAPER_DESIGN_NODE_HEIGHT,
+  PAPER_DESIGN_NODE_WIDTH,
+  PAPER_DESIGN_OUTER_PADDING,
+  paperDesignNodeHeight,
+} from "./paper-design-metrics.ts";
+import {
   calculateDiagramViewport,
   GENERATED_DIAGRAM_FIT_SCREEN_PADDING,
 } from "./chat/diagram-viewport.ts";
@@ -43,11 +51,14 @@ import {
   type StraightFlowEdgeData,
 } from "./StraightFlowEdge.tsx";
 
-export const PAPER_DESIGN_NODE_WIDTH = 240;
-export const PAPER_DESIGN_NODE_HEIGHT = 92;
-export const PAPER_DESIGN_NODE_GAP = 30;
-export const PAPER_DESIGN_COLUMN_GAP = 150;
-export const PAPER_DESIGN_OUTER_PADDING = 36;
+export {
+  PAPER_DESIGN_COLUMN_GAP,
+  PAPER_DESIGN_NODE_GAP,
+  PAPER_DESIGN_NODE_HEIGHT,
+  PAPER_DESIGN_NODE_WIDTH,
+  PAPER_DESIGN_OUTER_PADDING,
+  paperDesignNodeHeight,
+} from "./paper-design-metrics.ts";
 
 interface PaperDesignNodeData {
   concept: GraphNodeDto;
@@ -71,7 +82,8 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
       } ${selected ? "ring-2 ring-blue/30 ring-offset-2" : ""}`}
       style={{
         width: PAPER_DESIGN_NODE_WIDTH,
-        height: PAPER_DESIGN_NODE_HEIGHT,
+        minHeight: PAPER_DESIGN_NODE_HEIGHT,
+        height: "100%",
         backgroundColor: colors.background,
         borderColor: selected ? "#20242a" : colors.border,
       }}
@@ -95,7 +107,7 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
             </span>
           ) : null}
         </div>
-        <p className="mt-2 line-clamp-3 text-sm font-semibold leading-5 text-ink">
+        <p className="mt-2 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
           {displayTitle}
         </p>
       </div>
@@ -176,6 +188,9 @@ function PaperDesignCanvas({
       columnKey: concept.type,
       label: concept.title,
       ...(concept.label ? { producerLabel: concept.label } : {}),
+      height: paperDesignNodeHeight(
+        titleWithoutRepeatedProducerLabel(concept.title, concept.label),
+      ),
       value: concept,
     })),
     visibleEdges.map((edge) => ({
