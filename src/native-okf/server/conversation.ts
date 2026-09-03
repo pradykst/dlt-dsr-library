@@ -231,6 +231,11 @@ export interface PreparedNativeOkfChatRequest {
   restrictedPaperSlugs: string[];
   focusedConceptIds: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
+  /** Non-empty only when the user explicitly asked for an exclusively filtered
+   * diagram (e.g. "only" the design principles); drives STORED_FILTERED_MAP vs
+   * STORED_FULL_MAP and what is passed to the stored-diagram builder. Prose
+   * topic-scoping continues to use the broader requestedConceptKinds above. */
+  diagramConceptKinds: NativeOkfRequestedConceptKind[];
   queryMode: NativeOkfQueryMode;
   corpusQuery: boolean;
   includeDiagram: boolean;
@@ -256,6 +261,7 @@ export interface ResolvedNativeOkfTurnPlan {
   resolvedPaperSlugs: string[];
   focusedPaperSlugs: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
+  diagramConceptKinds: NativeOkfRequestedConceptKind[];
   activeDesignProblem: string | null;
   activeProposalDraft: SynthesisDraftState | null;
   evidenceScope: "paper" | "comparison" | "proposal" | "corpus" | "retrieval";
@@ -854,6 +860,26 @@ function requestedConceptKinds(
   })
     .sort((left, right) => left.position - right.position)
     .map((match) => match.kind);
+}
+
+const EXPLICIT_ONLY_FILTER_WORD_PATTERN = /\b(?:only|just|solely|exclusively)\b/iu;
+
+/**
+ * The concept-kind words a question happens to mention ("what design principles
+ * are represented...") are a reasonable signal for scoping the PROSE topic, but
+ * they must not, by themselves, shrink the stored-paper DIAGRAM down to an
+ * isolated subset — a diagram filtered to one kind (e.g. only principle nodes)
+ * necessarily drops the requirement/feature nodes those principles connect to,
+ * turning a connected canonical map into disconnected fragments. Only an
+ * explicit exclusivity word ("only"/"just"/"solely"/"exclusively") signals that
+ * the user actually wants a filtered diagram, matching the required exception
+ * for requests like "show only the design principles".
+ */
+function explicitlyFilteredDiagramConceptKinds(
+  question: string,
+): NativeOkfRequestedConceptKind[] {
+  if (!EXPLICIT_ONLY_FILTER_WORD_PATTERN.test(question)) return [];
+  return requestedConceptKinds(question);
 }
 function selectConceptIds(
   question: string,
@@ -1558,12 +1584,14 @@ export async function prepareNativeOkfChatRequest(
     explicitConceptIds.length > 0
       ? explicitConceptIds
       : selectConceptIds(effectiveQuestion, contextBase, catalog);
-  const requestedKinds = requestedConceptKinds(
-    categoryResolutionQuestion(
-      effectiveQuestion,
-      explicitPaperSlugs,
-      catalog,
-    ),
+  const categoryQuestion = categoryResolutionQuestion(
+    effectiveQuestion,
+    explicitPaperSlugs,
+    catalog,
+  );
+  const requestedKinds = requestedConceptKinds(categoryQuestion);
+  const diagramFilterKinds = explicitlyFilteredDiagramConceptKinds(
+    categoryQuestion,
   );
   const activeDraftRefinement = inferActiveSynthesisDiagramRefinement(
     effectiveQuestion,
@@ -1745,7 +1773,7 @@ export async function prepareNativeOkfChatRequest(
       : activeDiagramQa
         ? "ACTIVE_DIAGRAM_QA"
       : preferDeterministicPaperMap
-        ? requestedKinds.length > 0
+        ? diagramFilterKinds.length > 0
           ? "STORED_FILTERED_MAP"
           : "STORED_FULL_MAP"
         : preferDeterministicComparativeMap
@@ -1813,6 +1841,7 @@ export async function prepareNativeOkfChatRequest(
     restrictedPaperSlugs,
     focusedConceptIds,
     requestedConceptKinds: requestedKinds,
+    diagramConceptKinds: diagramFilterKinds,
     queryMode,
     corpusQuery,
     includeDiagram: resolvedIncludeDiagram,
@@ -1843,6 +1872,7 @@ export async function prepareNativeOkfChatRequest(
       resolvedPaperSlugs: [...focusedPaperSlugs],
       focusedPaperSlugs: [...focusedPaperSlugs],
       requestedConceptKinds: [...requestedKinds],
+      diagramConceptKinds: [...diagramFilterKinds],
       activeDesignProblem:
         synthesisProblem ?? priorSynthesisDraft?.problemStatement ?? null,
       activeProposalDraft: priorSynthesisDraft,

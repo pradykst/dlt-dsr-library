@@ -384,15 +384,41 @@ function answerModeInstruction(
   return NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION;
 }
 
+function nextAvailableSourceId(usedSourceIds: ReadonlySet<string>): string {
+  let candidate = 1;
+  while (usedSourceIds.has(`S${candidate}`)) candidate += 1;
+  return `S${candidate}`;
+}
+
+/**
+ * Merges source-card groups into one list with globally unique source IDs.
+ *
+ * The FIRST group is authoritative and is never renumbered: for every call
+ * site here, that group is the exact source-card set already validated
+ * against the citation context the model was prompted with (see
+ * validateAnswerCitations / context.ts), so its IDs are precisely what
+ * answerMarkdown's [[S#]] tokens already reference and must not change. Any
+ * later group (e.g. a deterministic diagram's own independently-numbered
+ * source cards) is deduplicated by conceptId as before, but if a card's own
+ * sourceId collides with an ID already used by a *different* concept, it is
+ * given a fresh unused ID rather than silently sharing the collided label —
+ * this is what previously allowed two independent "S1, S2, ..." numbering
+ * schemes to be concatenated and produce duplicate, ambiguous source IDs.
+ */
 function mergeSourceCards(
   ...groups: ReadonlyArray<NativeOkfChatResponse["sources"]>
 ): NativeOkfChatResponse["sources"] {
   const merged: NativeOkfChatResponse["sources"] = [];
-  const seen = new Set<string>();
+  const seenConceptIds = new Set<string>();
+  const usedSourceIds = new Set<string>();
   for (const source of groups.flat()) {
-    if (seen.has(source.conceptId)) continue;
-    seen.add(source.conceptId);
-    merged.push(source);
+    if (seenConceptIds.has(source.conceptId)) continue;
+    seenConceptIds.add(source.conceptId);
+    const sourceId = usedSourceIds.has(source.sourceId)
+      ? nextAvailableSourceId(usedSourceIds)
+      : source.sourceId;
+    usedSourceIds.add(sourceId);
+    merged.push(sourceId === source.sourceId ? source : { ...source, sourceId });
   }
   return merged;
 }
@@ -649,6 +675,9 @@ function assertResolvedTurnPlan(prepared: PreparedNativeOkfChatRequest): void {
     plan.includeDiagram !== prepared.includeDiagram ||
     plan.diagramMode !== prepared.diagramMode ||
     plan.queryMode !== prepared.queryMode ||
+    plan.diagramConceptKinds.join(",") !== prepared.diagramConceptKinds.join(",") ||
+    (plan.mode === "STORED_FULL_MAP" && plan.diagramConceptKinds.length > 0) ||
+    (plan.mode === "STORED_FILTERED_MAP" && plan.diagramConceptKinds.length === 0) ||
     plan.focusedPaperSlugs.join("\u0000") !==
       prepared.focusedPaperSlugs.join("\u0000") ||
     plan.requestedConceptKinds.join("\u0000") !==
@@ -670,7 +699,40 @@ function assertResolvedTurnPlan(prepared: PreparedNativeOkfChatRequest): void {
   }
 }
 
+/**
+ * Every response's sources must carry globally unique source IDs — the model's
+ * [[S#]] citations and any deterministic diagram's own source cards are merged
+ * by mergeSourceCards, which is the single place that must never let two
+ * independently-numbered "S1, S2, ..." schemes collide. This is a defense-in-
+ * depth check on the final response, and it FAILS CLOSED in every environment,
+ * production included: a response whose [[S#]] citations cannot each resolve to
+ * exactly one source card is ambiguous evidence attribution, and serving it
+ * would silently mis-cite. The throw is caught by the route layer
+ * (handlePublicNativeOkfChat → publicNativeOkfChatError) and returned as a
+ * handled error, so an ambiguous response is never successfully serialized to a
+ * client. Production additionally logs first, for observability.
+ */
+export function assertUniqueSourceIds(response: NativeOkfChatResponse): void {
+  const sourceIds = response.sources.map((source) => source.sourceId);
+  if (new Set(sourceIds).size === sourceIds.length) return;
+  const message =
+    `Native OKF response contains duplicate source IDs: ${sourceIds.join(", ")}`;
+  if (process.env.NODE_ENV === "production") {
+    console.error(message);
+  }
+  throw new Error(message);
+}
+
 export async function answerNativeOkfChat(
+  input: unknown,
+  dependencies: NativeOkfChatDependencies = {},
+): Promise<NativeOkfChatResponse> {
+  const response = await answerNativeOkfChatUnchecked(input, dependencies);
+  assertUniqueSourceIds(response);
+  return response;
+}
+
+async function answerNativeOkfChatUnchecked(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
 ): Promise<NativeOkfChatResponse> {
@@ -787,7 +849,7 @@ export async function answerNativeOkfChat(
       try {
         builtDiagram = await (
           dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
-        )(focusedPaper.conceptId, turnPlan.requestedConceptKinds);
+        )(focusedPaper.conceptId, turnPlan.diagramConceptKinds);
       } catch {
         builtDiagram = undefined;
       }
@@ -1226,11 +1288,23 @@ export async function answerNativeOkfChat(
     // shows; the LLM's cited sources answer the user's specific question and may be a
     // subset (or, rarely, reference a related concept the diagram doesn't include).
     // Keep both so source disclosure never shows less than the diagram itself does.
-    sourceCards = mergeSourceCards(earlyDeterministicDiagram.sources, sourceCards);
+    // sourceCards (citation-derived) must be the FIRST/authoritative group: its IDs
+    // are exactly what answerMarkdown's [[S#]] tokens already reference and must
+    // never be renumbered. The diagram's independently-numbered sources are merged
+    // in after, getting a fresh non-colliding ID for any concept the diagram alone
+    // introduces (see mergeSourceCards).
+    sourceCards = mergeSourceCards(sourceCards, earlyDeterministicDiagram.sources);
     if (presentationSafe) {
+      // The wording must match what was actually returned: "complete" is only true
+      // for the unfiltered canonical map. A STORED_FILTERED_MAP only exists when the
+      // user explicitly asked for an exclusively filtered subset (see
+      // explicitlyFilteredDiagramConceptKinds), so it must never be described as
+      // "the complete stored...map".
       const provenanceSentence = earlyDeterministicDiagram.mode === "comparative"
         ? "The diagram below shows the complete canonical stored design-knowledge relationships for both papers, kept in separate paper-labelled groups. No synthesized or invented cross-paper knowledge was added."
-        : "The diagram below shows the complete stored design-knowledge concepts and canonical relationships from the paper. No synthesized design knowledge was added.";
+        : turnPlan.mode === "STORED_FILTERED_MAP"
+          ? "The diagram below shows the stored design-knowledge concepts in the explicitly requested category and the canonical relationships among them from the paper. No synthesized design knowledge was added."
+          : "The diagram below shows the complete stored design-knowledge concepts and canonical relationships from the paper. No synthesized design knowledge was added.";
       answerMarkdown = `${answerMarkdown}\n\n${provenanceSentence}`;
     }
   }

@@ -18,8 +18,8 @@ import {
 import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import { formatConceptType } from "../../shared/presentation.ts";
 import {
+  resolveSynthesisProblemLabel,
   synthesisProblemNodeDisplay,
-  synthesisProblemSummaryPhrase,
 } from "../../shared/synthesis-problem-display.ts";
 import type { NativeOpenAiClient } from "./client.ts";
 import type {
@@ -861,11 +861,15 @@ function uniqueSupport(...groups: readonly string[][]): string[] {
 
 export function createNativeOkfSynthesisProblemNode(
   validatedProblemStatement: string,
+  modelProducedTitle: string | null = null,
 ): GeneratedDiagramNode {
   const display = synthesisProblemNodeDisplay(validatedProblemStatement);
   return {
     id: "user-problem",
-    label: display.label,
+    label: resolveSynthesisProblemLabel(
+      modelProducedTitle,
+      validatedProblemStatement,
+    ),
     description: display.description,
     category: "User problem",
     stage: "problem",
@@ -887,10 +891,9 @@ export function convertNativeOkfSynthesisPlan(
 ): { diagram: GeneratedDiagram; usedSupportConceptIds: string[] } | null {
   const problem = createNativeOkfSynthesisProblemNode(
     validatedProblemStatement,
+    plan.title,
   );
-  const problemDisplay = synthesisProblemNodeDisplay(
-    validatedProblemStatement,
-  );
+  const problemLabel = problem.label;
   const nodes = [problem, ...planNodes(plan).map((entry) => convertedNode(entry, grounding))];
   const byKey = new Map<string, GeneratedDiagramNode>([["problem", problem]]);
   planNodes(plan).forEach((entry, index) => byKey.set(entry.node.key, nodes[index + 1]!));
@@ -923,7 +926,7 @@ export function convertNativeOkfSynthesisPlan(
     }];
   });
   const candidate: GeneratedDiagram = {
-    title: `Design proposal: ${problemDisplay.label}`,
+    title: `Design proposal: ${problemLabel}`,
     explanation:
       "A problem-specific design proposal. Dashed elements are proposed adaptations; solid elements are exact stored native OKF knowledge.",
     nodes,
@@ -950,12 +953,19 @@ export function convertNativeOkfSynthesisPlan(
 
 export function deterministicNativeOkfSynthesisSummary(
   plan: SynthesisPlan,
-  _diagram: GeneratedDiagram,
+  diagram: GeneratedDiagram,
 ): string {
-  const boundedProblem = synthesisProblemSummaryPhrase(plan.problemSummary)
-    .split(/\s+/u)
-    .slice(0, 20)
-    .join(" ");
+  // Reuse the same label already resolved onto the diagram's own problem node
+  // (see createNativeOkfSynthesisProblemNode / convertNativeOkfSynthesisPlan)
+  // rather than re-deriving one from plan.problemSummary, so the diagram
+  // title, the problem node, and this summary can never disagree.
+  const problemLabel =
+    diagram.nodes.find((node) => node.stage === "problem")?.label ??
+    resolveSynthesisProblemLabel(plan.title, plan.problemSummary);
+  const lowerFirstLabel = /^[A-Z][a-z]/u.test(problemLabel)
+    ? problemLabel[0]!.toLocaleLowerCase("en") + problemLabel.slice(1)
+    : problemLabel;
+  const boundedProblem = lowerFirstLabel.split(/\s+/u).slice(0, 20).join(" ");
   return `This diagram translates the proposed design for ${boundedProblem} into a decision-support flow. Stored concepts are reused where applicable; proposed adaptations are distinguished visually and supported by the listed sources.`;
 }
 

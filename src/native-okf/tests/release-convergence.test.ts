@@ -254,7 +254,10 @@ test("valid SynthesisPlan converts deterministically to the current internal dia
   assert.equal(problem.id, "user-problem");
   assert.equal(problem.provenance, "user-provided");
   assert.deepEqual(problem.sourcePaths, []);
-  assert.match(problem.label, /Validated fragmented identity/);
+  // The problem node's label now prefers the plan's own bounded, model-produced
+  // title (see resolveSynthesisProblemLabel) over a substring of the raw
+  // problem statement passed as the third argument here.
+  assert.equal(problem.label, "Grounded cross-context proposal");
   const reused = converted.diagram.nodes.find((node) => node.id === "plan-requirement-one")!;
   assert.equal(reused.label, "Canonical requirement one");
   assert.equal(reused.description, "Canonical requirement description one.");
@@ -389,7 +392,8 @@ test("invalid first synthesis plan is repaired once from the candidate and deter
   assert.equal(calls.length, 3);
   assert.ok(result.diagram);
   assert.ok(result.plan);
-  assert.equal(result.diagram?.nodes[0]?.label, "Validated fragmented identity problem");
+  // Same preference as above: the accepted (repaired) plan's own title wins.
+  assert.equal(result.diagram?.nodes[0]?.label, "Grounded cross-context proposal");
   assert.equal((calls[0]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(JSON.stringify(calls[0]).includes("native_okf_generated_diagram"), false);
   assert.match(String(calls[1]?.input), /invalidPlan/);
@@ -572,17 +576,19 @@ test("successful synthesis skips the normal answer model and returns used suppor
   assert.equal(result.presentationMode, "diagram-primary");
   assert.equal(result.diagramMode, "synthesized");
   assert.equal(result.diagramStatus, "success");
-  assert.match(result.diagram?.title ?? "", /^Design proposal: Fragmented product identity/iu);
+  // The diagram title, the user-problem node's label, and the prose intro all
+  // now prefer the plan's own bounded, model-produced title (see
+  // resolveSynthesisProblemLabel) over a substring of the raw question —
+  // planForGrounding's title is deliberately distinct from the question text
+  // so this preference is unambiguous to assert on.
+  assert.match(result.diagram?.title ?? "", /^Design proposal: Validated problem-specific synthesis/iu);
   const problemNode = result.diagram?.nodes.find((node) => node.id === "user-problem");
-  assert.equal(
-    problemNode?.label,
-    "Fragmented product identity and lost review continuity across e-commerce marketplaces",
-  );
+  assert.equal(problemNode?.label, "Validated problem-specific synthesis");
   assert.equal(
     problemNode?.description,
     "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
   );
-  assert.match(result.answerMarkdown, /^This design proposal addresses fragmented product identity/iu);
+  assert.match(result.answerMarkdown, /^This design proposal addresses Validated problem-specific synthesis/iu);
   assert.doesNotMatch(result.answerMarkdown, /addresses Generate|\.\./iu);
   assert.ok(result.synthesisDraft);
   assert.ok(result.conversationState?.lastSynthesisProblem);
