@@ -1,5 +1,6 @@
 import {
   GENERATED_DIAGRAM_STAGES,
+  synthesisEdgeStructuralClass,
   type DiagramStage,
   type GeneratedDiagram,
   type GeneratedDiagramNode,
@@ -75,6 +76,16 @@ export interface DiagramLayoutEdge {
   labelPosition: LayoutPoint;
   showLabel: boolean;
   provenance: GeneratedDiagram["edges"][number]["provenance"];
+  /**
+   * True when the relationship type is a SECONDARY dependency ("depends on" /
+   * "interoperates with"). Secondary edges are rendered distinctly from the
+   * primary design flow and always show their label.
+   */
+  secondary: boolean;
+}
+
+function isSecondaryRelation(label: string): boolean {
+  return synthesisEdgeStructuralClass(label) === "secondary";
 }
 
 export interface DiagramStageLane {
@@ -236,6 +247,7 @@ async function layoutWithElk(
       ...(section.bendPoints ?? []).map((point) => shifted(point, xShift, yShift)),
       shifted(section.endPoint, xShift, yShift),
     ];
+    const secondary = isSecondaryRelation(source.label);
     return [{
       id: edge.id,
       source: source.source,
@@ -243,8 +255,10 @@ async function layoutWithElk(
       label: source.label,
       points,
       labelPosition: routeMidpoint(points),
-      showLabel: edgeLabelsVisible && source.label.trim() !== "",
+      showLabel:
+        secondary || (edgeLabelsVisible && source.label.trim() !== ""),
       provenance: source.provenance,
+      secondary,
     }];
   });
   const lanes = presentStages.flatMap((stage) => {
@@ -362,16 +376,21 @@ export async function layoutGeneratedDiagram(
       sourcePosition: node.sourcePosition,
       targetPosition: node.targetPosition,
     })),
-    edges: semantic.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      label: edge.label,
-      points: edge.points,
-      labelPosition: edge.labelPosition,
-      showLabel: edgeLabelsVisible && edge.label.trim() !== "",
-      provenance: edge.value.provenance,
-    })),
+    edges: semantic.edges.map((edge) => {
+      const secondary = isSecondaryRelation(edge.label);
+      return {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        points: edge.points,
+        labelPosition: edge.labelPosition,
+        showLabel:
+          secondary || (edgeLabelsVisible && edge.label.trim() !== ""),
+        provenance: edge.value.provenance,
+        secondary,
+      };
+    }),
     bounds: semantic.bounds,
     lanes: semantic.columns.map((column) => ({
       stage: column.key as DiagramStage,

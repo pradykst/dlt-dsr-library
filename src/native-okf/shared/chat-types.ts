@@ -20,8 +20,13 @@ export function nativeOkfVisibleHistoryExceedsModelContext(
 export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_NODES = 48;
 export const MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES = 96;
 
-/** Semantic proposal relationships. These are meanings, not layout hints. */
-export const SYNTHESIS_RELATIONSHIP_TYPES = [
+/**
+ * PRIMARY design-flow relationships. These carry the hierarchical proposal
+ * grammar Problem -> Requirement -> Design Principle -> Design Feature ->
+ * Artifact. A primary edge must connect two consecutive semantic layers.
+ * These are meanings, not layout hints.
+ */
+export const PRIMARY_SYNTHESIS_RELATIONSHIP_TYPES = [
   "motivates",
   "requires",
   "informs",
@@ -38,8 +43,116 @@ export const SYNTHESIS_RELATIONSHIP_TYPES = [
   "validates",
 ] as const;
 
+/**
+ * SECONDARY relationships express same-layer dependencies or implementation
+ * ordering (Design Principle -> Design Principle, Design Feature <-> Design
+ * Feature). A secondary edge is never part of the primary hierarchy: it never
+ * satisfies a missing primary parent, never completes a primary path, and is
+ * rendered and labelled distinctly from the primary design flow.
+ */
+export const SECONDARY_SYNTHESIS_RELATIONSHIP_TYPES = [
+  "depends on",
+  "interoperates with",
+] as const;
+
+export const SYNTHESIS_RELATIONSHIP_TYPES = [
+  ...PRIMARY_SYNTHESIS_RELATIONSHIP_TYPES,
+  ...SECONDARY_SYNTHESIS_RELATIONSHIP_TYPES,
+] as const;
+
 export type SynthesisRelationshipType =
   (typeof SYNTHESIS_RELATIONSHIP_TYPES)[number];
+
+export type PrimarySynthesisRelationshipType =
+  (typeof PRIMARY_SYNTHESIS_RELATIONSHIP_TYPES)[number];
+
+export type SecondarySynthesisRelationshipType =
+  (typeof SECONDARY_SYNTHESIS_RELATIONSHIP_TYPES)[number];
+
+export type SynthesisEdgeStructuralClass = "primary" | "secondary";
+
+const PRIMARY_SYNTHESIS_RELATIONSHIP_SET: ReadonlySet<string> = new Set(
+  PRIMARY_SYNTHESIS_RELATIONSHIP_TYPES,
+);
+const SECONDARY_SYNTHESIS_RELATIONSHIP_SET: ReadonlySet<string> = new Set(
+  SECONDARY_SYNTHESIS_RELATIONSHIP_TYPES,
+);
+
+/**
+ * The single deterministic classifier for a synthesized proposal edge. It maps
+ * every member of the CLOSED controlled relationship vocabulary
+ * (`SYNTHESIS_RELATIONSHIP_TYPES`) to exactly one structural class, and returns
+ * `null` for any unknown or unmapped type. Classification is never inferred
+ * from free text: an unmapped type must fail grammar validation. The grammar
+ * validator and the renderer both call this, so they can never disagree.
+ */
+export function synthesisEdgeStructuralClass(
+  relationshipType: string,
+): SynthesisEdgeStructuralClass | null {
+  const type = relationshipType.trim();
+  if (PRIMARY_SYNTHESIS_RELATIONSHIP_SET.has(type)) return "primary";
+  if (SECONDARY_SYNTHESIS_RELATIONSHIP_SET.has(type)) return "secondary";
+  return null;
+}
+
+/**
+ * Coarse semantic layer of a stage within the PRIMARY design hierarchy. The
+ * grammar only constrains transitions between these layers; the finer stage
+ * ontology (meta- vs design-requirement) is preserved as node metadata.
+ * `null` means the stage is not part of the primary hierarchy.
+ */
+export type SynthesisPrimaryLayer =
+  | "problem"
+  | "requirement"
+  | "principle"
+  | "feature"
+  | "artifact"
+  | "evaluation"
+  | "outcome";
+
+/**
+ * Ordered primary hierarchy (fixed semantic ontology). A primary edge is legal
+ * only between adjacent roles in this sequence, regardless of which layers a
+ * particular graph populates.
+ */
+export const SYNTHESIS_PRIMARY_LAYER_SEQUENCE = [
+  "problem",
+  "requirement",
+  "principle",
+  "feature",
+  "artifact",
+  "evaluation",
+  "outcome",
+] as const satisfies readonly SynthesisPrimaryLayer[];
+
+export function synthesisPrimaryLayer(
+  stage: DiagramStage,
+): SynthesisPrimaryLayer | null {
+  switch (stage) {
+    case "problem":
+    case "design-goal":
+    case "design-objective":
+      return "problem";
+    case "meta-requirement":
+    case "design-requirement":
+    case "requirements":
+      return "requirement";
+    case "design-principle":
+    case "principles":
+      return "principle";
+    case "design-feature":
+    case "features":
+      return "feature";
+    case "artifact":
+      return "artifact";
+    case "evaluation":
+      return "evaluation";
+    case "outcome":
+      return "outcome";
+    default:
+      return null;
+  }
+}
 
 export interface NativeOkfChatRequest {
   question: string;

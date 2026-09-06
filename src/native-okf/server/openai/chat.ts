@@ -461,7 +461,7 @@ function proposalDiagramFromDraft(draft: SynthesisDraftState): GeneratedDiagram 
   return {
     title: "Design proposal",
     explanation:
-      "This diagram translates the current design proposal into a decision-support flow. Stored concepts are reused where applicable; proposed adaptations are distinguished visually.",
+      "This diagram translates the current design proposal into a decision-support flow. Every node is a proposed design concept grounded in cited stored native OKF evidence; primary design-flow relationships and secondary dependencies are shown distinctly.",
     nodes: draft.nodes,
     edges: draft.edges,
   };
@@ -529,7 +529,7 @@ function designProposalNarrative(
 
   const introduction = refined
     ? "This refinement updates the existing design proposal while preserving all unmentioned elements."
-    : `This design proposal addresses ${diagram.nodes.find((node) => node.stage === "problem")?.label ?? "the research problem"}. Exact stored concepts are reused where applicable, and problem-specific adaptations remain visibly distinct.`;
+    : `This design proposal addresses ${diagram.nodes.find((node) => node.stage === "problem")?.label ?? "the research problem"}. Every design concept below is proposed for this problem and grounded in cited stored native OKF evidence.`;
 
   const highlightStage = NARRATIVE_HIGHLIGHT_STAGE_PREFERENCE.find((stage) =>
     proposalNodes.some((node) => node.stage === stage)
@@ -560,15 +560,23 @@ function designProposalNarrative(
       return `${count} ${pluralStageLabel(stage, count).toLocaleLowerCase("en")}`;
     })
     .join(", ");
-  const storedCount = proposalNodes.filter((node) => node.provenance === "stored").length;
-  const synthesizedCount = proposalNodes.filter(
+  const proposedCount = proposalNodes.filter(
     (node) => node.provenance === "synthesized",
   ).length;
-  const provenanceSentence = storedCount > 0 && synthesizedCount > 0
-    ? `The diagram below distinguishes ${storedCount} exact stored concept${storedCount === 1 ? "" : "s"} from ${synthesizedCount} synthesized addition${synthesizedCount === 1 ? "" : "s"} across ${stageCounts}.`
-    : synthesizedCount > 0
-      ? `All elements below are synthesized for this problem (${stageCounts}); none are claimed as exact stored knowledge.`
-      : `The diagram below shows ${stageCounts}, reused directly from stored knowledge.`;
+  const groundingConceptCount = new Set(
+    proposalNodes.flatMap((node) => node.supportConceptIds),
+  ).size;
+  const provenanceSentence = proposedCount > 0
+    ? `This problem-specific proposal contains ${proposedCount} proposed design concept${
+        proposedCount === 1 ? "" : "s"
+      } (${stageCounts})${
+        groundingConceptCount > 0
+          ? `, grounded in ${groundingConceptCount} stored native OKF concept${
+              groundingConceptCount === 1 ? "" : "s"
+            }`
+          : ""
+      }. The stored concepts are cited as evidence, not reproduced as diagram nodes.`
+    : `The diagram below shows ${stageCounts}, drawn directly from stored knowledge.`;
 
   return [
     introduction,
@@ -1012,6 +1020,10 @@ async function answerNativeOkfChatUnchecked(
           priorDraft: turnPlan.refinementIntent
             ? prepared.priorSynthesisDraft
             : null,
+          // A synthesized-flow diagram turn is a request for a complete design
+          // proposal: the mandatory core coverage Problem -> Requirement ->
+          // Design Principle -> Design Feature -> Artifact is always enforced.
+          // Evaluation and Outcome remain optional and never affect validity.
           requireRpfPath: nativeOkfSynthesisRequiresRpfPath(
             turnPlan.effectiveQuestion,
           ),

@@ -14,7 +14,14 @@ export interface ElkFlowEdgeData {
   showLabel: boolean;
   highlighted: boolean;
   dimmed: boolean;
+  /** Legacy provenance-based dashing (stored/comparative maps). */
   dashed: boolean;
+  /**
+   * SECONDARY dependency relationship ("depends on" / "interoperates with").
+   * Rendered as a thin dotted amber line so the primary design flow visually
+   * dominates.
+   */
+  secondary: boolean;
 }
 
 function finitePoint(point: XYPosition): boolean {
@@ -73,9 +80,16 @@ export function ElkFlowEdge({
   if (!path) return null;
 
   const labelPoint = data.labelPoint ?? polylineMidpoint(data.points);
-  const stroke = data.highlighted ? "#1f5f8b" : "#64748b";
+  const stroke = data.secondary
+    ? (data.highlighted ? "#b45309" : "#d97706")
+    : (data.highlighted ? "#1f5f8b" : "#64748b");
   const opacity = data.dimmed ? 0.18 : 1;
   const shouldShowLabel = data.showLabel && data.label.length > 0;
+  const strokeDasharray = data.secondary
+    ? "2 4"
+    : data.dashed
+      ? "7 5"
+      : undefined;
 
   return (
     <>
@@ -86,10 +100,10 @@ export function ElkFlowEdge({
         style={{
           ...style,
           stroke,
-          strokeWidth: data.highlighted ? 2.25 : 1.6,
+          strokeWidth: data.highlighted ? 2.25 : data.secondary ? 1.1 : 1.6,
           strokeLinecap: "round",
           strokeLinejoin: "round",
-          strokeDasharray: data.dashed ? "7 5" : undefined,
+          strokeDasharray,
           opacity,
         }}
       />
@@ -97,13 +111,17 @@ export function ElkFlowEdge({
         <EdgeLabelRenderer>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 max-w-32 -translate-x-1/2 -translate-y-1/2 rounded border border-line bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold leading-4 text-slate-700 shadow-sm"
+            className={`pointer-events-none absolute z-10 max-w-32 -translate-x-1/2 -translate-y-1/2 rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-4 shadow-sm ${
+              data.secondary
+                ? "border-amber-300 bg-amber-50/95 text-amber-800"
+                : "border-line bg-white/95 text-slate-700"
+            }`}
             style={{
               transform: `translate(-50%, -50%) translate(${labelPoint.x}px, ${labelPoint.y}px)`,
               opacity,
             }}
           >
-            {data.label}
+            {data.secondary ? `⇢ ${data.label}` : data.label}
           </span>
         </EdgeLabelRenderer>
       ) : null}

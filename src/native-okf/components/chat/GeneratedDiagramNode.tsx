@@ -25,7 +25,11 @@ function stageCaption(stage: DiagramNode["stage"]): string {
 
 function provenanceCaption(node: DiagramNode): string {
   if (node.provenance === "user-provided") return "User-provided";
-  if (node.provenance === "synthesized") return "Synthesized";
+  if (node.provenance === "synthesized") {
+    return /^adapted\b/iu.test(node.synthesisRationale ?? "")
+      ? "Adapted"
+      : "Proposed";
+  }
   return "Stored";
 }
 

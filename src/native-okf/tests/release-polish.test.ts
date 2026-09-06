@@ -43,7 +43,6 @@ function planNode(key: string): SynthesisPlanNode {
     label: `Proposal ${key}`,
     description: `Grounded proposal for ${key}.`,
     supportConceptIds: [`fixture/${key}`],
-    reuseStoredConceptId: null,
   };
 }
 
@@ -209,7 +208,7 @@ test("release polish synthesis summary normalizes the problem without mechanical
   assert.doesNotMatch(summary, /for Generate/iu);
   assert.doesNotMatch(summary, /\.\./u);
   assert.doesNotMatch(summary, /\b\d+ requirements|\b\d+ principles|\b\d+ features/iu);
-  assert.match(summary, /Stored concepts are reused where applicable/iu);
+  assert.match(summary, /proposed design concept grounded in the listed stored native OKF/iu);
   assert.ok(summary.trim().split(/\s+/u).length < 100);
 });
 

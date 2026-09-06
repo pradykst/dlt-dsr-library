@@ -71,10 +71,16 @@ const grounding: NativeOkfDiagramGrounding = {
   ],
 };
 
+/**
+ * A grammatically valid synthesized proposal: proposal nodes only, primary
+ * design-flow edges connecting adjacent semantic roles, one secondary
+ * principle -> principle dependency, and an optional post-artifact evaluation.
+ * Stored concepts C1-C3 appear only as evidence bindings (supportConceptIds).
+ */
 function synthesisDiagram(): GeneratedDiagram {
   return {
     title: "Cross-marketplace identity continuity",
-    explanation: "Stored native concepts ground a problem-specific proposal.",
+    explanation: "A problem-specific design proposal grounded in stored native OKF evidence.",
     nodes: [
       {
         id: "problem",
@@ -92,66 +98,98 @@ function synthesisDiagram(): GeneratedDiagram {
       },
       {
         id: "requirement",
-        label: "Identity continuity requirement",
-        description: "Maintain identity continuity.",
-        category: "design requirement",
+        label: "Preserve product identity continuity across marketplaces",
+        description: "The artifact must keep a product's identity and review history coherent across independent marketplaces.",
+        category: "Design requirement",
         stage: "design-requirement",
         order: 20,
         group: null,
-        provenance: "stored",
+        provenance: "synthesized",
         sourcePaths: [C1],
         supportConceptIds: [C1],
-        synthesisRationale: null,
-        synthesis: false,
+        synthesisRationale: "Proposed for this problem, grounded in the stored native OKF concept Identity continuity requirement.",
+        synthesis: true,
       },
       {
-        id: "principle",
-        label: "Selective disclosure principle",
-        description: "Disclose only necessary evidence.",
-        category: "design principle",
+        id: "principle-disclosure",
+        label: "Minimize disclosed identity evidence",
+        description: "Reveal only the identity attributes a marketplace needs for the current decision.",
+        category: "Design principle",
         stage: "design-principle",
         order: 40,
         group: null,
-        provenance: "stored",
+        provenance: "synthesized",
         sourcePaths: [C2],
         supportConceptIds: [C2],
-        synthesisRationale: null,
-        synthesis: false,
+        synthesisRationale: "Adapted for this problem from the stored native OKF concept Selective disclosure principle.",
+        synthesis: true,
+      },
+      {
+        id: "principle-portability",
+        label: "Make identity claims independently verifiable",
+        description: "Any marketplace can verify an identity claim without contacting the issuing marketplace.",
+        category: "Design principle",
+        stage: "design-principle",
+        order: 40,
+        group: null,
+        provenance: "synthesized",
+        sourcePaths: [C1, C2],
+        supportConceptIds: [C1, C2],
+        synthesisRationale: "Proposed for this problem, grounded in the stored native OKF concepts Identity continuity requirement; Selective disclosure principle.",
+        synthesis: true,
       },
       {
         id: "feature",
-        label: "Signed review record",
-        description: "Sign review records.",
-        category: "design feature",
+        label: "Portable signed identity-and-review credential",
+        description: "A signed, selectively disclosable credential bundling product identity and review attestations.",
+        category: "Design feature",
         stage: "design-feature",
         order: 60,
         group: null,
-        provenance: "stored",
-        sourcePaths: [C3],
-        supportConceptIds: [C3],
-        synthesisRationale: null,
-        synthesis: false,
+        provenance: "synthesized",
+        sourcePaths: [C2, C3],
+        supportConceptIds: [C2, C3],
+        synthesisRationale: "Proposed for this problem, grounded in the stored native OKF concepts Selective disclosure principle; Signed review record.",
+        synthesis: true,
+      },
+      {
+        id: "artifact",
+        label: "Cross-marketplace identity exchange service",
+        description: "A service that issues, exchanges, and verifies portable identity-and-review credentials between marketplaces.",
+        category: "Artifact",
+        stage: "artifact",
+        order: 75,
+        group: null,
+        provenance: "synthesized",
+        sourcePaths: [C1, C3],
+        supportConceptIds: [C1, C3],
+        synthesisRationale: "Proposed for this problem, grounded in the stored native OKF concepts Identity continuity requirement; Signed review record.",
+        synthesis: true,
       },
       {
         id: "evaluation",
-        label: "Evaluate continuity across marketplaces",
-        description: "Test whether identity and review evidence remain continuous.",
-        category: "evaluation",
+        label: "Evaluate continuity and disclosure minimization",
+        description: "Assess whether identity and review evidence stay continuous while disclosure stays minimal.",
+        category: "Evaluation",
         stage: "evaluation",
-        order: 80,
+        order: 85,
         group: null,
         provenance: "synthesized",
         sourcePaths: [C3],
         supportConceptIds: [C3],
-        synthesisRationale: "Adapts the stored signed-record feature into a problem-specific evaluation.",
+        synthesisRationale: "Proposed post-artifact assessment for this problem, grounded in the stored native OKF concept Signed review record.",
         synthesis: true,
       },
     ],
     edges: [
-      { source: "problem", target: "requirement", label: "requires", provenance: "synthesized", supportConceptIds: [C1] },
-      { source: "requirement", target: "principle", label: "addressed by", provenance: "stored", supportConceptIds: [C1, C2] },
-      { source: "principle", target: "feature", label: "implemented by", provenance: "stored", supportConceptIds: [C2, C3] },
-      { source: "feature", target: "evaluation", label: "validates", provenance: "synthesized", supportConceptIds: [C3] },
+      { source: "problem", target: "requirement", label: "motivates", provenance: "synthesized", supportConceptIds: [C1] },
+      { source: "requirement", target: "principle-disclosure", label: "addressed by", provenance: "synthesized", supportConceptIds: [C1, C2] },
+      { source: "requirement", target: "principle-portability", label: "addressed by", provenance: "synthesized", supportConceptIds: [C1] },
+      { source: "principle-disclosure", target: "principle-portability", label: "depends on", provenance: "synthesized", supportConceptIds: [C2] },
+      { source: "principle-disclosure", target: "feature", label: "implemented by", provenance: "synthesized", supportConceptIds: [C2, C3] },
+      { source: "principle-portability", target: "feature", label: "implemented by", provenance: "synthesized", supportConceptIds: [C1, C2] },
+      { source: "feature", target: "artifact", label: "instantiated in", provenance: "synthesized", supportConceptIds: [C3] },
+      { source: "artifact", target: "evaluation", label: "evaluated by", provenance: "synthesized", supportConceptIds: [C3] },
     ],
   };
 }
@@ -375,12 +413,12 @@ test("text-only synthesis and its later diagram are projections of the same vali
   // The full node set already lives in the validated plan (asserted above) and is
   // rendered by the diagram; the text projection is deliberately concise rather than
   // restating every node under every stage — it highlights the explanatory (principle)
-  // layer and states stored-vs-synthesized provenance, not a duplicate node dump.
-  assert.match(response.answerMarkdown, /Selective disclosure principle/iu);
+  // layer and states proposal-vs-evidence provenance, not a duplicate node dump.
+  assert.match(response.answerMarkdown, /Minimize disclosed identity evidence/iu);
   assert.doesNotMatch(response.answerMarkdown, /###/u);
-  assert.match(response.answerMarkdown, /stored|synthesized/iu);
+  assert.match(response.answerMarkdown, /proposed|grounded|evidence/iu);
   assert.ok(
-    response.answerMarkdown.length < 700,
+    response.answerMarkdown.length < 900,
     `expected a concise synthesis answer, got ${response.answerMarkdown.length} characters`,
   );
 });
@@ -458,7 +496,7 @@ test("synthesis requires at least two current-turn stored concepts", () => {
   );
 });
 
-test("strict synthesis validation accepts provenance-bearing grounded RPF flow", () => {
+test("strict synthesis validation accepts a grammatically valid full proposal", () => {
   const result = validateGeneratedDiagram(
     synthesisDiagram(),
     grounding,
@@ -482,14 +520,57 @@ test("strict validation rejects unknown support, source paths, and stored masque
   assert.equal(validateGeneratedDiagram(masquerade, grounding, { mode: "synthesized" }).ok, false);
 });
 
-test("stored nodes and stored edges must match exact native concepts and relations", () => {
-  const wrongLabel = synthesisDiagram();
-  wrongLabel.nodes[1]!.label = "Invented requirement";
-  assert.equal(validateGeneratedDiagram(wrongLabel, grounding, { mode: "synthesized" }).ok, false);
+test("synthesized proposal graphs may not contain stored nodes or stored edges", () => {
+  const storedNode = synthesisDiagram();
+  storedNode.nodes[1]!.provenance = "stored";
+  storedNode.nodes[1]!.synthesis = false;
+  const storedNodeResult = validateGeneratedDiagram(storedNode, grounding, { mode: "synthesized" });
+  assert.equal(storedNodeResult.ok, false);
 
-  const wrongEdge = synthesisDiagram();
-  wrongEdge.edges[1]!.label = "invented relation";
-  assert.equal(validateGeneratedDiagram(wrongEdge, grounding, { mode: "synthesized" }).ok, false);
+  const storedEdge = synthesisDiagram();
+  storedEdge.edges[1]!.provenance = "stored";
+  const storedEdgeResult = validateGeneratedDiagram(storedEdge, grounding, { mode: "synthesized" });
+  assert.equal(storedEdgeResult.ok, false);
+  assert.ok(
+    !storedEdgeResult.ok &&
+      storedEdgeResult.errors.some((error) => /imported stored-paper edge/u.test(error)),
+  );
+});
+
+test("the deterministic grammar rejects skipped and same-role primary edges", () => {
+  const skip = synthesisDiagram();
+  // Requirement -> Feature, jumping the principle role.
+  skip.edges.push({
+    source: "requirement",
+    target: "feature",
+    label: "implements",
+    provenance: "synthesized",
+    supportConceptIds: [C1],
+  });
+  const skipResult = validateGeneratedDiagram(skip, grounding, { mode: "synthesized", requireRpfPath: true });
+  assert.equal(skipResult.ok, false);
+  assert.ok(
+    !skipResult.ok &&
+      skipResult.errors.some((error) =>
+        error.includes("illegal-primary-edge:requirement->feature")
+      ),
+  );
+
+  const sameRole = synthesisDiagram();
+  // Principle -> Principle with a PRIMARY relationship type (not "depends on").
+  sameRole.edges = sameRole.edges.map((edge) =>
+    edge.source === "principle-disclosure" && edge.target === "principle-portability"
+      ? { ...edge, label: "informs" }
+      : edge
+  );
+  const sameRoleResult = validateGeneratedDiagram(sameRole, grounding, { mode: "synthesized", requireRpfPath: true });
+  assert.equal(sameRoleResult.ok, false);
+  assert.ok(
+    !sameRoleResult.ok &&
+      sameRoleResult.errors.some((error) =>
+        error.includes("illegal-primary-edge:principle->principle")
+      ),
+  );
 });
 
 test("user-provided nodes cannot claim paper sources", () => {
@@ -513,7 +594,7 @@ test("graph validation rejects duplicate edges, cycles, disconnection, and missi
   assert.equal(validateGeneratedDiagram(disconnected, grounding, { mode: "synthesized" }).ok, false);
 
   const missingRpf = synthesisDiagram();
-  missingRpf.edges = missingRpf.edges.filter((edge) => edge.source !== "principle");
+  missingRpf.edges = missingRpf.edges.filter((edge) => edge.target !== "feature");
   assert.equal(validateGeneratedDiagram(missingRpf, grounding, { mode: "synthesized", requireRpfPath: true }).ok, false);
 });
 
@@ -663,8 +744,11 @@ test("generated-diagram presentation exposes provenance without a competing rend
   assert.match(nodeSource, /border-dashed/);
   assert.match(presentationSource, /Supporting stored concepts/);
   assert.match(presentationSource, /Synthesis rationale/);
-  assert.match(presentationSource, /Dashed: synthesized proposal/);
+  assert.match(presentationSource, /proposed design concept/i);
+  assert.match(presentationSource, /dependency \(secondary\)/i);
   assert.match(edgeSource, /strokeDasharray/);
+  // Secondary dependency edges must be visually distinguished from the primary flow.
+  assert.match(edgeSource, /secondary/);
 });
 
 test("synthesis intent inference remains generic and topic-independent", () => {
@@ -684,12 +768,14 @@ test("synthesis intent inference remains generic and topic-independent", () => {
   );
 });
 
-test("RPF validation is conditional for explicitly different DSR structures", () => {
+test("every synthesized design proposal requires the mandatory core coverage", () => {
+  // Core validity (Problem -> Requirement -> Principle -> Feature -> Artifact)
+  // is enforced for every synthesized-flow diagram, independent of phrasing.
   assert.equal(
     nativeOkfSynthesisRequiresRpfPath(
       "Generate a grounded design solution for fragmented identity.",
     ),
-    false,
+    true,
   );
   assert.equal(
     nativeOkfSynthesisRequiresRpfPath(
@@ -701,12 +787,6 @@ test("RPF validation is conditional for explicitly different DSR structures", ()
     nativeOkfSynthesisRequiresRpfPath(
       "Create an explanatory theory for trust in digital marketplaces.",
     ),
-    false,
-  );
-  assert.equal(
-    nativeOkfSynthesisRequiresRpfPath(
-      "Construct an evaluation framework for privacy-preserving exchange.",
-    ),
-    false,
+    true,
   );
 });

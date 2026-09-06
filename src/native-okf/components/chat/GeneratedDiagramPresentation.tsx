@@ -19,10 +19,11 @@ import ReactFlow, {
   useReactFlow,
 } from "reactflow";
 
-import type {
-  GeneratedDiagram,
-  GeneratedDiagramNode as DiagramNode,
-  NativeOkfSourceCard,
+import {
+  synthesisEdgeStructuralClass,
+  type GeneratedDiagram,
+  type GeneratedDiagramNode as DiagramNode,
+  type NativeOkfSourceCard,
 } from "../../shared/chat-types.ts";
 import { conceptHref } from "../../shared/links.ts";
 import {
@@ -73,9 +74,12 @@ function formatProvenance(node: DiagramNode): string {
   if (node.provenance === "user-provided") {
     return "Provided in the research question";
   }
-  return node.provenance === "synthesized"
-    ? "Synthesized proposal"
-    : "Stored knowledge";
+  if (node.provenance === "synthesized") {
+    return /^adapted\b/iu.test(node.synthesisRationale ?? "")
+      ? "Proposed design concept (adapted from stored knowledge)"
+      : "Proposed design concept";
+  }
+  return "Stored knowledge";
 }
 
 function relatedNodeIds(
@@ -128,11 +132,13 @@ export function GeneratedDiagramDetailsPanel({
       {node.provenance === "synthesized" ? (
         <div className="mt-4 rounded-lg border border-purple/30 bg-purple/10 px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-purple">
-            Synthesized proposal
+            Proposed design concept
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-700">
-            This node is generated for the current design problem. It is not stored
-            directly in the source corpus.
+            This node is a design concept proposed for the current problem. It is
+            grounded in the stored native OKF concepts listed below, but it is not
+            itself a stored record and does not import any source paper&apos;s
+            structure.
           </p>
         </div>
       ) : null}
@@ -409,6 +415,10 @@ function GeneratedDiagramCanvas({
     [connectedIds, layout.nodes, orientation, selectedId],
   );
 
+  const nodeProvenanceById = useMemo(
+    () => new Map(diagram.nodes.map((node) => [node.id, node.provenance])),
+    [diagram.nodes],
+  );
   const edges = useMemo<Edge<ElkFlowEdgeData>[]>(
     () =>
       layout.edges.map((layoutEdge) => {
@@ -417,6 +427,12 @@ function GeneratedDiagramCanvas({
             (layoutEdge.source === selectedId || layoutEdge.target === selectedId),
         );
         const dimmed = Boolean(selectedId && !highlighted);
+        // A synthesized proposal's primary design-flow edges render solid and
+        // dominant. Legacy provenance dashing is kept only for a synthesized
+        // bridge drawn between two stored nodes (comparative maps).
+        const bridgesStoredNodes =
+          nodeProvenanceById.get(layoutEdge.source) === "stored" &&
+          nodeProvenanceById.get(layoutEdge.target) === "stored";
         return {
           id: layoutEdge.id,
           source: layoutEdge.source,
@@ -427,25 +443,32 @@ function GeneratedDiagramCanvas({
             label: layoutEdge.label,
             labelPoint: layoutEdge.labelPosition,
             showLabel:
+              layoutEdge.secondary ||
               edgeLabelMode === "all" ||
               (edgeLabelMode === "decision" &&
                 /^(?:yes|no)$/iu.test(layoutEdge.label.trim())),
             highlighted,
             dimmed,
-            dashed: layoutEdge.provenance === "synthesized",
+            dashed:
+              layoutEdge.provenance === "synthesized" && bridgesStoredNodes,
+            secondary: layoutEdge.secondary,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: highlighted ? "#1f5f8b" : "#64748b",
-            width: 17,
-            height: 17,
+            color: layoutEdge.secondary
+              ? "#d97706"
+              : highlighted
+                ? "#1f5f8b"
+                : "#64748b",
+            width: layoutEdge.secondary ? 13 : 17,
+            height: layoutEdge.secondary ? 13 : 17,
           },
-          zIndex: highlighted ? 3 : 1,
+          zIndex: highlighted ? 3 : layoutEdge.secondary ? 0 : 1,
           focusable: false,
           selectable: false,
         };
       }),
-    [layout.edges, selectedId, edgeLabelMode],
+    [layout.edges, selectedId, edgeLabelMode, nodeProvenanceById],
   );
 
   const fitDiagram = useCallback((): boolean => {
@@ -699,6 +722,19 @@ export function GeneratedDiagramPresentation({
     () => new Map(sources.map((source) => [source.conceptId, source])),
     [sources],
   );
+  const diagramLegend = useMemo(
+    () => ({
+      userProvided: diagram.nodes.some(
+        (node) => node.provenance === "user-provided",
+      ),
+      proposed: diagram.nodes.some((node) => node.provenance === "synthesized"),
+      stored: diagram.nodes.some((node) => node.provenance === "stored"),
+      secondary: diagram.edges.some(
+        (edge) => synthesisEdgeStructuralClass(edge.label) === "secondary",
+      ),
+    }),
+    [diagram.nodes, diagram.edges],
+  );
 
   return (
     <section
@@ -720,15 +756,26 @@ export function GeneratedDiagramPresentation({
             aria-label="Diagram provenance legend"
             className="flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide"
           >
-            <span className="rounded-full border-2 border-double border-slate-500 bg-slate-100 px-2.5 py-1 text-slate-700">
-              Double: user-provided
-            </span>
-            <span className="rounded-full border border-blue/30 bg-blue/10 px-2.5 py-1 text-blue">
-              Solid: stored knowledge
-            </span>
-            <span className="rounded-full border border-dashed border-purple/40 bg-purple/10 px-2.5 py-1 text-purple">
-              Dashed: synthesized proposal
-            </span>
+            {diagramLegend.userProvided ? (
+              <span className="rounded-full border-2 border-double border-slate-500 bg-slate-100 px-2.5 py-1 text-slate-700">
+                Double: from your question
+              </span>
+            ) : null}
+            {diagramLegend.proposed ? (
+              <span className="rounded-full border border-dashed border-purple/40 bg-purple/10 px-2.5 py-1 text-purple">
+                Dashed border: proposed design concept
+              </span>
+            ) : null}
+            {diagramLegend.stored ? (
+              <span className="rounded-full border border-blue/30 bg-blue/10 px-2.5 py-1 text-blue">
+                Solid border: stored knowledge
+              </span>
+            ) : null}
+            {diagramLegend.secondary ? (
+              <span className="rounded-full border border-dotted border-amber-400 bg-amber-50 px-2.5 py-1 text-amber-700">
+                Dotted: dependency (secondary)
+              </span>
+            ) : null}
           </div>
         </div>
         <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">

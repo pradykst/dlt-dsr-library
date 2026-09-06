@@ -45,7 +45,6 @@ export interface SynthesisRefinementNode {
   category: string;
   stage: DiagramStage;
   supportConceptIds: string[];
-  reuseStoredConceptId: string | null;
   synthesisRationale: string;
 }
 
@@ -98,7 +97,6 @@ const ADD_NODE_SCHEMA = {
     "category",
     "stage",
     "supportConceptIds",
-    "reuseStoredConceptId",
     "synthesisRationale",
   ],
   properties: {
@@ -121,12 +119,6 @@ const ADD_NODE_SCHEMA = {
     },
     stage: { type: "string", enum: SYNTHESIS_DIAGRAM_STAGES },
     supportConceptIds: SUPPORT_SCHEMA,
-    reuseStoredConceptId: {
-      anyOf: [
-        { type: "null" },
-        { type: "string", minLength: 1, maxLength: MAX_SUPPORT_ID_CHARACTERS },
-      ],
-    },
     synthesisRationale: {
       type: "string",
       minLength: 1,
@@ -254,7 +246,11 @@ export const NATIVE_OKF_SYNTHESIS_REFINEMENT_INSTRUCTIONS = `Return only a graph
 
 By default preserve every existing node and edge. Add only requested information. Use updateNodes only when the user explicitly asks to change or replace a node. Use removeNodeIds or removeEdges only when the user explicitly asks to remove, exclude, delete, or replace something. An added node ID is "refine-" followed by its key; use that ID in added edges.
 
-Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist. Give each added edge a schema-defined semantic label and a concise evidence-linked rationale. The prior draft is design context, never scholarly evidence for a new operation. Set reuseStoredConceptId only when the new node exactly reuses that current-turn stored concept. Do not alter an exact stored node with updateNodes. Preserve connectedness, forward semantic-stage order, acyclicity, provenance, and all unmentioned elements. Unequal stage sizes and real fan-in or fan-out are valid. Do not add filler or balance stages. The schema ceilings are emergency safety guards, not output targets. Every domain adjective modifies node content, not the stage. A requested thematic requirement remains a design-requirement. Never create a thematic or application-domain stage. Do not use em dashes in generated prose.`;
+Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist as evidence bindings. Every added or updated node is a PROPOSED design concept; never import a stored concept as a node and never reproduce a stored source relation. Give each added edge a schema-defined relationshipType and a concise evidence-linked rationale. The prior draft is design context, never scholarly evidence for a new operation.
+
+A PRIMARY relationship connects adjacent semantic roles only (problem -> requirement -> principle -> feature -> artifact); never add a requirement -> feature, principle -> artifact, backward, or same-role primary relationship. A SECONDARY dependency uses relationshipType "depends on" (principle -> principle or feature -> feature) or "interoperates with" (feature -> feature) and never substitutes for a primary parent. Evaluation and Outcome remain optional.
+
+Preserve connectedness, acyclicity, provenance, and all unmentioned elements. Unequal role sizes and real fan-in or fan-out are valid. Do not add filler or balance roles. The schema ceilings are emergency safety guards. Every domain adjective modifies node content, not the stage. A requested thematic requirement remains a design-requirement. Never create a thematic or application-domain stage. Do not use em dashes in generated prose.`;
 
 const PATCH_KEYS = new Set([
   "addNodes",
@@ -324,9 +320,6 @@ function parseAddNode(
   const category = bounded(value.category, MAX_CATEGORY_CHARACTERS);
   const parsedStage = stage(value.stage);
   const supports = supportIds(value.supportConceptIds, grounding);
-  const reuse = value.reuseStoredConceptId === null
-    ? null
-    : bounded(value.reuseStoredConceptId, MAX_SUPPORT_ID_CHARACTERS);
   const rationale = bounded(value.synthesisRationale, MAX_RATIONALE_CHARACTERS);
   if (
     !key ||
@@ -338,11 +331,6 @@ function parseAddNode(
     !supports ||
     !rationale
   ) return null;
-  if (
-    reuse &&
-    (!supports.includes(reuse) || !grounding.eligibleStoredConceptIds.has(reuse))
-  ) return null;
-  if (value.reuseStoredConceptId !== null && !reuse) return null;
   return {
     key,
     label,
@@ -350,7 +338,6 @@ function parseAddNode(
     category,
     stage: parsedStage,
     supportConceptIds: supports,
-    reuseStoredConceptId: reuse,
     synthesisRationale: rationale,
   };
 }
@@ -522,28 +509,11 @@ function orderForStage(value: DiagramStage): number {
 
 function convertedAddedNode(
   patchNode: SynthesisRefinementNode,
-  grounding: NativeOkfDiagramGrounding,
-): GeneratedDiagramNode | null {
-  const stored = patchNode.reuseStoredConceptId
-    ? grounding.conceptsById.get(patchNode.reuseStoredConceptId)
-    : undefined;
-  if (stored) {
-    return {
-      id: `refine-${patchNode.key}`,
-      label: stored.title,
-      description: stored.description,
-      category: stored.type,
-      stage: stored.stage,
-      order: orderForStage(stored.stage),
-      group: null,
-      provenance: "stored",
-      sourcePaths: [stored.conceptId],
-      supportConceptIds: [stored.conceptId],
-      synthesisRationale: null,
-      synthesis: false,
-    };
-  }
-  if (patchNode.reuseStoredConceptId) return null;
+): GeneratedDiagramNode {
+  // Every refinement-added node is a PROPOSED design concept. Its
+  // supportConceptIds are evidence bindings, never a claim of stored identity,
+  // so a refinement can never stitch a source paper's topology into the
+  // active proposal.
   return {
     id: `refine-${patchNode.key}`,
     label: patchNode.label,
@@ -558,29 +528,6 @@ function convertedAddedNode(
     synthesisRationale: patchNode.synthesisRationale,
     synthesis: true,
   };
-}
-
-function exactStoredEdge(
-  source: GeneratedDiagramNode,
-  target: GeneratedDiagramNode,
-  label: string,
-  grounding: NativeOkfDiagramGrounding,
-): GeneratedDiagramEdge | null {
-  if (source.provenance !== "stored" || target.provenance !== "stored") return null;
-  const relation = grounding.storedRelations.find((candidate) =>
-    candidate.sourceId === source.supportConceptIds[0] &&
-    candidate.targetId === target.supportConceptIds[0] &&
-    normalizeLabel(candidate.label) === normalizeLabel(label)
-  );
-  return relation
-    ? {
-        source: source.id,
-        target: target.id,
-        label: relation.label,
-        provenance: "stored",
-        supportConceptIds: [source.supportConceptIds[0]!, target.supportConceptIds[0]!],
-      }
-    : null;
 }
 
 function forwardStageOrder(
@@ -637,13 +584,7 @@ export async function applyNativeOkfSynthesisRefinementPatch(
         }
       : node;
   });
-  const addedNodes = patch.addNodes.flatMap((node) => {
-    const converted = convertedAddedNode(node, currentTurnGrounding);
-    return converted ? [converted] : [];
-  });
-  if (addedNodes.length !== patch.addNodes.length) {
-    return { ok: false, errors: ["patch:invalid-added-node"] };
-  }
+  const addedNodes = patch.addNodes.map(convertedAddedNode);
   if (addedNodes.some((node) => existingIds.has(node.id))) {
     return { ok: false, errors: ["patch:add-node-id-collision"] };
   }
@@ -667,8 +608,9 @@ export async function applyNativeOkfSynthesisRefinementPatch(
     const source = nodeById.get(addition.source);
     const target = nodeById.get(addition.target);
     if (!source || !target) return { ok: false, errors: ["patch:unknown-add-edge-endpoint"] };
-    const stored = exactStoredEdge(source, target, addition.label, currentTurnGrounding);
-    edges.push(stored ?? {
+    // Every refinement-added relationship is a proposed design relation. Stored
+    // source-paper relations are never imported.
+    edges.push({
       source: source.id,
       target: target.id,
       label: addition.label,

@@ -572,11 +572,14 @@ test("invariant: DESIGN_SYNTHESIS + RENDER_NEW_SYNTHESIS never returns an all-st
   const result = validateGeneratedDiagram(
     allStoredDiagram,
     new Set(["design-knowledge/fixture-dr1"]),
-    { mode: "synthesized", requireDisplayedStoredSupport: false },
+    { mode: "synthesized" },
   );
   assert.equal(result.ok, false);
   if (!result.ok) {
-    assert.match(result.errors.join(" "), /all-stored graph does not represent a new proposal/u);
+    assert.match(
+      result.errors.join(" "),
+      /not imported stored knowledge|evidence-used-as-topology/u,
+    );
   }
   void catalog;
 });

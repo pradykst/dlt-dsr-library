@@ -222,7 +222,6 @@ test("validated refinement patches preserve prior graph elements and ground new 
     category: "Design requirement",
     stage: "design-requirement",
     supportConceptIds: [freshSupportId],
-    reuseStoredConceptId: null,
     synthesisRationale: "The fresh stored concept supports an accountable governance adaptation.",
   });
   add.addEdges.push({
@@ -621,8 +620,8 @@ test("drawer, source disclosure, copy, and history UI expose the reviewed behavi
   );
   assert.match(presentation, /z-40[\s\S]*bg-white[\s\S]*opacity-100/);
   assert.doesNotMatch(presentation, /bg-white\/98/);
-  assert.match(presentation, /Synthesized proposal/);
-  assert.match(presentation, /not stored\s+directly in the source corpus/);
+  assert.match(presentation, /Proposed design concept/);
+  assert.match(presentation, /not\s+itself a stored record/);
   assert.match(presentation, /Supporting stored concepts/);
   assert.match(presentation, /source\?\.title/);
   assert.match(presentation, /source\?\.sourcePaper/);

@@ -6,6 +6,7 @@ import {
   GENERATED_DIAGRAM_STAGES,
   SYNTHESIS_DIAGRAM_STAGES,
   SYNTHESIS_RELATIONSHIP_TYPES,
+  synthesisPrimaryLayer,
   type DiagramEdgeProvenance,
   type DiagramNodeProvenance,
   type DiagramStage,
@@ -15,6 +16,7 @@ import {
 } from "../../shared/chat-types.ts";
 import type { NativeOkfDiagramGrounding } from "./diagram-grounding.ts";
 import { DIAGRAM_LIMITS } from "./diagram-schema.ts";
+import { synthesisGrammarDiagnostics } from "./synthesis-grammar.ts";
 
 export interface ValidDiagramResult {
   ok: true;
@@ -34,7 +36,14 @@ export type DiagramValidationResult =
 
 export interface DiagramValidationOptions {
   mode?: "stored" | "synthesized";
+  /**
+   * The researcher asked for a complete proposed solution / diagram. Enforces
+   * the mandatory core coverage Problem -> Requirement -> Design Principle ->
+   * Design Feature -> Artifact. Evaluation and Outcome are never part of this
+   * check. Kept as `requireRpfPath` for call-site compatibility.
+   */
   requireRpfPath?: boolean;
+  /** @deprecated No longer read. Stored evidence is never proposal topology. */
   requireDisplayedStoredSupport?: boolean;
 }
 
@@ -408,9 +417,17 @@ function validateNode(
       errors.push(path + " must be grounded in at least one retrieved concept.");
     }
     if (label && context.strictProvenance) {
+      // A proposed node may adopt a stored concept's exact wording only as an
+      // honest adaptation, i.e. when it cites that concept as evidence. Matching
+      // an uncited stored concept's title is a provenance error.
       for (const concept of context.grounding.conceptsById.values()) {
-        if (normalizeLabel(label) === normalizeLabel(concept.title)) {
-          errors.push(path + " duplicates an exact stored concept while marked synthesized.");
+        if (
+          normalizeLabel(label) === normalizeLabel(concept.title) &&
+          !supportConceptIds.includes(concept.conceptId)
+        ) {
+          errors.push(
+            path + " reproduces an uncited stored concept's exact title.",
+          );
           break;
         }
       }
@@ -649,58 +666,39 @@ function validateGraph(
       errors.push("Stored source maps may contain only stored edges.");
     }
   }
-  if (
-    context.options.mode === "synthesized" &&
-    context.options.requireDisplayedStoredSupport !== false
-  ) {
-    const storedNodes = nodes.filter((node) => node.provenance === "stored");
-    if (storedNodes.length < 2) {
-      errors.push("A grounded synthesis flow requires at least two displayed stored concepts.");
-    }
-    const displayedStoredConceptIds = new Set(
-      storedNodes.flatMap((node) => node.supportConceptIds),
-    );
-    const synthesizedStages = new Set(
-      nodes
-        .filter((node) => node.provenance === "synthesized")
-        .map((node) => node.stage),
-    );
-    for (const stage of synthesizedStages) {
-      const stageSupported = nodes
-        .filter(
-          (node) =>
-            node.provenance === "synthesized" && node.stage === stage,
-        )
-        .some((node) =>
-          node.supportConceptIds.some((id) =>
-            displayedStoredConceptIds.has(id)
-          )
-        );
-      if (!stageSupported) {
+  if (context.options.mode === "synthesized") {
+    // Evidence is not topology. A synthesized proposal graph contains proposal
+    // nodes and proposal edges only. Every non-problem node is a proposed or
+    // adapted design concept ("synthesized"); the single problem node is
+    // user-provided. Retrieved stored concepts remain fully inspectable as
+    // evidence bindings (citations, source cards, evidence drawer), but are
+    // never structural vertices or edges of the new proposal, so the system
+    // cannot stitch a source paper's topology into the researcher's design.
+    for (const node of nodes) {
+      if (synthesisPrimaryLayer(node.stage) === "problem") {
+        if (node.provenance !== "user-provided") {
+          errors.push(
+            "A synthesized proposal problem node must be user-provided.",
+          );
+        }
+        continue;
+      }
+      if (node.provenance !== "synthesized") {
         errors.push(
-          "Synthesized stage " +
-            JSON.stringify(stage) +
-            " lacks a displayed stored support concept.",
+          "Synthesized proposal node " +
+            JSON.stringify(node.id) +
+            " must be a proposed or adapted design concept, not imported stored knowledge.",
         );
       }
     }
-  }
-  if (context.options.mode === "synthesized") {
-    // A design-synthesis turn proposes something for the user's problem — an all-stored
-    // graph is a retrieval/evidence dump, not a proposal. Require at least one genuinely
-    // synthesized or adapted node. This applies regardless of requireDisplayedStoredSupport
-    // (refinement patches disable that narrower grounding rule, but still edit a proposal
-    // that must remain a proposal). There is deliberately no "exact reuse" bypass here:
-    // the schema carries no validated marker proving a proposal is a verbatim reuse of a
-    // complete stored artifact, so that exception is not inferred casually.
-    const proposalNodes = nodes.filter((node) => node.stage !== "problem");
-    const hasSynthesizedNode = proposalNodes.some(
-      (node) => node.provenance === "synthesized",
-    );
-    if (proposalNodes.length > 0 && !hasSynthesizedNode) {
-      errors.push(
-        "A synthesized design proposal must include at least one synthesized or adapted node; an all-stored graph does not represent a new proposal.",
-      );
+    for (const edge of edges) {
+      if (edge.provenance !== "synthesized") {
+        errors.push(
+          "Synthesized proposal relationship " +
+            JSON.stringify(edge.label) +
+            " must be a proposed design relation, not an imported stored-paper edge.",
+        );
+      }
     }
   }
   if (nodes.length <= 1) return;
@@ -713,43 +711,15 @@ function validateGraph(
     outgoing.get(edge.source)?.add(edge.target);
   }
   if (context.options.mode === "synthesized") {
-    const rank: ReadonlyMap<DiagramStage, number> = new Map(
-      SYNTHESIS_DIAGRAM_STAGES.map((stage, index) => [stage, index]),
-    );
-    const nodeById = new Map(nodes.map((node) => [node.id, node]));
-    const hasAlternativePath = (source: string, target: string): boolean => {
-      const visited = new Set([source]);
-      const queue = [source];
-      for (let cursor = 0; cursor < queue.length; cursor += 1) {
-        const current = queue[cursor]!;
-        for (const next of outgoing.get(current) ?? []) {
-          if (current === source && next === target) continue;
-          if (next === target) return true;
-          if (!visited.has(next)) {
-            visited.add(next);
-            queue.push(next);
-          }
-        }
-      }
-      return false;
-    };
-    for (const edge of edges) {
-      if (edge.provenance !== "synthesized") continue;
-      const source = nodeById.get(edge.source);
-      const target = nodeById.get(edge.target);
-      const sourceRank = source ? rank.get(source.stage) : undefined;
-      const targetRank = target ? rank.get(target.stage) : undefined;
-      if (
-        sourceRank !== undefined &&
-        targetRank !== undefined &&
-        targetRank - sourceRank > 1 &&
-        hasAlternativePath(edge.source, edge.target)
-      ) {
-        errors.push(
-          "Synthesized relationship " + JSON.stringify(edge.label) +
-            " duplicates an existing intermediate path.",
-        );
-      }
+    // The deterministic PRIMARY/SECONDARY design-knowledge grammar and the
+    // mandatory core connectivity invariants (Problem -> Requirement ->
+    // Principle -> Feature -> Artifact). `requireRpfPath` here means the
+    // researcher asked for a complete proposed solution.
+    for (const code of synthesisGrammarDiagnostics(
+      { nodes, edges },
+      { requireFullProposal: context.options.requireRpfPath === true },
+    )) {
+      errors.push("synthesis-grammar:" + code);
     }
   }
   for (const [nodeId, neighbors] of adjacency) {
@@ -798,42 +768,6 @@ function validateGraph(
     };
     if (nodes.some((node) => hasCycle(node.id))) {
       errors.push("Synthesis flow must not contain cycles.");
-    }
-  }
-
-  if (context.options.requireRpfPath) {
-    const byId = new Map(nodes.map((node) => [node.id, node]));
-    const isProblem = (stage: DiagramStage) =>
-      ["problem", "design-goal", "design-objective"].includes(stage);
-    const isRequirement = (stage: DiagramStage) =>
-      ["meta-requirement", "design-requirement", "requirements"].includes(stage);
-    const isPrinciple = (stage: DiagramStage) =>
-      ["design-principle", "principles"].includes(stage);
-    const isFeature = (stage: DiagramStage) =>
-      ["design-feature", "features"].includes(stage);
-    const completePath = nodes.some((problem) =>
-      isProblem(problem.stage) &&
-      [...(outgoing.get(problem.id) ?? [])].some((requirementId) => {
-        const requirement = byId.get(requirementId);
-        return Boolean(
-          requirement &&
-          isRequirement(requirement.stage) &&
-          [...(outgoing.get(requirement.id) ?? [])].some((principleId) => {
-            const principle = byId.get(principleId);
-            return Boolean(
-              principle &&
-              isPrinciple(principle.stage) &&
-              [...(outgoing.get(principle.id) ?? [])].some((featureId) => {
-                const feature = byId.get(featureId);
-                return Boolean(feature && isFeature(feature.stage));
-              })
-            );
-          })
-        );
-      })
-    );
-    if (!completePath) {
-      errors.push("The requested design solution requires a complete problem -> requirement -> principle -> feature path.");
     }
   }
 

@@ -72,69 +72,68 @@ function validPlan(): SynthesisPlan {
     requirements: [
       {
         key: "requirement-one",
-        label: "Ignored requirement label",
-        description: "Ignored requirement description.",
+        label: "Preserve continuity across contexts",
+        description: "The artifact must keep information coherent across independent contexts.",
         supportConceptIds: ["fixture/r1"],
-        reuseStoredConceptId: "fixture/r1",
       },
       {
         key: "requirement-two",
         label: "Preserve accountable continuity",
         description: "Maintain continuity while bounding disclosure.",
         supportConceptIds: ["fixture/r2"],
-        reuseStoredConceptId: null,
       },
     ],
     principles: [
       {
         key: "principle-one",
-        label: "Ignored principle label",
-        description: "Ignored principle description.",
+        label: "Anchor claims to independently verifiable evidence",
+        description: "Bind each claim to evidence any party can verify without the issuer.",
         supportConceptIds: ["fixture/p1"],
-        reuseStoredConceptId: "fixture/p1",
       },
       {
         key: "principle-two",
         label: "Minimize disclosed context",
         description: "Reveal only the context required for the decision.",
         supportConceptIds: ["fixture/p2"],
-        reuseStoredConceptId: null,
       },
     ],
     features: [
       {
         key: "feature-one",
-        label: "Ignored feature label",
-        description: "Ignored feature description.",
+        label: "Portable verifiable claim record",
+        description: "A signed record a party can carry and present between contexts.",
         supportConceptIds: ["fixture/f1"],
-        reuseStoredConceptId: "fixture/f1",
       },
       {
         key: "feature-two",
         label: "Selective continuity proof",
         description: "Provide a bounded proof without exposing unrelated history.",
         supportConceptIds: ["fixture/f2"],
-        reuseStoredConceptId: null,
       },
     ],
-    artifact: [],
+    artifact: [{
+      key: "artifact-one",
+      label: "Cross-context continuity service",
+      description: "A service that issues, exchanges, and verifies portable continuity records.",
+      supportConceptIds: ["fixture/r1", "fixture/f2"],
+    }],
     evaluation: [{
       key: "evaluation-one",
       label: "Evaluate continuity and privacy",
       description: "Measure continuity preservation and unnecessary disclosure.",
       supportConceptIds: ["fixture/e1"],
-      reuseStoredConceptId: null,
     }],
     outcome: [],
     relationships: [
-      { id: "e1", sourceKey: "problem", targetKey: "requirement-one", relationshipType: "requires", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r1"] },
-      { id: "e2", sourceKey: "problem", targetKey: "requirement-two", relationshipType: "requires", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r2"] },
+      { id: "e1", sourceKey: "problem", targetKey: "requirement-one", relationshipType: "motivates", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r1"] },
+      { id: "e2", sourceKey: "problem", targetKey: "requirement-two", relationshipType: "motivates", rationale: "The problem motivates the requirement.", supportConceptIds: ["fixture/r2"] },
       { id: "e3", sourceKey: "requirement-one", targetKey: "principle-one", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: ["fixture/r1", "fixture/p1"] },
       { id: "e4", sourceKey: "requirement-two", targetKey: "principle-two", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: ["fixture/r2", "fixture/p2"] },
       { id: "e5", sourceKey: "principle-one", targetKey: "feature-one", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: ["fixture/p1", "fixture/f1"] },
       { id: "e6", sourceKey: "principle-two", targetKey: "feature-two", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: ["fixture/p2", "fixture/f2"] },
-      { id: "e7", sourceKey: "feature-one", targetKey: "evaluation-one", relationshipType: "evaluated by", rationale: "The evaluation tests the feature.", supportConceptIds: ["fixture/f1", "fixture/e1"] },
-      { id: "e8", sourceKey: "feature-two", targetKey: "evaluation-one", relationshipType: "evaluated by", rationale: "The evaluation tests the feature.", supportConceptIds: ["fixture/f2", "fixture/e1"] },
+      { id: "e7", sourceKey: "feature-one", targetKey: "artifact-one", relationshipType: "instantiated in", rationale: "The feature composes the artifact.", supportConceptIds: ["fixture/f1"] },
+      { id: "e8", sourceKey: "feature-two", targetKey: "artifact-one", relationshipType: "instantiated in", rationale: "The feature composes the artifact.", supportConceptIds: ["fixture/f2"] },
+      { id: "e9", sourceKey: "artifact-one", targetKey: "evaluation-one", relationshipType: "evaluated by", rationale: "The evaluation tests the artifact.", supportConceptIds: ["fixture/e1"] },
     ],
   };
 }
@@ -189,27 +188,31 @@ function planForGrounding(value: NativeOkfDiagramGrounding): SynthesisPlan {
     supportingStoredConceptIds: [...new Set([support(0)[0]!, support(1)[0]!])],
     coverageRationale: "Uses both allowlisted fixture concepts across the proposal.",
     requirements: [
-      { key: "r-one", label: "Bound the first requirement", description: "A grounded synthesized requirement.", supportConceptIds: support(0), reuseStoredConceptId: null },
-      { key: "r-two", label: "Bound the second requirement", description: "A second grounded synthesized requirement.", supportConceptIds: support(1), reuseStoredConceptId: null },
+      { key: "r-one", label: "Bound the first requirement", description: "A grounded synthesized requirement.", supportConceptIds: support(0) },
+      { key: "r-two", label: "Bound the second requirement", description: "A second grounded synthesized requirement.", supportConceptIds: support(1) },
     ],
     principles: [
-      { key: "p-one", label: "Apply the first principle", description: "A grounded synthesized principle.", supportConceptIds: support(0), reuseStoredConceptId: null },
-      { key: "p-two", label: "Apply the second principle", description: "A second grounded synthesized principle.", supportConceptIds: support(1), reuseStoredConceptId: null },
+      { key: "p-one", label: "Apply the first principle", description: "A grounded synthesized principle.", supportConceptIds: support(0) },
+      { key: "p-two", label: "Apply the second principle", description: "A second grounded synthesized principle.", supportConceptIds: support(1) },
     ],
     features: [
-      { key: "f-one", label: "Implement the first feature", description: "A grounded synthesized feature.", supportConceptIds: support(0), reuseStoredConceptId: null },
-      { key: "f-two", label: "Implement the second feature", description: "A second grounded synthesized feature.", supportConceptIds: support(1), reuseStoredConceptId: null },
+      { key: "f-one", label: "Implement the first feature", description: "A grounded synthesized feature.", supportConceptIds: support(0) },
+      { key: "f-two", label: "Implement the second feature", description: "A second grounded synthesized feature.", supportConceptIds: support(1) },
     ],
-    artifact: [],
+    artifact: [
+      { key: "a-one", label: "Integrate the proposed features", description: "A grounded synthesized artifact integrating the features.", supportConceptIds: support(0) },
+    ],
     evaluation: [],
     outcome: [],
     relationships: [
-      { id: "e1", sourceKey: "problem", targetKey: "r-one", relationshipType: "requires", rationale: "The problem requires this response.", supportConceptIds: support(0) },
-      { id: "e2", sourceKey: "problem", targetKey: "r-two", relationshipType: "requires", rationale: "The problem requires this response.", supportConceptIds: support(1) },
+      { id: "e1", sourceKey: "problem", targetKey: "r-one", relationshipType: "motivates", rationale: "The problem requires this response.", supportConceptIds: support(0) },
+      { id: "e2", sourceKey: "problem", targetKey: "r-two", relationshipType: "motivates", rationale: "The problem requires this response.", supportConceptIds: support(1) },
       { id: "e3", sourceKey: "r-one", targetKey: "p-one", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: support(0) },
       { id: "e4", sourceKey: "r-two", targetKey: "p-two", relationshipType: "addressed by", rationale: "The principle addresses the requirement.", supportConceptIds: support(1) },
       { id: "e5", sourceKey: "p-one", targetKey: "f-one", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: support(0) },
       { id: "e6", sourceKey: "p-two", targetKey: "f-two", relationshipType: "implemented by", rationale: "The feature implements the principle.", supportConceptIds: support(1) },
+      { id: "e7", sourceKey: "f-one", targetKey: "a-one", relationshipType: "instantiated in", rationale: "The feature composes the artifact.", supportConceptIds: support(0) },
+      { id: "e8", sourceKey: "f-two", targetKey: "a-one", relationshipType: "instantiated in", rationale: "The feature composes the artifact.", supportConceptIds: support(1) },
     ],
   };
 }
@@ -235,7 +238,9 @@ test("SynthesisPlan schema exposes content only and excludes renderer-owned fiel
   assert.match(schema, /coverageRationale/);
   assert.match(schema, /relationshipType/);
   assert.match(schema, /rationale/);
-  assert.match(schema, /reuseStoredConceptId/);
+  // Retrieved concepts are evidence bindings only; a proposal node can never be
+  // a stored concept, so the schema carries no reuse field.
+  assert.doesNotMatch(schema, /reuseStoredConceptId/);
 });
 
 test("valid SynthesisPlan converts deterministically to the current internal diagram", async () => {
@@ -248,8 +253,9 @@ test("valid SynthesisPlan converts deterministically to the current internal dia
     "Validated fragmented identity and review-continuity problem.",
   );
   assert.ok(converted);
-  assert.equal(converted.diagram.nodes.length, 8);
-  assert.equal(converted.diagram.edges.length, 8);
+  // problem + 2 requirements + 2 principles + 2 features + 1 artifact + 1 evaluation.
+  assert.equal(converted.diagram.nodes.length, 9);
+  assert.equal(converted.diagram.edges.length, 9);
   const problem = converted.diagram.nodes[0]!;
   assert.equal(problem.id, "user-problem");
   assert.equal(problem.provenance, "user-provided");
@@ -258,18 +264,21 @@ test("valid SynthesisPlan converts deterministically to the current internal dia
   // title (see resolveSynthesisProblemLabel) over a substring of the raw
   // problem statement passed as the third argument here.
   assert.equal(problem.label, "Grounded cross-context proposal");
-  const reused = converted.diagram.nodes.find((node) => node.id === "plan-requirement-one")!;
-  assert.equal(reused.label, "Canonical requirement one");
-  assert.equal(reused.description, "Canonical requirement description one.");
-  assert.equal(reused.provenance, "stored");
-  assert.deepEqual(reused.sourcePaths, ["fixture/r1"]);
+  // Every proposal node is a proposed design concept; the retrieved concept is an
+  // evidence binding, never a stored structural vertex.
+  const grounded = converted.diagram.nodes.find((node) => node.id === "plan-requirement-one")!;
+  assert.equal(grounded.label, "Preserve continuity across contexts");
+  assert.equal(grounded.provenance, "synthesized");
+  assert.deepEqual(grounded.sourcePaths, ["fixture/r1"]);
+  assert.deepEqual(grounded.supportConceptIds, ["fixture/r1"]);
   const synthesized = converted.diagram.nodes.find((node) => node.id === "plan-requirement-two")!;
   assert.equal(synthesized.stage, "design-requirement");
   assert.equal(synthesized.provenance, "synthesized");
   assert.deepEqual(synthesized.sourcePaths, ["fixture/r2"]);
-  assert.equal(converted.diagram.edges.find((edge) =>
-    edge.source === "plan-requirement-one" && edge.target === "plan-principle-one"
-  )?.provenance, "stored");
+  // No proposal edge is imported from a stored source relation.
+  assert.ok(
+    converted.diagram.edges.every((edge) => edge.provenance === "synthesized"),
+  );
   const layout = await layoutGeneratedDiagram(converted.diagram, {
     orientation: "horizontal",
     edgeLabelsVisible: true,
@@ -290,19 +299,32 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
       code: /invalid-value/,
     },
     {
-      name: "missing RPF path",
+      name: "missing core path",
       mutate: (plan) => { plan.relationships = plan.relationships.filter((edge) => edge.sourceKey !== "problem"); },
-      code: /missing-rpf-path|disconnected/,
+      code: /disconnected|orphan-/,
     },
     {
       name: "orphan",
       mutate: (plan) => { plan.relationships = plan.relationships.filter((edge) => edge.sourceKey !== "feature-two" && edge.targetKey !== "feature-two"); },
-      code: /disconnected/,
+      code: /disconnected|orphan-feature/,
     },
     {
-      name: "cycle or backward jump",
-      mutate: (plan) => { plan.relationships.push({ id: "e9", sourceKey: "feature-one", targetKey: "requirement-one", relationshipType: "informs", rationale: "Invalid backward fixture edge.", supportConceptIds: ["fixture/f1"] }); },
-      code: /backward-stage-jump|cycle/,
+      name: "skipped principle role",
+      mutate: (plan) => {
+        plan.relationships = plan.relationships.filter((edge) => edge.targetKey !== "principle-one");
+        plan.relationships.push({ id: "eskip", sourceKey: "requirement-one", targetKey: "feature-one", relationshipType: "implements", rationale: "Invalid skip fixture edge.", supportConceptIds: ["fixture/r1"] });
+      },
+      code: /illegal-primary-edge:requirement->feature/,
+    },
+    {
+      name: "backward primary edge",
+      mutate: (plan) => { plan.relationships.push({ id: "eback", sourceKey: "feature-one", targetKey: "requirement-one", relationshipType: "informs", rationale: "Invalid backward fixture edge.", supportConceptIds: ["fixture/f1"] }); },
+      code: /backward-primary-edge|cycle/,
+    },
+    {
+      name: "same-role primary edge",
+      mutate: (plan) => { plan.relationships.push({ id: "esame", sourceKey: "principle-one", targetKey: "principle-two", relationshipType: "informs", rationale: "Invalid same-role fixture edge.", supportConceptIds: ["fixture/p1"] }); },
+      code: /illegal-primary-edge:principle->principle/,
     },
     {
       name: "duplicate semantic node",
@@ -310,9 +332,9 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
       code: /duplicate-semantic-node/,
     },
     {
-      name: "exact stored title without explicit reuse",
-      mutate: (plan) => { plan.requirements[1]!.label = "Canonical requirement two"; },
-      code: /exact-stored-label-requires-reuse/,
+      name: "label matches an uncited stored concept",
+      mutate: (plan) => { plan.requirements[1]!.label = "Canonical principle one"; },
+      code: /label-matches-uncited-stored-concept/,
     },
   ];
   for (const item of cases) {
@@ -322,7 +344,7 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
       const result = validateNativeOkfSynthesisPlan(
         plan,
         grounding(),
-        { requireRpfPath: item.name === "missing RPF path" },
+        { requireRpfPath: item.name === "missing core path" },
       );
       assert.equal(result.ok, false);
       if (!result.ok) assert.match(result.errors.join(" "), item.code);
@@ -337,7 +359,6 @@ test("SynthesisPlan validation enforces grounding, requested paths, and graph in
         label: `Additional requirement ${index}`,
         description: `Additional grounded requirement ${index}.`,
         supportConceptIds: ["fixture/r2"],
-        reuseStoredConceptId: null,
       });
     }
     const result = validateNativeOkfSynthesisPlan(plan, grounding());
@@ -364,7 +385,7 @@ test("synthesis summary is deterministic, proposal-oriented, and concise", () =>
   const second = deterministicNativeOkfSynthesisSummary(validPlan(), converted.diagram);
   assert.equal(first, second);
   assert.match(first, /translates the proposed design/);
-  assert.match(first, /Stored concepts are reused where applicable/);
+  assert.match(first, /proposed design concept grounded in the listed stored native OKF/i);
   assert.doesNotMatch(first, /\b\d+ requirements|\b\d+ principles|\b\d+ features/);
   assert.ok(first.trim().split(/\s+/u).length < 100);
   assert.equal(first.includes("Selective continuity proof"), false);
@@ -428,7 +449,9 @@ test("invalid first synthesis plan is repaired once from the candidate and deter
 
 test("an invalid optional quality revision cannot discard a convertible validated plan", async () => {
   const invalidReview = clonePlan();
-  invalidReview.requirements[1]!.label = "Canonical requirement one response";
+  // The revised plan reproduces an uncited stored concept's exact title, which
+  // the deterministic validator rejects, so the original plan must be kept.
+  invalidReview.requirements[1]!.label = "Canonical principle one";
   const calls: Array<Record<string, unknown>> = [];
   const result = await generateNativeOkfSynthesisPlan({
     client: queuedClient(
@@ -448,12 +471,17 @@ test("an invalid optional quality revision cannot discard a convertible validate
   assert.ok(result.diagram);
   assert.equal(
     result.diagram.nodes.some((node) =>
-      node.label === "Canonical requirement one response" &&
+      node.label === "Canonical principle one" &&
       node.provenance === "synthesized"
     ),
     false,
   );
-  assert.match(result.warnings.join(" "), /original validated plan was retained/);
+  // The good plan survives whether the bad revision fails deterministic
+  // validation or fails conversion.
+  assert.match(
+    result.warnings.join(" "),
+    /original validated plan was retained|quality review was unavailable/,
+  );
 });
 
 test("repair input remains bounded to the invalid plan, problem, allowlist, and error codes", () => {

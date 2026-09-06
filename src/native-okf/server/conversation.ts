@@ -286,7 +286,20 @@ function normalize(value: string): string {
     .replace(/\s+/gu, " ");
 }
 
-export function nativeOkfSynthesisRequiresRpfPath(question: string): boolean {
+/**
+ * A synthesized-flow diagram is always a request for a COMPLETE design proposal,
+ * so the mandatory core coverage Problem -> Requirement -> Design Principle ->
+ * Design Feature -> Artifact is enforced regardless of how the researcher
+ * phrased the request. (Evaluation and Outcome are optional and never part of
+ * this check.) The historical phrasing pattern is retained only for callers
+ * that still want to detect an explicit "requirements, principles and features"
+ * request; it no longer gates core validity.
+ */
+export function nativeOkfSynthesisRequiresRpfPath(_question: string): boolean {
+  return true;
+}
+
+export function nativeOkfQuestionNamesRpfStructure(question: string): boolean {
   return EXPLICIT_RPF_STRUCTURE_PATTERN.test(question);
 }
 
