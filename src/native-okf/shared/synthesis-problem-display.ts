@@ -131,19 +131,28 @@ export function synthesisProblemNodeDisplay(question: string): {
  * The single normalized problem label shared by the diagram title, the
  * user-problem node, deterministicSummary, and the prose introduction.
  *
- * Prefers a bounded, model-produced label (e.g. a DesignProposalPlan's own
- * `title` field) when one is available and non-empty -- that is a genuine
- * semantic summary rather than a substring of the user's raw phrasing, and
- * naturally handles the full range of natural-language framings without
- * depending on any one exact phrase. Falls back to the conservative
- * deterministic cleanup above only when no such label was produced.
+ * Prefers a bounded, model-produced PROBLEM label when one is available and
+ * non-empty -- a genuine semantic statement of the user's challenge rather than
+ * a substring of their raw phrasing, which naturally handles the full range of
+ * natural-language framings without depending on any one exact phrase. Falls
+ * back to the conservative deterministic cleanup above only when no such label
+ * was produced.
+ *
+ * The argument is a DesignProposalPlan's `problemLabel`, never its `title`. A
+ * proposal title may legitimately name the proposed solution, so wiring one
+ * into this slot is precisely how a Problem node ends up carrying an artifact's
+ * name. Problem space and solution space are distinct fields end to end, and
+ * the deterministic grammar rejects a Problem label that restates the Artifact.
  */
 export function resolveSynthesisProblemLabel(
-  modelProducedTitle: string | null | undefined,
+  modelProducedProblemLabel: string | null | undefined,
   fallbackProblemStatement: string,
 ): string {
-  const bounded = modelProducedTitle
-    ? boundSynthesisDisplayText(modelProducedTitle, MAX_SYNTHESIS_PROBLEM_LABEL_CHARACTERS)
+  const bounded = modelProducedProblemLabel
+    ? boundSynthesisDisplayText(
+        modelProducedProblemLabel,
+        MAX_SYNTHESIS_PROBLEM_LABEL_CHARACTERS,
+      )
     : "";
   if (bounded !== "" && bounded !== "Problem statement") return bounded;
   return synthesisProblemNodeDisplay(fallbackProblemStatement).label;

@@ -87,7 +87,8 @@ function summaryFixture(): { plan: SynthesisPlan; diagram: GeneratedDiagram } {
   }));
   return {
     plan: {
-      title: "Ignored model title",
+      title: "Ignored model proposal title",
+      problemLabel: "Ignored model problem label",
       problemSummary: RAW_PROBLEM,
       supportingStoredConceptIds: entries.map((entry) => entry.supportConceptIds[0]!),
       coverageRationale: "The fixture covers every selected proposal stage.",

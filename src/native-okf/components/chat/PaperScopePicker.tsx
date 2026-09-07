@@ -20,6 +20,11 @@ export interface PaperScopePickerProps {
   onClose: () => void;
   initialQuery?: string;
   heading?: string;
+  /**
+   * Viewport-derived ceiling for the whole panel, supplied by
+   * {@link PaperScopePopover}. The paper list scrolls inside it.
+   */
+  maxHeight?: number;
 }
 
 /**
@@ -27,6 +32,10 @@ export interface PaperScopePickerProps {
  * paper reference, and the `/paper` command. Keyboard-navigable listbox: arrow
  * keys move the active option, Enter selects, Escape closes. An ambiguous query
  * always shows every match — a choice is never resolved silently.
+ *
+ * Sizing and anchoring belong to {@link PaperScopePopover}, which mounts this
+ * component: the picker fills the bounded panel it is given and scrolls the
+ * paper list inside it.
  */
 export function PaperScopePicker({
   papers,
@@ -34,6 +43,7 @@ export function PaperScopePicker({
   onClose,
   initialQuery = "",
   heading = "Select a paper",
+  maxHeight,
 }: PaperScopePickerProps) {
   const [query, setQuery] = useState(initialQuery);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -95,7 +105,8 @@ export function PaperScopePicker({
     <div
       role="dialog"
       aria-labelledby={headingId}
-      className="w-[22rem] max-w-[90vw] rounded-xl border border-line bg-white p-2 shadow-research"
+      style={maxHeight === undefined ? undefined : { maxHeight }}
+      className="flex w-full flex-col rounded-xl border border-line bg-white p-2 shadow-research"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.stopPropagation();
@@ -105,7 +116,7 @@ export function PaperScopePicker({
     >
       <p
         id={headingId}
-        className="px-2 pb-1 pt-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-blue"
+        className="shrink-0 px-2 pb-1 pt-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-blue"
       >
         {heading}
       </p>
@@ -124,13 +135,13 @@ export function PaperScopePicker({
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Search papers by title or author…"
-        className="mb-1 block w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-blue/50 focus:ring-2 focus:ring-blue/20"
+        className="mb-1 block w-full shrink-0 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-blue/50 focus:ring-2 focus:ring-blue/20"
       />
       <ul
         id={listId}
         role="listbox"
         aria-label="Papers"
-        className="max-h-64 overflow-y-auto"
+        className="min-h-0 max-h-64 flex-1 overflow-y-auto"
       >
         {matches.length === 0 ? (
           <li className="px-3 py-3 text-sm text-muted">No matching paper.</li>
@@ -153,9 +164,11 @@ export function PaperScopePicker({
                     : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <span className="block font-semibold text-ink">{paper.title}</span>
+                <span className="block break-words font-semibold text-ink">
+                  {paper.title}
+                </span>
                 {paper.authors.length > 0 ? (
-                  <span className="mt-0.5 block text-xs text-muted">
+                  <span className="mt-0.5 block break-words text-xs text-muted">
                     {paper.authors.slice(0, 3).join(", ")}
                     {paper.authors.length > 3 ? " et al." : ""}
                   </span>

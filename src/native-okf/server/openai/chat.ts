@@ -546,6 +546,28 @@ function pluralStageLabel(
   return count === 1 ? heading : `${heading}s`;
 }
 
+/** Small-number words, so the summary lead-in reads as prose rather than a tally. */
+const SMALL_NUMBER_WORDS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+  "nine", "ten",
+] as const;
+
+function numberWord(value: number): string {
+  return SMALL_NUMBER_WORDS[value] ?? String(value);
+}
+
+/**
+ * The problem label as it reads inside a sentence. Only a plainly capitalized
+ * opening word is lowered, so an acronym or a proper noun keeps its casing.
+ */
+function problemPhrase(diagram: GeneratedDiagram): string {
+  const label = diagram.nodes.find((node) => node.stage === "problem")?.label ?? "";
+  if (label === "") return "the research problem";
+  return /^[A-Z][a-z]/u.test(label)
+    ? label[0]!.toLocaleLowerCase("en") + label.slice(1)
+    : label;
+}
+
 /**
  * Concise deterministic prose alongside the same validated proposal graph.
  *
@@ -564,19 +586,35 @@ function designProposalNarrative(
   );
   const proposalNodes = diagram.nodes.filter((node) => node.stage !== "problem");
 
+  // The introduction states the PROBLEM the proposal addresses, never the
+  // proposed artifact: the problem node carries the problem label, and problem
+  // space and solution space stay distinct in the prose as well as the graph.
   const introduction = refined
     ? "This refinement updates the existing design proposal while preserving all unmentioned elements."
-    : `This design proposal addresses ${diagram.nodes.find((node) => node.stage === "problem")?.label ?? "the research problem"}. Every design concept below is proposed for this problem and grounded in cited stored native OKF evidence.`;
+    : `This design proposal addresses ${problemPhrase(diagram)}.`;
 
   const highlightStage = NARRATIVE_HIGHLIGHT_STAGE_PREFERENCE.find((stage) =>
     proposalNodes.some((node) => node.stage === stage)
   );
-  const bullets = (
-    highlightStage
-      ? proposalNodes.filter((node) => node.stage === highlightStage)
-      : []
-  )
-    .slice(0, MAX_NARRATIVE_HIGHLIGHT_BULLETS)
+  const highlightNodes = highlightStage
+    ? proposalNodes.filter((node) => node.stage === highlightStage)
+    : [];
+  const shownNodes = highlightNodes.slice(0, MAX_NARRATIVE_HIGHLIGHT_BULLETS);
+  // Only one concept layer is summarized below, so the lead-in names exactly
+  // that layer instead of claiming every design concept is listed.
+  const highlightLead = highlightStage && shownNodes.length > 0
+    ? `The proposal is organized around ${
+      numberWord(highlightNodes.length)
+    } ${
+      pluralStageLabel(highlightStage, highlightNodes.length)
+        .toLocaleLowerCase("en")
+    }${
+      shownNodes.length === highlightNodes.length
+        ? ""
+        : `, ${numberWord(shownNodes.length)} of which are summarized here`
+    }:`
+    : null;
+  const bullets = shownNodes
     .map((node) => {
       const citations = [...new Set(
         node.supportConceptIds.flatMap((conceptId) => {
@@ -617,6 +655,7 @@ function designProposalNarrative(
 
   return [
     introduction,
+    ...(highlightLead ? [highlightLead] : []),
     ...(bullets.length > 0 ? [bullets.join("\n")] : []),
     provenanceSentence,
   ].join("\n\n");

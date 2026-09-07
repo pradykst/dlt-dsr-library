@@ -63,6 +63,7 @@ function grounding(): NativeOkfDiagramGrounding {
 function validPlan(): SynthesisPlan {
   return {
     title: "Grounded cross-context proposal",
+    problemLabel: "Continuity and accountability break across independent contexts",
     problemSummary: "Model-written problem text that the server must not trust.",
     supportingStoredConceptIds: [
       "fixture/r1", "fixture/r2", "fixture/p1", "fixture/p2",
@@ -184,6 +185,7 @@ function planForGrounding(value: NativeOkfDiagramGrounding): SynthesisPlan {
   const support = (index: number) => [ids[index % ids.length]!];
   return {
     title: "Validated problem-specific synthesis",
+    problemLabel: "Validated problem-specific design challenge",
     problemSummary: "A model summary that is replaced by validated server input.",
     supportingStoredConceptIds: [...new Set([support(0)[0]!, support(1)[0]!])],
     coverageRationale: "Uses both allowlisted fixture concepts across the proposal.",
@@ -260,10 +262,15 @@ test("valid SynthesisPlan converts deterministically to the current internal dia
   assert.equal(problem.id, "user-problem");
   assert.equal(problem.provenance, "user-provided");
   assert.deepEqual(problem.sourcePaths, []);
-  // The problem node's label now prefers the plan's own bounded, model-produced
-  // title (see resolveSynthesisProblemLabel) over a substring of the raw
-  // problem statement passed as the third argument here.
-  assert.equal(problem.label, "Grounded cross-context proposal");
+  // The problem node's label prefers the plan's own bounded, model-produced
+  // PROBLEM label (see resolveSynthesisProblemLabel) over a substring of the
+  // raw problem statement passed as the third argument here. The solution-
+  // oriented proposal title is never used for the problem node.
+  assert.equal(
+    problem.label,
+    "Continuity and accountability break across independent contexts",
+  );
+  assert.notEqual(problem.label, validPlan().title);
   // Every proposal node is a proposed design concept; the retrieved concept is an
   // evidence binding, never a stored structural vertex.
   const grounded = converted.diagram.nodes.find((node) => node.id === "plan-requirement-one")!;
@@ -413,8 +420,12 @@ test("invalid first synthesis plan is repaired once from the candidate and deter
   assert.equal(calls.length, 3);
   assert.ok(result.diagram);
   assert.ok(result.plan);
-  // Same preference as above: the accepted (repaired) plan's own title wins.
-  assert.equal(result.diagram?.nodes[0]?.label, "Grounded cross-context proposal");
+  // Same preference as above: the accepted (repaired) plan's own PROBLEM label
+  // wins, never its solution-oriented proposal title.
+  assert.equal(
+    result.diagram?.nodes[0]?.label,
+    "Continuity and accountability break across independent contexts",
+  );
   assert.equal((calls[0]?.text as { format?: { name?: string } })?.format?.name, "native_okf_synthesis_plan");
   assert.equal(JSON.stringify(calls[0]).includes("native_okf_generated_diagram"), false);
   assert.match(String(calls[1]?.input), /invalidPlan/);
@@ -605,18 +616,18 @@ test("successful synthesis skips the normal answer model and returns used suppor
   assert.equal(result.diagramMode, "synthesized");
   assert.equal(result.diagramStatus, "success");
   // The diagram title, the user-problem node's label, and the prose intro all
-  // now prefer the plan's own bounded, model-produced title (see
+  // prefer the plan's own bounded, model-produced PROBLEM label (see
   // resolveSynthesisProblemLabel) over a substring of the raw question —
-  // planForGrounding's title is deliberately distinct from the question text
-  // so this preference is unambiguous to assert on.
-  assert.match(result.diagram?.title ?? "", /^Design proposal: Validated problem-specific synthesis/iu);
+  // planForGrounding's problemLabel is deliberately distinct from both the
+  // question text and the proposal title so this preference is unambiguous.
+  assert.match(result.diagram?.title ?? "", /^Design proposal: Validated problem-specific design challenge/iu);
   const problemNode = result.diagram?.nodes.find((node) => node.id === "user-problem");
-  assert.equal(problemNode?.label, "Validated problem-specific synthesis");
+  assert.equal(problemNode?.label, "Validated problem-specific design challenge");
   assert.equal(
     problemNode?.description,
     "Generate a design flow for fragmented product identity and lost review continuity across e-commerce marketplaces.",
   );
-  assert.match(result.answerMarkdown, /^This design proposal addresses Validated problem-specific synthesis/iu);
+  assert.match(result.answerMarkdown, /^This design proposal addresses validated problem-specific design challenge/iu);
   assert.doesNotMatch(result.answerMarkdown, /addresses Generate|\.\./iu);
   assert.ok(result.synthesisDraft);
   assert.ok(result.conversationState?.lastSynthesisProblem);

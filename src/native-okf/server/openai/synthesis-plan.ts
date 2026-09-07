@@ -18,6 +18,7 @@ import {
 import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
 import { formatConceptType } from "../../shared/presentation.ts";
 import {
+  MAX_SYNTHESIS_PROBLEM_LABEL_CHARACTERS,
   resolveSynthesisProblemLabel,
   synthesisProblemNodeDisplay,
 } from "../../shared/synthesis-problem-display.ts";
@@ -35,6 +36,7 @@ import {
 
 export const SYNTHESIS_PLAN_LIMITS = Object.freeze({
   maxTitleCharacters: 120,
+  maxProblemLabelCharacters: MAX_SYNTHESIS_PROBLEM_LABEL_CHARACTERS,
   maxProblemSummaryCharacters: 300,
   maxKeyCharacters: 48,
   maxLabelCharacters: 90,
@@ -68,7 +70,19 @@ export interface SynthesisPlanRelationship {
 }
 
 export interface SynthesisPlan {
+  /**
+   * The proposal's own title. May legitimately be solution-oriented ("Trusted
+   * X Platform"); it names the proposal, never the Problem node.
+   */
   title: string;
+  /**
+   * A short statement of the PROBLEM: the undesirable current state, the
+   * deficiency, need, tension, or opportunity that motivates the design. This
+   * is what the Problem node renders. It is deliberately a separate field from
+   * `title` and from the artifact's label, which describe solution space.
+   */
+  problemLabel: string;
+  /** The validated user problem statement; server-owned, never model-trusted. */
   problemSummary: string;
   supportingStoredConceptIds: string[];
   coverageRationale: string;
@@ -112,6 +126,7 @@ export interface SynthesisPlanRepairContext {
 
 const PLAN_KEYS = new Set([
   "title",
+  "problemLabel",
   "problemSummary",
   "supportingStoredConceptIds",
   "coverageRationale",
@@ -181,6 +196,7 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
   additionalProperties: false,
   required: [
     "title",
+    "problemLabel",
     "problemSummary",
     "supportingStoredConceptIds",
     "coverageRationale",
@@ -197,6 +213,11 @@ export const SYNTHESIS_PLAN_JSON_SCHEMA = {
       type: "string",
       minLength: 1,
       maxLength: SYNTHESIS_PLAN_LIMITS.maxTitleCharacters,
+    },
+    problemLabel: {
+      type: "string",
+      minLength: 1,
+      maxLength: SYNTHESIS_PLAN_LIMITS.maxProblemLabelCharacters,
     },
     problemSummary: {
       type: "string",
@@ -311,6 +332,10 @@ export const SYNTHESIS_PLAN_RESPONSE_FORMAT = {
 
 export const NATIVE_OKF_SYNTHESIS_PLAN_INSTRUCTIONS = `Return only a DesignProposalPlan matching the strict schema. Do not emit diagram coordinates, layout, paths, stages, ordering, groups, provenance, renderer fields, Markdown, or prose outside the response.
 
+Problem space and solution space are separate fields and are never interchangeable. problemLabel states the PROBLEM: the undesirable current state, deficiency, challenge, need, tension, or opportunity that motivates the design, phrased from the researcher's own situation, and it never names a proposed system, artifact, service, or offering. title names the PROPOSAL and may be solution-oriented. The artifact node names the designed solution. Never reuse the artifact's name, or the proposal title, as problemLabel; a problemLabel that restates the artifact is rejected. A problem and an artifact sharing ordinary domain vocabulary is expected and fine.
+
+problemLabel is rendered as one diagram node label, so write a compact noun phrase of roughly four to twelve words: no finite verb, no trailing clause, and comfortably short of the field's character limit rather than running up to it. It must read correctly inside the sentence "This design proposal addresses <problemLabel>."
+
 Every node in requirements, principles, features, artifact, evaluation, and outcome is a NEW problem-specific PROPOSED design concept. Retrieved stored concepts are EVIDENCE, not building blocks: cite one to three allowlisted supportConceptIds per node and relationship, but never copy a stored concept in as a node and never reproduce a source paper's relationships. Do not reuse a stored concept's exact title unless that same concept is one of the node's supportConceptIds (an honest adaptation). List the plan's used evidence in supportingStoredConceptIds and explain coverage briefly in coverageRationale.
 
 Semantic roles: a Requirement states WHAT the artifact must achieve, ensure, prevent, or preserve (never a technology or an implementation step). A Design Principle is a prescriptive, generalizable rule for HOW one or more requirements are addressed (not a restatement of the requirement, not a technology name). A Design Feature is a concrete mechanism, component, interface, or protocol behavior that operationalizes one or more principles. The Artifact integrates the selected features.
@@ -325,7 +350,7 @@ export const NATIVE_OKF_SYNTHESIS_PLAN_REPAIR_INSTRUCTION = `When invalidPlan an
 
 export const NATIVE_OKF_SYNTHESIS_QUALITY_REVIEW_INSTRUCTIONS = `Review the supplied DesignProposalPlan against the research problem and the same allowlisted stored evidence. Return one complete corrected plan using the exact synthesis-plan schema, even when no correction is needed.
 
-Check problem coverage, strongest applicable stored concepts, redundant or filler nodes, missing major recommendations, unrelated elements, semantic role fit, semantic edge direction, and unsupported synthesis. Preserve useful many-to-many structure. Every primary relationship must connect adjacent semantic roles (problem -> requirement -> principle -> feature -> artifact); never introduce a skip-level or same-role primary relationship, and never copy a stored source relationship. Do not add external knowledge or concept IDs outside the allowlist. Do not target a node count. Do not use em dashes.`;
+Check problem coverage, strongest applicable stored concepts, redundant or filler nodes, missing major recommendations, unrelated elements, semantic role fit, semantic edge direction, and unsupported synthesis. Keep problemLabel a statement of the problem, deficiency, or need, never the proposal title and never the artifact's name; correct it when it has drifted into solution space. Preserve useful many-to-many structure. Every primary relationship must connect adjacent semantic roles (problem -> requirement -> principle -> feature -> artifact); never introduce a skip-level or same-role primary relationship, and never copy a stored source relationship. Do not add external knowledge or concept IDs outside the allowlist. Do not target a node count. Do not use em dashes.`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -379,7 +404,15 @@ function planGrammarProjection(plan: SynthesisPlan): {
   edges: SynthesisGrammarEdge[];
 } {
   const nodes: SynthesisGrammarNode[] = [
-    { id: "problem", stage: "problem", provenance: "user-provided", label: plan.title },
+    {
+      id: "problem",
+      stage: "problem",
+      provenance: "user-provided",
+      // Exactly the label the converted diagram will render, so the grammar's
+      // problem/artifact separation check runs against the real Problem node
+      // rather than against the proposal title.
+      label: resolveSynthesisProblemLabel(plan.problemLabel, plan.problemSummary),
+    },
   ];
   const push = (
     kind: keyof typeof PLAN_STAGE_BY_KIND,
@@ -580,6 +613,10 @@ export function validateNativeOkfSynthesisPlan(
     return { ok: false, errors: ["plan:invalid-shape"] };
   }
   const title = bounded(value.title, SYNTHESIS_PLAN_LIMITS.maxTitleCharacters);
+  const problemLabel = bounded(
+    value.problemLabel,
+    SYNTHESIS_PLAN_LIMITS.maxProblemLabelCharacters,
+  );
   const problemSummary = bounded(
     value.problemSummary,
     SYNTHESIS_PLAN_LIMITS.maxProblemSummaryCharacters,
@@ -595,6 +632,18 @@ export function validateNativeOkfSynthesisPlan(
       }))]
     : [];
   if (!title) errors.push("plan:invalid-title");
+  if (!problemLabel) errors.push("plan:invalid-problem-label");
+  // A problemLabel that lands exactly on the schema's character ceiling was cut
+  // off there rather than written that way: constrained decoding stops mid-word
+  // at the limit, and the Problem node is the most prominent label in the
+  // rendered diagram. Reject it so the bounded repair produces a whole phrase
+  // instead of shipping a visibly clipped one.
+  if (
+    problemLabel &&
+    problemLabel.length >= SYNTHESIS_PLAN_LIMITS.maxProblemLabelCharacters
+  ) {
+    errors.push("plan:truncated-problem-label");
+  }
   if (!problemSummary) errors.push("plan:invalid-problem-summary");
   if (!coverageRationale) errors.push("plan:invalid-coverage-rationale");
   if (
@@ -737,9 +786,12 @@ export function validateNativeOkfSynthesisPlan(
   const derivedSupportingStoredConceptIds = [...usedSupportIds].sort((left, right) =>
     left.localeCompare(right, "en"),
   );
-  if (!title || !problemSummary || !coverageRationale) return { ok: false, errors };
+  if (!title || !problemLabel || !problemSummary || !coverageRationale) {
+    return { ok: false, errors };
+  }
   const plan: SynthesisPlan = {
     title,
+    problemLabel,
     problemSummary,
     supportingStoredConceptIds: derivedSupportingStoredConceptIds,
     coverageRationale,
@@ -844,15 +896,20 @@ function uniqueSupport(...groups: readonly string[][]): string[] {
   return [...new Set(groups.flat())].slice(0, SYNTHESIS_PLAN_LIMITS.maxSupportConceptIds);
 }
 
+/**
+ * The user-problem node. `modelProducedProblemLabel` is a DesignProposalPlan's
+ * `problemLabel` -- a statement of the problem -- and never its `title`, which
+ * may name the proposed solution.
+ */
 export function createNativeOkfSynthesisProblemNode(
   validatedProblemStatement: string,
-  modelProducedTitle: string | null = null,
+  modelProducedProblemLabel: string | null = null,
 ): GeneratedDiagramNode {
   const display = synthesisProblemNodeDisplay(validatedProblemStatement);
   return {
     id: "user-problem",
     label: resolveSynthesisProblemLabel(
-      modelProducedTitle,
+      modelProducedProblemLabel,
       validatedProblemStatement,
     ),
     description: display.description,
@@ -876,7 +933,7 @@ export function convertNativeOkfSynthesisPlan(
 ): { diagram: GeneratedDiagram; usedSupportConceptIds: string[] } | null {
   const problem = createNativeOkfSynthesisProblemNode(
     validatedProblemStatement,
-    plan.title,
+    plan.problemLabel,
   );
   const problemLabel = problem.label;
   const nodes = [problem, ...planNodes(plan).map((entry) => convertedNode(entry, grounding))];
@@ -938,7 +995,7 @@ export function deterministicNativeOkfSynthesisSummary(
   // title, the problem node, and this summary can never disagree.
   const problemLabel =
     diagram.nodes.find((node) => node.stage === "problem")?.label ??
-    resolveSynthesisProblemLabel(plan.title, plan.problemSummary);
+    resolveSynthesisProblemLabel(plan.problemLabel, plan.problemSummary);
   const lowerFirstLabel = /^[A-Z][a-z]/u.test(problemLabel)
     ? problemLabel[0]!.toLocaleLowerCase("en") + problemLabel.slice(1)
     : problemLabel;

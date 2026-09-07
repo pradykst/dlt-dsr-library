@@ -3,6 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  PAPER_SCOPE_POPOVER_PREFERRED_WIDTH,
+  PAPER_SCOPE_POPOVER_VIEWPORT_MARGIN,
+  paperScopePopoverPlacement,
+} from "../components/chat/paper-scope-popover-placement.ts";
+import {
   matchNativeOkfScopePapers,
   nativeOkfActiveMentionQuery,
   nativeOkfSlashCommand,
@@ -70,20 +75,185 @@ test("slash-command detection covers /paper, /all, /new only", () => {
   assert.equal(nativeOkfSlashCommand("/compare a and b"), null);
 });
 
-test("@ and /paper reuse the one shared picker and resolver", async () => {
+test("@ and /paper reuse the one shared picker, popover, and resolver", async () => {
   const workbench = await source("components/chat/ChatWorkbench.tsx");
   const control = await source("components/chat/PaperScopeControl.tsx");
+  const popover = await source("components/chat/PaperScopePopover.tsx");
   const picker = await source("components/chat/PaperScopePicker.tsx");
   const scope = await source("shared/paper-scope.ts");
 
-  // The visible selector, the `@` reference, and the `/paper` command all render
-  // the same PaperScopePicker.
-  assert.ok((workbench.match(/<PaperScopePicker/gu) ?? []).length >= 2);
-  assert.match(control, /<PaperScopePicker/u);
+  // The visible selector, the `@` reference, and the `/paper` command all mount
+  // the same picker through the same positioning layer.
+  assert.ok((workbench.match(/<PaperScopePopover/gu) ?? []).length >= 2);
+  assert.match(control, /<PaperScopePopover/u);
+  assert.doesNotMatch(workbench, /<PaperScopePicker/u);
+  assert.doesNotMatch(control, /<PaperScopePicker/u);
+  // Exactly one render site for the picker itself: no duplicate implementation.
+  assert.equal((popover.match(/<PaperScopePicker/gu) ?? []).length, 1);
   // One resolver only.
   assert.match(picker, /matchNativeOkfScopePapers/u);
   assert.match(scope, /export function matchNativeOkfScopePapers/u);
   assert.doesNotMatch(picker, /function\s+\w*[Mm]atch\w*Papers/u);
+});
+
+/**
+ * Regression: the picker used to be an absolutely positioned child of the
+ * composer, left-aligned to a right-aligned control. Inside the chat panel's
+ * rounded `overflow-hidden` card that clipped it, and where it overhung the
+ * page it extended the document's scrollable width, so the popover looked
+ * detached, was cut off, and could introduce a horizontal scrollbar. It is now
+ * a viewport-positioned panel with a bounded, clamped placement.
+ */
+test("the picker popover is viewport-positioned and never sized by document flow", async () => {
+  const popover = await source("components/chat/PaperScopePopover.tsx");
+  const workbench = await source("components/chat/ChatWorkbench.tsx");
+  const control = await source("components/chat/PaperScopeControl.tsx");
+  const picker = await source("components/chat/PaperScopePicker.tsx");
+
+  assert.match(popover, /position: "fixed"/u);
+  assert.match(popover, /paperScopePopoverPlacement/u);
+  // It stacks above the sticky site header (z-40).
+  assert.match(popover, /className="z-50"/u);
+  // No absolutely positioned picker wrapper survives in either mount site, and
+  // no viewport-unit width that ignores where the control actually sits.
+  assert.doesNotMatch(workbench, /absolute bottom-full/u);
+  assert.doesNotMatch(control, /absolute bottom-full/u);
+  assert.doesNotMatch(picker, /\d+vw/u);
+  // The panel is bounded by the popover and scrolls its list internally.
+  assert.match(picker, /maxHeight/u);
+  assert.match(picker, /overflow-y-auto/u);
+  assert.match(picker, /break-words/u);
+});
+
+test("popover placement stays inside the viewport at desktop, laptop, and mobile widths", () => {
+  const margin = PAPER_SCOPE_POPOVER_VIEWPORT_MARGIN;
+  const viewports = [
+    { width: 1920, height: 1080 },
+    { width: 1440, height: 900 },
+    { width: 1280, height: 720 },
+    { width: 1024, height: 640 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+    { width: 320, height: 568 },
+  ];
+  for (const viewport of viewports) {
+    // Anchors at the far left, the middle, and the far right of the viewport,
+    // plus near the top and near the bottom.
+    const anchors = [
+      { left: 0, right: 120, top: 40, bottom: 70 },
+      { left: Math.max(0, viewport.width / 2 - 60), right: viewport.width / 2 + 60, top: viewport.height / 2, bottom: viewport.height / 2 + 30 },
+      { left: Math.max(0, viewport.width - 140), right: viewport.width, top: viewport.height - 90, bottom: viewport.height - 60 },
+    ];
+    for (const anchor of anchors) {
+      const placement = paperScopePopoverPlacement(anchor, viewport.width, viewport.height);
+      const context = `${viewport.width}x${viewport.height} @ ${anchor.left}`;
+
+      assert.ok(placement.width > 0, context);
+      assert.ok(
+        placement.width <= PAPER_SCOPE_POPOVER_PREFERRED_WIDTH,
+        `${context}: never wider than the preferred width`,
+      );
+      assert.ok(
+        placement.width <= Math.max(placement.width, viewport.width),
+        `${context}: never wider than the viewport`,
+      );
+      assert.ok(placement.left >= 0, `${context}: never off the left edge`);
+      assert.ok(
+        placement.left + placement.width <= viewport.width,
+        `${context}: never off the right edge (no horizontal page scrolling)`,
+      );
+      assert.ok(placement.maxHeight > 0, context);
+      // Exactly one vertical anchor, and it stays on screen.
+      assert.equal(
+        (placement.top === undefined ? 0 : 1) + (placement.bottom === undefined ? 0 : 1),
+        1,
+        `${context}: exactly one vertical anchor`,
+      );
+      if (placement.top !== undefined) {
+        assert.ok(placement.top >= margin && placement.top < viewport.height, context);
+      } else {
+        assert.ok(placement.bottom! >= margin && placement.bottom! < viewport.height, context);
+      }
+    }
+  }
+});
+
+/**
+ * Regression: on a wide desktop the chat panel is a centred column, so a
+ * right-aligned control that still had viewport room to its right opened a
+ * panel floating well outside the column and reading as detached. The popover
+ * stays inside the content region it belongs to.
+ */
+test("popover placement stays inside the chat panel's content region on desktop", () => {
+  // A 1920px viewport with a 1216px centred content column.
+  const panel = { left: 352, right: 1568 };
+  const control = { left: 1433, right: 1543, top: 700, bottom: 730 };
+  const placement = paperScopePopoverPlacement(control, 1920, 1000, panel);
+
+  assert.equal(placement.width, PAPER_SCOPE_POPOVER_PREFERRED_WIDTH);
+  assert.ok(
+    placement.left >= panel.left,
+    "the popover starts inside the content region",
+  );
+  assert.ok(
+    placement.left + placement.width <= panel.right,
+    "the popover ends inside the content region",
+  );
+  // Right-aligned to the control it belongs to.
+  assert.equal(placement.left + placement.width, control.right);
+
+  // A full-width anchor inside the same panel keeps its natural left alignment.
+  const composer = { left: 368, right: 1552, top: 700, bottom: 800 };
+  const composerPlacement = paperScopePopoverPlacement(composer, 1920, 1000, panel);
+  assert.equal(composerPlacement.left, composer.left);
+  assert.ok(composerPlacement.left + composerPlacement.width <= panel.right);
+
+  // A bounds region narrower than the minimum width is ignored in favour of the
+  // viewport, so the popover is never squeezed into an unusable sliver.
+  const sliver = paperScopePopoverPlacement(control, 1920, 1000, { left: 900, right: 940 });
+  assert.ok(sliver.width >= 200);
+  assert.ok(sliver.left >= 0 && sliver.left + sliver.width <= 1920);
+
+  // Bounds wider than the viewport still cannot push the popover off-screen.
+  const overflowing = paperScopePopoverPlacement(
+    { left: 300, right: 380, top: 500, bottom: 530 },
+    360,
+    780,
+    { left: -200, right: 900 },
+  );
+  assert.ok(overflowing.left >= 0);
+  assert.ok(overflowing.left + overflowing.width <= 360);
+});
+
+test("popover placement flips alignment and direction instead of overflowing", () => {
+  // A right-aligned control on a wide desktop: left-aligning the panel would
+  // run past the right edge, so it right-aligns to the control instead.
+  const rightControl = paperScopePopoverPlacement(
+    { left: 1180, right: 1268, top: 600, bottom: 630 },
+    1280,
+    800,
+  );
+  assert.equal(rightControl.width, PAPER_SCOPE_POPOVER_PREFERRED_WIDTH);
+  assert.equal(rightControl.left, 1268 - PAPER_SCOPE_POPOVER_PREFERRED_WIDTH);
+  assert.ok(rightControl.bottom !== undefined, "opens upward from the composer");
+
+  // A control near the top of a short viewport has no room above, so the panel
+  // opens downward rather than off-screen.
+  const topControl = paperScopePopoverPlacement(
+    { left: 20, right: 140, top: 24, bottom: 54 },
+    1280,
+    800,
+  );
+  assert.ok(topControl.top !== undefined, "flips downward when there is no room above");
+
+  // Narrow viewport: the panel is bounded by the viewport, not by 22rem.
+  const mobile = paperScopePopoverPlacement(
+    { left: 16, right: 130, top: 700, bottom: 730 },
+    360,
+    780,
+  );
+  assert.equal(mobile.width, 360 - PAPER_SCOPE_POPOVER_VIEWPORT_MARGIN * 2);
+  assert.equal(mobile.left, PAPER_SCOPE_POPOVER_VIEWPORT_MARGIN);
 });
 
 test("the picker is a keyboard-navigable listbox", async () => {

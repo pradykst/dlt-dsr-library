@@ -49,7 +49,7 @@ import {
 import { ChatAnswer } from "./ChatAnswer.tsx";
 import { GuidedChatStarters } from "./GuidedChatStarters.tsx";
 import { PaperScopeControl } from "./PaperScopeControl.tsx";
-import { PaperScopePicker } from "./PaperScopePicker.tsx";
+import { PaperScopePopover } from "./PaperScopePopover.tsx";
 
 const MAX_QUESTION_LENGTH = 2_000;
 
@@ -209,6 +209,10 @@ export function ChatWorkbench({
   const nextId = useRef(1);
   const requestController = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  /** Anchor for the `@` and `/paper` pickers: the composer box itself. */
+  const composerRef = useRef<HTMLDivElement | null>(null);
+  /** Content region every paper picker popover stays inside on desktop. */
+  const panelRef = useRef<HTMLElement | null>(null);
   const skipNextSessionWrite = useRef(false);
 
   const sessionKey = lockedPaperId
@@ -553,7 +557,10 @@ export function ChatWorkbench({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-research">
+      <section
+        ref={panelRef}
+        className="overflow-hidden rounded-2xl border border-line bg-white shadow-research"
+      >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3 sm:px-5">
           <div>
             {variant === "drawer" ? (
@@ -836,6 +843,7 @@ export function ChatWorkbench({
                 scope={scope}
                 onScopeChange={changeScope}
                 disabled={pending}
+                boundsRef={panelRef}
               />
             ) : (
               <span className="inline-flex items-center gap-2 rounded-full border border-blue/30 bg-blue/10 px-3 py-1 text-xs font-semibold text-ink">
@@ -845,30 +853,33 @@ export function ChatWorkbench({
             )}
           </div>
 
-          <div className="relative rounded-xl border border-line bg-white p-2 shadow-sm focus-within:border-blue/50 focus-within:ring-2 focus-within:ring-blue/15">
+          <div
+            ref={composerRef}
+            className="rounded-xl border border-line bg-white p-2 shadow-sm focus-within:border-blue/50 focus-within:ring-2 focus-within:ring-blue/15"
+          >
             {mentionState && !lockedScope ? (
-              <div className="absolute bottom-full left-2 z-30 mb-2">
-                <PaperScopePicker
-                  papers={papers}
-                  heading="Reference a paper"
-                  initialQuery={mentionState.query}
-                  onSelect={selectMentionPaper}
-                  onClose={() => setMentionState(null)}
-                />
-              </div>
+              <PaperScopePopover
+                anchorRef={composerRef}
+                boundsRef={panelRef}
+                papers={papers}
+                heading="Reference a paper"
+                initialQuery={mentionState.query}
+                onSelect={selectMentionPaper}
+                onClose={() => setMentionState(null)}
+              />
             ) : null}
             {commandPickerOpen && !lockedScope ? (
-              <div className="absolute bottom-full left-2 z-30 mb-2">
-                <PaperScopePicker
-                  papers={papers}
-                  heading="Select a paper"
-                  initialQuery={slashCommand?.command === "paper"
-                    ? slashCommand.argument
-                    : ""}
-                  onSelect={selectCommandPaper}
-                  onClose={() => setCommandPickerOpen(false)}
-                />
-              </div>
+              <PaperScopePopover
+                anchorRef={composerRef}
+                boundsRef={panelRef}
+                papers={papers}
+                heading="Select a paper"
+                initialQuery={slashCommand?.command === "paper"
+                  ? slashCommand.argument
+                  : ""}
+                onSelect={selectCommandPaper}
+                onClose={() => setCommandPickerOpen(false)}
+              />
             ) : null}
             <textarea
               ref={inputRef}

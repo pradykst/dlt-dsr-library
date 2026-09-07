@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 import type { NativeOkfChatScope } from "../../shared/chat-types.ts";
 import {
   findNativeOkfScopePaper,
   type NativeOkfScopePaper,
 } from "../../shared/paper-scope.ts";
-import { PaperScopePicker } from "./PaperScopePicker.tsx";
+import { PaperScopePopover } from "./PaperScopePopover.tsx";
 
 export interface PaperScopeControlProps {
   papers: readonly NativeOkfScopePaper[];
@@ -16,6 +16,8 @@ export interface PaperScopeControlProps {
   disabled?: boolean;
   /** External trigger to open the picker (e.g. the `@` / `/paper` affordances). */
   requestOpenToken?: number;
+  /** Content region the picker popover stays inside on desktop. */
+  boundsRef?: RefObject<HTMLElement | null>;
 }
 
 export function PaperScopeControl({
@@ -24,6 +26,7 @@ export function PaperScopeControl({
   onScopeChange,
   disabled = false,
   requestOpenToken = 0,
+  boundsRef,
 }: PaperScopeControlProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -58,7 +61,7 @@ export function PaperScopeControl({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex flex-col gap-1">
+    <div ref={containerRef} className="inline-flex flex-col gap-1">
       {scope.type === "paper" ? (
         <div className="inline-flex items-center gap-1">
           <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue/30 bg-blue/10 py-1 pl-3 pr-1 text-xs font-semibold text-ink">
@@ -108,17 +111,17 @@ export function PaperScopeControl({
       ) : null}
 
       {open ? (
-        <div className="absolute bottom-full left-0 z-30 mb-2">
-          <PaperScopePicker
-            papers={papers}
-            heading={scope.type === "paper" ? "Switch paper" : "Select a paper"}
-            onSelect={selectPaper}
-            onClose={() => {
-              setOpen(false);
-              triggerRef.current?.focus();
-            }}
-          />
-        </div>
+        <PaperScopePopover
+          anchorRef={containerRef}
+          boundsRef={boundsRef}
+          papers={papers}
+          heading={scope.type === "paper" ? "Switch paper" : "Select a paper"}
+          onSelect={selectPaper}
+          onClose={() => {
+            setOpen(false);
+            triggerRef.current?.focus();
+          }}
+        />
       ) : null}
     </div>
   );

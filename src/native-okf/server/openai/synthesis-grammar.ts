@@ -139,6 +139,97 @@ export function synthesisNodeRoleViolation(
   return null;
 }
 
+// -- Problem space vs solution space ----------------------------------------
+// The Problem node states the undesirable current state, deficiency, need, or
+// opportunity that motivates the design. The Artifact node names the designed
+// solution. Naming the problem after the solution collapses the two spaces and
+// makes the proposal methodologically unreadable, so the deterministic check
+// below is a backstop behind correct field separation upstream.
+//
+// It is deliberately narrow. Problem and artifact labels routinely and
+// legitimately share domain vocabulary ("Fragmented identity records across
+// marketplaces" / "Cross-marketplace identity resolution service"), and words
+// like system, platform, marketplace, trust, or identity are never themselves
+// evidence of conflation. Only two shapes are rejected: the same phrase up to
+// cosmetic differences, and the artifact's own multi-word name reproduced
+// verbatim inside the problem label.
+
+export const SYNTHESIS_PROBLEM_ARTIFACT_CONFLATION_CODE =
+  "problem-label-restates-artifact";
+
+/** Closed list of function words; no domain vocabulary is ever removed. */
+const LABEL_FUNCTION_WORDS: ReadonlySet<string> = new Set([
+  "a", "an", "the", "and", "or", "of", "for", "to", "in", "on", "at", "by",
+  "as", "from", "into", "with", "without", "across", "between", "within",
+  "that", "this", "these", "those", "its", "their", "is", "are", "be",
+]);
+
+/**
+ * Content tokens of a label: case, punctuation, hyphenation, diacritic form,
+ * function words, and simple plurals are all normalized away, so only the
+ * substantive wording remains.
+ */
+export function synthesisLabelContentTokens(label: string): string[] {
+  return label
+    .normalize("NFKC")
+    .toLocaleLowerCase("en")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/u)
+    .filter((token) => token !== "" && !LABEL_FUNCTION_WORDS.has(token))
+    .map((token) =>
+      token.length > 3 && token.endsWith("s") && !token.endsWith("ss")
+        ? token.slice(0, -1)
+        : token
+    );
+}
+
+function containsRun(
+  haystack: readonly string[],
+  needle: readonly string[],
+): boolean {
+  if (needle.length === 0 || needle.length > haystack.length) return false;
+  for (let start = 0; start + needle.length <= haystack.length; start += 1) {
+    if (needle.every((token, offset) => haystack[start + offset] === token)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns the conflation diagnostic when the Problem label is really the
+ * Artifact's name, and `null` for every legitimate pairing, including ones that
+ * share substantial domain vocabulary.
+ */
+export function synthesisProblemArtifactConflation(
+  problemLabel: string,
+  artifactLabels: readonly string[],
+): string | null {
+  const problem = synthesisLabelContentTokens(problemLabel);
+  if (problem.length === 0) return null;
+  const problemTokens = new Set(problem);
+  for (const artifactLabel of artifactLabels) {
+    const artifact = synthesisLabelContentTokens(artifactLabel);
+    if (artifact.length === 0) continue;
+    // The same phrase up to word order, plural, hyphenation, or casing.
+    if (
+      artifact.length === problem.length &&
+      artifact.every((token) => problemTokens.has(token))
+    ) {
+      return SYNTHESIS_PROBLEM_ARTIFACT_CONFLATION_CODE;
+    }
+    // The artifact's own multi-word name, verbatim, inside the problem label:
+    // the problem node has been given the solution's name plus qualifiers. The
+    // reverse containment is not rejected, because an artifact legitimately
+    // names the problem domain it addresses.
+    if (artifact.length >= 2 && containsRun(problem, artifact)) {
+      return SYNTHESIS_PROBLEM_ARTIFACT_CONFLATION_CODE;
+    }
+  }
+  return null;
+}
+
 // -- Grammar evaluation ------------------------------------------------------
 
 export interface SynthesisGrammarInput {
@@ -193,6 +284,20 @@ export function synthesisGrammarDiagnostics(
     if (violation) diagnostics.push(violation);
   }
 
+  // 3. Problem space stays distinct from solution space.
+  const problemNode = input.nodes.find(
+    (node) => synthesisPrimaryLayer(node.stage) === "problem",
+  );
+  if (problemNode) {
+    const conflation = synthesisProblemArtifactConflation(
+      problemNode.label,
+      input.nodes
+        .filter((node) => synthesisPrimaryLayer(node.stage) === "artifact")
+        .map((node) => node.label),
+    );
+    if (conflation) diagnostics.push(conflation);
+  }
+
   const classified: ClassifiedEdge[] = input.edges.map((edge) => {
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
@@ -211,7 +316,7 @@ export function synthesisGrammarDiagnostics(
     if (layer) presentLayers.add(layer);
   }
 
-  // 3. Edge grammar (fixed ontology, not "next present layer").
+  // 4. Edge grammar (fixed ontology, not "next present layer").
   for (const edge of classified) {
     const { structuralClass, sourceLayer, targetLayer } = edge;
     if (sourceLayer === null || targetLayer === null) {
@@ -256,7 +361,7 @@ export function synthesisGrammarDiagnostics(
     }
   }
 
-  // 4. Connectivity invariants. Only legal adjacency-respecting primary edges
+  // 5. Connectivity invariants. Only legal adjacency-respecting primary edges
   //    count towards parent/child coverage.
   const primaryParentLayers = new Map<string, Set<SynthesisPrimaryLayer>>();
   const primaryChildLayers = new Map<string, Set<SynthesisPrimaryLayer>>();

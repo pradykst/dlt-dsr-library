@@ -395,9 +395,12 @@ function minimalSynthesisGrounding(): NativeOkfDiagramGrounding {
   };
 }
 
-function minimalSynthesisPlan(title: string): SynthesisPlan {
+function minimalSynthesisPlan(problemLabel: string): SynthesisPlan {
   return {
-    title,
+    // A proposal title may be solution-oriented; only `problemLabel` reaches
+    // the Problem node.
+    title: "Cross-marketplace identity exchange proposal",
+    problemLabel,
     problemSummary: "unused: production always overwrites this with the raw problem statement",
     supportingStoredConceptIds: [
       "fixture/r1", "fixture/r2", "fixture/p1", "fixture/p2", "fixture/f1", "fixture/f2", "fixture/e1",
@@ -436,10 +439,10 @@ test("synthesis problem label: 15 natural-human prompts yield a clean, non-boile
   const grounding = minimalSynthesisGrounding();
   let exercised = 0;
   for (const question of NATURAL_SYNTHESIS_PROMPTS) {
-    // title: "" forces resolveSynthesisProblemLabel through the deterministic
-    // fallback (normalizeSynthesisProblemDisplay), exercising the same
-    // conservative cleanup path production falls back to when no
-    // model-produced title is available.
+    // problemLabel: "" forces resolveSynthesisProblemLabel through the
+    // deterministic fallback (normalizeSynthesisProblemDisplay), exercising the
+    // same conservative cleanup path production falls back to when no
+    // model-produced problem label is available.
     const plan = minimalSynthesisPlan("");
     const converted = convertNativeOkfSynthesisPlan(plan, grounding, question);
     assert.ok(converted, question);
@@ -591,10 +594,10 @@ test("duplicate-source invariant: a unique-ID response still serializes normally
   assert.equal(new Set(ids).size, ids.length);
 });
 
-test("synthesis problem label: a model-produced plan title wins over the raw question", () => {
+test("synthesis problem label: a model-produced problem label wins over the raw question", () => {
   const grounding = minimalSynthesisGrounding();
-  const modelTitle = "Cross-organizational credential portability";
-  const plan = minimalSynthesisPlan(modelTitle);
+  const modelProblemLabel = "Credential portability breaks across gig platforms";
+  const plan = minimalSynthesisPlan(modelProblemLabel);
   const converted = convertNativeOkfSynthesisPlan(
     plan,
     grounding,
@@ -602,8 +605,10 @@ test("synthesis problem label: a model-produced plan title wins over the raw que
   );
   assert.ok(converted);
   const problemNode = converted!.diagram.nodes.find((node) => node.stage === "problem");
-  assert.equal(problemNode?.label, modelTitle);
-  assert.ok(converted!.diagram.title.includes(modelTitle));
+  assert.equal(problemNode?.label, modelProblemLabel);
+  // The solution-oriented proposal title never reaches the Problem node.
+  assert.notEqual(problemNode?.label, plan.title);
+  assert.ok(converted!.diagram.title.includes(modelProblemLabel));
   const summary = deterministicNativeOkfSynthesisSummary(plan, converted!.diagram);
-  assert.ok(summary.toLowerCase().includes(modelTitle.toLowerCase()));
+  assert.ok(summary.toLowerCase().includes(modelProblemLabel.toLowerCase()));
 });
