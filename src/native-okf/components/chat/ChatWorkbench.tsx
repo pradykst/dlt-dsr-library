@@ -16,6 +16,7 @@ import {
   type NativeOkfChatHistoryMessage,
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
+  type NativeOkfChatScope,
 } from "../../shared/chat-types.ts";
 import {
   clearNativeOkfChatSession,
@@ -28,17 +29,27 @@ import {
   parseNativeOkfConversationState,
 } from "../../shared/conversation-state.ts";
 import { shouldShowNativeOkfEvaluationCallout } from "../../shared/evaluation-onboarding.ts";
-import type { NativeOkfGuidedStarterPaper } from "../../shared/guided-starters.ts";
 import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "../../shared/public-links.ts";
+import {
+  findNativeOkfScopePaper,
+  nativeOkfActiveMentionQuery,
+  nativeOkfSlashCommand,
+  type NativeOkfScopePaper,
+} from "../../shared/paper-scope.ts";
 import {
   applyManualDiagramToggle,
   diagramPreferenceForRequest,
   INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
   reconcileDiagramIntentToggle,
 } from "../../shared/diagram-intent.ts";
-import { NATIVE_OKF_API_ROUTES } from "../../shared/routes.ts";
+import {
+  NATIVE_OKF_API_ROUTES,
+  NATIVE_OKF_PUBLIC_ROUTES,
+} from "../../shared/routes.ts";
 import { ChatAnswer } from "./ChatAnswer.tsx";
 import { GuidedChatStarters } from "./GuidedChatStarters.tsx";
+import { PaperScopeControl } from "./PaperScopeControl.tsx";
+import { PaperScopePicker } from "./PaperScopePicker.tsx";
 
 const MAX_QUESTION_LENGTH = 2_000;
 
@@ -97,10 +108,6 @@ function isChatResponse(value: unknown): value is NativeOkfChatResponse {
 }
 
 function nativeOkfChatErrorMessage(payload: unknown, status: number): string {
-  // Prefer the server's own differentiated, safe message (it already distinguishes
-  // provider outages, rate limits, quota limits, and validation failures) over a
-  // generic status-code bucket — the bucket below is only a fallback for a missing
-  // or malformed error payload.
   if (isRecord(payload)) {
     if (
       typeof payload.error === "string" &&
@@ -128,8 +135,6 @@ function nativeOkfChatErrorMessage(payload: unknown, status: number): string {
 
 function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistoryMessage[] {
   return entries
-    // A failed turn never received an assistant reply; sending it would put two
-    // consecutive user messages in the model's history with nothing answering the first.
     .filter((entry) => !entry.failed)
     .map((entry) => ({
       role: entry.role,
@@ -141,23 +146,64 @@ function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistory
     .slice(-MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES);
 }
 
+function parseResponseScope(value: unknown): NativeOkfChatScope | null {
+  if (!isRecord(value)) return null;
+  if (value.type === "corpus") return { type: "corpus" };
+  if (value.type === "paper" && typeof value.paperId === "string" && value.paperId) {
+    return { type: "paper", paperId: value.paperId };
+  }
+  return null;
+}
+
+export interface ChatWorkbenchProps {
+  /** Canonical papers for the scope selector, `@` reference, and `/paper` command. */
+  papers: readonly NativeOkfScopePaper[];
+  /** Initial conversational scope (e.g. from `?paper=` or the paper-page drawer). */
+  initialScope?: NativeOkfChatScope;
+  /**
+   * When set, this instance is bound to one paper's page: New Chat returns to
+   * this paper rather than to All papers, and the scope selector is not shown.
+   */
+  lockedPaperId?: string;
+  variant?: "page" | "drawer";
+}
+
 export function ChatWorkbench({
-  starterPapers,
-}: {
-  starterPapers: readonly NativeOkfGuidedStarterPaper[];
-}) {
+  papers,
+  initialScope,
+  lockedPaperId,
+  variant = "page",
+}: ChatWorkbenchProps) {
+  const lockedScope: NativeOkfChatScope | null = lockedPaperId
+    ? { type: "paper", paperId: lockedPaperId }
+    : null;
+  const startingScope: NativeOkfChatScope =
+    lockedScope ?? initialScope ?? { type: "corpus" };
+
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [question, setQuestion] = useState("");
+  const [scope, setScope] = useState<NativeOkfChatScope>(startingScope);
+  const [mentionState, setMentionState] = useState<
+    { start: number; query: string } | null
+  >(null);
+  const [commandPickerOpen, setCommandPickerOpen] = useState(false);
   const [diagramIntentToggle, setDiagramIntentToggle] = useState(
     INITIAL_DIAGRAM_INTENT_TOGGLE_STATE,
   );
-  const [conversationState, setConversationState] = useState(
-    createInitialNativeOkfConversationState,
-  );
+  const [conversationState, setConversationState] = useState(() => ({
+    ...createInitialNativeOkfConversationState(),
+    scope: startingScope,
+  }));
   const [conversationId, setConversationId] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * An informational message about the composer itself (for example, a command
+   * that does not apply in this chat). Kept separate from `error` so a "not
+   * available here" explanation is never labelled as a failed request.
+   */
+  const [notice, setNotice] = useState<string | null>(null);
   const [startersOpen, setStartersOpen] = useState(true);
   const [surveyCalloutDismissed, setSurveyCalloutDismissed] = useState(false);
   const nextId = useRef(1);
@@ -165,30 +211,50 @@ export function ChatWorkbench({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const skipNextSessionWrite = useRef(false);
 
+  const sessionKey = lockedPaperId
+    ? `native-okf-chat-session:paper:${lockedPaperId}`
+    : undefined;
+
   const trimmedQuestion = question.trim();
+  const slashCommand = nativeOkfSlashCommand(question);
   const invalidLength =
-    trimmedQuestion.length > 0 && trimmedQuestion.length < 3;
+    trimmedQuestion.length > 0 && trimmedQuestion.length < 3 && !slashCommand;
   const overLimit = question.length > MAX_QUESTION_LENGTH;
   const canSubmit =
     !pending &&
-    trimmedQuestion.length >= 3 &&
-    question.length <= MAX_QUESTION_LENGTH;
+    ((trimmedQuestion.length >= 3 && question.length <= MAX_QUESTION_LENGTH) ||
+      slashCommand !== null);
   const includeDiagram = diagramIntentToggle.enabled;
   const historyContextTruncated =
     nativeOkfVisibleHistoryExceedsModelContext(entries.length);
+  const activePaper = scope.type === "paper"
+    ? findNativeOkfScopePaper(scope.paperId, papers)
+    : undefined;
 
-  function updateComposerQuestion(nextQuestion: string) {
+  function changeScope(next: NativeOkfChatScope) {
+    if (lockedScope && next.type === "corpus") return;
+    setScope(next);
+    setConversationState((current) => ({ ...current, scope: next }));
+  }
+
+  function updateComposer(nextQuestion: string, caret?: number) {
     setQuestion(nextQuestion);
     setDiagramIntentToggle((current) =>
       reconcileDiagramIntentToggle(current, nextQuestion, true),
     );
+    const caretPosition = caret ?? nextQuestion.length;
+    setMentionState(
+      lockedScope ? null : nativeOkfActiveMentionQuery(nextQuestion, caretPosition),
+    );
+    const command = nativeOkfSlashCommand(nextQuestion);
+    setCommandPickerOpen(!lockedScope && command?.command === "paper");
   }
 
   useEffect(() => {
     const restoreTimer = window.setTimeout(() => {
       let restored = null;
       try {
-        restored = readNativeOkfChatSession(window.sessionStorage);
+        restored = readNativeOkfChatSession(window.sessionStorage, sessionKey);
       } catch {
         // The tab remains usable when browser storage is unavailable.
       }
@@ -213,7 +279,19 @@ export function ChatWorkbench({
         });
         setEntries(restoredEntries);
         if (restoredEntries.length > 0) setStartersOpen(false);
-        setConversationState(restored.conversationState);
+        // An explicitly requested scope — the drawer's locked paper, or the
+        // `?paper=` deep link behind "Open full chat" — is the researcher's
+        // current intent and outranks whatever scope the restored tab session
+        // was last left in. Without this, opening the full chat from a paper
+        // drawer would silently land back in All papers whenever a previous
+        // main-chat conversation existed in this tab.
+        const restoredScope = lockedScope ?? initialScope ??
+          restored.conversationState.scope;
+        setConversationState({
+          ...restored.conversationState,
+          scope: restoredScope,
+        });
+        setScope(restoredScope);
         setDiagramIntentToggle(restored.diagramPreference);
         setConversationId(restored.conversationId);
         nextId.current = restoredEntries.length + 1;
@@ -223,6 +301,7 @@ export function ChatWorkbench({
       setSessionReady(true);
     }, 0);
     return () => window.clearTimeout(restoreTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -232,13 +311,17 @@ export function ChatWorkbench({
       return;
     }
     try {
-      writeNativeOkfChatSession(window.sessionStorage, {
-        version: 1,
-        conversationId,
-        messages: entries,
-        conversationState,
-        diagramPreference: diagramIntentToggle,
-      });
+      writeNativeOkfChatSession(
+        window.sessionStorage,
+        {
+          version: 1,
+          conversationId,
+          messages: entries,
+          conversationState,
+          diagramPreference: diagramIntentToggle,
+        },
+        sessionKey,
+      );
     } catch {
       // In-memory conversation remains available when storage is blocked.
     }
@@ -248,6 +331,7 @@ export function ChatWorkbench({
     diagramIntentToggle,
     entries,
     sessionReady,
+    sessionKey,
   ]);
 
   function makeId(prefix: "user" | "assistant"): string {
@@ -256,14 +340,55 @@ export function ChatWorkbench({
     return id;
   }
 
-  async function submitQuestion(
-    event?: FormEvent<HTMLFormElement>,
-    guidedSubmission?: { question: string; includeDiagram: boolean },
-  ) {
+  function selectMentionPaper(paper: NativeOkfScopePaper) {
+    if (mentionState) {
+      const before = question.slice(0, mentionState.start);
+      const after = question.slice(
+        mentionState.start + 1 + mentionState.query.length,
+      );
+      const nextQuestion = `${before}${after}`.replace(/\s{2,}/gu, " ");
+      updateComposer(nextQuestion, before.length);
+    }
+    changeScope({ type: "paper", paperId: paper.paperId });
+    setMentionState(null);
+    inputRef.current?.focus();
+  }
+
+  function selectCommandPaper(paper: NativeOkfScopePaper) {
+    changeScope({ type: "paper", paperId: paper.paperId });
+    updateComposer("");
+    setCommandPickerOpen(false);
+    inputRef.current?.focus();
+  }
+
+  async function submitQuestion(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
-    const submittedQuestion = (
-      guidedSubmission?.question ?? trimmedQuestion
-    ).trim();
+
+    const raw = question.trim();
+    const command = nativeOkfSlashCommand(raw);
+    if (command) {
+      if (command.command === "all") {
+        if (lockedScope) {
+          // This instance is bound to one paper's page, so broadening is not
+          // available here. Say so rather than swallowing the message silently,
+          // and point at the affordance that does broaden.
+          setNotice(
+            "This paper chat stays with this paper. Use “Open full chat” to ask across all papers.",
+          );
+          return;
+        }
+        setNotice(null);
+        changeScope({ type: "corpus" });
+        updateComposer("");
+      } else if (command.command === "new") {
+        clearConversation();
+      } else {
+        setCommandPickerOpen(true);
+      }
+      return;
+    }
+
+    const submittedQuestion = raw;
     if (
       pending ||
       submittedQuestion.length < 3 ||
@@ -278,6 +403,7 @@ export function ChatWorkbench({
     const request: NativeOkfChatRequest = {
       question: submittedQuestion,
       history: historyFromEntries(priorEntries),
+      scope,
       diagramPreference: diagramPreferenceForRequest(
         diagramIntentToggle,
         submittedQuestion,
@@ -287,17 +413,15 @@ export function ChatWorkbench({
         conversationState,
       ),
     };
-    if (guidedSubmission) {
-      request.diagramPreference = guidedSubmission.includeDiagram
-        ? "requested"
-        : "auto";
-    }
 
     setEntries((current) => [...current, userEntry]);
     setStartersOpen(false);
     setQuestion("");
     setDiagramIntentToggle(INITIAL_DIAGRAM_INTENT_TOGGLE_STATE);
+    setMentionState(null);
+    setCommandPickerOpen(false);
     setError(null);
+    setNotice(null);
     setPending(true);
 
     const controller = new AbortController();
@@ -314,7 +438,7 @@ export function ChatWorkbench({
 
       const payload: unknown = await result.json().catch(() => undefined);
       if (!result.ok) {
-          throw new Error(nativeOkfChatErrorMessage(payload, result.status));
+        throw new Error(nativeOkfChatErrorMessage(payload, result.status));
       }
       if (!isChatResponse(payload)) {
         throw new Error("The assistant returned an invalid response.");
@@ -326,14 +450,16 @@ export function ChatWorkbench({
         throw new Error("The assistant returned invalid conversation state.");
       }
       setConversationState(nextConversationState);
+      const nextScope =
+        parseResponseScope((payload as { scope?: unknown }).scope) ??
+        nextConversationState.scope;
+      setScope(lockedScope ?? nextScope);
 
       const assistantEntry: ChatEntry = {
         id: makeId("assistant"),
         role: "assistant",
         content: payload.answerMarkdown,
-        ...(payload.kind === "answer"
-          ? { response: payload }
-          : {}),
+        ...(payload.kind === "answer" ? { response: payload } : {}),
       };
       setEntries((current) => [...current, assistantEntry]);
     } catch (caught) {
@@ -343,14 +469,12 @@ export function ChatWorkbench({
           ? caught.message
           : "The design knowledge assistant could not complete this request.",
       );
-      // Mark the turn that failed in place rather than leaving an unlabeled orphan —
-      // a retry then adds a new, visually distinct entry instead of an identical twin.
       setEntries((current) =>
         current.map((entry) =>
           entry.id === userEntry.id ? { ...entry, failed: true } : entry
         )
       );
-      updateComposerQuestion(submittedQuestion);
+      updateComposer(submittedQuestion);
     } finally {
       if (requestController.current === controller) {
         requestController.current = null;
@@ -360,6 +484,17 @@ export function ChatWorkbench({
   }
 
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      (mentionState || commandPickerOpen) &&
+      ["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)
+    ) {
+      // Let the open picker handle navigation keys.
+      if (event.key === "Escape") {
+        setMentionState(null);
+        setCommandPickerOpen(false);
+      }
+      return;
+    }
     if (
       event.key === "Enter" &&
       !event.shiftKey &&
@@ -375,177 +510,186 @@ export function ChatWorkbench({
     requestController.current = null;
     skipNextSessionWrite.current = true;
     try {
-      clearNativeOkfChatSession(window.sessionStorage);
+      clearNativeOkfChatSession(window.sessionStorage, sessionKey);
     } catch {
       // In-memory reset still succeeds when browser storage is blocked.
     }
-    setConversationState(createInitialNativeOkfConversationState());
+    const resetScope = lockedScope ?? { type: "corpus" as const };
+    setConversationState({
+      ...createInitialNativeOkfConversationState(),
+      scope: resetScope,
+    });
+    setScope(resetScope);
     setDiagramIntentToggle(INITIAL_DIAGRAM_INTENT_TOGGLE_STATE);
     setConversationId(createNativeOkfLocalConversationId());
     nextId.current = 1;
     setEntries([]);
     setStartersOpen(true);
     setSurveyCalloutDismissed(false);
-    updateComposerQuestion("");
+    setMentionState(null);
+    setCommandPickerOpen(false);
+    updateComposer("");
     setError(null);
+    setNotice(null);
     setPending(false);
     inputRef.current?.focus();
   }
 
-  function setGuidedDiagramDefault(enabled: boolean) {
-    setDiagramIntentToggle((current) =>
-      applyManualDiagramToggle(current, question, enabled),
-    );
-  }
-
-  function askGuidedQuestion(
-    questionText: string,
-    requestedDiagram: boolean,
-  ) {
-    setDiagramIntentToggle((current) =>
-      applyManualDiagramToggle(current, questionText, requestedDiagram),
-    );
-    void submitQuestion(undefined, {
-      question: questionText,
-      includeDiagram: requestedDiagram,
-    });
+  function prefillComposer(example: string) {
+    updateComposer(example);
+    setStartersOpen(false);
+    inputRef.current?.focus();
   }
 
   const hasSubstantiveResponse = shouldShowNativeOkfEvaluationCallout(
     entries.flatMap((entry) => entry.response ? [entry.response] : []),
   );
+
+  const openFullChatHref = scope.type === "paper"
+    ? `${NATIVE_OKF_PUBLIC_ROUTES.chat}?paper=${
+        encodeURIComponent(scope.paperId)
+      }`
+    : NATIVE_OKF_PUBLIC_ROUTES.chat;
+
   return (
     <div className="space-y-5">
       <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-research">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-4 py-3 sm:px-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
-              Design knowledge assistant
-            </p>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              Answers use retrieved library sources. Conversation content remains in this
-              browser tab and is not stored by the server.
-            </p>
-            <p className="mt-2 inline-flex rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs leading-5 text-amber-950">
-              Current corpus: Blockchain-related Design Science Research papers only.
-            </p>
+            {variant === "drawer" ? (
+              <p className="text-xs leading-5 text-muted">
+                Answers stay grounded in this paper&apos;s canonical design
+                knowledge and are kept only in this tab session.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">
+                  Design knowledge assistant
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  Answers use retrieved library sources. Conversation content remains in this
+                  browser tab and is not stored by the server.
+                </p>
+              </>
+            )}
+            {variant !== "drawer" ? (
+              <p className="mt-2 inline-flex rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs leading-5 text-amber-950">
+                Current corpus: Blockchain-related Design Science Research papers only.
+              </p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={clearConversation}
-            aria-label="Start a new chat"
-            disabled={entries.length === 0 && !pending && !error}
-            className="rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            New chat
-          </button>
+          <div className="flex items-center gap-2">
+            {variant === "drawer" ? (
+              <a
+                href={openFullChatHref}
+                className="rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-blue/40 hover:text-blue"
+              >
+                Open full chat ↗
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={clearConversation}
+              aria-label="Start a new chat"
+              disabled={entries.length === 0 && !pending && !error}
+              className="rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              New chat
+            </button>
+          </div>
         </div>
 
         <div
           aria-busy={pending}
-          className="min-h-[360px] space-y-6 px-4 py-6 sm:px-6 lg:px-8"
+          className="min-h-[320px] space-y-6 px-4 py-6 sm:px-6 lg:px-8"
         >
           {entries.length === 0 ? (
-            <div className="mx-auto max-w-3xl py-5 text-center">
-              <div
-                aria-hidden="true"
-                className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-blue/20 bg-blue/10 font-serif text-xl font-semibold text-blue"
-              >
-                OKF
-              </div>
-              <h2 className="mt-4 font-serif text-2xl font-semibold text-ink">
-                Ask the design knowledge library
+            <div className="mx-auto max-w-3xl py-4 text-center">
+              <h2 className="font-serif text-2xl font-semibold text-ink">
+                {variant === "drawer"
+                  ? "Ask about this paper's design knowledge"
+                  : "Ask the design knowledge library"}
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted">
-                Answers use retrieved papers and concepts. Citations link to library
-                source records; diagrams distinguish stored knowledge from new synthesis.
+                {variant === "drawer"
+                  ? "Questions and answers are restricted to this paper's canonical design knowledge."
+                  : "Answers use retrieved papers and concepts. Citations link to library source records; diagrams distinguish stored knowledge from new synthesis."}
               </p>
 
-              <div className="mt-6 text-left">
-                <GuidedChatStarters
-                  papers={starterPapers}
-                  currentDiagramEnabled={includeDiagram}
-                  pending={pending}
-                  onDefaultDiagramIntent={setGuidedDiagramDefault}
-                  onAsk={askGuidedQuestion}
-                />
-              </div>
+              {variant !== "drawer" ? (
+                <div className="mt-6 text-left">
+                  <GuidedChatStarters pending={pending} onPrefill={prefillComposer} />
+                </div>
+              ) : null}
             </div>
           ) : (
             <>
-              <div className="rounded-xl border border-line bg-slate-50 px-4 py-3">
-                <button
-                  type="button"
-                  aria-expanded={startersOpen}
-                  aria-controls="native-okf-reopened-starters"
-                  disabled={pending}
-                  onClick={() => setStartersOpen((current) => !current)}
-                  className="text-sm font-semibold text-blue underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
-                >
-                  Guided starters
-                </button>
-                {startersOpen ? (
-                  <div id="native-okf-reopened-starters" className="mt-3 min-w-0 max-w-full">
-                    <GuidedChatStarters
-                      papers={starterPapers}
-                      currentDiagramEnabled={includeDiagram}
-                      pending={pending}
-                      onDefaultDiagramIntent={setGuidedDiagramDefault}
-                      onAsk={askGuidedQuestion}
-                    />
-                  </div>
-                ) : null}
-              </div>
+              {variant !== "drawer" ? (
+                <div className="rounded-xl border border-line bg-slate-50 px-4 py-3">
+                  <button
+                    type="button"
+                    aria-expanded={startersOpen}
+                    aria-controls="native-okf-reopened-starters"
+                    disabled={pending}
+                    onClick={() => setStartersOpen((current) => !current)}
+                    className="text-sm font-semibold text-blue underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue"
+                  >
+                    Corpus starters
+                  </button>
+                  {startersOpen ? (
+                    <div id="native-okf-reopened-starters" className="mt-3 min-w-0 max-w-full">
+                      <GuidedChatStarters pending={pending} onPrefill={prefillComposer} />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <ol className="space-y-7">
-              {entries.map((entry) => (
-                <li key={entry.id}>
-                  {entry.role === "user" ? (
-                    <article
-                      className={`ml-auto max-w-3xl rounded-2xl rounded-br-md px-5 py-4 shadow-sm ${
-                        entry.failed
-                          ? "border border-dashed border-red-300 bg-white text-ink opacity-70"
-                          : "bg-ink text-white"
-                      }`}
-                    >
-                      <p
-                        className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${
-                          entry.failed ? "text-red-500" : "text-slate-400"
+                {entries.map((entry) => (
+                  <li key={entry.id}>
+                    {entry.role === "user" ? (
+                      <article
+                        className={`ml-auto max-w-3xl rounded-2xl rounded-br-md px-5 py-4 shadow-sm ${
+                          entry.failed
+                            ? "border border-dashed border-red-300 bg-white text-ink opacity-70"
+                            : "bg-ink text-white"
                         }`}
                       >
-                        {entry.failed ? "You · not sent" : "You"}
-                      </p>
-                      <p className="whitespace-pre-wrap text-sm leading-6">
-                        {entry.content}
-                      </p>
-                      {entry.failed ? (
-                        <p className="mt-2 text-xs text-red-500">
-                          This message failed to send and was not answered. It has been
-                          placed back in the composer to retry.
+                        <p
+                          className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                            entry.failed ? "text-red-500" : "text-slate-400"
+                          }`}
+                        >
+                          {entry.failed ? "You · not sent" : "You"}
                         </p>
-                      ) : null}
-                    </article>
-                  ) : (
-                    <article className="rounded-2xl rounded-tl-md border border-line bg-white px-5 py-5 shadow-sm sm:px-6">
-                      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-blue">
-                        Design knowledge assistant
-                      </p>
-                      {entry.response ? (
-                        <ChatAnswer
-                          response={entry.response}
-                          messageId={entry.id}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted">{entry.content}</p>
-                      )}
-                    </article>
-                  )}
-                </li>
-              ))}
+                        <p className="whitespace-pre-wrap text-sm leading-6">
+                          {entry.content}
+                        </p>
+                        {entry.failed ? (
+                          <p className="mt-2 text-xs text-red-500">
+                            This message failed to send and was not answered. It has been
+                            placed back in the composer to retry.
+                          </p>
+                        ) : null}
+                      </article>
+                    ) : (
+                      <article className="rounded-2xl rounded-tl-md border border-line bg-white px-5 py-5 shadow-sm sm:px-6">
+                        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-blue">
+                          Design knowledge assistant
+                        </p>
+                        {entry.response ? (
+                          <ChatAnswer response={entry.response} messageId={entry.id} />
+                        ) : (
+                          <p className="text-sm text-muted">{entry.content}</p>
+                        )}
+                      </article>
+                    )}
+                  </li>
+                ))}
               </ol>
             </>
           )}
 
-          {hasSubstantiveResponse && !surveyCalloutDismissed ? (
+          {hasSubstantiveResponse && !surveyCalloutDismissed && variant !== "drawer" ? (
             <aside
               aria-labelledby="native-okf-evaluation-callout-title"
               className="rounded-xl border border-blue/20 bg-blue/5 px-4 py-4"
@@ -597,6 +741,29 @@ export function ChatWorkbench({
             </div>
           ) : null}
 
+          {notice ? (
+            <div
+              role="status"
+              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber-900">
+                    Not available here
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">{notice}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotice(null)}
+                  className="text-xs font-semibold text-amber-900 underline underline-offset-4"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {error ? (
             <div
               role="alert"
@@ -611,9 +778,7 @@ export function ChatWorkbench({
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setError(null);
-                  }}
+                  onClick={() => setError(null)}
                   className="text-xs font-semibold text-rose-700 underline underline-offset-4"
                 >
                   Dismiss
@@ -648,23 +813,77 @@ export function ChatWorkbench({
               </div>
             </aside>
           ) : null}
-          <label
-            htmlFor="native-okf-chat-question"
-            className="text-xs font-bold uppercase tracking-[0.12em] text-ink"
-          >
-            Question
-          </label>
-          <div className="mt-2 rounded-xl border border-line bg-white p-2 shadow-sm focus-within:border-blue/50 focus-within:ring-2 focus-within:ring-blue/15">
+
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="native-okf-chat-question"
+                className="text-xs font-bold uppercase tracking-[0.12em] text-ink"
+              >
+                Question
+              </label>
+              {variant !== "drawer" ? (
+                <p className="text-[0.68rem] leading-4 text-muted">
+                  Tip: Use <span className="font-semibold text-ink">@</span> or{" "}
+                  <span className="font-semibold text-ink">/paper</span> to select a
+                  paper and chat only with its design knowledge.
+                </p>
+              ) : null}
+            </div>
+            {variant !== "drawer" ? (
+              <PaperScopeControl
+                papers={papers}
+                scope={scope}
+                onScopeChange={changeScope}
+                disabled={pending}
+              />
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue/30 bg-blue/10 px-3 py-1 text-xs font-semibold text-ink">
+                <span className="text-blue">Paper scope:</span>
+                {activePaper?.title ?? lockedPaperId}
+              </span>
+            )}
+          </div>
+
+          <div className="relative rounded-xl border border-line bg-white p-2 shadow-sm focus-within:border-blue/50 focus-within:ring-2 focus-within:ring-blue/15">
+            {mentionState && !lockedScope ? (
+              <div className="absolute bottom-full left-2 z-30 mb-2">
+                <PaperScopePicker
+                  papers={papers}
+                  heading="Reference a paper"
+                  initialQuery={mentionState.query}
+                  onSelect={selectMentionPaper}
+                  onClose={() => setMentionState(null)}
+                />
+              </div>
+            ) : null}
+            {commandPickerOpen && !lockedScope ? (
+              <div className="absolute bottom-full left-2 z-30 mb-2">
+                <PaperScopePicker
+                  papers={papers}
+                  heading="Select a paper"
+                  initialQuery={slashCommand?.command === "paper"
+                    ? slashCommand.argument
+                    : ""}
+                  onSelect={selectCommandPaper}
+                  onClose={() => setCommandPickerOpen(false)}
+                />
+              </div>
+            ) : null}
             <textarea
               ref={inputRef}
               id="native-okf-chat-question"
               value={question}
-              onChange={(event) => updateComposerQuestion(event.target.value)}
+              onChange={(event) =>
+                updateComposer(event.target.value, event.target.selectionStart ?? undefined)
+              }
               onKeyDown={handleComposerKeyDown}
               rows={3}
               maxLength={MAX_QUESTION_LENGTH + 1}
               disabled={pending}
-              placeholder="Ask about papers, requirements, principles, features, relationships, or cross-paper synthesis..."
+              placeholder={scope.type === "paper"
+                ? "Ask about this paper — its requirements, principles, features, map, or relationships…"
+                : "Ask about papers, requirements, principles, features, relationships, or cross-paper synthesis…"}
               className="block w-full resize-y border-0 bg-transparent px-2 py-2 text-sm leading-6 text-ink outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
@@ -675,11 +894,7 @@ export function ChatWorkbench({
                   checked={includeDiagram}
                   onChange={(event) =>
                     setDiagramIntentToggle((current) =>
-                      applyManualDiagramToggle(
-                        current,
-                        question,
-                        event.target.checked,
-                      ),
+                      applyManualDiagramToggle(current, question, event.target.checked),
                     )
                   }
                   disabled={pending}
@@ -721,9 +936,17 @@ export function ChatWorkbench({
             </p>
           ) : (
             <p className="mt-2 text-xs leading-5 text-muted">
-              Press Enter to send or Shift+Enter for a new line. Questions,
-              answers, and conversation focus are kept only in this tab session;
-              they are not stored by the server.
+              Press Enter to send or Shift+Enter for a new line. Type{" "}
+              {/* A locked paper chat cannot broaden, so it never offers /all. */}
+              {lockedScope ? null : (
+                <>
+                  <span className="font-semibold">/all</span> to return to all
+                  papers,{" "}
+                </>
+              )}
+              <span className="font-semibold">/new</span> to start a new chat.
+              Questions, answers, and conversation focus are kept only in this tab
+              session; they are not stored by the server.
             </p>
           )}
         </form>

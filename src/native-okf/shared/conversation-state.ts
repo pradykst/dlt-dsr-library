@@ -8,6 +8,7 @@ import {
   MAX_NATIVE_OKF_SYNTHESIS_CLARIFICATION_ROUNDS,
   NATIVE_OKF_CLARIFICATION_KINDS,
   NATIVE_OKF_CONVERSATION_INTENTS,
+  type NativeOkfChatScope,
   type NativeOkfClarificationKind,
   type NativeOkfConversationIntent,
   type NativeOkfConversationState,
@@ -21,6 +22,7 @@ import { normalizeSynthesisProblemDisplay } from "./synthesis-problem-display.ts
 
 const STATE_KEYS = new Set([
   "version",
+  "scope",
   "activePaperSlugs",
   "activeComparisonPaperSlugs",
   "activeStructuredResultPaperSlugs",
@@ -35,7 +37,23 @@ const STATE_KEYS = new Set([
   "synthesisDraft",
 ]);
 const PENDING_KEYS = new Set(["kind", "originalQuestion"]);
+const SCOPE_KEYS = new Set(["type", "paperId"]);
 const MAX_IDENTIFIER_CHARACTERS = 256;
+
+function parseChatScope(value: unknown): NativeOkfChatScope | null {
+  if (value === undefined) return { type: "corpus" };
+  if (!isRecord(value) || !hasOnlyKeys(value, SCOPE_KEYS)) return null;
+  if (value.type === "corpus") {
+    return value.paperId === undefined ? { type: "corpus" } : null;
+  }
+  if (value.type === "paper") {
+    if (typeof value.paperId !== "string") return null;
+    const paperId = sanitize(value.paperId);
+    if (paperId === "" || paperId.length > MAX_IDENTIFIER_CHARACTERS) return null;
+    return { type: "paper", paperId };
+  }
+  return null;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" &&
@@ -109,6 +127,9 @@ export function parseNativeOkfConversationState(
     return null;
   }
   if (value.version !== 1) return null;
+
+  const scope = parseChatScope(value.scope);
+  if (scope === null) return null;
 
   const activePaperSlugs = boundedStrings(
     value.activePaperSlugs,
@@ -229,6 +250,7 @@ export function parseNativeOkfConversationState(
 
   return {
     version: 1,
+    scope,
     activePaperSlugs,
     activeComparisonPaperSlugs,
     activeStructuredResultPaperSlugs,
@@ -278,6 +300,7 @@ export function compactNativeOkfConversationStateForRequest(
     : null;
   return {
     version: state.version,
+    scope: state.scope,
     activePaperSlugs: state.activePaperSlugs,
     activeComparisonPaperSlugs: state.activeComparisonPaperSlugs ?? [],
     activeStructuredResultPaperSlugs:

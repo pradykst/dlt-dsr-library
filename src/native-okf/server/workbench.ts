@@ -17,6 +17,7 @@ import {
   formatConceptType,
   normalizeCatchAllSegments,
 } from "../shared/presentation.ts";
+import { compareNumberedConceptOrder } from "../shared/natural-order.ts";
 import type { CatchAllSegments } from "../shared/presentation.ts";
 import type {
   ConceptDetailDto,
@@ -104,8 +105,11 @@ function compareConceptSummaries(
   left: ConceptSummaryDto,
   right: ConceptSummaryDto,
 ): number {
+  // Within a design-knowledge category, order numbered concepts naturally so
+  // "DR2" precedes "DR10". Label-free titles keep their previous lexical order
+  // because the natural comparator falls back to a display-string comparison.
   return compareStrings(left.type, right.type) ||
-    compareDisplayStrings(left.title, right.title) ||
+    compareNumberedConceptOrder(left, right) ||
     compareStrings(left.id, right.id);
 }
 

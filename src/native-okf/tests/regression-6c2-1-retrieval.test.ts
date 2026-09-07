@@ -108,6 +108,7 @@ const mapFixture = resolvedRetrieval(MAP_QUESTION);
 function staleConversationState(): NativeOkfConversationState {
   return {
     version: 1,
+    scope: { type: "corpus" },
     activePaperSlugs: ["green-bond-reporting-dp"],
     activeConceptIds: ["design-knowledge/green-bond-reporting-dp"],
     activeSourceIds: ["design-knowledge/green-bond-reporting-dp"],

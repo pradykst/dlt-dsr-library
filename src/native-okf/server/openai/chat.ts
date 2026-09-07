@@ -11,6 +11,7 @@ import {
   type NativeOkfChatHistoryMessage,
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
+  type NativeOkfChatScope,
   type NativeOkfDiagramMode,
   type NativeOkfSafeDiagnosticCode,
   type SynthesisDraftState,
@@ -25,6 +26,10 @@ import {
   NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE,
 } from "../live-data-gate.ts";
 import {
+  NATIVE_OKF_LIBRARY_SCOPE_BOUNDARY_RESPONSE,
+} from "../scope-guard.ts";
+import {
+  assembleCompletePaperContext,
   nativeOkfRequestedKindForType,
   retrieveOkfContext,
 } from "../retrieval.ts";
@@ -100,11 +105,38 @@ const MIN_MEANINGFUL_QUESTION_CHARACTERS = 3;
 const ALLOWED_REQUEST_KEYS = new Set([
   "question",
   "history",
+  "scope",
   "diagramPreference",
   "visibleHistoryMessageCount",
   "includeDiagram",
   "conversationState",
 ]);
+const ALLOWED_SCOPE_KEYS = new Set(["type", "paperId"]);
+const MAX_SCOPE_PAPER_ID_CHARACTERS = 256;
+
+function validateChatScope(value: unknown): NativeOkfChatScope {
+  if (!isRecord(value)) {
+    throw new NativeOkfRequestError("Scope must be an object.");
+  }
+  validateKnownKeys(value, ALLOWED_SCOPE_KEYS, "Scope");
+  if (value.type === "corpus") {
+    if (value.paperId !== undefined) {
+      throw new NativeOkfRequestError("Corpus scope must not carry a paperId.");
+    }
+    return { type: "corpus" };
+  }
+  if (value.type === "paper") {
+    if (typeof value.paperId !== "string") {
+      throw new NativeOkfRequestError("Paper scope requires a paperId string.");
+    }
+    const paperId = sanitizeNativeOkfChatText(value.paperId);
+    if (paperId === "" || paperId.length > MAX_SCOPE_PAPER_ID_CHARACTERS) {
+      throw new NativeOkfRequestError("Paper scope paperId is invalid.");
+    }
+    return { type: "paper", paperId };
+  }
+  throw new NativeOkfRequestError('Scope type must be "corpus" or "paper".');
+}
 const ALLOWED_HISTORY_KEYS = new Set(["role", "content"]);
 
 export interface NativeOkfDiagramGenerationResult {
@@ -221,6 +253,10 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
     .map(validateHistoryMessage)
     .slice(-MAX_NATIVE_OKF_HISTORY_MESSAGES);
 
+  const scope = input.scope === undefined
+    ? undefined
+    : validateChatScope(input.scope);
+
   if (input.includeDiagram !== undefined && typeof input.includeDiagram !== "boolean") {
     throw new NativeOkfRequestError("includeDiagram must be a boolean.");
   }
@@ -273,6 +309,7 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
   return {
     question,
     ...(recentHistory.length > 0 ? { history: recentHistory } : {}),
+    ...(scope === undefined ? {} : { scope }),
     ...(input.includeDiagram === undefined
       ? {}
       : { includeDiagram: input.includeDiagram }),
@@ -738,9 +775,32 @@ export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
 ): Promise<NativeOkfChatResponse> {
-  const response = await answerNativeOkfChatUnchecked(input, dependencies);
+  const prepared = dependencies.prepared ??
+    (await prepareNativeOkfChatRequest(
+      validateNativeOkfChatRequest(input),
+      dependencies.conversationCatalog,
+    ));
+  const response = await answerNativeOkfChatUnchecked(input, {
+    ...dependencies,
+    prepared,
+  });
   assertUniqueSourceIds(response);
-  return response;
+  const warnings = response.warnings ?? [];
+  // The scope in effect after the turn always mirrors the returned conversation
+  // state, so the client can keep the visible scope chip exactly in sync —
+  // including when the server dropped a paper-scoped turn back to corpus.
+  //
+  // A dropped scope is never silent. Attaching the notice here, rather than at
+  // one of the many return sites, is what guarantees the researcher is told on
+  // every path a stale scope can reach: an ordinary answer, a stored map, a
+  // synthesis, a clarification, a scope guardrail, or a no-evidence reply.
+  return {
+    ...response,
+    scope: response.conversationState?.scope ?? { type: "corpus" },
+    ...(prepared.scopeWarning && !warnings.includes(prepared.scopeWarning)
+      ? { warnings: [prepared.scopeWarning, ...warnings] }
+      : {}),
+  };
 }
 
 async function answerNativeOkfChatUnchecked(
@@ -774,13 +834,16 @@ async function answerNativeOkfChatUnchecked(
     return {
       kind: "answer",
       presentationMode: "no-match",
-      answerMarkdown: NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE,
+      answerMarkdown: prepared.turnPlan.scopeGuardrail === "out-of-scope"
+        ? NATIVE_OKF_LIBRARY_SCOPE_BOUNDARY_RESPONSE
+        : NATIVE_OKF_LIVE_DATA_BOUNDARY_RESPONSE,
       sources: [],
       insufficientContext: false,
       diagramMode: null,
       diagramStatus: null,
       conversationState: {
         ...prepared.validatedState,
+        scope: prepared.turnPlan.scope,
         lastIntent: "answer",
         lastDiagramRequested: false,
         pendingClarification: null,
@@ -791,8 +854,22 @@ async function answerNativeOkfChatUnchecked(
 
   const turnPlan = prepared.turnPlan;
   const includeDiagram = turnPlan.includeDiagram;
-  const retrieve = dependencies.retrieve ?? retrieveOkfContext;
-  const rawRetrieval = await retrieve(prepared.retrievalQuestion);
+  const scopePaperConceptId = prepared.scopePaperSlug
+    ? prepared.catalog.papers.find(
+        (paper) => paper.slug === prepared.scopePaperSlug,
+      )?.conceptId ?? null
+    : null;
+  // Paper scope assembles the complete native OKF record for the one selected
+  // paper — no broad all-corpus retrieval. A test-provided `retrieve` override
+  // still wins so fixtures stay in control.
+  const rawRetrieval = dependencies.retrieve
+    ? await dependencies.retrieve(prepared.retrievalQuestion)
+    : scopePaperConceptId
+      ? await assembleCompletePaperContext(
+          scopePaperConceptId,
+          prepared.retrievalQuestion,
+        )
+      : await retrieveOkfContext(prepared.retrievalQuestion);
   const retrieval = await assembleNativeOkfContextualRetrieval(
     prepared,
     rawRetrieval,
@@ -978,6 +1055,17 @@ async function answerNativeOkfChatUnchecked(
     })
     .map((concept) => concept.conceptId),
     ...activeProposalSupportIds,
+    // In paper scope the whole paper record is the evidence set: keep every
+    // canonical design-knowledge concept protected from context trimming, and
+    // require the answer to cite at least one concept from this paper.
+    ...(prepared.scopePaperSlug
+      ? retrieval.finalConcepts
+          .filter(
+            (concept) =>
+              concept.type !== "paper" && concept.type !== "reference",
+          )
+          .map((concept) => concept.conceptId)
+      : []),
   ])];
   const context = buildNativeOkfGroundedContext(
     retrieval,
@@ -1221,6 +1309,7 @@ async function answerNativeOkfChatUnchecked(
       : []),
     ...draftPolicy.errors,
   ];
+  // A dropped paper scope is reported once, centrally, by answerNativeOkfChat.
   const warnings = userFacingRetrievalWarnings(
     retrieval,
     expectedScopedEvidenceIds,

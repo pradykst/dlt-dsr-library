@@ -668,7 +668,10 @@ test("drawer, source disclosure, copy, and history UI expose the reviewed behavi
   assert.equal(nativeOkfVisibleHistoryExceedsModelContext(MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES), false);
   assert.equal(nativeOkfVisibleHistoryExceedsModelContext(MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES + 1), true);
   assert.match(workbench, /setEntries\(\[\]\)/);
-  assert.match(workbench, /setConversationState\(createInitialNativeOkfConversationState\(\)\)/);
+  assert.match(
+    workbench,
+    /setConversationState\(\{\s*\.\.\.createInitialNativeOkfConversationState\(\),\s*scope: resetScope,?\s*\}\)/u,
+  );
 });
 
 test("generated prose forbids em dashes while stored map code leaves source titles untouched", async () => {

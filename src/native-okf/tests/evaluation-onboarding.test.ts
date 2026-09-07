@@ -141,39 +141,59 @@ test("production starter logic contains no canonical paper-title or topic branch
   }
 });
 
-test("starter component is explicit, keyboard-native, and API-free", async () => {
+test("corpus starter cards are the four capabilities and never the removed single-paper workflows", async () => {
+  const { NATIVE_OKF_CORPUS_STARTERS } = await import(
+    "../shared/corpus-starters.ts"
+  );
+  assert.deepEqual(
+    NATIVE_OKF_CORPUS_STARTERS.map((starter: { label: string }) => starter.label),
+    [
+      "Find relevant design knowledge",
+      "Discover reusable design patterns",
+      "Compare two papers",
+      "Build a design proposal",
+    ],
+  );
+  for (const starter of NATIVE_OKF_CORPUS_STARTERS) {
+    assert.ok(starter.description.length > 20, starter.label);
+    assert.ok(starter.example.length > 20, starter.label);
+  }
+  const labels = NATIVE_OKF_CORPUS_STARTERS.map(
+    (starter: { label: string }) => starter.label,
+  );
+  assert.equal(labels.includes("Explore a paper map"), false);
+  assert.equal(labels.includes("Inspect design knowledge"), false);
+});
+
+test("starter component prefills editable examples and never auto-sends or calls an API", async () => {
   const component = await source(
     "src/native-okf/components/chat/GuidedChatStarters.tsx",
   );
-  assert.equal((component.match(/label: "/gu) ?? []).length, 4);
-  assert.match(component, /Ask this question/u);
+  assert.match(component, /NATIVE_OKF_CORPUS_STARTERS/u);
+  assert.match(component, /onPrefill\(starter\.example\)/u);
   assert.match(component, /<button/u);
-  assert.match(component, /<select/u);
-  assert.match(component, /<textarea/u);
-  assert.match(component, /aria-expanded=/u);
-  assert.doesNotMatch(component, /diagramQuotaExhausted/u);
-  assert.match(component, /This workflow is text-only unless you enable the existing diagram control/u);
-  assert.match(component, /min-w-0 max-w-full/u);
+  assert.doesNotMatch(component, /<select/u);
   assert.doesNotMatch(component, /\bfetch\s*\(/u);
   assert.doesNotMatch(component, /\/api\/native-okf/u);
+  assert.doesNotMatch(component, /submitQuestion/u);
+  assert.match(component, /nothing is\s*\n?\s*sent until you press Send/u);
 });
 
-test("guided submissions reuse the existing chat handler and New chat resets only conversation UI", async () => {
+test("New chat resets scope and conversation, and the @ / paper helper text is present", async () => {
   const workbench = await source(
     "src/native-okf/components/chat/ChatWorkbench.tsx",
   );
   assert.equal((workbench.match(/async function submitQuestion\(/gu) ?? []).length, 1);
-  assert.match(workbench, /submitQuestion\(undefined, \{/u);
-  assert.match(workbench, /setStartersOpen\(false\)/u);
-  assert.match(workbench, /Guided starters/u);
+  assert.match(workbench, /onPrefill=\{prefillComposer\}/u);
   assert.match(workbench, /setStartersOpen\(true\)/u);
-  assert.match(workbench, /clearNativeOkfChatSession\(window\.sessionStorage\)/u);
+  assert.match(workbench, /clearNativeOkfChatSession\(window\.sessionStorage, sessionKey\)/u);
   assert.doesNotMatch(workbench, /window\.localStorage/u);
+  assert.match(workbench, /Use <span[^>]*>@<\/span> or\{" "\}\s*<span[^>]*>\/paper<\/span>/u);
   const clearStart = workbench.indexOf("function clearConversation()");
-  const clearEnd = workbench.indexOf("function setGuidedDiagramDefault", clearStart);
-  const clearBody = workbench.slice(clearStart, clearEnd);
-  assert.doesNotMatch(clearBody, /setQuota\(/u);
-  assert.doesNotMatch(clearBody, /accessState/u);
+  const clearBody = workbench.slice(clearStart, clearStart + 900);
+  // Main chat New Chat returns to All papers; drawer New Chat keeps its paper.
+  assert.match(clearBody, /lockedScope \?\? \{ type: "corpus" as const \}/u);
+  assert.match(clearBody, /setScope\(resetScope\)/u);
 });
 
 test("evaluation callout requires a substantive text or diagram answer", () => {
@@ -270,10 +290,10 @@ test("deployment hygiene covers production start, ignored artifacts, and canonic
   assert.doesNotMatch(sitemap, /\/admin/u);
 });
 
-test("the server chat page passes the bounded catalog without introducing an API", async () => {
+test("the server chat page passes the bounded scope catalog without introducing an API", async () => {
   const page = await source("app/native-okf/chat/page.tsx");
-  assert.match(page, /getNativeOkfGuidedStarterPapers\(\)/u);
-  assert.match(page, /<ChatWorkbench starterPapers=\{starterPapers\}/u);
+  assert.match(page, /getNativeOkfScopePapers\(\)/u);
+  assert.match(page, /<ChatWorkbench papers=\{scopePapers\}/u);
   assert.doesNotMatch(page, /fetch\(/u);
   assert.doesNotMatch(page, /fullText|markdownBody|rawBody/u);
 });

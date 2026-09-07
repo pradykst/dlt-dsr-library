@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { WorkbenchView } from "@/src/native-okf/components/WorkbenchView";
+import { getNativeOkfScopePapers } from "@/src/native-okf/server/scope-papers";
 import { getPaperWorkbenchViewModel } from "@/src/native-okf/server/workbench";
 
 export const runtime = "nodejs";
@@ -22,5 +23,6 @@ export default async function NativeOkfPaperPage({
   }
 
   if (!view) notFound();
-  return <WorkbenchView view={view} />;
+  const scopePapers = await getNativeOkfScopePapers();
+  return <WorkbenchView view={view} scopePapers={scopePapers} />;
 }

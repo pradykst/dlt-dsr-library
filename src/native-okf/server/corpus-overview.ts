@@ -69,6 +69,15 @@ function paperOverview(bundle: OkfBundle, paper: OkfConcept): CorpusPaperOvervie
   };
 }
 
+/** The compact overview line for a single paper, by its concept id. */
+export function buildSinglePaperOverview(
+  bundle: OkfBundle,
+  paperConceptId: string,
+): CorpusPaperOverview | undefined {
+  const paper = bundle.conceptsById.get(paperConceptId);
+  return paper && paper.type === "paper" ? paperOverview(bundle, paper) : undefined;
+}
+
 /**
  * Builds a compact, deterministic paper inventory from the native OKF graph.
  *
