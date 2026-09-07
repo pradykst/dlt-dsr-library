@@ -6,7 +6,14 @@ import {
   buildPaperPresentation,
   publicPaperFrontmatter,
 } from "../shared/paper-presentation.ts";
+import type { NativeOkfScopePaper } from "../shared/paper-scope.ts";
 import { NATIVE_OKF_PUBLIC_ROUTES } from "../shared/routes.ts";
+import {
+  CONCEPT_WORKBENCH_SECTIONS,
+  PAPER_WORKBENCH_SECTIONS,
+  workbenchSectionEyebrow,
+} from "../shared/workbench-sections.ts";
+import { PaperChatLauncher } from "./chat/PaperChatLauncher.tsx";
 import type { JsonValue, WorkbenchViewModel } from "../shared/types.ts";
 import { ConceptCard } from "./ConceptCard.tsx";
 import { EmptyState } from "./EmptyState.tsx";
@@ -19,25 +26,16 @@ import { NativeOkfShell } from "./NativeOkfShell.tsx";
 import { RelationshipList } from "./RelationshipList.tsx";
 import { TypeBadge } from "./TypeBadge.tsx";
 
-const CONCEPT_SECTION_LINKS = [
-  ["overview", "Overview"],
-  ["design-knowledge", "Design knowledge"],
-  ["relationships", "Relationships"],
-  ["graph", "Graph"],
-  ["raw-metadata", "Raw metadata"],
-] as const;
-
-const PAPER_SECTION_LINKS = [
-  ["overview", "Overview"],
-  ["dsr-grid", "DSR grid"],
-  ["design-knowledge", "Design knowledge"],
-  ["graph", "Paper design map"],
-  ["raw-metadata", "Publication metadata"],
-] as const;
-
-export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
+export function WorkbenchView({
+  view,
+  scopePapers,
+}: {
+  view: WorkbenchViewModel;
+  scopePapers?: readonly NativeOkfScopePaper[];
+}) {
   const { concept } = view;
   const isPaper = view.kind === "paper";
+  const paperScopeId = isPaper ? concept.id.replace(/^papers\//u, "") : "";
   const frontmatter = concept.frontmatter;
   const paperPresentation = isPaper
     ? buildPaperPresentation(concept.markdownBody, view.linkedGroups)
@@ -70,7 +68,121 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
         },
       ];
 
+  // On a paper page the design map is the high-level overview, so it is placed
+  // above the detailed Design knowledge cards. Concept pages keep their existing
+  // order (linked concepts, relationships, then the local graph). Section order
+  // and eyebrow numbers come from ../shared/workbench-sections.ts.
+  const sectionKind = isPaper ? "paper" : "concept";
+  const designKnowledgeSection = (
+    <WorkbenchSection
+      id="design-knowledge"
+      eyebrow={workbenchSectionEyebrow(sectionKind, "design-knowledge")}
+      title={isPaper ? "Design knowledge" : "Linked concepts"}
+      description={
+        isPaper
+          ? "Directly linked concepts, grouped by their represented design-knowledge category."
+          : "Concepts connected by incoming or outgoing native Markdown links."
+      }
+    >
+      {view.linkedGroups.length > 0 ? (
+        <div className="space-y-8">
+          {view.linkedGroups.map((group) => (
+            <section key={group.type} aria-labelledby={`group-${group.type}`}>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 id={`group-${group.type}`} className="font-serif text-2xl font-semibold text-ink">
+                  {group.typeLabel}
+                </h3>
+                <span
+                  aria-label={`${group.count} ${group.typeLabel}`}
+                  className="font-mono text-xs font-semibold text-muted"
+                >
+                  {group.count}
+                </span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {group.concepts.map((linkedConcept) => (
+                  <ConceptCard
+                    key={linkedConcept.id}
+                    concept={linkedConcept}
+                    meta={<code className="font-mono">{linkedConcept.id}</code>}
+                    showTypeBadge={false}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title={isPaper ? "No linked design knowledge" : "No linked concepts"}
+          description={isPaper
+            ? "The current library record contains no directly linked design knowledge."
+            : "The graph contains no directly connected concept documents for this item."
+          }
+        />
+      )}
+    </WorkbenchSection>
+  );
+
+  const relationshipsSection = !isPaper ? (
+    <WorkbenchSection
+      id="relationships"
+      eyebrow="03"
+      title="Relationships"
+      description="Directed links from Markdown. Heading context is displayed as derived metadata, not as a formal OKF predicate."
+    >
+      <div className="grid items-start gap-7 lg:grid-cols-2">
+        <RelationshipList
+          title="Outgoing links"
+          relationships={view.outgoing}
+          emptyMessage="This concept has no outgoing Markdown links."
+        />
+        <RelationshipList
+          title="Incoming backlinks"
+          relationships={view.incoming}
+          emptyMessage="No other concept links to this concept."
+        />
+      </div>
+    </WorkbenchSection>
+  ) : null;
+
+  const graphSection = (
+    <WorkbenchSection
+      id="graph"
+      eyebrow={workbenchSectionEyebrow(sectionKind, "graph")}
+      title={isPaper ? "Paper design map" : "Local graph"}
+      description={
+        isPaper
+          ? "The default semantic design map canonicalizes stored design relationships; Raw links retains the complete technical Markdown-link view."
+          : "One-hop by default, with an optional bounded two-hop view. Nodes are concept files and arrows are Markdown links."
+      }
+    >
+      {isPaper && view.paperDesignMap ? (
+        <PaperGraphViews
+          designMap={view.paperDesignMap}
+          graphOneHop={view.graphOneHop}
+          graphTwoHops={view.graphTwoHops}
+          selectedId={concept.id}
+        />
+      ) : (
+        <NativeOkfGraph
+          graphOneHop={view.graphOneHop}
+          graphTwoHops={view.graphTwoHops}
+          selectedId={concept.id}
+        />
+      )}
+    </WorkbenchSection>
+  );
+
   return (
+    <>
+    {isPaper && scopePapers && scopePapers.length > 0 ? (
+      <PaperChatLauncher
+        paperId={paperScopeId}
+        paperTitle={concept.title}
+        papers={scopePapers}
+      />
+    ) : null}
     <NativeOkfShell
       title={concept.title}
       eyebrow={isPaper ? "Research paper" : concept.typeLabel}
@@ -107,13 +219,13 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
           aria-label={isPaper ? "Paper sections" : "Concept sections"}
           className="sticky top-0 z-10 -mx-2 flex gap-1 overflow-x-auto border-y border-line bg-paper/95 px-2 py-3 backdrop-blur"
         >
-          {(isPaper ? PAPER_SECTION_LINKS : CONCEPT_SECTION_LINKS).map(([id, label]) => (
+          {(isPaper ? PAPER_WORKBENCH_SECTIONS : CONCEPT_WORKBENCH_SECTIONS).map((section) => (
             <a
-              key={id}
-              href={`#${id}`}
+              key={section.id}
+              href={`#${section.id}`}
               className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted transition hover:bg-white hover:text-ink"
             >
-              {!isPaper && id === "design-knowledge" ? "Linked concepts" : label}
+              {section.navLabel}
             </a>
           ))}
         </nav>
@@ -186,102 +298,18 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
           </WorkbenchSection>
         ) : null}
 
-        <WorkbenchSection
-          id="design-knowledge"
-          eyebrow={isPaper ? "03" : "02"}
-          title={isPaper ? "Design knowledge" : "Linked concepts"}
-          description={
-            isPaper
-              ? "Directly linked concepts, grouped by their represented design-knowledge category."
-              : "Concepts connected by incoming or outgoing native Markdown links."
-          }
-        >
-          {view.linkedGroups.length > 0 ? (
-            <div className="space-y-8">
-              {view.linkedGroups.map((group) => (
-                <section key={group.type} aria-labelledby={`group-${group.type}`}>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <h3 id={`group-${group.type}`} className="font-serif text-2xl font-semibold text-ink">
-                      {group.typeLabel}
-                    </h3>
-                    <span
-                      aria-label={`${group.count} ${group.typeLabel}`}
-                      className="font-mono text-xs font-semibold text-muted"
-                    >
-                      {group.count}
-                    </span>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {group.concepts.map((linkedConcept) => (
-                      <ConceptCard
-                        key={linkedConcept.id}
-                        concept={linkedConcept}
-                        meta={<code className="font-mono">{linkedConcept.id}</code>}
-                        showTypeBadge={false}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title={isPaper ? "No linked design knowledge" : "No linked concepts"}
-              description={isPaper
-                ? "The current library record contains no directly linked design knowledge."
-                : "The graph contains no directly connected concept documents for this item."
-              }
-            />
-          )}
-        </WorkbenchSection>
-
-        {!isPaper ? (
-          <WorkbenchSection
-            id="relationships"
-            eyebrow="03"
-            title="Relationships"
-            description="Directed links from Markdown. Heading context is displayed as derived metadata, not as a formal OKF predicate."
-          >
-            <div className="grid items-start gap-7 lg:grid-cols-2">
-              <RelationshipList
-                title="Outgoing links"
-                relationships={view.outgoing}
-                emptyMessage="This concept has no outgoing Markdown links."
-              />
-              <RelationshipList
-                title="Incoming backlinks"
-                relationships={view.incoming}
-                emptyMessage="No other concept links to this concept."
-              />
-            </div>
-          </WorkbenchSection>
-        ) : null}
-
-        <WorkbenchSection
-          id="graph"
-          eyebrow="04"
-          title={isPaper ? "Paper design map" : "Local graph"}
-          description={
-            isPaper
-              ? "The default semantic design map canonicalizes stored design relationships; Raw links retains the complete technical Markdown-link view."
-              : "One-hop by default, with an optional bounded two-hop view. Nodes are concept files and arrows are Markdown links."
-          }
-        >
-          {isPaper && view.paperDesignMap ? (
-            <PaperGraphViews
-              designMap={view.paperDesignMap}
-              graphOneHop={view.graphOneHop}
-              graphTwoHops={view.graphTwoHops}
-              selectedId={concept.id}
-            />
-          ) : (
-            <NativeOkfGraph
-              graphOneHop={view.graphOneHop}
-              graphTwoHops={view.graphTwoHops}
-              selectedId={concept.id}
-            />
-          )}
-        </WorkbenchSection>
+        {isPaper ? (
+          <>
+            {graphSection}
+            {designKnowledgeSection}
+          </>
+        ) : (
+          <>
+            {designKnowledgeSection}
+            {relationshipsSection}
+            {graphSection}
+          </>
+        )}
 
         <WorkbenchSection
           id="raw-metadata"
@@ -309,6 +337,7 @@ export function WorkbenchView({ view }: { view: WorkbenchViewModel }) {
         </WorkbenchSection>
       </div>
     </NativeOkfShell>
+    </>
   );
 }
 

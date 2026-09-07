@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import { ChatWorkbench } from "@/src/native-okf/components/chat/ChatWorkbench";
 import { NativeOkfShell } from "@/src/native-okf/components/NativeOkfShell";
-import { getNativeOkfGuidedStarterPapers } from "@/src/native-okf/server/guided-starters";
+import { getNativeOkfScopePapers } from "@/src/native-okf/server/scope-papers";
+import type { NativeOkfChatScope } from "@/src/native-okf/shared/chat-types";
 import { NATIVE_OKF_PUBLIC_ROUTES } from "@/src/native-okf/shared/routes";
 
 export const runtime = "nodejs";
@@ -16,8 +17,24 @@ export const metadata: Metadata = {
   alternates: { canonical: "/chat" },
 };
 
-export default async function NativeOkfChatPage() {
-  const starterPapers = await getNativeOkfGuidedStarterPapers();
+export default async function NativeOkfChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [scopePapers, resolvedSearchParams] = await Promise.all([
+    getNativeOkfScopePapers(),
+    searchParams,
+  ]);
+
+  const paperParam = resolvedSearchParams.paper;
+  const requestedPaperId = Array.isArray(paperParam) ? paperParam[0] : paperParam;
+  const initialScope: NativeOkfChatScope | undefined =
+    requestedPaperId &&
+    scopePapers.some((paper) => paper.paperId === requestedPaperId)
+      ? { type: "paper", paperId: requestedPaperId }
+      : undefined;
+
   return (
     <NativeOkfShell
       title="Chat with the design knowledge library"
@@ -33,7 +50,7 @@ export default async function NativeOkfChatPage() {
         </Link>
       }
     >
-      <ChatWorkbench starterPapers={starterPapers} />
+      <ChatWorkbench papers={scopePapers} initialScope={initialScope} />
     </NativeOkfShell>
   );
 }

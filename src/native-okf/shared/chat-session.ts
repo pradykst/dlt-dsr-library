@@ -236,13 +236,16 @@ export function parseNativeOkfChatSession(
   }
 }
 
+/**
+ * The paper-page chat drawer keeps its own session under a per-paper key so it
+ * never collides with the main chat's conversation.
+ */
 export function readNativeOkfChatSession(
   storage: StorageReader,
+  key: string = NATIVE_OKF_CHAT_SESSION_KEY,
 ): NativeOkfChatSessionPayload | null {
   try {
-    return parseNativeOkfChatSession(
-      storage.getItem(NATIVE_OKF_CHAT_SESSION_KEY),
-    );
+    return parseNativeOkfChatSession(storage.getItem(key));
   } catch {
     return null;
   }
@@ -251,11 +254,12 @@ export function readNativeOkfChatSession(
 export function writeNativeOkfChatSession(
   storage: StorageWriter,
   payload: NativeOkfChatSessionPayload,
+  key: string = NATIVE_OKF_CHAT_SESSION_KEY,
 ): boolean {
   const serialized = serializeNativeOkfChatSession(payload);
   if (!serialized) return false;
   try {
-    storage.setItem(NATIVE_OKF_CHAT_SESSION_KEY, serialized);
+    storage.setItem(key, serialized);
     return true;
   } catch {
     return false;
@@ -264,9 +268,10 @@ export function writeNativeOkfChatSession(
 
 export function clearNativeOkfChatSession(
   storage: StorageRemover,
+  key: string = NATIVE_OKF_CHAT_SESSION_KEY,
 ): void {
   try {
-    storage.removeItem(NATIVE_OKF_CHAT_SESSION_KEY);
+    storage.removeItem(key);
   } catch {
     // Browser storage may be disabled. New chat still clears memory.
   }

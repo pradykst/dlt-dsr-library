@@ -249,6 +249,7 @@ function responseClient(
 function establishedState(): NativeOkfConversationState {
   return {
     version: 1,
+    scope: { type: "corpus" },
     activePaperSlugs: ["blockchain-for-the-iot"],
     activeConceptIds: [
       "design-knowledge/iot-dp1",

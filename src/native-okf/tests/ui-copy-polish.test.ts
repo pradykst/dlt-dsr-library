@@ -169,9 +169,24 @@ test("paper page keeps structured knowledge while hiding technical and relations
     source("src/native-okf/components/WorkbenchView.tsx"),
     source("src/native-okf/components/PaperDsrGrid.tsx"),
   ]);
-  const paperLinks = workbench.match(/const PAPER_SECTION_LINKS = \[[\s\S]*?\] as const;/u)?.[0] ?? "";
-  assert.doesNotMatch(paperLinks, /Relationships/u);
-  assert.match(workbench, /\{!isPaper \? \([\s\S]*?id="relationships"/u);
+  const { PAPER_WORKBENCH_SECTIONS } = await import(
+    "../shared/workbench-sections.ts"
+  );
+  assert.equal(
+    PAPER_WORKBENCH_SECTIONS.some((section: { navLabel: string }) =>
+      /Relationships/u.test(section.navLabel)
+    ),
+    false,
+  );
+  // The relationships section is defined only for concept pages and is never
+  // placed into the paper render branch.
+  const normalized = workbench.replace(/\r/gu, "");
+  assert.match(normalized, /const relationshipsSection = !isPaper \? \([\s\S]*?id="relationships"/u);
+  // Paper render branch: map, then Design knowledge, and no relationships.
+  assert.match(
+    normalized,
+    /\{isPaper \? \(\s*<>\s*\{graphSection\}\s*\{designKnowledgeSection\}\s*<\/>\s*\) : \(\s*<>\s*\{designKnowledgeSection\}\s*\{relationshipsSection\}\s*\{graphSection\}\s*<\/>/u,
+  );
   assert.match(workbench, /paperPresentation\?\.narrativeMarkdown/u);
   assert.match(workbench, /title=\{isPaper \? "Design knowledge"/u);
   assert.match(workbench, /publicPaperFrontmatter\(frontmatter\)/u);

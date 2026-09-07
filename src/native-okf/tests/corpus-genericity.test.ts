@@ -149,6 +149,7 @@ function emptyState(
 ): NativeOkfConversationState {
   return {
     version: 1,
+    scope: { type: "corpus" },
     activePaperSlugs: [paperSlug],
     activeConceptIds: [...conceptIds].slice(0, 8),
     activeSourceIds: [...conceptIds].slice(0, 12),

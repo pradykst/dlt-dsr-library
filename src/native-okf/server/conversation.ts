@@ -1,7 +1,8 @@
-import "server-only";
+﻿import "server-only";
 
 import type {
   NativeOkfChatRequest,
+  NativeOkfChatScope,
   NativeOkfClarification,
   NativeOkfConversationIntent,
   NativeOkfConversationState,
@@ -41,6 +42,7 @@ import { applyNativeOkfStructuredAnalysis } from "./structured-analysis.ts";
 import type { RetrievalResult } from "./retrieval-types.ts";
 import type { OkfConcept } from "./types.ts";
 import { isNativeOkfLiveDataRequest } from "./live-data-gate.ts";
+import { nativeOkfOutOfScopeCategory } from "./scope-guard.ts";
 
 const COMPARISON_PATTERN =
   /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differ(?:s|ing|ed)?|differences?|versus|vs\.?)\b/iu;
@@ -132,6 +134,9 @@ const EXPLICIT_RPF_STRUCTURE_PATTERN =
 const ONLY_PAPER_PATTERN =
   /\b(?:use|show|keep|base\s+(?:it|the revision)\s+on)?\s*only\s+(?:the\s+)?(?:first|second|this|that|these two|[\p{L}\p{N}][^.!?]{0,160})\s+papers?\b/iu;
 const EXCLUDE_PAPER_PATTERN = /\bexclude\b[^.!?]{0,180}\bpaper\b/iu;
+// A researcher in paper mode explicitly asking to leave the single-paper scope.
+const BROADEN_SCOPE_PATTERN =
+  /\b(?:across|throughout|within)\s+(?:the\s+)?(?:whole\s+|entire\s+|full\s+)?(?:library|corpus)\b|\b(?:the\s+)?(?:whole|entire|rest\s+of\s+the|other|another|remaining|all\s+(?:the\s+)?other)\s+(?:papers?|studies|articles?|works?|publications?)\b|\bsearch\s+(?:the\s+)?(?:whole\s+|entire\s+)?(?:library|corpus)\b|\b(?:all|every)\s+(?:the\s+)?papers?\b|\bacross\s+(?:multiple|several|many|all)\s+(?:papers?|publications?)\b/iu;
 const CATEGORY_STORED_MAP_FOLLOW_UP_PATTERN =
   /(?:^\s*(?:please\s+)?(?:show|display|draw|visuali[sz]e|map|give)(?:\s+me)?\b|^\s*(?:please\s+)?(?:just|only)\b|\b(?:only|layer)\s*[?.!]*$)/iu;
 const AMBIGUOUS_MAP_AGAIN_PATTERN =
@@ -231,6 +236,17 @@ export interface PreparedNativeOkfChatRequest {
   activeComparisonPaperSlugs: string[];
   structuredReferentPaperSlugs: string[];
   restrictedPaperSlugs: string[];
+  /**
+   * The canonical slug of the paper this turn is scoped to, or `null` for
+   * corpus. Resolved server-side from the request/state scope and this turn's
+   * broaden/switch intent; drives complete-paper context assembly and the
+   * paper-only grounding guarantee.
+   */
+  scopePaperSlug: string | null;
+  /** The scope in effect after this turn â€” echoed into every response state. */
+  resolvedScope: NativeOkfChatScope;
+  /** Set when a requested paper scope could not be resolved to a real paper. */
+  scopeWarning: string | null;
   focusedConceptIds: string[];
   requestedConceptKinds: NativeOkfRequestedConceptKind[];
   /** Non-empty only when the user explicitly asked for an exclusively filtered
@@ -275,6 +291,17 @@ export interface ResolvedNativeOkfTurnPlan {
   refinementIntent: boolean;
   categoryStoredMapFollowUp: boolean;
   historyContextTruncated: boolean;
+  /** Canonical slug of the paper this turn is scoped to; `null` for corpus. */
+  scopePaperSlug: string | null;
+  /** The scope in effect after this turn. */
+  scope: NativeOkfChatScope;
+  /**
+   * Why a SCOPE_GUARDRAIL turn short-circuited: `live-data` for requests that
+   * need a current external feed, `out-of-scope` for requests unmistakably
+   * outside the library (arithmetic, recipes, general knowledge). `null` for
+   * every other mode.
+   */
+  scopeGuardrail: "live-data" | "out-of-scope" | null;
 }
 
 function normalize(value: string): string {
@@ -488,8 +515,13 @@ export function validateNativeOkfConversationState(
           sourcePaperSlugs: [],
         }
       : null);
+  const scope: NativeOkfConversationState["scope"] =
+    state.scope.type === "paper" && paperSlugs.has(state.scope.paperId)
+      ? { type: "paper", paperId: state.scope.paperId }
+      : { type: "corpus" };
   return {
     version: 1,
+    scope,
     activePaperSlugs: uniqueBounded(
       state.activePaperSlugs.filter((slug) => paperSlugs.has(slug)),
       MAX_NATIVE_OKF_ACTIVE_PAPERS,
@@ -533,7 +565,7 @@ function escapeRegExp(value: string): string {
  * for intent classification (e.g. synthesis-intent detection).
  *
  * Real paper titles routinely contain words like "Designing", "Privacy-Preserving", or
- * "Framework" — a natural comparison question that quotes two such titles verbatim
+ * "Framework" â€” a natural comparison question that quotes two such titles verbatim
  * (e.g. "How do \"Designing X\" and \"Y: A Framework\" differ?") would otherwise trip
  * synthesis-intent regexes on the TITLES' own vocabulary rather than the user's actual
  * request, silently converting a comparison into a design-synthesis turn. Stripping the
@@ -580,7 +612,7 @@ function authorSurname(fullName: string): string {
 }
 
 function paperAuthorFullNames(paper: NativeOkfConversationPaper): string[] {
-  // Defensive against fixtures/catalogs built without `authors` — never assume it is set.
+  // Defensive against fixtures/catalogs built without `authors` â€” never assume it is set.
   return (paper.authors ?? [])
     .map((name) => normalize(name))
     .filter((name) => name.length >= MIN_AUTHOR_FULL_NAME_LENGTH);
@@ -613,7 +645,7 @@ function paperMentionScore(
   if (titlePrefix.length >= 10 && normalizedQuestion.includes(titlePrefix)) {
     return 9_000 + titlePrefix.length;
   }
-  // A full author name is as distinctive as a slug match — resolves even without
+  // A full author name is as distinctive as a slug match â€” resolves even without
   // an accompanying word like "paper" or "study".
   const authorNameMatch = paperAuthorFullNames(paper).find((name) =>
     normalizedQuestion.includes(name)
@@ -626,7 +658,7 @@ function paperMentionScore(
   }
 
   const questionTerms = new Set(normalizedQuestion.split(" "));
-  // A bare surname is a weaker, single-word signal — required to appear as a whole
+  // A bare surname is a weaker, single-word signal â€” required to appear as a whole
   // token (never a substring of an unrelated word) and ranked below slug matches.
   const surnameMatch = paperAuthorSurnames(paper).find((surname) =>
     questionTerms.has(surname)
@@ -884,7 +916,7 @@ const EXPLICIT_ONLY_FILTER_WORD_PATTERN = /\b(?:only|just|solely|exclusively)\b/
  * The concept-kind words a question happens to mention ("what design principles
  * are represented...") are a reasonable signal for scoping the PROSE topic, but
  * they must not, by themselves, shrink the stored-paper DIAGRAM down to an
- * isolated subset — a diagram filtered to one kind (e.g. only principle nodes)
+ * isolated subset â€” a diagram filtered to one kind (e.g. only principle nodes)
  * necessarily drops the requirement/feature nodes those principles connect to,
  * turning a connected canonical map into disconnected fragments. Only an
  * explicit exclusivity word ("only"/"just"/"solely"/"exclusively") signals that
@@ -1056,7 +1088,7 @@ export function inferActiveSynthesisDiagramRefinement(
   // A named structural object ("add another feature", "connect both requirements") or an
   // explicit connect phrase is the clearest signal, but requiring one unconditionally
   // rejected natural refinements that name a topical concern instead of a formal layer
-  // ("add stronger privacy", "make this more robust") — with an active validated draft
+  // ("add stronger privacy", "make this more robust") â€” with an active validated draft
   // already required above, an edit-action verb that isn't a pure explain-only question
   // is itself sufficient; the object-noun/connect check only adds confidence, it does not
   // gate acceptance.
@@ -1201,7 +1233,7 @@ function clarificationFor(
     !state.lastSynthesisProblem &&
     !state.latestValidatedSynthesisDraft &&
     // A first-turn request can itself use a mutation-shaped verb ("make a system for
-    // consent management") without being an ambiguous follow-up refinement — only ask
+    // consent management") without being an ambiguous follow-up refinement â€” only ask
     // for the domain when the question doesn't already name one explicitly (via the
     // same "for <domain>" / cross-organizational framing used elsewhere). This
     // deliberately excludes the looser "3 meaningful words" fallback used by
@@ -1330,7 +1362,9 @@ export async function assembleNativeOkfContextualRetrieval(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
 ): Promise<RetrievalResult> {
-  const paperSlugs = prepared.structuredReferentPaperSlugs.length > 0
+  const paperSlugs = prepared.scopePaperSlug
+    ? [prepared.scopePaperSlug]
+    : prepared.structuredReferentPaperSlugs.length > 0
     ? prepared.structuredReferentPaperSlugs
     : prepared.activeComparisonPaperSlugs.length >= 2
       ? prepared.activeComparisonPaperSlugs
@@ -1370,10 +1404,16 @@ export async function assembleNativeOkfContextualRetrieval(
           prepared.requestedConceptKinds.length > 0
         ? prepared.explicitPaperSlugs
         : [];
+  // Paper scope is a hard evidence boundary, enforced here rather than trusted
+  // from whichever retrieval produced the raw result. Complete-paper assembly
+  // already yields only this paper's record, so the filter is a no-op on that
+  // path; it is what makes the paper-only guarantee deterministic for every
+  // other path (a conversationally derived comparison set, an injected
+  // retrieval, or any future retrieval strategy).
   const scoped = restrictNativeOkfRetrievalToPaperSlugs(
     prepared,
     prioritized,
-    evidencePaperSlugs,
+    prepared.scopePaperSlug ? [prepared.scopePaperSlug] : evidencePaperSlugs,
   );
   return applyNativeOkfStructuredAnalysis(scoped, {
     question: prepared.effectiveQuestion,
@@ -1452,15 +1492,60 @@ export function hasSufficientNativeOkfSynthesisGrounding(
   ).length >= 2;
 }
 
+function sameChatScope(
+  left: NativeOkfChatScope,
+  right: NativeOkfChatScope,
+): boolean {
+  if (left.type !== right.type) return false;
+  return left.type !== "paper" ||
+    left.paperId === (right as { paperId: string }).paperId;
+}
+
+/**
+ * When the researcher changes the conversational scope between turns â€” picking a
+ * paper, switching to a different paper, or returning to All papers â€” the
+ * referents carried by conversation state belong to the *previous* evidence
+ * universe. Keeping them lets a plain follow-up ("explain the map", "show it
+ * again") resolve against the previous paper's stored map or a previous
+ * proposal draft while the visible chip already names the new scope.
+ *
+ * A deliberate scope change therefore drops the carried evidence referents and
+ * diagram subject. It never touches an in-flight clarification: the researcher
+ * is mid-answer to a question the server asked, and that loop owns its own
+ * problem state.
+ */
+function withScopeChangeReset(
+  state: NativeOkfConversationState,
+  requestScope: NativeOkfChatScope | undefined,
+): NativeOkfConversationState {
+  if (requestScope === undefined) return state;
+  if (sameChatScope(requestScope, state.scope)) return state;
+  if (state.pendingClarification) return state;
+  return {
+    ...state,
+    activePaperSlugs: [],
+    activeComparisonPaperSlugs: [],
+    activeStructuredResultPaperSlugs: [],
+    activeConceptIds: [],
+    activeSourceIds: [],
+    lastIntent: "answer",
+    lastDiagramRequested: false,
+    lastSynthesisProblem: null,
+    synthesisClarificationRounds: 0,
+    latestValidatedSynthesisDraft: null,
+    synthesisDraft: null,
+  };
+}
+
 export async function prepareNativeOkfChatRequest(
   request: NativeOkfChatRequest,
   catalogInput?: NativeOkfConversationCatalog,
 ): Promise<PreparedNativeOkfChatRequest> {
   const catalog =
     catalogInput ?? (await loadNativeOkfConversationCatalog());
-  const validatedState = validateNativeOkfConversationState(
-    request.conversationState,
-    catalog,
+  const validatedState = withScopeChangeReset(
+    validateNativeOkfConversationState(request.conversationState, catalog),
+    request.scope,
   );
   const pendingOriginal =
     validatedState.pendingClarification?.originalQuestion;
@@ -1468,6 +1553,19 @@ export async function prepareNativeOkfChatRequest(
     ? `${pendingOriginal}\nClarification response: ${request.question}`
     : request.question;
   const directCorpusQuery = CORPUS_QUERY_PATTERN.test(effectiveQuestion);
+  // First-class conversational scope. The request's scope is authoritative for
+  // this turn; the persisted state carries it between turns. `paperId` is always
+  // resolved against the canonical repository â€” a stale or unknown paper falls
+  // back to corpus rather than silently scoping to nothing.
+  const catalogPaperSlugSet = new Set(catalog.papers.map((paper) => paper.slug));
+  const requestedScope = request.scope ?? validatedState.scope;
+  const requestedScopePaperSlug =
+    requestedScope.type === "paper" &&
+      catalogPaperSlugSet.has(requestedScope.paperId)
+      ? requestedScope.paperId
+      : null;
+  const unresolvedScopePaper =
+    requestedScope.type === "paper" && requestedScopePaperSlug === null;
   const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
     effectiveQuestion,
     catalog,
@@ -1558,6 +1656,41 @@ export async function prepareNativeOkfChatRequest(
         : [];
   const corpusQuery = directCorpusQuery ||
     structuredReferentPaperSlugs.length > 0;
+
+  // Resolve how the active paper scope applies to this turn. A researcher in
+  // paper mode who explicitly asks to compare with another paper, search the
+  // whole library, or find related knowledge elsewhere is broadened to corpus
+  // for that turn (and the scope chip clears). Naming exactly one different
+  // paper switches the scope to that paper. Otherwise the scope holds, so plain
+  // follow-ups never need to repeat the paper title.
+  const otherExplicitPaperSlugs = explicitPaperSlugs.filter(
+    (slug) => slug !== requestedScopePaperSlug,
+  );
+  const broadenFromPaperScope = requestedScopePaperSlug !== null &&
+    (
+      directCorpusQuery ||
+      corpusQuery ||
+      (currentTurnComparisonRequested && otherExplicitPaperSlugs.length >= 1) ||
+      otherExplicitPaperSlugs.length >= 2 ||
+      BROADEN_SCOPE_PATTERN.test(effectiveQuestion)
+    );
+  const switchScopePaperSlug =
+    requestedScopePaperSlug !== null &&
+      !broadenFromPaperScope &&
+      !currentTurnComparisonRequested &&
+      otherExplicitPaperSlugs.length === 1
+      ? otherExplicitPaperSlugs[0]!
+      : null;
+  const scopePaperSlug = broadenFromPaperScope
+    ? null
+    : switchScopePaperSlug ?? requestedScopePaperSlug;
+  const resolvedScope: NativeOkfChatScope = scopePaperSlug
+    ? { type: "paper", paperId: scopePaperSlug }
+    : { type: "corpus" };
+  const scopeWarning = unresolvedScopePaper
+    ? "The selected paper is no longer in the library, so the paper scope was cleared and this turn covers all papers. Select a paper again to restrict answers and citations."
+    : null;
+
   const explicitSubjectChange =
     (explicitPaperSlugs.length > 0 || explicitConceptIds.length > 0) &&
     !EXCLUDE_PAPER_PATTERN.test(effectiveQuestion) &&
@@ -1585,7 +1718,16 @@ export async function prepareNativeOkfChatRequest(
       ? []
       : validatedState.activeSourceIds,
   };
-  const focusedPaperSlugs = structuredReferentPaperSlugs.length > 0
+  if (scopePaperSlug) {
+    // Paper scope is authoritative: short references ("this paper", a bare
+    // concept label, "why does it connect to that one") always resolve within
+    // the selected paper.
+    contextBase.activePaperSlugs = [scopePaperSlug];
+    contextBase.activeComparisonPaperSlugs = [];
+  }
+  const focusedPaperSlugs = scopePaperSlug
+    ? [scopePaperSlug]
+    : structuredReferentPaperSlugs.length > 0
     ? structuredReferentPaperSlugs
     : activeComparisonPaperSlugs.length > 0
       ? activeComparisonPaperSlugs
@@ -1619,7 +1761,7 @@ export async function prepareNativeOkfChatRequest(
     contextBase,
   );
   // With >=1 explicitly named paper, classify intent from the question with their
-  // own title text removed — real titles routinely contain words ("Designing",
+  // own title text removed â€” real titles routinely contain words ("Designing",
   // "Privacy-Preserving", "Framework") that would otherwise be misread as the
   // user's own synthesis-shaped request, even for a single stored-paper question
   // (e.g. "What design principles are represented in \"<a quoted paper title>\"?").
@@ -1648,12 +1790,14 @@ export async function prepareNativeOkfChatRequest(
   ) {
     synthesisIntent = false;
   }
-  const restrictedPaperSlugs = resolvedPaperRestriction(
-    effectiveQuestion,
-    explicitPaperSlugs,
-    focusedPaperSlugs,
-    validatedState,
-  );
+  const restrictedPaperSlugs = scopePaperSlug
+    ? [scopePaperSlug]
+    : resolvedPaperRestriction(
+        effectiveQuestion,
+        explicitPaperSlugs,
+        focusedPaperSlugs,
+        validatedState,
+      );
   const retrievalPaperSlugs = restrictedPaperSlugs.length > 0
     ? restrictedPaperSlugs
     : focusedPaperSlugs;
@@ -1686,7 +1830,7 @@ export async function prepareNativeOkfChatRequest(
   const storedPaperDiagram =
     // An edit-shaped utterance already recognized as refining the active validated
     // synthesis draft must never be reinterpreted as a request for some retrieved
-    // paper's stored map — "this"/"it" in e.g. "make this more robust and give an
+    // paper's stored map â€” "this"/"it" in e.g. "make this more robust and give an
     // updated diagram" otherwise satisfies the generic stored-map subject pattern.
     !activeDraftRefinement &&
     includeDiagram && focusedPaperSlugs.length === 1 &&
@@ -1782,9 +1926,20 @@ export async function prepareNativeOkfChatRequest(
       contextBase.lastSynthesisProblem?.problemStatement ??
       effectiveQuestion.slice(0, 800)
     : null;
+  const liveDataRequest = isNativeOkfLiveDataRequest(effectiveQuestion);
+  const outOfScopeRequest = !liveDataRequest &&
+    nativeOkfOutOfScopeCategory(effectiveQuestion) !== null;
+  const scopeGuardrail: ResolvedNativeOkfTurnPlan["scopeGuardrail"] =
+    clarification
+      ? null
+      : liveDataRequest
+        ? "live-data"
+        : outOfScopeRequest
+          ? "out-of-scope"
+          : null;
   const authoritativeMode: NativeOkfAuthoritativeTurnMode = clarification
     ? "CLARIFICATION"
-    : isNativeOkfLiveDataRequest(effectiveQuestion)
+    : scopeGuardrail !== null
       ? "SCOPE_GUARDRAIL"
       : activeDiagramQa
         ? "ACTIVE_DIAGRAM_QA"
@@ -1855,6 +2010,9 @@ export async function prepareNativeOkfChatRequest(
     activeComparisonPaperSlugs,
     structuredReferentPaperSlugs,
     restrictedPaperSlugs,
+    scopePaperSlug,
+    resolvedScope,
+    scopeWarning,
     focusedConceptIds,
     requestedConceptKinds: requestedKinds,
     diagramConceptKinds: diagramFilterKinds,
@@ -1901,6 +2059,9 @@ export async function prepareNativeOkfChatRequest(
       refinementIntent: activeDraftRefinement,
       categoryStoredMapFollowUp,
       historyContextTruncated,
+      scopePaperSlug,
+      scope: resolvedScope,
+      scopeGuardrail,
     },
   };
 }
@@ -1909,9 +2070,12 @@ export function clarificationConversationState(
   prepared: PreparedNativeOkfChatRequest,
 ): NativeOkfConversationState {
   const clarification = prepared.clarification;
-  if (!clarification) return prepared.validatedState;
+  if (!clarification) {
+    return { ...prepared.validatedState, scope: prepared.resolvedScope };
+  }
   return {
     ...prepared.validatedState,
+    scope: prepared.resolvedScope,
     lastIntent: "clarification",
     lastDiagramRequested: prepared.includeDiagram,
     pendingClarification: {
@@ -1929,7 +2093,7 @@ export function clarificationConversationState(
  * has been turned into a grounded follow-up question.
  *
  * It preserves the design problem (so the researcher never has to restate it),
- * carries the bounded round counter forward, and — critically — never records a
+ * carries the bounded round counter forward, and â€” critically â€” never records a
  * validated draft, active diagram subject, or `synthesized-flow` intent, because
  * no valid proposal exists yet. `pendingClarification.originalQuestion` holds the
  * preserved problem so the next turn resumes the same synthesis attempt via the
@@ -1947,6 +2111,7 @@ export function nativeOkfSynthesisClarificationState(
   const priorProblem = prepared.validatedState.lastSynthesisProblem ?? null;
   return {
     ...prepared.validatedState,
+    scope: prepared.resolvedScope,
     lastIntent: "clarification",
     lastDiagramRequested: true,
     pendingClarification: {
@@ -2170,6 +2335,7 @@ export function completedConversationState(
   );
   return {
     version: 1,
+    scope: prepared.resolvedScope,
     activePaperSlugs: papers,
     activeComparisonPaperSlugs: comparisonPapers,
     activeStructuredResultPaperSlugs,

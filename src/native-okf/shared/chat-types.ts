@@ -154,9 +154,34 @@ export function synthesisPrimaryLayer(
   }
 }
 
+/**
+ * The active conversational scope. `corpus` is the whole library (the default);
+ * `paper` restricts every answer, citation, source card, and stored map to one
+ * canonical paper. The canonical `paperId` (the paper's stable slug) is the
+ * trusted identity — a paper title is only display/search metadata and is never
+ * accepted from the client as identity.
+ */
+export type NativeOkfChatScope =
+  | { type: "corpus" }
+  | { type: "paper"; paperId: string };
+
+export const NATIVE_OKF_CORPUS_SCOPE: NativeOkfChatScope = { type: "corpus" };
+
+export function nativeOkfChatScopePaperId(
+  scope: NativeOkfChatScope | null | undefined,
+): string | null {
+  return scope && scope.type === "paper" ? scope.paperId : null;
+}
+
 export interface NativeOkfChatRequest {
   question: string;
   history?: NativeOkfChatHistoryMessage[];
+  /**
+   * The scope the composer is in when this turn is submitted. Authoritative for
+   * the turn; the server still resolves and validates `paperId` against the
+   * canonical repository. Omitted by older clients, which are treated as corpus.
+   */
+  scope?: NativeOkfChatScope;
   /**
    * `auto` lets the server resolve conversational diagram intent. `suppressed`
    * is reserved for an explicit user opt-out; it must not be inferred from an
@@ -230,6 +255,12 @@ export interface NativeOkfPendingClarification {
 
 export interface NativeOkfConversationState {
   version: typeof NATIVE_OKF_CONVERSATION_STATE_VERSION;
+  /**
+   * The persisted conversational scope. Defaults to corpus. A `paper` scope
+   * survives follow-up turns until the researcher switches paper or returns to
+   * All papers; New Chat resets it to corpus.
+   */
+  scope: NativeOkfChatScope;
   activePaperSlugs: string[];
   /** Explicitly compared papers; supporting retrieval never expands this set. */
   activeComparisonPaperSlugs?: string[];
@@ -275,11 +306,13 @@ export interface CompactNativeOkfSynthesisDraftState extends Omit<
 
 export interface NativeOkfConversationStateInput extends Omit<
   NativeOkfConversationState,
+  | "scope"
   | "activeSourceIds"
   | "lastSynthesisProblem"
   | "latestValidatedSynthesisDraft"
   | "synthesisDraft"
 > {
+  scope?: NativeOkfChatScope;
   activeSourceIds?: string[];
   lastSynthesisProblem?: SynthesisProblemState | null;
   latestValidatedSynthesisDraft?:
@@ -297,6 +330,7 @@ export interface NativeOkfClarification {
 export function createInitialNativeOkfConversationState(): NativeOkfConversationState {
   return {
     version: NATIVE_OKF_CONVERSATION_STATE_VERSION,
+    scope: { type: "corpus" },
     activePaperSlugs: [],
     activeComparisonPaperSlugs: [],
     activeStructuredResultPaperSlugs: [],
@@ -458,6 +492,13 @@ export interface NativeOkfChatResponse {
   synthesisDraft?: SynthesisDraftState;
   clarification?: NativeOkfClarification;
   conversationState?: NativeOkfConversationState;
+  /**
+   * The scope in effect after this turn. Mirrors `conversationState.scope`; the
+   * client uses it to keep the visible scope chip in sync, including when the
+   * server transitions a paper-scoped turn back to corpus for an explicit
+   * broaden request.
+   */
+  scope?: NativeOkfChatScope;
   insufficientContext: boolean;
   warnings?: string[];
   retrievalDebug?: unknown;
