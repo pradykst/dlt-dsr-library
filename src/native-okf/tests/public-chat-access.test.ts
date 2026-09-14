@@ -347,7 +347,7 @@ test("request transport accepts bytes below and rejects bytes above its hard cei
   assert.equal(above.status, 413);
 });
 
-test("stored and comparative deterministic diagrams are available anonymously", async () => {
+test("stored diagrams and comparison prose are available anonymously", async () => {
   // The diagram itself is still built with zero LLM involvement (unchanged, guaranteed
   // canonical), but the turn now also generates a real grounded answer alongside it, so
   // this end-to-end anonymous-transport test needs a working (mocked) model client.
@@ -393,9 +393,9 @@ test("stored and comparative deterministic diagrams are available anonymously", 
     assert.equal(comparative.status, 200);
     assert.equal(comparative.headers.get("set-cookie"), null);
     const comparativePayload = await comparative.json() as NativeOkfChatResponse;
-    assert.equal(comparativePayload.diagramMode, "comparative");
-    assert.equal(comparativePayload.diagramStatus, "success");
-    assert.ok((comparativePayload.diagram?.nodes.length ?? 0) > 0);
+    assert.equal(comparativePayload.diagramMode, null);
+    assert.equal(comparativePayload.diagramStatus, null);
+    assert.equal(comparativePayload.diagram, undefined);
   } finally {
     clearOpenAiClientForTests();
     process.env.OPENAI_API_KEY = originalApiKey;

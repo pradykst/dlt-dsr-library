@@ -6,8 +6,8 @@ import { CANONICAL_ROUTES } from "@/src/native-okf/shared/routes";
 const footerLinks = [
   { label: "Library", href: CANONICAL_ROUTES.library },
   { label: "Chat", href: CANONICAL_ROUTES.chat },
-  { label: "Method and limitations", href: CANONICAL_ROUTES.method },
-  { label: "Privacy note", href: `${CANONICAL_ROUTES.method}#privacy` },
+  { label: "Imprint", href: CANONICAL_ROUTES.imprint },
+  { label: "Privacy", href: CANONICAL_ROUTES.privacy },
 ];
 
 export function SiteFooter() {

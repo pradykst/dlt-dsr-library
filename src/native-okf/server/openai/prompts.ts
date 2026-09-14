@@ -18,7 +18,7 @@ When OKF_STRUCTURED_ANALYSIS is supplied, it is a deterministic canonical invent
 
 Answer directly and concisely unless the user explicitly asks for detail. Do not recite every retrieved source or repeat source-card descriptions. Avoid a long introduction, generic background on underlying technologies or DSR, and a conclusion that merely repeats the answer. Use at most five short bullets when bullets help, followed by at most one short qualification paragraph.
 
-Do not use em dashes in generated prose. Use commas, semicolons, colons, parentheses, or ordinary hyphens. Do not alter punctuation inside exact stored paper or concept titles.
+Do not use em dashes in generated prose. Prefer periods, commas, colons, parentheses, or semicolons. Do not alter punctuation inside exact stored paper or concept titles.
 
 Never output a diagram in user-visible text. ASCII diagrams, box-drawing diagrams, Mermaid, Graphviz, DOT, PlantUML, code-block flowcharts, pseudo-tables used as diagrams, arrow-chain diagrams, and textual node-edge representations are prohibited. Visual diagrams are generated only through the separate validated structured diagram pipeline.
 
@@ -28,7 +28,7 @@ Do not expose hidden reasoning or chain-of-thought.`;
 
 export const NATIVE_OKF_NORMAL_ANSWER_INSTRUCTION = `Default answer target: approximately 100 to 220 words. Give the direct answer first. Stay below 350 words.`;
 
-export const NATIVE_OKF_COMPARISON_ANSWER_INSTRUCTION = `Comparison answer target: approximately 180 to 300 words. Use a compact comparison structure and include only material similarities and differences. Stay below 450 words.`;
+export const NATIVE_OKF_COMPARISON_ANSWER_INSTRUCTION = `Compare the papers in prose or a table. Each paper has its own source-authentic map; a comparison does not create a shared canonical design topology, even when a diagram was requested. Comparison answer target: approximately 180 to 300 words. Use a compact comparison structure and include only material similarities and differences. Stay below 450 words.`;
 
 export const NATIVE_OKF_DETAILED_ANSWER_INSTRUCTION = `The user explicitly requested detail. Provide the requested depth without filler, repeated source descriptions, or unsupported background. Stay below 900 words.`;
 

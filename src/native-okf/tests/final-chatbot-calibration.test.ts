@@ -444,7 +444,8 @@ test("visual follow-ups retain synthesis, comparison, and single-paper focus whi
     }),
     catalog,
   );
-  assert.equal(comparisonFollowUp.queryMode, "COMPARATIVE_EVIDENCE_DIAGRAM");
+  assert.equal(comparisonFollowUp.turnPlan.mode, "CLARIFICATION");
+  assert.equal(comparisonFollowUp.includeDiagram, false);
 
   const paperFollowUp = await prepareNativeOkfChatRequest(
     validateNativeOkfChatRequest({
@@ -496,7 +497,7 @@ test("resolved single-paper diagram uses the complete canonical stored map", asy
   assert.equal(response.diagram?.edges.length, expected.edges.length);
 });
 
-test("resolved cross-paper diagram is deterministic and paper-distinguishable", async () => {
+test("resolved cross-paper comparison never combines the stored maps", async () => {
   const question =
     "Create a diagram comparing how trust is operationalized in the trust-enabling capacity-exchange paper and the consent self-management paper. Keep the two papers distinguishable.";
   const prepared = await prepareNativeOkfChatRequest(
@@ -507,24 +508,17 @@ test("resolved cross-paper diagram is deterministic and paper-distinguishable", 
     2,
     JSON.stringify(prepared.focusedPaperSlugs),
   );
-  assert.equal(prepared.queryMode, "COMPARATIVE_EVIDENCE_DIAGRAM");
-  assert.equal(prepared.preferDeterministicComparativeMap, true);
+  assert.equal(prepared.queryMode, "MULTI_PAPER_QA");
+  assert.equal(prepared.preferDeterministicComparativeMap, false);
   assert.equal(prepared.clarification, null);
   const response = await answerNativeOkfChat(
     { question },
     { environment: MOCK_ENVIRONMENT, client: mockAnswerClient() },
   );
-  assert.equal(response.diagramMode, "comparative");
-  assert.equal(response.diagramStatus, "success");
-  assert.equal(new Set(response.diagram?.nodes.map((node) => node.group)).size, 2);
-  const groupByNode = new Map(
-    response.diagram?.nodes.map((node) => [node.id, node.group]) ?? [],
-  );
-  assert.ok(
-    response.diagram?.edges.every(
-      (edge) => groupByNode.get(edge.source) === groupByNode.get(edge.target),
-    ),
-  );
+  assert.equal(response.diagramMode, null);
+  assert.equal(response.diagramStatus, null);
+  assert.equal(response.diagram, undefined);
+  assert.equal(prepared.turnPlan.mode, "STORED_COMPARISON");
 });
 
 test("design-problem guidance and diagram follow-up preserve synthesis focus", async () => {
@@ -618,7 +612,7 @@ test("diagram mode selection is generic across repository papers and derived pai
     );
     assert.equal(
       prepared.queryMode,
-      "COMPARATIVE_EVIDENCE_DIAGRAM",
+      "MULTI_PAPER_QA",
       `${left.title} / ${right.title}`,
     );
   }

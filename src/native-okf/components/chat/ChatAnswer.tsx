@@ -329,7 +329,7 @@ export function ChatAnswer({
               className="rounded-xl border border-amber/35 bg-amber/10 px-4 py-3 text-sm leading-6 text-slate-700"
             >
               <strong className="text-ink">
-                Supporting evidence map — not the requested synthesized flow.
+                Supporting evidence map. The requested synthesized flow is unavailable.
               </strong>{" "}
               Only deterministic stored relationships are shown.
             </div>

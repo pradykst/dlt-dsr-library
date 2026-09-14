@@ -902,7 +902,7 @@ export function ChatWorkbench({
             />
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-2 pt-3">
-              <label title="When selected, the response includes the relevant stored design map or a problem-specific DSR diagram, depending on the question." className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+              <label title="Adds a relevant stored design map or a problem-specific DSR mapping when the question supports one. Comparisons use prose and tables." className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
                 <input
                   type="checkbox"
                   checked={includeDiagram}
@@ -914,7 +914,7 @@ export function ChatWorkbench({
                   disabled={pending}
                   className="h-4 w-4 rounded border-slate-300 text-blue focus:ring-blue"
                 />
-                Include a relevant diagram in the response
+                Generate mapping diagram
               </label>
 
               {diagramIntentToggle.enabled && diagramIntentToggle.autoEnabled ? (

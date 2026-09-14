@@ -14,7 +14,6 @@ import {
   type NativeOkfConversationCatalog,
 } from "../server/conversation.ts";
 import { retrieveOkfContext } from "../server/retrieval.ts";
-import { buildComparativePaperDesignMap } from "../server/openai/stored-source-map.ts";
 import {
   answerNativeOkfChat,
   validateNativeOkfChatRequest,
@@ -420,19 +419,14 @@ test("validated comparison subject survives unrelated retrieval and drives the n
     }),
     catalog,
   );
-  assert.equal(visual.preferDeterministicComparativeMap, true);
+  assert.equal(visual.preferDeterministicComparativeMap, false);
+  assert.equal(visual.turnPlan.mode, "STORED_COMPARISON");
+  assert.equal(visual.includeDiagram, false);
   assert.deepEqual(visual.turnPlan.resolvedPaperSlugs, [
     paperA.slug,
     paperB.slug,
   ]);
-  const map = await buildComparativePaperDesignMap([
-    paperA.conceptId,
-    paperB.conceptId,
-  ]);
-  assert.ok(map);
-  assert.equal(map.diagram.title.includes(paperA.title), true);
-  assert.equal(map.diagram.title.includes(paperB.title), true);
-  assert.equal(map.diagram.title.includes(paperC.title), false);
+  assert.equal(visual.turnPlan.diagramAction, "NONE");
 });
 
 test("validated concept referents combine with a newly named comparison paper", async () => {

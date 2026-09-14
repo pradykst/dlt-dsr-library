@@ -14,7 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     CANONICAL_ROUTES.home,
     CANONICAL_ROUTES.library,
     CANONICAL_ROUTES.chat,
-    CANONICAL_ROUTES.method,
+    CANONICAL_ROUTES.imprint,
+    CANONICAL_ROUTES.privacy,
     ...concepts.map((concept) => conceptPageHref(concept.id)),
   ]);
 

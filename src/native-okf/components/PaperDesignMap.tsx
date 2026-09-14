@@ -77,7 +77,8 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
   );
   return (
     <div
-      className={`flex rounded-xl border-2 px-3.5 py-3 text-left shadow-md motion-safe:transition-[border-color,box-shadow,opacity] motion-safe:duration-150 ${
+      data-stored-map-node
+      className={`relative grid place-items-center rounded-xl border-2 px-3.5 py-4 text-left shadow-md motion-safe:transition-[border-color,box-shadow,opacity] motion-safe:duration-150 ${
         dimmed ? "opacity-40" : "opacity-100"
       } ${selected ? "ring-2 ring-blue/30 ring-offset-2" : ""}`}
       style={{
@@ -96,21 +97,14 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
         className="!h-2.5 !w-2.5 !border-2 !bg-white"
         style={{ borderColor: colors.border }}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-h-3 min-w-0 items-center justify-end">
-          {concept.label ? (
-            <span
-              className="shrink-0 font-mono text-[10px] font-bold"
-              style={{ color: colors.text }}
-            >
-              {concept.label}
-            </span>
-          ) : null}
-        </div>
-        <p className="flex flex-1 items-center py-2 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
-          {displayTitle}
-        </p>
-      </div>
+      {concept.label ? (
+        <span className="absolute right-3.5 top-1 font-mono text-[10px] font-bold leading-3" style={{ color: colors.text }}>
+          {concept.label}
+        </span>
+      ) : null}
+      <p data-stored-map-title className="m-0 w-full min-w-0 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
+        {displayTitle}
+      </p>
       <Handle
         type="source"
         position={Position.Right}

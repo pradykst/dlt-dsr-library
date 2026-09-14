@@ -5,7 +5,7 @@ const MAP_ACTION_PATTERN =
   /^\s*(?:please\s+|(?:can|could|would)\s+you\s+)?map\s+(?:(?:the|this|that|what|how|all|every)\s+|represented\s+|stored\s+|canonical\s+)*(?:design\s+knowledge|concepts?|relationships?|relations?|connections?|flow|evidence|requirements?|principles?|features?|what|how)\b/iu;
 
 const SHOW_VISUAL_OBJECT_PATTERN =
-  /\b(?:show|display|draw|render|chart|lay\s+out)\b[^.!?]{0,100}\b(?:relationships?|relations?|connections?|links?|formal\s+layers?|flow|diagram|graph|map|architecture|design\s+knowledge)\b/iu;
+  /\b(?:show|display|draw|render|chart|lay\s+out)\b[^.!?]{0,100}\b(?:relationships?|relations?|connections?|links?|formal\s+layers?|flow|diagram|graph|maps?|architecture|design\s+knowledge)\b/iu;
 
 const STORED_PAPER_MAP_INTENT_PATTERN =
   /(?:\b(?:show|display|visuali[sz]e|generate|create|draw|render|chart|lay\s+out|depict|illustrate|give)\b|^\s*(?:please\s+)?map\b)[^.!?]{0,160}\b(?:requirements?\s*,?\s*principles?\s*,?\s*(?:and\s+)?features?|rpf|rfp|paper(?:'s)?\s+(?:design\s+)?map|(?:represented|canonical|stored|complete)\s+(?:design\s+)?(?:map|knowledge|relations?|relationships?)|design\s+knowledge|formal\s+layers?\s+and\s+links?|this\s+paper|that\s+paper)\b/iu;
@@ -13,7 +13,7 @@ const STORED_PAPER_MAP_INTENT_PATTERN =
 const PAPER_VISUAL_ACTION_PATTERN =
   /\b(?:show|display|draw|render|chart|lay\s+out|map|visuali[sz]e|depict|illustrate|give)\b/iu;
 const PAPER_VISUAL_OBJECT_PATTERN =
-  /\b(?:diagram|map|graph|grid|flow|relationships?|connections?|links?|formal\s+layers?|visual\s+structure|architecture|whole\s+thing)\b|\b(?:rpf|rfp|dsr)\b/iu;
+  /\b(?:diagram|maps?|graph|grid|flow|relationships?|connections?|links?|formal\s+layers?|visual\s+structure|architecture|whole\s+thing)\b|\b(?:rpf|rfp|dsr)\b/iu;
 const PAPER_VISUAL_SUBJECT_PATTERN =
   /\b(?:paper|study|article|work|publication|this|that|it|its|whole\s+thing|design\s+knowledge|complete|full)\b/iu;
 const EXPLICIT_PAPER_STRUCTURE_OBJECT_PATTERN =

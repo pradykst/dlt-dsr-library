@@ -35,7 +35,8 @@ export const DEFAULT_RELEASE_CANONICAL_SOURCE_PATHS = [
   "app/native-okf/papers",
   "app/native-okf/concepts",
   "app/native-okf/release-home",
-  "app/native-okf/method",
+  "app/imprint",
+  "app/privacy",
   "components/layout/SiteHeader.tsx",
   "components/layout/SiteFooter.tsx",
   "src/native-okf/components",
@@ -50,7 +51,8 @@ export const DEFAULT_PUBLIC_NAVIGATION_SOURCE_PATHS = [
   "components/layout/SiteHeader.tsx",
   "components/layout/SiteFooter.tsx",
   "app/native-okf/release-home",
-  "app/native-okf/method",
+  "app/imprint",
+  "app/privacy",
 ] as const;
 
 const REQUIRED_COMPATIBILITY_REDIRECTS = new Map<string, string>([
@@ -67,7 +69,6 @@ const REQUIRED_CANONICAL_REWRITES = new Map<string, string>([
   ["/", "/native-okf/release-home"],
   ["/library", "/native-okf"],
   ["/chat", "/native-okf/chat"],
-  ["/method", "/native-okf/method"],
   ["/papers/:slug", "/native-okf/papers/:slug"],
   ["/concepts/:conceptId*", "/native-okf/concepts/:conceptId*"],
 ]);

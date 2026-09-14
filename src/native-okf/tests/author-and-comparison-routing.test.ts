@@ -142,7 +142,7 @@ test("named two-paper comparisons with build/design vocabulary still route to MU
       catalog,
     );
     assert.equal(prepared.queryMode, "MULTI_PAPER_QA", question);
-    assert.equal(prepared.turnPlan.mode, "TEXT_QA", question);
+    assert.equal(prepared.turnPlan.mode, "STORED_COMPARISON", question);
     assert.notEqual(prepared.intent, "synthesized-flow", question);
     assert.deepEqual(
       [...prepared.explicitPaperSlugs].sort((left, right) => left.localeCompare(right, "en")),

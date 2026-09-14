@@ -84,7 +84,7 @@ test("diagram toggle contract: STORED_PAPER_QA off => no diagram, on => RENDER_S
   assert.equal(on.turnPlan.includeDiagram, true);
 });
 
-test("diagram toggle contract: STORED_COMPARISON off => prose-only, on => RENDER_STORED comparison map", async () => {
+test("diagram toggle contract: STORED_COMPARISON stays prose-only with the diagram toggle off or on", async () => {
   const catalog = await catalogFixture;
   const [first, second] = catalog.papers;
   assert.ok(first && second);
@@ -95,7 +95,7 @@ test("diagram toggle contract: STORED_COMPARISON off => prose-only, on => RENDER
     catalog,
   );
   assert.equal(off.turnPlan.diagramAction, "NONE");
-  assert.notEqual(off.turnPlan.mode, "STORED_COMPARISON_MAP");
+  assert.equal(off.turnPlan.mode, "STORED_COMPARISON");
 
   const on = await prepareNativeOkfChatRequest(
     validateNativeOkfChatRequest({
@@ -104,8 +104,8 @@ test("diagram toggle contract: STORED_COMPARISON off => prose-only, on => RENDER
     }),
     catalog,
   );
-  assert.equal(on.turnPlan.mode, "STORED_COMPARISON_MAP");
-  assert.equal(on.turnPlan.diagramAction, "RENDER_STORED");
+  assert.equal(on.turnPlan.mode, "STORED_COMPARISON");
+  assert.equal(on.turnPlan.diagramAction, "NONE");
 });
 
 test("diagram toggle contract: DESIGN_SYNTHESIS off => synthesis prose only, on => RENDER_NEW_SYNTHESIS", async () => {
@@ -240,8 +240,8 @@ test("15 sampled paper pairs: comparison resolves exactly the intended two subje
       validateNativeOkfChatRequest({ question, includeDiagram: true }),
       catalog,
     );
-    assert.equal(withDiagram.turnPlan.mode, "STORED_COMPARISON_MAP", question);
-    assert.equal(withDiagram.turnPlan.diagramAction, "RENDER_STORED", question);
+    assert.equal(withDiagram.turnPlan.mode, "STORED_COMPARISON", question);
+    assert.equal(withDiagram.turnPlan.diagramAction, "NONE", question);
     assert.deepEqual(
       new Set(withDiagram.turnPlan.resolvedPaperSlugs),
       new Set([a.slug, b.slug]),
@@ -268,11 +268,11 @@ test("comparison with diagram enabled still produces real prose, not just the de
     { question, includeDiagram: true },
     { prepared, environment: MOCK_ENVIRONMENT, client: mockAnswerClient(realProse) },
   );
-  assert.equal(response.diagramMode, "comparative");
-  assert.equal(response.diagramStatus, "success");
-  assert.ok(response.diagram);
+  assert.equal(response.diagramMode, null);
+  assert.equal(response.diagramStatus, null);
+  assert.equal(response.diagram, undefined);
   // The real generated prose must be present, not replaced by a bare "N concepts, M
-  // relationships" sentence — the diagram is attached alongside it, not instead of it.
+  // relationships" sentence. The comparison has no combined diagram.
   assert.match(response.answerMarkdown, /decentralized control/iu);
   assert.doesNotMatch(response.answerMarkdown, /^This deterministic comparison keeps/u);
 });

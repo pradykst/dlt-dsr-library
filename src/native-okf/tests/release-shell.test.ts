@@ -147,7 +147,8 @@ test("canonical routes and temporary compatibility redirects are loop-free", () 
     home: "/",
     library: "/library",
     chat: "/chat",
-    method: "/method",
+    imprint: "/imprint",
+    privacy: "/privacy",
   });
   assert.deepEqual(validateNativeOkfRouteIntegrity(), []);
   assert.deepEqual(
@@ -192,8 +193,10 @@ test("global header and footer expose only the intended public navigation", asyn
   assert.match(header, /Give feedback/u);
   assert.match(header, /aria-controls="public-mobile-navigation"/u);
   assert.match(header, /aria-expanded=\{isOpen\}/u);
-  assert.match(footer, /Method and limitations/u);
-  assert.match(footer, /Privacy note/u);
+  assert.match(footer, /Imprint/u);
+  assert.doesNotMatch(footer, /Method and limitations/u);
+  assert.match(footer, /label: "Privacy"/u);
+  assert.doesNotMatch(footer, /Privacy note/u);
 
   const combined = `${header}\n${footer}`;
   for (const forbidden of [
@@ -211,21 +214,20 @@ test("global header and footer expose only the intended public navigation", asyn
   assert.equal(combined.includes("CANONICAL_ROUTES.admin"), false);
 });
 
-test("method page explains limitations, grounding, and operational privacy", async () => {
-  const method = await source("src/native-okf/components/release/ReleaseMethod.tsx");
-
-  assert.match(method, /Stored knowledge and generated synthesis/u);
-  assert.match(method, /Citation-ID and source-path validation|citation IDs/u);
-  assert.match(method, /Corpus-curation limitations/u);
-  assert.match(method, /No-match behavior/u);
-  assert.match(method, /Questions, answers, conversation history,[\s\S]*are not persisted/u);
-  assert.match(method, /Generated output remains non-authoritative/u);
+test("legal pages provide institutional contact and operational privacy", async () => {
+  const privacy = await source("app/privacy/page.tsx");
+  const imprint = await source("app/imprint/page.tsx");
+  assert.match(privacy, /OpenAI/);
+  assert.match(privacy, /session storage/);
+  assert.match(privacy, /operational|Operational/);
+  assert.match(imprint, /DE 141510383/);
+  assert.match(imprint, /max.graeser@uni-leipzig.de/);
 });
 
 test("sitemap source includes canonical public records and excludes private routes", async () => {
   const sitemap = await source("app/sitemap.ts");
 
-  for (const routeName of ["home", "library", "chat", "method"]) {
+  for (const routeName of ["home", "library", "chat", "imprint", "privacy"]) {
     assert.match(sitemap, new RegExp(`CANONICAL_ROUTES\\.${routeName}`, "u"));
   }
   assert.match(sitemap, /conceptPageHref\(concept\.id\)/u);
