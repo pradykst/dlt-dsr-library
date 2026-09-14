@@ -1,4 +1,16 @@
 import { compareDisplayStrings } from "./presentation.ts";
+import { MAX_NATIVE_OKF_SELECTED_PAPERS, nativeOkfChatScopePaperIds, type NativeOkfChatScope } from "./chat-types.ts";
+
+export function addNativeOkfScopePaper(scope: NativeOkfChatScope, paperId: string): NativeOkfChatScope {
+  const ids = nativeOkfChatScopePaperIds(scope);
+  if (ids.includes(paperId) || ids.length >= MAX_NATIVE_OKF_SELECTED_PAPERS) return scope;
+  return { type: "papers", paperIds: [...ids, paperId] };
+}
+
+export function removeNativeOkfScopePaper(scope: NativeOkfChatScope, paperId: string): NativeOkfChatScope {
+  const paperIds = nativeOkfChatScopePaperIds(scope).filter((id) => id !== paperId);
+  return paperIds.length ? { type: "papers", paperIds } : { type: "corpus" };
+}
 
 /**
  * A canonical paper as offered by the scope selector, the `@` paper reference,

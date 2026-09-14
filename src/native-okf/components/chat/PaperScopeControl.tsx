@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 
-import type { NativeOkfChatScope } from "../../shared/chat-types.ts";
+import { nativeOkfChatScopePaperIds, type NativeOkfChatScope } from "../../shared/chat-types.ts";
 import {
   findNativeOkfScopePaper,
+  addNativeOkfScopePaper,
+  removeNativeOkfScopePaper,
   type NativeOkfScopePaper,
 } from "../../shared/paper-scope.ts";
 import { PaperScopePopover } from "./PaperScopePopover.tsx";
@@ -32,9 +34,7 @@ export function PaperScopeControl({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const activePaper = scope.type === "paper"
-    ? findNativeOkfScopePaper(scope.paperId, papers)
-    : undefined;
+  const paperIds = nativeOkfChatScopePaperIds(scope);
 
   useEffect(() => {
     if (requestOpenToken > 0 && !disabled) setOpen(true);
@@ -55,59 +55,38 @@ export function PaperScopeControl({
   }, [open]);
 
   function selectPaper(paper: NativeOkfScopePaper) {
-    onScopeChange({ type: "paper", paperId: paper.paperId });
+    onScopeChange(addNativeOkfScopePaper(scope, paper.paperId));
     setOpen(false);
     triggerRef.current?.focus();
   }
 
   return (
-    <div ref={containerRef} className="inline-flex flex-col gap-1">
-      {scope.type === "paper" ? (
-        <div className="inline-flex items-center gap-1">
-          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue/30 bg-blue/10 py-1 pl-3 pr-1 text-xs font-semibold text-ink">
-            <button
-              ref={triggerRef}
-              type="button"
-              disabled={disabled}
-              onClick={() => setOpen((current) => !current)}
-              aria-haspopup="dialog"
-              aria-expanded={open}
-              className="truncate rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:cursor-not-allowed"
-              title="Switch paper"
-            >
-              <span className="text-blue">Paper scope:</span>{" "}
-              {activePaper?.title ?? scope.paperId}
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onScopeChange({ type: "corpus" })}
-              aria-label="Clear paper scope and return to all papers"
-              className="grid h-5 w-5 place-items-center rounded-full text-blue transition hover:bg-blue/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:cursor-not-allowed"
-            >
-              <span aria-hidden="true">×</span>
-            </button>
-          </span>
-        </div>
-      ) : (
-        <button
-          ref={triggerRef}
-          type="button"
-          disabled={disabled}
-          onClick={() => setOpen((current) => !current)}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          All papers
-          <span aria-hidden="true" className="text-muted">▾</span>
+    <div ref={containerRef} className="flex min-w-0 max-w-full flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button ref={triggerRef} type="button" disabled={disabled}
+          onClick={() => setOpen((current) => !current)} aria-haspopup="dialog" aria-expanded={open}
+          className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink focus-visible:ring-2 focus-visible:ring-blue disabled:opacity-45">
+          {paperIds.length ? `${paperIds.length} ${paperIds.length === 1 ? "paper" : "papers"} selected` : "All papers"}
+          <span aria-hidden="true" className="ml-2 text-muted">▾</span>
         </button>
-      )}
-
-      {scope.type === "paper" ? (
-        <p className="text-[0.68rem] leading-4 text-muted">
-          Answers and citations are restricted to this paper.
-        </p>
+        {paperIds.length ? <button type="button" disabled={disabled} onClick={() => onScopeChange({ type: "corpus" })}
+          className="text-xs font-semibold text-blue underline">All papers</button> : null}
+      </div>
+      {paperIds.length ? (
+        <>
+          <ul className="flex min-w-0 flex-wrap gap-1.5" aria-label="Selected papers">
+            {paperIds.map((paperId, index) => {
+              const title = findNativeOkfScopePaper(paperId, papers)?.title ?? paperId;
+              return <li key={paperId} className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-blue/30 bg-blue/10 px-2.5 py-1.5 text-xs text-ink">
+                <span className="shrink-0 font-semibold text-blue">{index + 1}</span>
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]" title={title}>{title}</span>
+                <button type="button" disabled={disabled} onClick={() => onScopeChange(removeNativeOkfScopePaper(scope, paperId))}
+                  aria-label={`Remove ${title}`} className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-base text-blue hover:bg-blue/20 focus-visible:ring-2 focus-visible:ring-blue">×</button>
+              </li>;
+            })}
+          </ul>
+          <p className="text-[0.68rem] leading-4 text-muted">Answers and citations are restricted to the selected papers.</p>
+        </>
       ) : null}
 
       {open ? (
@@ -115,7 +94,8 @@ export function PaperScopeControl({
           anchorRef={containerRef}
           boundsRef={boundsRef}
           papers={papers}
-          heading={scope.type === "paper" ? "Switch paper" : "Select a paper"}
+          heading="Add a paper"
+          selectedPaperIds={paperIds}
           onSelect={selectPaper}
           onClose={() => {
             setOpen(false);

@@ -144,7 +144,8 @@ test("4 bounded paper metadata cannot crowd out requested principles", async () 
   const { retrieval } = await principlesFixture;
   const ids = retrieval.finalConcepts.map((concept) => concept.conceptId);
   assert.ok(PRINCIPLE_IDS.every((id) => ids.includes(id)));
-  assert.ok(ids.indexOf(PAPER_ID) > ids.indexOf(PRINCIPLE_IDS[3]!));
+  assert.equal(ids.includes(PAPER_ID), false);
+  assert.deepEqual(ids, PRINCIPLE_IDS);
   assert.ok(
     retrieval.contextCharacterEstimate <=
       DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters,

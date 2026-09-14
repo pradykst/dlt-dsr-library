@@ -16,6 +16,8 @@ import type {
 import { parseNativeOkfConversationState } from "../shared/conversation-state.ts";
 import {
   createInitialNativeOkfConversationState,
+  normalizeNativeOkfChatScope,
+  nativeOkfChatScopePaperIds,
   MAX_NATIVE_OKF_ACTIVE_CONCEPTS,
   MAX_NATIVE_OKF_ACTIVE_PAPERS,
   MAX_NATIVE_OKF_ACTIVE_SOURCES,
@@ -42,6 +44,8 @@ import { applyNativeOkfStructuredAnalysis } from "./structured-analysis.ts";
 import type { RetrievalResult } from "./retrieval-types.ts";
 import type { OkfConcept } from "./types.ts";
 import { isNativeOkfLiveDataRequest } from "./live-data-gate.ts";
+import { NativeOkfRequestError } from "./openai/errors.ts";
+import { buildNativeOkfGroundedContext } from "./openai/context.ts";
 import { nativeOkfOutOfScopeCategory } from "./scope-guard.ts";
 
 const COMPARISON_PATTERN =
@@ -134,9 +138,6 @@ const EXPLICIT_RPF_STRUCTURE_PATTERN =
 const ONLY_PAPER_PATTERN =
   /\b(?:use|show|keep|base\s+(?:it|the revision)\s+on)?\s*only\s+(?:the\s+)?(?:first|second|this|that|these two|[\p{L}\p{N}][^.!?]{0,160})\s+papers?\b/iu;
 const EXCLUDE_PAPER_PATTERN = /\bexclude\b[^.!?]{0,180}\bpaper\b/iu;
-// A researcher in paper mode explicitly asking to leave the single-paper scope.
-const BROADEN_SCOPE_PATTERN =
-  /\b(?:across|throughout|within)\s+(?:the\s+)?(?:whole\s+|entire\s+|full\s+)?(?:library|corpus)\b|\b(?:the\s+)?(?:whole|entire|rest\s+of\s+the|other|another|remaining|all\s+(?:the\s+)?other)\s+(?:papers?|studies|articles?|works?|publications?)\b|\bsearch\s+(?:the\s+)?(?:whole\s+|entire\s+)?(?:library|corpus)\b|\b(?:all|every)\s+(?:the\s+)?papers?\b|\bacross\s+(?:multiple|several|many|all)\s+(?:papers?|publications?)\b/iu;
 const CATEGORY_STORED_MAP_FOLLOW_UP_PATTERN =
   /(?:^\s*(?:please\s+)?(?:show|display|draw|visuali[sz]e|map|give)(?:\s+me)?\b|^\s*(?:please\s+)?(?:just|only)\b|\b(?:only|layer)\s*[?.!]*$)/iu;
 const AMBIGUOUS_MAP_AGAIN_PATTERN =
@@ -237,12 +238,12 @@ export interface PreparedNativeOkfChatRequest {
   structuredReferentPaperSlugs: string[];
   restrictedPaperSlugs: string[];
   /**
-   * The canonical slug of the paper this turn is scoped to, or `null` for
-   * corpus. Resolved server-side from the request/state scope and this turn's
+   * Ordered canonical slugs for the selected evidence boundary, or an empty
+   * list for corpus. Resolved server-side from the request/state scope and this turn's
    * broaden/switch intent; drives complete-paper context assembly and the
    * paper-only grounding guarantee.
    */
-  scopePaperSlug: string | null;
+  scopePaperSlugs: string[];
   /** The scope in effect after this turn â€” echoed into every response state. */
   resolvedScope: NativeOkfChatScope;
   /** Set when a requested paper scope could not be resolved to a real paper. */
@@ -291,8 +292,8 @@ export interface ResolvedNativeOkfTurnPlan {
   refinementIntent: boolean;
   categoryStoredMapFollowUp: boolean;
   historyContextTruncated: boolean;
-  /** Canonical slug of the paper this turn is scoped to; `null` for corpus. */
-  scopePaperSlug: string | null;
+  /** Ordered selected paper slugs; empty for corpus. */
+  scopePaperSlugs: string[];
   /** The scope in effect after this turn. */
   scope: NativeOkfChatScope;
   /**
@@ -491,7 +492,10 @@ export function validateNativeOkfConversationState(
   const initial = createInitialNativeOkfConversationState();
   if (!input) return initial;
   const state = parseNativeOkfConversationState(input);
-  if (!state) return initial;
+  if (!state) {
+    if (input.scope !== undefined) throw new NativeOkfRequestError("The saved paper scope is invalid. Start a new chat or select the papers again.");
+    return initial;
+  }
   const paperSlugs = new Set(catalog.papers.map((paper) => paper.slug));
   const conceptIds = new Set(
     catalog.concepts.map((concept) => concept.conceptId),
@@ -515,10 +519,10 @@ export function validateNativeOkfConversationState(
           sourcePaperSlugs: [],
         }
       : null);
-  const scope: NativeOkfConversationState["scope"] =
-    state.scope.type === "paper" && paperSlugs.has(state.scope.paperId)
-      ? { type: "paper", paperId: state.scope.paperId }
-      : { type: "corpus" };
+  const scope = state.scope;
+  if (nativeOkfChatScopePaperIds(scope).some((id) => !paperSlugs.has(id))) {
+    throw new NativeOkfRequestError("A selected paper is no longer in the library. Remove it or select All papers.");
+  }
   return {
     version: 1,
     scope,
@@ -1362,8 +1366,8 @@ export async function assembleNativeOkfContextualRetrieval(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
 ): Promise<RetrievalResult> {
-  const paperSlugs = prepared.scopePaperSlug
-    ? [prepared.scopePaperSlug]
+  const paperSlugs = prepared.scopePaperSlugs.length > 0
+    ? prepared.scopePaperSlugs
     : prepared.structuredReferentPaperSlugs.length > 0
     ? prepared.structuredReferentPaperSlugs
     : prepared.activeComparisonPaperSlugs.length >= 2
@@ -1413,9 +1417,9 @@ export async function assembleNativeOkfContextualRetrieval(
   const scoped = restrictNativeOkfRetrievalToPaperSlugs(
     prepared,
     prioritized,
-    prepared.scopePaperSlug ? [prepared.scopePaperSlug] : evidencePaperSlugs,
+    prepared.scopePaperSlugs.length > 0 ? prepared.scopePaperSlugs : evidencePaperSlugs,
   );
-  return applyNativeOkfStructuredAnalysis(scoped, {
+  const analyzed = await applyNativeOkfStructuredAnalysis(scoped, {
     question: prepared.effectiveQuestion,
     paperConceptIds,
     requestedConceptKinds: prepared.requestedConceptKinds,
@@ -1423,6 +1427,58 @@ export async function assembleNativeOkfContextualRetrieval(
       prepared.structuredReferentPaperSlugs.length === 0,
     multiPaperComparison: prepared.queryMode === "MULTI_PAPER_QA",
   });
+  const filtered = restrictNativeOkfRetrievalConceptKinds(analyzed, hardNativeOkfConceptKinds(prepared), prepared.effectiveQuestion);
+  const truncationWarning = "One or more Markdown bodies were truncated to fit the context limit.";
+  if (filtered !== analyzed && filtered.warnings.includes(truncationWarning)) {
+    const canonicalById = new Map((await getAllConcepts()).map((concept) => [concept.id, concept]));
+    const stillTruncated = filtered.finalConcepts.some((concept) => {
+      const canonical = canonicalById.get(concept.conceptId);
+      return !canonical || concept.markdownBody.length < canonical.markdownBody.length;
+    });
+    if (!stillTruncated) filtered.warnings = filtered.warnings.filter((warning) => warning !== truncationWarning);
+  }
+  return filtered;
+}
+
+export function hardNativeOkfConceptKinds(prepared: PreparedNativeOkfChatRequest): readonly NativeOkfRequestedConceptKind[] {
+  if (["DESIGN_SYNTHESIS", "DESIGN_REFINEMENT", "ACTIVE_DIAGRAM_QA"].includes(prepared.turnPlan.mode)) return [];
+  // A classification question explicitly includes mechanisms of other formal kinds.
+  if (/\bas\s+(?:a\s+)?design\b[^.!?]{0,100}\bor\s+(?:an?\s+)?implementation mechanism/iu.test(prepared.effectiveQuestion)) return [];
+  // Paper inventories need paper records to cite missing categories truthfully.
+  if (prepared.corpusQuery && /\b(?:which|what|all|every|each)\s+(?:of\s+the\s+)?(?:papers?|studies|articles?|publications?)\b/iu.test(prepared.effectiveQuestion)) return [];
+  if (/\b(?:full|complete|canonical|entire|whole)\b[^.!?]{0,60}\b(?:map|diagram)\b/iu.test(prepared.effectiveQuestion)) return [];
+  return prepared.requestedConceptKinds;
+}
+
+export function restrictNativeOkfRetrievalConceptKinds(retrieval: RetrievalResult, kinds: readonly NativeOkfRequestedConceptKind[], question = retrieval.normalizedQuestion): RetrievalResult {
+  if (kinds.length === 0) return retrieval;
+  const accepts = (concept: { type: string }): boolean => kinds.includes(nativeOkfRequestedKindForType(concept.type)!);
+  const finalConcepts = retrieval.finalConcepts.filter(accepts);
+  const ids = new Set(finalConcepts.map((concept) => concept.conceptId));
+  const relationships = <T extends { sourceId: string; targetId: string }>(edges: T[]) => edges.filter((edge) => ids.has(edge.sourceId) && ids.has(edge.targetId));
+  const result: RetrievalResult = {
+    ...retrieval,
+    finalConcepts,
+    seedResults: retrieval.seedResults.filter(accepts),
+    expandedResults: retrieval.expandedResults.filter(accepts),
+    noMatch: finalConcepts.length === 0,
+    contextCharacterEstimate: finalConcepts.reduce((sum, concept) => sum + concept.characterEstimate, 0),
+    ...(retrieval.structuredAnalysis ? { structuredAnalysis: {
+      ...retrieval.structuredAnalysis,
+      papers: retrieval.structuredAnalysis.papers.map((paper) => ({
+        ...paper,
+        relevantConcepts: paper.relevantConcepts.filter(accepts),
+        relevantConceptCount: paper.relevantConcepts.every(accepts) ? paper.relevantConceptCount : paper.relevantConcepts.filter(accepts).length,
+        relevantRelationships: paper.relevantRelationships.filter((edge) => accepts({ type: edge.sourceType }) && accepts({ type: edge.targetType })),
+        relevantRelationshipCount: paper.relevantRelationships.filter((edge) => accepts({ type: edge.sourceType }) && accepts({ type: edge.targetType })).length,
+      })),
+    }} : {}),
+    debug: { ...retrieval.debug, expansionPaths: relationships(retrieval.debug.expansionPaths) },
+  };
+  if (result.structuredAnalysis && !result.completePaperContext) {
+    result.contextCharacterEstimate = buildNativeOkfGroundedContext(result, question).prompt.length;
+  }
+  return result;
 }
 
 function restrictNativeOkfRetrievalToPaperSlugs(
@@ -1449,8 +1505,15 @@ function restrictNativeOkfRetrievalToPaperSlugs(
     allowedConcept(concept.conceptId)
   );
   const finalIds = new Set(finalConcepts.map((concept) => concept.conceptId));
+  const overviewPapers = retrieval.corpusOverview.papers.filter((paper) => allowedConcept(paper.conceptId));
   return {
     ...retrieval,
+    ...(retrieval.completePaperContext ? { completePaperContext: {
+      paperConceptIds: retrieval.completePaperContext.paperConceptIds.filter(allowedConcept),
+      conceptIdsByPaper: Object.fromEntries(Object.entries(retrieval.completePaperContext.conceptIdsByPaper)
+        .filter(([id]) => allowedConcept(id)).map(([id, ids]) => [id, ids.filter(allowedConcept)])),
+      relationships: retrieval.completePaperContext.relationships.filter((edge) => allowedConcept(edge.sourceId) && allowedConcept(edge.targetId)),
+    }} : {}),
     seedResults: retrieval.seedResults.filter((result) =>
       allowedConcept(result.conceptId)
     ),
@@ -1459,10 +1522,8 @@ function restrictNativeOkfRetrievalToPaperSlugs(
     ),
     finalConcepts,
     corpusOverview: {
-      ...retrieval.corpusOverview,
-      papers: retrieval.corpusOverview.papers.filter((paper) =>
-        allowedConcept(paper.conceptId)
-      ),
+      paperCount: overviewPapers.length,
+      papers: overviewPapers,
     },
     noMatch: retrieval.noMatch || finalConcepts.length === 0,
     debug: {
@@ -1492,37 +1553,22 @@ export function hasSufficientNativeOkfSynthesisGrounding(
   ).length >= 2;
 }
 
-function sameChatScope(
-  left: NativeOkfChatScope,
-  right: NativeOkfChatScope,
-): boolean {
-  if (left.type !== right.type) return false;
-  return left.type !== "paper" ||
-    left.paperId === (right as { paperId: string }).paperId;
+function sameChatScope(left: NativeOkfChatScope, right: NativeOkfChatScope): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
-/**
- * When the researcher changes the conversational scope between turns â€” picking a
- * paper, switching to a different paper, or returning to All papers â€” the
- * referents carried by conversation state belong to the *previous* evidence
- * universe. Keeping them lets a plain follow-up ("explain the map", "show it
- * again") resolve against the previous paper's stored map or a previous
- * proposal draft while the visible chip already names the new scope.
- *
- * A deliberate scope change therefore drops the carried evidence referents and
- * diagram subject. It never touches an in-flight clarification: the researcher
- * is mid-answer to a question the server asked, and that loop owns its own
- * problem state.
- */
+/** A changed ordered selection invalidates paper ordinals and prior diagram referents. */
 function withScopeChangeReset(
   state: NativeOkfConversationState,
-  requestScope: NativeOkfChatScope | undefined,
+  requestScope: NativeOkfChatRequest["scope"],
 ): NativeOkfConversationState {
   if (requestScope === undefined) return state;
-  if (sameChatScope(requestScope, state.scope)) return state;
-  if (state.pendingClarification) return state;
+  const normalized = normalizeNativeOkfChatScope(requestScope);
+  if (!normalized) throw new NativeOkfRequestError("The selected paper scope is invalid.");
+  if (sameChatScope(normalized, state.scope)) return state;
   return {
     ...state,
+    pendingClarification: null,
     activePaperSlugs: [],
     activeComparisonPaperSlugs: [],
     activeStructuredResultPaperSlugs: [],
@@ -1552,24 +1598,18 @@ export async function prepareNativeOkfChatRequest(
   const effectiveQuestion = pendingOriginal
     ? `${pendingOriginal}\nClarification response: ${request.question}`
     : request.question;
-  const directCorpusQuery = CORPUS_QUERY_PATTERN.test(effectiveQuestion);
-  // First-class conversational scope. The request's scope is authoritative for
-  // this turn; the persisted state carries it between turns. `paperId` is always
-  // resolved against the canonical repository â€” a stale or unknown paper falls
-  // back to corpus rather than silently scoping to nothing.
+  const directCorpusQuery = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope)?.type === "corpus" && CORPUS_QUERY_PATTERN.test(effectiveQuestion);
   const catalogPaperSlugSet = new Set(catalog.papers.map((paper) => paper.slug));
-  const requestedScope = request.scope ?? validatedState.scope;
-  const requestedScopePaperSlug =
-    requestedScope.type === "paper" &&
-      catalogPaperSlugSet.has(requestedScope.paperId)
-      ? requestedScope.paperId
-      : null;
-  const unresolvedScopePaper =
-    requestedScope.type === "paper" && requestedScopePaperSlug === null;
+  const requestedScope = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope);
+  if (!requestedScope) throw new NativeOkfRequestError("The selected paper scope is invalid.");
+  const scopePaperSlugs = nativeOkfChatScopePaperIds(requestedScope);
+  if (scopePaperSlugs.some((id) => !catalogPaperSlugSet.has(id))) {
+    throw new NativeOkfRequestError("A selected paper is no longer in the library. Remove it or select All papers.");
+  }
   const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
     effectiveQuestion,
     catalog,
-  );
+  ).filter((slug) => scopePaperSlugs.length === 0 || scopePaperSlugs.includes(slug));
   const ambiguousPaperReference = hasAmbiguousPaperReference(
     effectiveQuestion,
     catalog,
@@ -1601,7 +1641,7 @@ export async function prepareNativeOkfChatRequest(
       catalog,
     ),
     catalog,
-  );
+  ).filter((id) => scopePaperSlugs.length === 0 || catalog.concepts.some((concept) => concept.conceptId === id && concept.paperSlug && scopePaperSlugs.includes(concept.paperSlug)));
   const currentTurnComparisonRequested = COMPARISON_PATTERN.test(
     effectiveQuestion,
   );
@@ -1639,7 +1679,9 @@ export async function prepareNativeOkfChatRequest(
     comparisonRequested &&
     explicitPaperSlugs.length === 1 &&
     comparisonConceptPaperSlugs.length > 0;
-  const activeComparisonPaperSlugs = comparisonRequested &&
+  const activeComparisonPaperSlugs = scopePaperSlugs.length >= 2 && comparisonRequested
+    ? [...scopePaperSlugs]
+    : comparisonRequested &&
       explicitPaperSlugs.length >= 2
     ? [...explicitPaperSlugs]
     : comparisonUsesPriorConcept
@@ -1657,39 +1699,9 @@ export async function prepareNativeOkfChatRequest(
   const corpusQuery = directCorpusQuery ||
     structuredReferentPaperSlugs.length > 0;
 
-  // Resolve how the active paper scope applies to this turn. A researcher in
-  // paper mode who explicitly asks to compare with another paper, search the
-  // whole library, or find related knowledge elsewhere is broadened to corpus
-  // for that turn (and the scope chip clears). Naming exactly one different
-  // paper switches the scope to that paper. Otherwise the scope holds, so plain
-  // follow-ups never need to repeat the paper title.
-  const otherExplicitPaperSlugs = explicitPaperSlugs.filter(
-    (slug) => slug !== requestedScopePaperSlug,
-  );
-  const broadenFromPaperScope = requestedScopePaperSlug !== null &&
-    (
-      directCorpusQuery ||
-      corpusQuery ||
-      (currentTurnComparisonRequested && otherExplicitPaperSlugs.length >= 1) ||
-      otherExplicitPaperSlugs.length >= 2 ||
-      BROADEN_SCOPE_PATTERN.test(effectiveQuestion)
-    );
-  const switchScopePaperSlug =
-    requestedScopePaperSlug !== null &&
-      !broadenFromPaperScope &&
-      !currentTurnComparisonRequested &&
-      otherExplicitPaperSlugs.length === 1
-      ? otherExplicitPaperSlugs[0]!
-      : null;
-  const scopePaperSlug = broadenFromPaperScope
-    ? null
-    : switchScopePaperSlug ?? requestedScopePaperSlug;
-  const resolvedScope: NativeOkfChatScope = scopePaperSlug
-    ? { type: "paper", paperId: scopePaperSlug }
-    : { type: "corpus" };
-  const scopeWarning = unresolvedScopePaper
-    ? "The selected paper is no longer in the library, so the paper scope was cleared and this turn covers all papers. Select a paper again to restrict answers and citations."
-    : null;
+  // Selection is the evidence boundary. Mentioning another title cannot change it.
+  const resolvedScope = requestedScope;
+  const scopeWarning = null;
 
   const explicitSubjectChange =
     (explicitPaperSlugs.length > 0 || explicitConceptIds.length > 0) &&
@@ -1718,15 +1730,15 @@ export async function prepareNativeOkfChatRequest(
       ? []
       : validatedState.activeSourceIds,
   };
-  if (scopePaperSlug) {
+  if (scopePaperSlugs.length > 0) {
     // Paper scope is authoritative: short references ("this paper", a bare
     // concept label, "why does it connect to that one") always resolve within
     // the selected paper.
-    contextBase.activePaperSlugs = [scopePaperSlug];
-    contextBase.activeComparisonPaperSlugs = [];
+    contextBase.activePaperSlugs = [...scopePaperSlugs];
+    contextBase.activeComparisonPaperSlugs = comparisonRequested ? [...scopePaperSlugs] : [];
   }
-  const focusedPaperSlugs = scopePaperSlug
-    ? [scopePaperSlug]
+  const focusedPaperSlugs = scopePaperSlugs.length > 0
+    ? scopePaperSlugs
     : structuredReferentPaperSlugs.length > 0
     ? structuredReferentPaperSlugs
     : activeComparisonPaperSlugs.length > 0
@@ -1780,7 +1792,7 @@ export async function prepareNativeOkfChatRequest(
   // (e.g. asking about "reusable mechanisms" or "which approach transfers better").
   // Only an explicit new-artifact framing should still route to synthesis here.
   const explicitMultiPaperComparison =
-    explicitPaperSlugs.length >= 2 && comparisonRequested;
+    (explicitPaperSlugs.length >= 2 || scopePaperSlugs.length >= 2) && comparisonRequested;
   if (
     explicitMultiPaperComparison &&
     !activeDraftRefinement &&
@@ -1790,8 +1802,8 @@ export async function prepareNativeOkfChatRequest(
   ) {
     synthesisIntent = false;
   }
-  const restrictedPaperSlugs = scopePaperSlug
-    ? [scopePaperSlug]
+  const restrictedPaperSlugs = scopePaperSlugs.length > 0
+    ? scopePaperSlugs
     : resolvedPaperRestriction(
         effectiveQuestion,
         explicitPaperSlugs,
@@ -1845,6 +1857,7 @@ export async function prepareNativeOkfChatRequest(
     includeDiagram &&
     focusedPaperSlugs.length >= 2 &&
     (
+      (scopePaperSlugs.length >= 2 && !synthesisIntent) ||
       COMPARISON_PATTERN.test(effectiveQuestion) ||
       explicitPaperSlugs.length === 0 &&
         ((contextBase.activeComparisonPaperSlugs?.length ?? 0) >= 2 ||
@@ -2010,7 +2023,7 @@ export async function prepareNativeOkfChatRequest(
     activeComparisonPaperSlugs,
     structuredReferentPaperSlugs,
     restrictedPaperSlugs,
-    scopePaperSlug,
+    scopePaperSlugs,
     resolvedScope,
     scopeWarning,
     focusedConceptIds,
@@ -2059,7 +2072,7 @@ export async function prepareNativeOkfChatRequest(
       refinementIntent: activeDraftRefinement,
       categoryStoredMapFollowUp,
       historyContextTruncated,
-      scopePaperSlug,
+      scopePaperSlugs,
       scope: resolvedScope,
       scopeGuardrail,
     },

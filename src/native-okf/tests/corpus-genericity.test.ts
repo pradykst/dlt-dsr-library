@@ -360,7 +360,7 @@ test("all represented paper/category combinations retain requested evidence firs
       const expectedIds = selected.map((concept) => concept.id);
       const finalIds = retrieval.finalConcepts.map((concept) => concept.conceptId);
       assert.deepEqual(finalIds.slice(0, expectedIds.length), expectedIds, `${row.title}: ${spec.type}`);
-      assert.equal(finalIds[expectedIds.length], row.paper.id, `${row.title}: paper metadata order`);
+      assert.equal(finalIds.length, expectedIds.length, `${row.title}: requested kinds only`);
       assert.ok(expectedIds.every((id) => finalIds.includes(id)), row.title);
       assert.ok(retrieval.finalConcepts.every((concept) =>
         concept.conceptId === row.paper.id || row.associated.some((item) => item.id === concept.conceptId)
@@ -534,14 +534,10 @@ test("requested-category-first packing is generic across large and sparse paper 
     const { retrieval } = await resolveRetrieval(categoryQuestion(row, spec));
     const finalIds = retrieval.finalConcepts.map((concept) => concept.conceptId);
     assert.deepEqual(finalIds.slice(0, selected.length), selected.map((concept) => concept.id), row.title);
-    assert.equal(finalIds[selected.length], row.paper.id, row.title);
+    assert.equal(finalIds.length, selected.length, row.title);
     assert.ok(selected.every((concept) => finalIds.includes(concept.id)), row.title);
     assert.ok(selected.every((concept) => !retrieval.debug.droppedConcepts.some((item) => item.conceptId === concept.id)), row.title);
-    const packedPaper = retrieval.finalConcepts.find((concept) => concept.conceptId === row.paper.id);
-    assert.ok(packedPaper, row.title);
-    if (row.paper.markdownBody.length > PAPER_MARKDOWN_LIMIT) {
-      assert.ok(packedPaper.markdownBody.length <= PAPER_MARKDOWN_LIMIT, row.title);
-    }
+    assert.equal(retrieval.finalConcepts.some((concept) => concept.type === "paper"), false, row.title);
     assert.ok(retrieval.contextCharacterEstimate <= MAX_CONTEXT_CHARACTERS);
     const truncatedWarning = retrieval.warnings.includes(
       "One or more Markdown bodies were truncated to fit the context limit.",
@@ -586,8 +582,8 @@ test("generic citation strictness applies to dynamically selected papers and cat
     assert.equal(invented.needsRepair, true, row.title);
     assert.deepEqual(invented.unknownSourceIds, ["S999"]);
     const paperSource = context.sources.find((source) => source.conceptId === row.paper.id);
-    assert.ok(paperSource, row.title);
-    const paperOnly = validateAnswerCitations(`Catalogue only [[${paperSource.sourceId}]].`, context);
+    assert.equal(paperSource, undefined, row.title);
+    const paperOnly = validateAnswerCitations("Catalogue only [[S999]].", context);
     assert.equal(paperOnly.needsRepair, true, row.title);
   }
 });
@@ -606,7 +602,7 @@ test("citation repair receives only the current retrieval allowlist", async () =
   );
   const paperSource = context.sources.find((source) => source.conceptId === row.paper.id);
   const requestedSource = context.sources.find((source) => source.conceptId === selected[0]?.id);
-  assert.ok(paperSource);
+  assert.equal(paperSource, undefined);
   assert.ok(requestedSource);
   const requests: unknown[] = [];
   const result = await answerNativeOkfChat(
@@ -616,7 +612,7 @@ test("citation repair receives only the current retrieval allowlist", async () =
       retrieve: async () => raw,
       environment: ENVIRONMENT,
       client: mockedResponseClient([
-        `Catalogue-only answer [[${paperSource.sourceId}]].`,
+        "Catalogue-only answer [[S999]].",
         `Direct requested evidence [[${requestedSource.sourceId}]].`,
       ], requests),
     },

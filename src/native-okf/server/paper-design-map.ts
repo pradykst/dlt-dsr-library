@@ -1,5 +1,7 @@
 import "server-only";
 
+import { conceptNarrative, publicationDoi } from "../shared/research-presentation.ts";
+
 import { getOkfBundle } from "./cache.ts";
 import { getPaperByPath } from "./repository.ts";
 import type { OkfBundle, OkfConcept, OkfLink } from "./types.ts";
@@ -39,7 +41,6 @@ const KNOWN_COLUMN_TITLES = new Map<string, string>([
   ["outcome", "Outcomes"],
 ]);
 
-const SUMMARY_LIMIT = 700;
 const DESCRIPTION_LIMIT = 400;
 
 function compareStrings(left: string, right: string): number {
@@ -56,22 +57,9 @@ function boundedText(value: string | undefined, limit: number): string | undefin
   const normalized = value?.replace(/\s+/gu, " ").trim();
   if (!normalized) return undefined;
   if (normalized.length <= limit) return normalized;
-  return `${normalized.slice(0, limit - 1).trimEnd()}?`;
+  return `${normalized.slice(0, limit - 1).trimEnd()}…`;
 }
 
-function markdownSummary(markdown: string): string | undefined {
-  return boundedText(
-    markdown
-      .replace(/```[\s\S]*?```/gu, " ")
-      .replace(/!\[([^\]]*)\]\([^)]*\)/gu, "$1")
-      .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
-      .replace(/<[^>]+>/gu, " ")
-      .replace(/^\s{0,3}#{1,6}\s+/gmu, "")
-      .replace(/^\s*[-+*>]\s*/gmu, "")
-      .replace(/[*_~`|]/gu, " "),
-    SUMMARY_LIMIT,
-  );
-}
 
 function displayTitle(concept: OkfConcept): string {
   return concept.title?.trim() ||
@@ -182,11 +170,12 @@ export function compareSemanticConcepts(
 
 function graphNode(concept: OkfConcept): GraphNodeDto {
   const description = boundedText(concept.description, DESCRIPTION_LIMIT);
-  const summary = markdownSummary(concept.markdownBody);
+  const summary = conceptNarrative(concept.markdownBody, concept.description);
   const label = optionalString(concept.frontmatter.label);
   return {
     id: concept.id,
     filePath: concept.filePath,
+    doi: publicationDoi(concept.resource, concept.markdownBody),
     type: concept.type,
     typeLabel: formatConceptType(concept.type),
     title: displayTitle(concept),

@@ -314,7 +314,7 @@ test("type presentation does not repeat adjacent semantic labels", async () => {
     compact(workbench),
     /isPaper \? \( <TypeBadge type=\{concept\.type\} label=\{concept\.typeLabel\} \/> \) : null/u,
   );
-  assert.match(workbench, /aria-label=\{`\$\{group\.count\} \$\{group\.typeLabel\}`\}/u);
+  assert.match(workbench, /formatConceptCount\(group\.type, group\.count\)/u);
   assert.doesNotMatch(
     workbench,
     /<TypeBadge type=\{group\.type\} label=\{group\.typeLabel\} count=\{group\.count\} \/>/u,

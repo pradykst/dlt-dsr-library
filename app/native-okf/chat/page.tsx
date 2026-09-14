@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -29,10 +30,11 @@ export default async function NativeOkfChatPage({
 
   const paperParam = resolvedSearchParams.paper;
   const requestedPaperId = Array.isArray(paperParam) ? paperParam[0] : paperParam;
+  if (requestedPaperId && !scopePapers.some((paper) => paper.paperId === requestedPaperId)) notFound();
   const initialScope: NativeOkfChatScope | undefined =
     requestedPaperId &&
     scopePapers.some((paper) => paper.paperId === requestedPaperId)
-      ? { type: "paper", paperId: requestedPaperId }
+      ? { type: "papers", paperIds: [requestedPaperId] }
       : undefined;
 
   return (

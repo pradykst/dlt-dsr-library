@@ -11,7 +11,8 @@ import type {
   NativeOkfStructuredAnalysis,
   RetrievalResult,
 } from "../retrieval-types.ts";
-import { InternalNativeOkfError } from "./errors.ts";
+import { InternalNativeOkfError, RequestTooLargeError } from "./errors.ts";
+import { compactCompletePaperMarkdown } from "../complete-paper-packing.ts";
 
 export interface NativeOkfGroundedSource {
   sourceId: string;
@@ -97,7 +98,21 @@ function sourceBlock(
   concept: FinalContextConcept,
   sourceId: string,
   includeDetails: boolean,
+  completePaper = false,
+  representedDescriptions: ReadonlySet<string> = new Set(),
+  sourceIdByConceptId: ReadonlyMap<string, string> = new Map(),
 ): string {
+  if (completePaper) {
+    const body = compactCompletePaperMarkdown(concept.markdownBody, concept.selectedMetadata, representedDescriptions, sourceIdByConceptId);
+    const content = [
+      `TITLE: ${concept.title ?? concept.conceptId}`,
+      `TYPE: ${concept.type}`,
+      concept.description && !body.includes(concept.description) ? `DESCRIPTION: ${concept.description}` : "",
+      concept.type === "paper" ? `PUBLICATION: ${JSON.stringify(concept.selectedMetadata)}` : "",
+      body,
+    ].filter(Boolean).join("\n");
+    return `<OKF_SOURCE id="${sourceId}" path="${escapeXmlAttribute(concept.conceptId)}">\n${escapeXmlText(content)}\n</OKF_SOURCE>`;
+  }
   const metadata = JSON.stringify(concept.selectedMetadata);
   const content = [
     `TITLE: ${concept.title ?? concept.conceptId}`,
@@ -176,6 +191,21 @@ export function buildNativeOkfGroundedContext(
   );
 
   let rendered = render();
+  if (retrieval.completePaperContext) {
+    if (rendered.prompt.length > maximumCharacters) {
+      throw new RequestTooLargeError(
+        "These selected papers contain more complete design knowledge than fits one response context. Remove a paper or narrow the concept kinds and try again. No selected knowledge was truncated.",
+      );
+    }
+    return {
+      sources: rendered.sources,
+      sourceById: new Map(rendered.sources.map((source) => [source.sourceId, source])),
+      allowedConceptIds: new Set(rendered.sources.map((source) => source.conceptId)),
+      requiredConceptIds: requiredIds,
+      prompt: rendered.prompt,
+      packing: { overviewDropped: false, optionalConceptsDropped: 0, markdownTruncated: false, sourceDetailsDropped: false },
+    };
+  }
   if (rendered.prompt.length > maximumCharacters) {
     includeOverview = false;
     rendered = render();
@@ -273,7 +303,26 @@ function structuredEvidenceIds(
 function compactStructuredAnalysis(
   analysis: NativeOkfStructuredAnalysis,
   sourceIdByConceptId: ReadonlyMap<string, string>,
+  completePapers = false,
 ): string {
+  if (completePapers) return JSON.stringify({
+    scope: analysis.scope,
+    checkedPaperCount: analysis.checkedPaperCount,
+    exhaustiveForScope: analysis.exhaustiveForScope,
+    requestedKinds: analysis.requestedKinds,
+    exactTerm: analysis.exactTerm,
+    relationshipCheckComplete: analysis.relationshipCheckComplete,
+    absenceCheckComplete: analysis.absenceCheckComplete,
+    papers: analysis.papers.map((paper) => ({
+      paperConceptId: paper.paperConceptId,
+      representedTypeCounts: paper.representedTypeCounts,
+      relevantConceptCount: paper.relevantConceptCount,
+      ...(analysis.exactTerm ? { relevantSourceIds: paper.relevantConcepts.flatMap((concept) => sourceIdByConceptId.get(concept.conceptId) ?? []) } : {}),
+      relevantRelationshipCount: paper.relevantRelationshipCount,
+      relationshipStatus: paper.relationshipStatus,
+      explicitTermMatchCount: paper.explicitTermMatchCount,
+    })),
+  });
   return JSON.stringify({
     scope: analysis.scope,
     checkedPaperCount: analysis.checkedPaperCount,
@@ -342,6 +391,8 @@ function renderGroundedPrompt(
   includeOverview: boolean,
   activeProposalDraft: SynthesisDraftState | null,
 ): { sources: NativeOkfGroundedSource[]; prompt: string } {
+  const representedDescriptions = new Set(concepts.flatMap((concept) => concept.description ? [concept.description] : []));
+  const sourceIdByConceptId = new Map(concepts.map((concept, index) => [concept.conceptId, `S${index + 1}`]));
   const sources = concepts.map((concept, index) => {
     const sourceId = `S${index + 1}`;
     const promptConcept = {
@@ -352,7 +403,7 @@ function renderGroundedPrompt(
       sourceId,
       conceptId: concept.conceptId,
       card: sourceCard(concept, sourceId),
-      block: sourceBlock(promptConcept, sourceId, includeDetails),
+      block: sourceBlock(promptConcept, sourceId, includeDetails, Boolean(retrieval.completePaperContext), representedDescriptions, sourceIdByConceptId),
     } satisfies NativeOkfGroundedSource;
   });
 
@@ -363,16 +414,29 @@ function renderGroundedPrompt(
       .join("\n")
     : "";
   const sourceText = sources.map((source) => source.block).join("\n\n");
-  const sourceIdByConceptId = new Map(
-    sources.map((source) => [source.conceptId, source.sourceId]),
-  );
+  const selectedBlock = retrieval.completePaperContext
+    ? `<OKF_SELECTED_PAPERS>\n${escapeXmlText(JSON.stringify({
+        notice: "Selection order is authoritative for first/second/third/fourth/fifth and paper 1 through paper 5. Only current OKF_SOURCE records are citable evidence. Absence refers only to the curated records, not proof of absence in the original publications. Relationships are stored within papers; do not invent cross-paper links.",
+        papers: retrieval.completePaperContext.paperConceptIds.map((id, index) => ({
+          ordinal: index + 1, conceptId: id,
+          title: retrieval.corpusOverview.papers.find((paper) => paper.conceptId === id)?.title,
+          sourceIds: (retrieval.completePaperContext!.conceptIdsByPaper[id] ?? []).flatMap((conceptId) => sourceIdByConceptId.get(conceptId) ?? []),
+        })),
+        relationshipSchema: ["sourceCitationId", "targetCitationId", "canonicalLabel"],
+        relationships: retrieval.completePaperContext.relationships.flatMap((edge) => {
+          const source = sourceIdByConceptId.get(edge.sourceId);
+          const target = sourceIdByConceptId.get(edge.targetId);
+          return source && target ? [[source, target, edge.label]] : [];
+        }),
+      }))}\n</OKF_SELECTED_PAPERS>\n\n`
+    : "";
   const structured = retrieval.structuredAnalysis
-    ? compactStructuredAnalysis(retrieval.structuredAnalysis, sourceIdByConceptId)
+    ? compactStructuredAnalysis(retrieval.structuredAnalysis, sourceIdByConceptId, Boolean(retrieval.completePaperContext))
     : null;
   const structuredBlock = structured
     ? `<OKF_STRUCTURED_ANALYSIS>\n${escapeXmlText(structured)}\n</OKF_STRUCTURED_ANALYSIS>\n\n`
     : "";
-  const overviewBlock = includeOverview
+  const overviewBlock = includeOverview && !retrieval.completePaperContext
     ? `<OKF_CORPUS_OVERVIEW>\n${overview}\n</OKF_CORPUS_OVERVIEW>\n\n`
     : "";
   const activeProposalBlock = activeProposalDraft
@@ -407,7 +471,7 @@ function renderGroundedPrompt(
         })),
       }))}\n</ACTIVE_VALIDATED_PROPOSAL>\n\n`
     : "";
-  const prompt = `${overviewBlock}${structuredBlock}${sourceText}\n\n${activeProposalBlock}<USER_QUESTION>\n${escapeXmlText(question)}\n</USER_QUESTION>`;
+  const prompt = `${selectedBlock}${overviewBlock}${structuredBlock}${sourceText}\n\n${activeProposalBlock}<USER_QUESTION>\n${escapeXmlText(question)}\n</USER_QUESTION>`;
   return {
     sources,
     prompt,

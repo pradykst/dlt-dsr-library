@@ -156,21 +156,46 @@ export function synthesisPrimaryLayer(
 
 /**
  * The active conversational scope. `corpus` is the whole library (the default);
- * `paper` restricts every answer, citation, source card, and stored map to one
- * canonical paper. The canonical `paperId` (the paper's stable slug) is the
- * trusted identity — a paper title is only display/search metadata and is never
+ * `papers` restricts every answer, citation, source card, and stored map to an
+ * ordered set of 1–5 canonical paper IDs. A stable slug is the trusted identity;
+ * a paper title is only display/search metadata and is never
  * accepted from the client as identity.
  */
 export type NativeOkfChatScope =
   | { type: "corpus" }
-  | { type: "paper"; paperId: string };
+  | { type: "papers"; paperIds: string[] };
+
+export type NativeOkfChatScopeInput = NativeOkfChatScope | { type: "paper"; paperId: string };
+export const MAX_NATIVE_OKF_SELECTED_PAPERS = 5;
+
+/** One parser for current requests, legacy sessions and server responses. */
+export function normalizeNativeOkfChatScope(value: unknown): NativeOkfChatScope | null {
+  if (value === undefined) return { type: "corpus" };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  if (input.type === "corpus") {
+    return Object.keys(input).length === 1 ? { type: "corpus" } : null;
+  }
+  const legacy = input.type === "paper";
+  if (!legacy && input.type !== "papers") return null;
+  if (Object.keys(input).some((key) => key !== "type" && key !== (legacy ? "paperId" : "paperIds"))) return null;
+  const ids = legacy ? [input.paperId] : input.paperIds;
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string" || !/^[a-z0-9][a-z0-9-]{0,255}$/u.test(id))) return null;
+  const paperIds = [...new Set(ids as string[])];
+  if (paperIds.length > MAX_NATIVE_OKF_SELECTED_PAPERS) return null;
+  return paperIds.length ? { type: "papers", paperIds } : { type: "corpus" };
+}
+
+export function nativeOkfChatScopePaperIds(scope: NativeOkfChatScope): string[] {
+  return scope.type === "papers" ? scope.paperIds : [];
+}
 
 export const NATIVE_OKF_CORPUS_SCOPE: NativeOkfChatScope = { type: "corpus" };
 
 export function nativeOkfChatScopePaperId(
   scope: NativeOkfChatScope | null | undefined,
 ): string | null {
-  return scope && scope.type === "paper" ? scope.paperId : null;
+  return scope?.type === "papers" && scope.paperIds.length === 1 ? scope.paperIds[0]! : null;
 }
 
 export interface NativeOkfChatRequest {
@@ -178,10 +203,10 @@ export interface NativeOkfChatRequest {
   history?: NativeOkfChatHistoryMessage[];
   /**
    * The scope the composer is in when this turn is submitted. Authoritative for
-   * the turn; the server still resolves and validates `paperId` against the
+   * the turn; the server still resolves and validates every paper ID against the
    * canonical repository. Omitted by older clients, which are treated as corpus.
    */
-  scope?: NativeOkfChatScope;
+  scope?: NativeOkfChatScopeInput;
   /**
    * `auto` lets the server resolve conversational diagram intent. `suppressed`
    * is reserved for an explicit user opt-out; it must not be inferred from an
@@ -205,7 +230,7 @@ export type NativeOkfDiagramPreference =
   (typeof NATIVE_OKF_DIAGRAM_PREFERENCES)[number];
 
 export const NATIVE_OKF_CONVERSATION_STATE_VERSION = 1 as const;
-export const MAX_NATIVE_OKF_ACTIVE_PAPERS = 3;
+export const MAX_NATIVE_OKF_ACTIVE_PAPERS = MAX_NATIVE_OKF_SELECTED_PAPERS;
 export const MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS = 64;
 export const MAX_NATIVE_OKF_ACTIVE_CONCEPTS = 8;
 export const MAX_NATIVE_OKF_ACTIVE_SOURCES = 12;
@@ -256,7 +281,7 @@ export interface NativeOkfPendingClarification {
 export interface NativeOkfConversationState {
   version: typeof NATIVE_OKF_CONVERSATION_STATE_VERSION;
   /**
-   * The persisted conversational scope. Defaults to corpus. A `paper` scope
+   * The persisted conversational scope. Defaults to corpus. A `papers` scope
    * survives follow-up turns until the researcher switches paper or returns to
    * All papers; New Chat resets it to corpus.
    */
@@ -312,7 +337,7 @@ export interface NativeOkfConversationStateInput extends Omit<
   | "latestValidatedSynthesisDraft"
   | "synthesisDraft"
 > {
-  scope?: NativeOkfChatScope;
+  scope?: NativeOkfChatScopeInput;
   activeSourceIds?: string[];
   lastSynthesisProblem?: SynthesisProblemState | null;
   latestValidatedSynthesisDraft?:

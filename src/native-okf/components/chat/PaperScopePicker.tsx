@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { MAX_NATIVE_OKF_SELECTED_PAPERS } from "../../shared/chat-types.ts";
+
 import {
   matchNativeOkfScopePapers,
   type NativeOkfScopePaper,
@@ -18,6 +20,7 @@ export interface PaperScopePickerProps {
   papers: readonly NativeOkfScopePaper[];
   onSelect: (paper: NativeOkfScopePaper) => void;
   onClose: () => void;
+  selectedPaperIds?: readonly string[];
   initialQuery?: string;
   heading?: string;
   /**
@@ -41,6 +44,7 @@ export function PaperScopePicker({
   papers,
   onSelect,
   onClose,
+  selectedPaperIds = [],
   initialQuery = "",
   heading = "Select a paper",
   maxHeight,
@@ -68,9 +72,13 @@ export function PaperScopePicker({
     setActiveIndex(0);
   }, [query]);
 
+  function selectionBlocked(paperId: string) {
+    return selectedPaperIds.includes(paperId) || selectedPaperIds.length >= MAX_NATIVE_OKF_SELECTED_PAPERS;
+  }
+
   function commit(index: number) {
     const paper = matches[index];
-    if (paper) onSelect(paper);
+    if (paper && !selectionBlocked(paper.paperId)) onSelect(paper);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -120,6 +128,9 @@ export function PaperScopePicker({
       >
         {heading}
       </p>
+      {selectedPaperIds.length >= MAX_NATIVE_OKF_SELECTED_PAPERS ? (
+        <p role="status" className="shrink-0 px-2 py-1 text-xs text-muted">You can select up to 5 papers.</p>
+      ) : null}
       <input
         ref={inputRef}
         type="text"
@@ -151,14 +162,16 @@ export function PaperScopePicker({
               key={paper.paperId}
               id={`${listId}-option-${index}`}
               role="option"
-              aria-selected={index === activeIndex}
+              aria-selected={selectedPaperIds.includes(paper.paperId)}
+              aria-disabled={selectionBlocked(paper.paperId)}
             >
               <button
                 type="button"
                 tabIndex={-1}
                 onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => onSelect(paper)}
-                className={`block w-full rounded-lg px-3 py-2 text-left text-sm leading-5 transition ${
+                onClick={() => commit(index)}
+                disabled={selectionBlocked(paper.paperId)}
+                className={`block w-full rounded-lg disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 text-left text-sm leading-5 transition ${
                   index === activeIndex
                     ? "bg-blue/10 text-ink"
                     : "text-slate-700 hover:bg-slate-50"
@@ -166,6 +179,7 @@ export function PaperScopePicker({
               >
                 <span className="block break-words font-semibold text-ink">
                   {paper.title}
+                  {selectedPaperIds.includes(paper.paperId) ? " (selected)" : ""}
                 </span>
                 {paper.authors.length > 0 ? (
                   <span className="mt-0.5 block break-words text-xs text-muted">

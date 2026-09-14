@@ -81,7 +81,7 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
             id={`${titleId}-identity`}
             className="text-xs font-semibold uppercase tracking-[0.14em] text-muted"
           >
-            Bundle identity
+            Concept identity
           </h4>
           <dl className="mt-3 space-y-3 text-sm">
             <div>
@@ -89,10 +89,6 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
               <dd className="mt-1 break-all rounded-md border border-line bg-white px-3 py-2 font-mono text-xs text-ink">
                 {concept.id}
               </dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted">Markdown path</dt>
-              <dd className="mt-1 break-all font-mono text-xs text-ink">{concept.filePath}</dd>
             </div>
             {concept.label ? (
               <div>
@@ -112,7 +108,7 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
             id={`${titleId}-summary`}
             className="text-xs font-semibold uppercase tracking-[0.14em] text-muted"
           >
-            Markdown summary
+            Description
           </h4>
           {summary ? (
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink">{summary}</p>
@@ -122,6 +118,13 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
             </p>
           )}
         </section>
+
+        {concept.doi ? (
+          <section className="mt-7 border-t border-line pt-5">
+            <h4 className="text-xs font-semibold text-muted">DOI</h4>
+            <a href={concept.doi} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all text-sm text-blue underline">{concept.doi}</a>
+          </section>
+        ) : null}
 
         {concept.tags.length > 0 ? (
           <section className="mt-7 border-t border-line pt-5" aria-labelledby={`${titleId}-tags`}>
@@ -146,7 +149,7 @@ export function ConceptDrawer({ concept, onClose }: ConceptDrawerProps) {
       </div>
 
       <footer className="border-t border-line px-5 py-3 text-xs leading-5 text-muted">
-        This bounded preview contains only client-safe native OKF metadata.
+        Description and publication link from the library record.
       </footer>
     </aside>
   );

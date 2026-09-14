@@ -71,10 +71,10 @@ test("a paper-scoped turn answers from that paper and never leaves it", async ()
     },
   );
 
-  assert.deepEqual(result.scope, { type: "paper", paperId: SCOPE_PAPER });
+  assert.deepEqual(result.scope, { type: "papers", paperIds: [SCOPE_PAPER] });
   assert.deepEqual(result.conversationState?.scope, {
-    type: "paper",
-    paperId: SCOPE_PAPER,
+    type: "papers",
+    paperIds: [SCOPE_PAPER],
   });
   assert.ok(result.sources.length >= 1, "expected at least one cited source");
   for (const source of result.sources) {
@@ -107,81 +107,30 @@ test("follow-up turns keep the paper scope without repeating the title", async (
     { environment: CONFIG, client: client(["It works like this [[S2]].", "It works like this [[S2]]."]) },
   );
 
-  assert.deepEqual(followUp.scope, { type: "paper", paperId: SCOPE_PAPER });
+  assert.deepEqual(followUp.scope, { type: "papers", paperIds: [SCOPE_PAPER] });
   for (const source of followUp.sources) {
     assert.ok(source.conceptId.includes(SCOPE_PAPER));
   }
 });
 
-test("an explicit broaden request transitions the turn back to corpus visibly", async () => {
+test("selected scope stays authoritative until the control changes", async () => {
   const result = await answerNativeOkfChat(
-    {
-      question: "Search the whole library for related design knowledge on this topic.",
-      scope: { type: "paper", paperId: SCOPE_PAPER },
-    },
-    { environment: CONFIG, client: client(["Across the library [[S1]].", "Across the library [[S1]]."]) },
+    { question: "Search the whole library for related design knowledge.", scope: { type: "paper", paperId: SCOPE_PAPER } },
+    { environment: CONFIG, client: client(["Within the selected paper [[S2]]."]) },
   );
-  assert.deepEqual(result.scope, { type: "corpus" });
-  assert.deepEqual(result.conversationState?.scope, { type: "corpus" });
+  assert.deepEqual(result.scope, { type: "papers", paperIds: [SCOPE_PAPER] });
 });
 
-test("an unknown scoped paper falls back to corpus with a warning, never a silent mismatch", async () => {
-  const result = await answerNativeOkfChat(
-    {
-      question: "What are the design principles for trust?",
-      scope: { type: "paper", paperId: "this-paper-does-not-exist" },
-    },
-    { environment: CONFIG, client: client(["Principles [[S1]].", "Principles [[S1]]."]) },
-  );
-  assert.deepEqual(result.scope, { type: "corpus" });
-  assert.ok(
-    (result.warnings ?? []).some((warning) => /selected paper/iu.test(warning)),
-  );
-});
-
-/**
- * Regression: a dropped paper scope must be reported on EVERY turn shape a
- * stale scope can reach, not only the ordinary answer path. Attaching the
- * notice at one return site left a researcher who happened to ask for a map, a
- * synthesis, or an out-of-scope question with a silently cleared scope and no
- * explanation at all.
- */
-test("a dropped paper scope is reported on every turn shape", async () => {
-  const staleScope = { type: "paper" as const, paperId: "this-paper-does-not-exist" };
-  const turns = [
-    // Scope guardrail: short-circuits before retrieval and any model call.
-    "What is 35+76/2*6?",
-    // Stored map request.
-    "Show me the complete design map for this paper.",
-    // Design synthesis request.
-    "Using this paper as evidence, design a new solution for cross-organisational auditing.",
-    // No-evidence research question.
-    "What does the library say about epigenetic quantum consensus for interplanetary ledgers?",
-  ];
-
-  for (const question of turns) {
-    const result = await answerNativeOkfChat(
-      { question, scope: staleScope },
-      {
-        environment: CONFIG,
-        client: client(["An answer [[S1]].", "An answer [[S1]]."]),
-      },
-    );
-    assert.deepEqual(result.scope, { type: "corpus" }, question);
-    assert.ok(
-      (result.warnings ?? []).some((warning) =>
-        /selected paper is no longer in the library/iu.test(warning)
-      ),
-      `no dropped-scope notice for: ${question}`,
-    );
-    assert.equal(
-      (result.warnings ?? []).filter((warning) =>
-        /selected paper is no longer in the library/iu.test(warning)
-      ).length,
-      1,
-      `duplicated dropped-scope notice for: ${question}`,
-    );
+test("an unknown scoped paper fails closed on every turn shape with no provider call", async () => {
+  let calls = 0;
+  const noCalls = { responses: { create: async () => { calls++; throw new Error("unexpected provider call"); } } } as unknown as NativeOpenAiClient;
+  for (const question of ["What are the design principles?", "Show the complete map.", "Design a solution for cross-organizational auditing.", "What is 35+76/2*6?"]) {
+    await assert.rejects(answerNativeOkfChat(
+      { question, scope: { type: "paper", paperId: "missing-paper" } },
+      { environment: CONFIG, client: noCalls },
+    ), /selected paper is no longer/u);
   }
+  assert.equal(calls, 0);
 });
 
 /**
@@ -313,7 +262,7 @@ test("changing scope between turns drops the previous scope's referents", async 
     catalog,
   );
 
-  assert.equal(prepared.scopePaperSlug, SCOPE_PAPER);
+  assert.deepEqual(prepared.scopePaperSlugs, [SCOPE_PAPER]);
   assert.deepEqual(prepared.validatedState.activeConceptIds, []);
   assert.deepEqual(prepared.validatedState.activeSourceIds, []);
   assert.deepEqual(prepared.validatedState.activeStructuredResultPaperSlugs, []);
@@ -388,7 +337,7 @@ test("state and requests from before the scope field default to corpus", async (
   });
   assert.equal(request.scope, undefined);
   const prepared = await prepareNativeOkfChatRequest(request);
-  assert.equal(prepared.scopePaperSlug, null);
+  assert.deepEqual(prepared.scopePaperSlugs, []);
   assert.deepEqual(prepared.resolvedScope, { type: "corpus" });
   assert.equal(prepared.scopeWarning, null);
 });
@@ -440,8 +389,8 @@ test("every canonical paper builds a complete, bounded, paper-only scoped contex
       }),
       catalog,
     );
-    assert.equal(prepared.scopePaperSlug, slug, paper.id);
-    assert.deepEqual(prepared.resolvedScope, { type: "paper", paperId: slug });
+    assert.deepEqual(prepared.scopePaperSlugs, [slug], paper.id);
+    assert.deepEqual(prepared.resolvedScope, { type: "papers", paperIds: [slug] });
     assert.deepEqual(prepared.restrictedPaperSlugs, [slug]);
 
     const retrieval = await assembleCompletePaperContext(

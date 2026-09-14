@@ -1,4 +1,6 @@
 import "server-only";
+
+import { conceptNarrative, publicationDoi } from "../shared/research-presentation.ts";
 import { buildPaperDesignMapFromBundle } from "./paper-design-map.ts";
 
 import { getOkfBundle } from "./cache.ts";
@@ -40,7 +42,6 @@ export { normalizeCatchAllSegments } from "../shared/presentation.ts";
 export type { CatchAllSegments } from "../shared/presentation.ts";
 
 export const WORKBENCH_GRAPH_MAX_NODES = 120;
-const GRAPH_MARKDOWN_SUMMARY_LIMIT = 700;
 const GRAPH_DESCRIPTION_LIMIT = 400;
 const BLOCKED_JSON_KEYS = new Set([
   "__proto__",
@@ -191,17 +192,6 @@ function boundedText(value: string | undefined, maximum: number): string | undef
   return `${truncated.trimEnd()}…`;
 }
 
-function markdownSummary(markdownBody: string): string | undefined {
-  const plainText = markdownBody
-    .replace(/```[\s\S]*?```/gu, " ")
-    .replace(/!\[([^\]]*)\]\([^)]*\)/gu, "$1")
-    .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
-    .replace(/<[^>]+>/gu, " ")
-    .replace(/^\s{0,3}#{1,6}\s+/gmu, "")
-    .replace(/^\s*[-+*>]\s*/gmu, "")
-    .replace(/[*_~`|]/gu, " ");
-  return boundedText(plainText, GRAPH_MARKDOWN_SUMMARY_LIMIT);
-}
 
 function linkedGroups(concepts: readonly OkfConcept[]): LinkedConceptGroupDto[] {
   const groups = new Map<string, ConceptSummaryDto[]>();
@@ -270,6 +260,7 @@ function graphNode(concept: OkfConcept, seedId: string): GraphNodeDto {
   return {
     id: concept.id,
     filePath: concept.filePath,
+    doi: publicationDoi(concept.resource, concept.markdownBody),
     type: concept.type,
     typeLabel: formatConceptType(concept.type),
     title: displayTitle(concept),
@@ -280,9 +271,9 @@ function graphNode(concept: OkfConcept, seedId: string): GraphNodeDto {
       ? {}
       : { label: optionalString(concept.frontmatter.label) }),
     tags: [...(concept.tags ?? [])].sort(compareDisplayStrings),
-    ...(markdownSummary(concept.markdownBody) === undefined
+    ...(conceptNarrative(concept.markdownBody, concept.description) === undefined
       ? {}
-      : { markdownSummary: markdownSummary(concept.markdownBody) }),
+      : { markdownSummary: conceptNarrative(concept.markdownBody, concept.description) }),
     seed: concept.id === seedId,
   };
 }

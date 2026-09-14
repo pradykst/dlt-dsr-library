@@ -96,7 +96,7 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
         className="!h-2.5 !w-2.5 !border-2 !bg-white"
         style={{ borderColor: colors.border }}
       />
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-h-3 min-w-0 items-center justify-end">
           {concept.label ? (
             <span
@@ -107,7 +107,7 @@ function PaperDesignNode({ data, selected }: NodeProps<PaperDesignNodeData>) {
             </span>
           ) : null}
         </div>
-        <p className="mt-2 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
+        <p className="flex flex-1 items-center py-2 whitespace-normal break-words [overflow-wrap:anywhere] text-sm font-semibold leading-5 text-ink">
           {displayTitle}
         </p>
       </div>

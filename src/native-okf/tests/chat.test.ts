@@ -807,7 +807,7 @@ test("requested-category packing exposes only actionable context limitations", a
       retrieve: async () => categoryRetrievalFixture(true),
       environment: CONFIG,
       client: responseClient(
-        [completedResponse("Both stored principles are represented [[S1]] [[S2]] [[S3]].")],
+        [completedResponse("Both stored principles are represented [[S1]] [[S2]].")],
         completeCounters,
       ),
     },
@@ -823,7 +823,7 @@ test("requested-category packing exposes only actionable context limitations", a
       retrieve: async () => categoryRetrievalFixture(false),
       environment: CONFIG,
       client: responseClient(
-        [completedResponse("The retained stored principle is represented [[S1]] [[S2]].")],
+        [completedResponse("The retained stored principle is represented [[S1]].")],
         limitedCounters,
       ),
     },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { paperHref } from "../../shared/routes.ts";
+import { formatConceptCount } from "../../shared/presentation.ts";
 import type { PaperCardDto } from "../../shared/types.ts";
 
 export function ReleaseFeaturedPaper({ paper }: { paper: PaperCardDto }) {
@@ -25,7 +26,7 @@ export function ReleaseFeaturedPaper({ paper }: { paper: PaperCardDto }) {
             key={entry.type}
             className="rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200"
           >
-            {entry.label} · {entry.count}
+            {formatConceptCount(entry.type, entry.count)}
           </span>
         ))}
       </div>

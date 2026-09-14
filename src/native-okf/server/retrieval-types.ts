@@ -214,6 +214,11 @@ export interface RetrievalDebug {
 }
 
 export interface RetrievalResult {
+  completePaperContext?: {
+    paperConceptIds: string[];
+    conceptIdsByPaper: Record<string, string[]>;
+    relationships: { sourceId: string; targetId: string; label: string }[];
+  };
   normalizedQuestion: string;
   seedResults: SearchResult[];
   expandedResults: ExpandedResult[];

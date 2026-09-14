@@ -19,6 +19,12 @@ export function formatConceptType(type: string): string {
     .join(" ");
 }
 
+export function formatConceptCount(type: string, count: number): string {
+  const singular = formatConceptType(type);
+  const plural = singular === "Analysis" ? "Analyses" : `${singular}s`;
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 export function fallbackTitleFromId(id: string): string {
   const segment = id.replace(/\.md$/iu, "").split("/").filter(Boolean).at(-1);
   return formatConceptType(segment ?? id);

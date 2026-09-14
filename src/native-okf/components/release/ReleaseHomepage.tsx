@@ -17,9 +17,9 @@ const CAPABILITIES = [
       "Retrieve linked concepts across the corpus and compare represented mechanisms, requirements, and design approaches.",
   },
   {
-    title: "Generate evidence-linked decision-support flows",
+    title: "Build evidence-grounded design proposals",
     description:
-      "Combine retrieved knowledge into proposed artifact directions while keeping stored concepts visibly distinct from synthesis.",
+      "Turn relevant library knowledge into a problem-specific DSR proposal and diagram, keeping cited source knowledge separate from newly proposed concepts.",
   },
   {
     title: "Verify grounding",
@@ -95,7 +95,7 @@ export function ReleaseHomepage({ viewModel }: { viewModel: ReleaseHomeViewModel
         <SectionIntro
           eyebrow="Research workflows"
           title="What researchers can do"
-          description="The interfaces expose what is currently represented without assuming that every paper contains every DSR category."
+          description="Inspect, compare, and reuse design knowledge from the library, then trace results back to the source publications."
         />
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {CAPABILITIES.map((capability, index) => (

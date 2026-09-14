@@ -1,5 +1,7 @@
 import "server-only";
 
+import { MAX_NATIVE_OKF_SELECTED_PAPERS } from "../shared/chat-types.ts";
+
 import { buildCorpusOverview, buildSinglePaperOverview } from "./corpus-overview.ts";
 import { getOkfBundle } from "./cache.ts";
 import {
@@ -670,6 +672,7 @@ export async function prioritizeExplicitPaperCategoryContext(
   retrieval: RetrievalResult,
   focus: NativeOkfExplicitPaperContextFocus,
 ): Promise<RetrievalResult> {
+  if (retrieval.completePaperContext) return retrieval;
   const requestedKinds = new Set(focus.requestedConceptKinds);
   if (focus.paperConceptIds.length === 0) {
     return retrieval;
@@ -919,6 +922,7 @@ function compareDropped(left: DroppedConcept, right: DroppedConcept): number {
 export async function retrieveOkfContext(
   question: string,
   options: RetrievalOptions = {},
+  requestedKinds: readonly NativeOkfRequestedConceptKind[] = [],
 ): Promise<RetrievalResult> {
   if (typeof question !== "string") throw new TypeError("A retrieval question is required.");
 
@@ -927,9 +931,11 @@ export async function retrieveOkfContext(
     MAX_SEARCH_RESULTS,
     limits.lexicalSeedLimit * LEXICAL_CANDIDATE_MULTIPLIER,
   );
-  const [bundle, searchResponse, corpusOverview] = await Promise.all([
-    getOkfBundle(),
-    searchOkf(question, { limit: lexicalCandidateLimit }),
+  const bundle = await getOkfBundle();
+  const acceptsType = (type: string): boolean => requestedKinds.length === 0 ||
+    requestedKinds.includes(nativeOkfRequestedKindForType(type)!);
+  const [searchResponse, corpusOverview] = await Promise.all([
+    searchOkf(question, { limit: lexicalCandidateLimit, ...(requestedKinds.length ? { types: [...bundle.conceptsByType.keys()].filter(acceptsType) } : {}) }),
     buildCorpusOverview(),
   ]);
   const droppedConcepts: DroppedConcept[] = [];
@@ -968,6 +974,7 @@ export async function retrieveOkfContext(
       }
       const rankInfluence = Math.max(0, seedResults.length - seed.seedRank) * 0.15;
       for (const neighbor of neighbors(bundle, concept.id, limits)) {
+        if (!acceptsType(neighbor.concept.type)) continue;
         firstHopCandidates.push(
           expansionCandidate(concept, neighbor, seed.score, 1, rankInfluence, searchResponse.meaningfulTerms),
         );
@@ -1008,6 +1015,7 @@ export async function retrieveOkfContext(
     const excluded = new Set([...seedIds, ...firstHop.map((item) => item.result.conceptId)]);
     for (const parent of firstHop) {
       for (const neighbor of neighbors(bundle, parent.concept.id, limits)) {
+        if (!acceptsType(neighbor.concept.type)) continue;
         if (excluded.has(neighbor.concept.id)) {
           addDropped(droppedConcepts, droppedKeys, neighbor.concept.id, "deduplicated");
           continue;
@@ -1166,9 +1174,6 @@ export async function retrieveOkfContext(
   };
 }
 
-const PAPER_SCOPE_MARKDOWN_CEILING_LARGE = 700;
-const PAPER_SCOPE_MARKDOWN_CEILING_SMALL = 1_600;
-const PAPER_SCOPE_LARGE_PAPER_CONCEPTS = 18;
 
 function questionTermSet(question: string): Set<string> {
   return new Set(
@@ -1202,38 +1207,31 @@ function withinPaperRelevance(
   return hits;
 }
 
-function boundedBody(body: string, maximum: number): string {
-  if (body.length <= maximum) return body;
-  if (maximum <= 1) return "";
-  return `${body.slice(0, maximum - 1).trimEnd()}…`;
-}
-
-/**
- * Assembles the COMPLETE native OKF representation of one canonical paper as a
- * retrieval result: the paper record plus every design-knowledge concept that
- * belongs to it, lightly ranked against the question but never dropped for
- * relevance. Because the scope is a single paper, no broad all-corpus retrieval
- * is performed.
- *
- * Trimming, when the serialized paper would exceed the context budget, follows
- * the release priority order: every canonical concept and its identity is kept;
- * only per-concept Markdown prose is shortened. A paper that still cannot fit at
- * its minimum prose is reported through `warnings` rather than silently losing a
- * concept or its stored relationships.
- */
+/** One-paper compatibility entry point uses the selected-paper assembler. */
 export async function assembleCompletePaperContext(
   paperConceptId: string,
   question: string,
   options: RetrievalOptions = {},
 ): Promise<RetrievalResult> {
-  if (typeof paperConceptId !== "string" || paperConceptId === "") {
-    throw new TypeError("A paper concept id is required.");
+  return assembleCompletePapersContext([paperConceptId], question, options);
+}
+
+/** Complete canonical records; the model packer must fit them without truncation. */
+export async function assembleCompletePapersContext(
+  paperConceptIds: readonly string[],
+  question: string,
+  options: RetrievalOptions = {},
+): Promise<RetrievalResult> {
+  const ids = [...new Set(paperConceptIds)];
+  if (ids.length < 1 || ids.length > MAX_NATIVE_OKF_SELECTED_PAPERS) {
+    throw new RangeError("Select between 1 and 5 papers.");
   }
   const bundle = await getOkfBundle();
-  const paper = bundle.conceptsById.get(paperConceptId);
-  if (!paper || paper.type !== "paper") {
-    throw new RangeError(`Unknown paper concept: ${paperConceptId}`);
-  }
+  const papers = ids.map((id) => {
+    const paper = bundle.conceptsById.get(id);
+    if (!paper || paper.type !== "paper") throw new RangeError(`Unknown paper concept: ${id}`);
+    return paper;
+  });
   const limits = resolveLimits({
     ...options,
     maxConcepts: options.maxConcepts ?? MAX_RETRIEVAL_LIMITS.maxConcepts,
@@ -1246,89 +1244,26 @@ export async function assembleCompletePaperContext(
   });
 
   const terms = questionTermSet(question);
-  const associated = associatedConceptsForPaper(bundle, paper);
-  const ranked = [...associated].sort((left, right) => {
-    const byRelevance =
-      withinPaperRelevance(right, terms) - withinPaperRelevance(left, terms);
-    if (byRelevance !== 0) return byRelevance;
-    return (
-      semanticTypeRank(left.type) - semanticTypeRank(right.type) ||
-      compareSemanticConcepts(left, right)
-    );
+  const associatedByPaper = papers.map((paper) => associatedConceptsForPaper(bundle, paper));
+  const ordered = papers.flatMap((paper, index) => [paper, ...associatedByPaper[index]!.sort((left, right) =>
+    withinPaperRelevance(right, terms) - withinPaperRelevance(left, terms) ||
+    semanticTypeRank(left.type) - semanticTypeRank(right.type) || compareSemanticConcepts(left, right)
+  )]);
+  const finalConcepts = [...new Map(ordered.map((concept, index) => [concept.id,
+    stabilizeEstimate(contextBase({ concept, score: 1, depth: 0, seedRank: index }, concept.markdownBody)),
+  ])).values()];
+  const contextCharacterEstimate = finalConcepts.reduce((sum, concept) => sum + concept.characterEstimate, 0);
+  const overviews = papers.flatMap((paper) => {
+    const overview = buildSinglePaperOverview(bundle, paper.id);
+    return overview ? [overview] : [];
   });
-  const ordered = [paper, ...ranked];
-
-  const markdownCeiling = associated.length > PAPER_SCOPE_LARGE_PAPER_CONCEPTS
-    ? PAPER_SCOPE_MARKDOWN_CEILING_LARGE
-    : PAPER_SCOPE_MARKDOWN_CEILING_SMALL;
-
-  const warnings: string[] = [];
-  const droppedConcepts: DroppedConcept[] = [];
-  const finalConcepts: FinalContextConcept[] = [];
-  let contextCharacterEstimate = 0;
-  let contextWasTruncated = false;
-
-  for (const [index, concept] of ordered.entries()) {
-    if (finalConcepts.length >= limits.maxConcepts) {
-      droppedConcepts.push({ conceptId: concept.id, reason: "concept-limit" });
-      continue;
-    }
-    const relevanceScore = concept === paper
-      ? 1
-      : Math.max(
-          0.01,
-          withinPaperRelevance(concept, terms) / Math.max(1, terms.size),
-        );
-    const candidate: ContextCandidate = {
-      concept,
-      score: rounded(relevanceScore),
-      depth: 0,
-      seedRank: index,
-    };
-    const remaining = limits.maxContextCharacters - contextCharacterEstimate;
-    const cappedBody = boundedBody(concept.markdownBody, markdownCeiling);
-    let fitted = stabilizeEstimate(contextBase(candidate, cappedBody));
-    if (fitted.characterEstimate > remaining) {
-      const empty = stabilizeEstimate(contextBase(candidate, ""));
-      if (empty.characterEstimate > remaining) {
-        droppedConcepts.push({ conceptId: concept.id, reason: "context-limit" });
-        warnings.push(
-          "This paper contains more canonical design knowledge than fits one bounded answer context; some concept descriptions were omitted.",
-        );
-        continue;
-      }
-      let low = 0;
-      let high = cappedBody.length;
-      let best = empty;
-      while (low <= high) {
-        const middle = Math.floor((low + high) / 2);
-        const trial = stabilizeEstimate(
-          contextBase(candidate, boundedBody(cappedBody, middle)),
-        );
-        if (trial.characterEstimate <= remaining) {
-          best = trial;
-          low = middle + 1;
-        } else {
-          high = middle - 1;
-        }
-      }
-      fitted = best;
-      contextWasTruncated = true;
-    }
-    if (cappedBody.length < concept.markdownBody.length) {
-      contextWasTruncated = true;
-    }
-    finalConcepts.push(fitted);
-    contextCharacterEstimate += fitted.characterEstimate;
-  }
-
-  if (contextWasTruncated) {
-    warnings.push(
-      "One or more Markdown bodies were truncated to fit the context limit.",
-    );
-  }
-
-  const overview = buildSinglePaperOverview(bundle, paper.id);
+  const relationships = associatedByPaper.flatMap((associated) => projectSemanticEdges(bundle, associated));
+  const selectedIds = new Set(finalConcepts.map((concept) => concept.conceptId));
+  const completePaperContext = {
+    paperConceptIds: ids,
+    conceptIdsByPaper: Object.fromEntries(papers.map((paper, index) => [paper.id, associatedByPaper[index]!.map((concept) => concept.id)])),
+    relationships: relationships.filter((edge) => selectedIds.has(edge.sourceId) && selectedIds.has(edge.targetId)),
+  };
   const overlap = terms.size === 0
     ? 0
     : Math.min(
@@ -1363,9 +1298,9 @@ export async function assembleCompletePaperContext(
       topScoreSeparation: 0,
     },
     expansionPaths: [],
-    droppedConcepts: droppedConcepts.sort(compareDropped),
+    droppedConcepts: [],
     secondHopUsed: false,
-    secondHopReason: "single-paper scope uses the complete paper record",
+    secondHopReason: "selected-paper scope uses complete canonical records",
     candidateCount: ordered.length,
   };
 
@@ -1374,10 +1309,9 @@ export async function assembleCompletePaperContext(
     seedResults: [],
     expandedResults: [],
     finalConcepts,
-    corpusOverview: overview
-      ? { paperCount: 1, papers: [overview] }
-      : { paperCount: 0, papers: [] },
-    warnings: [...new Set(warnings)],
+    completePaperContext,
+    corpusOverview: { paperCount: overviews.length, papers: overviews },
+    warnings: [],
     confidence: 1,
     noMatch: finalConcepts.length === 0,
     debug,

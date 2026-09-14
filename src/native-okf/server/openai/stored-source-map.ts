@@ -408,6 +408,7 @@ export async function storedPaperMapPresentation(
 
 export async function buildComparativePaperDesignMap(
   paperConceptIds: readonly string[],
+  requestedKinds: readonly NativeOkfRequestedConceptKind[] = [],
 ): Promise<{
   diagram: GeneratedDiagram;
   summary: string;
@@ -420,7 +421,7 @@ export async function buildComparativePaperDesignMap(
   const paperMaps = await Promise.all(
     uniquePaperIds.map(async (paperId, paperIndex) => {
       const paper = bundle.conceptsById.get(paperId);
-      const map = await buildStoredPaperDesignMap(paperId);
+      const map = await buildStoredPaperDesignMap(paperId, requestedKinds);
       if (!paper || paper.type !== "paper" || !map) return null;
       const title = displayTitle(paper);
       const nodeId = new Map(

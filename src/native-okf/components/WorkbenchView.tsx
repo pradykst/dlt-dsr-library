@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { publicationDoi, researcherMarkdown } from "../shared/research-presentation.ts";
+import { formatConceptCount } from "../shared/presentation.ts";
 import type { ReactNode } from "react";
 
 import { conceptHref, isSafeExternalHref } from "../shared/links.ts";
@@ -40,9 +42,8 @@ export function WorkbenchView({
   const paperPresentation = isPaper
     ? buildPaperPresentation(concept.markdownBody, view.linkedGroups)
     : null;
-  const displayFrontmatter = isPaper
-    ? publicPaperFrontmatter(frontmatter)
-    : frontmatter;
+  const displayFrontmatter = publicPaperFrontmatter(frontmatter);
+  const doi = publicationDoi(concept.resource, concept.markdownBody);
   const resourceIsSafe = Boolean(
     concept.resource && isSafeExternalHref(concept.resource),
   );
@@ -90,14 +91,9 @@ export function WorkbenchView({
             <section key={group.type} aria-labelledby={`group-${group.type}`}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h3 id={`group-${group.type}`} className="font-serif text-2xl font-semibold text-ink">
-                  {group.typeLabel}
+                  {formatConceptCount(group.type, group.count)}
                 </h3>
-                <span
-                  aria-label={`${group.count} ${group.typeLabel}`}
-                  className="font-mono text-xs font-semibold text-muted"
-                >
-                  {group.count}
-                </span>
+
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {group.concepts.map((linkedConcept) => (
@@ -260,7 +256,7 @@ export function WorkbenchView({
                   </Link>
                 </div>
               ) : null}
-              <MetadataGrid items={metadataItems} />
+              <MetadataGrid items={[...metadataItems, { label: "DOI", value: doi ? <a href={doi} target="_blank" rel="noopener noreferrer" className="break-all text-blue underline">{doi}</a> : undefined }]} />
               {concept.tags.length > 0 ? (
                 <div className="mt-5 flex flex-wrap gap-2" aria-label="Concept tags">
                   {concept.tags.map((tag) => (
@@ -277,7 +273,7 @@ export function WorkbenchView({
 
             <div className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-8">
               <MarkdownDocument
-                markdown={paperPresentation?.narrativeMarkdown ?? concept.markdownBody}
+                markdown={researcherMarkdown(paperPresentation?.narrativeMarkdown ?? concept.markdownBody)}
                 sourceFilePath={concept.filePath}
               />
             </div>

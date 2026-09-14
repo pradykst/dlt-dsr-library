@@ -1,3 +1,4 @@
+import { normalizeNativeOkfChatScope, type NativeOkfChatScope } from "./chat-types.ts";
 import type {
   NativeOkfChatResponse,
   NativeOkfConversationState,
@@ -12,6 +13,7 @@ export const MAX_NATIVE_OKF_SESSION_MESSAGE_CHARACTERS = 12_000;
 export const MAX_NATIVE_OKF_SESSION_SERIALIZED_CHARACTERS = 100_000;
 
 export interface NativeOkfStoredChatMessage {
+  scope?: NativeOkfChatScope;
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -104,7 +106,10 @@ function safeStoredMessage(
     return null;
   }
   const response = safeStoredResponse(value.response);
+  const scope = normalizeNativeOkfChatScope(value.scope);
+  if (!scope) return null;
   return {
+    ...(value.scope === undefined ? {} : { scope }),
     id: value.id,
     role: value.role,
     content: value.content,
@@ -170,6 +175,7 @@ function compactPayload(
           return [];
         }
         return [{
+          ...(message.scope ? { scope: message.scope } : {}),
           id: message.id.slice(0, 100),
           role: message.role,
           content: message.content,
@@ -206,6 +212,7 @@ export function serializeNativeOkfChatSession(
       MAX_NATIVE_OKF_SESSION_SERIALIZED_CHARACTERS
   ) {
     bounded.messages = bounded.messages.map((message) => ({
+      ...(message.scope ? { scope: message.scope } : {}),
       id: message.id,
       role: message.role,
       content: message.content,

@@ -3,6 +3,7 @@ import "server-only";
 import type { Response } from "openai/resources/responses/responses";
 
 import {
+  normalizeNativeOkfChatScope,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
   MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
@@ -29,13 +30,14 @@ import {
   NATIVE_OKF_LIBRARY_SCOPE_BOUNDARY_RESPONSE,
 } from "../scope-guard.ts";
 import {
-  assembleCompletePaperContext,
+  assembleCompletePapersContext,
   nativeOkfRequestedKindForType,
   retrieveOkfContext,
 } from "../retrieval.ts";
 import type { RetrievalResult } from "../retrieval-types.ts";
 import {
   assembleNativeOkfContextualRetrieval,
+  hardNativeOkfConceptKinds,
   clarificationConversationState,
   completedConversationState,
   hasSufficientNativeOkfSynthesisGrounding,
@@ -111,31 +113,10 @@ const ALLOWED_REQUEST_KEYS = new Set([
   "includeDiagram",
   "conversationState",
 ]);
-const ALLOWED_SCOPE_KEYS = new Set(["type", "paperId"]);
-const MAX_SCOPE_PAPER_ID_CHARACTERS = 256;
-
 function validateChatScope(value: unknown): NativeOkfChatScope {
-  if (!isRecord(value)) {
-    throw new NativeOkfRequestError("Scope must be an object.");
-  }
-  validateKnownKeys(value, ALLOWED_SCOPE_KEYS, "Scope");
-  if (value.type === "corpus") {
-    if (value.paperId !== undefined) {
-      throw new NativeOkfRequestError("Corpus scope must not carry a paperId.");
-    }
-    return { type: "corpus" };
-  }
-  if (value.type === "paper") {
-    if (typeof value.paperId !== "string") {
-      throw new NativeOkfRequestError("Paper scope requires a paperId string.");
-    }
-    const paperId = sanitizeNativeOkfChatText(value.paperId);
-    if (paperId === "" || paperId.length > MAX_SCOPE_PAPER_ID_CHARACTERS) {
-      throw new NativeOkfRequestError("Paper scope paperId is invalid.");
-    }
-    return { type: "paper", paperId };
-  }
-  throw new NativeOkfRequestError('Scope type must be "corpus" or "paper".');
+  const scope = normalizeNativeOkfChatScope(value);
+  if (!scope) throw new NativeOkfRequestError("Select between 1 and 5 valid, unique paper IDs, or All papers.");
+  return scope;
 }
 const ALLOWED_HISTORY_KEYS = new Set(["role", "content"]);
 
@@ -714,6 +695,7 @@ function directlyScopedEvidenceIds(
   prepared: PreparedNativeOkfChatRequest,
   requestedConceptIds: readonly string[],
 ): string[] {
+  if (hardNativeOkfConceptKinds(prepared).length > 0) return [...requestedConceptIds];
   const paperSlugs = prepared.explicitPaperSlugs.length > 0
     ? prepared.explicitPaperSlugs
     : prepared.restrictedPaperSlugs;
@@ -824,18 +806,26 @@ export async function answerNativeOkfChat(
     prepared,
   });
   assertUniqueSourceIds(response);
+  const allowedPapers = new Set(prepared.scopePaperSlugs);
+  const kinds = hardNativeOkfConceptKinds(prepared);
+  if (allowedPapers.size > 0 || kinds.length > 0) {
+    const canonical = new Map(prepared.catalog.concepts.map((concept) => [concept.conceptId, concept]));
+    const accepts = (id: string, fallbackType?: string): boolean => {
+      const concept = canonical.get(id);
+      if (allowedPapers.size > 0 && (!concept?.paperSlug || !allowedPapers.has(concept.paperSlug))) return false;
+      return kinds.length === 0 || kinds.includes(nativeOkfRequestedKindForType(concept?.type ?? fallbackType ?? "")!);
+    };
+    if (response.sources.some((source) => !accepts(source.conceptId, source.type)) ||
+      [...(response.diagram?.nodes ?? []), ...(response.diagram?.edges ?? [])]
+        .some((item) => item.supportConceptIds.some((id) => !accepts(id)))) {
+      throw new NativeOkfRequestError("The response could not be verified within the selected papers and concept kinds. Please try again.");
+    }
+  }
   const warnings = response.warnings ?? [];
-  // The scope in effect after the turn always mirrors the returned conversation
-  // state, so the client can keep the visible scope chip exactly in sync —
-  // including when the server dropped a paper-scoped turn back to corpus.
-  //
-  // A dropped scope is never silent. Attaching the notice here, rather than at
-  // one of the many return sites, is what guarantees the researcher is told on
-  // every path a stale scope can reach: an ordinary answer, a stored map, a
-  // synthesis, a clarification, a scope guardrail, or a no-evidence reply.
+  // Echo the resolved boundary on every response, including clarification and no evidence.
   return {
     ...response,
-    scope: response.conversationState?.scope ?? { type: "corpus" },
+    scope: prepared.resolvedScope,
     ...(prepared.scopeWarning && !warnings.includes(prepared.scopeWarning)
       ? { warnings: [prepared.scopeWarning, ...warnings] }
       : {}),
@@ -893,22 +883,14 @@ async function answerNativeOkfChatUnchecked(
 
   const turnPlan = prepared.turnPlan;
   const includeDiagram = turnPlan.includeDiagram;
-  const scopePaperConceptId = prepared.scopePaperSlug
-    ? prepared.catalog.papers.find(
-        (paper) => paper.slug === prepared.scopePaperSlug,
-      )?.conceptId ?? null
-    : null;
-  // Paper scope assembles the complete native OKF record for the one selected
-  // paper — no broad all-corpus retrieval. A test-provided `retrieve` override
-  // still wins so fixtures stay in control.
+  const hardKinds = hardNativeOkfConceptKinds(prepared);
+  const paperBySlug = new Map(prepared.catalog.papers.map((paper) => [paper.slug, paper.conceptId]));
+  const scopePaperConceptIds = prepared.scopePaperSlugs.map((slug) => paperBySlug.get(slug)!);
   const rawRetrieval = dependencies.retrieve
     ? await dependencies.retrieve(prepared.retrievalQuestion)
-    : scopePaperConceptId
-      ? await assembleCompletePaperContext(
-          scopePaperConceptId,
-          prepared.retrievalQuestion,
-        )
-      : await retrieveOkfContext(prepared.retrievalQuestion);
+    : scopePaperConceptIds.length > 0
+      ? await assembleCompletePapersContext(scopePaperConceptIds, prepared.retrievalQuestion)
+      : await retrieveOkfContext(prepared.retrievalQuestion, {}, hardKinds);
   const retrieval = await assembleNativeOkfContextualRetrieval(
     prepared,
     rawRetrieval,
@@ -919,7 +901,7 @@ async function answerNativeOkfChatUnchecked(
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
   if (
-    ![
+    (hardKinds.length > 0 && retrieval.finalConcepts.length === 0) || (![
       "STORED_FULL_MAP",
       "STORED_FILTERED_MAP",
       "STORED_COMPARISON_MAP",
@@ -928,12 +910,14 @@ async function answerNativeOkfChatUnchecked(
       retrieval.noMatch ||
       retrieval.finalConcepts.length === 0 ||
       insufficientSynthesisGrounding
-    )
+    ))
   ) {
     return {
       kind: "answer",
       presentationMode: "no-match",
-      answerMarkdown: INSUFFICIENT_CONTEXT_ANSWER,
+      answerMarkdown: hardKinds.length > 0
+        ? "No relevant concepts of the requested kind were found within the current paper scope. Try another topic or change the selected papers."
+        : INSUFFICIENT_CONTEXT_ANSWER,
       sources: [],
       insufficientContext: true,
       diagramMode: null,
@@ -977,7 +961,7 @@ async function answerNativeOkfChatUnchecked(
       try {
         builtDiagram = await (
           dependencies.buildStoredPaperMap ?? buildStoredPaperDesignMap
-        )(focusedPaper.conceptId, turnPlan.diagramConceptKinds);
+        )(focusedPaper.conceptId, hardKinds.length ? hardKinds : turnPlan.diagramConceptKinds);
       } catch {
         builtDiagram = undefined;
       }
@@ -1021,7 +1005,7 @@ async function answerNativeOkfChatUnchecked(
     try {
       presentation = await (
         dependencies.buildComparativePaperMap ?? buildComparativePaperDesignMap
-      )(paperConceptIds);
+      )(paperConceptIds, hardKinds);
     } catch {
       presentation = undefined;
     }
@@ -1047,23 +1031,6 @@ async function answerNativeOkfChatUnchecked(
       summary: presentation.summary,
     };
   }
-
-  const environment =
-    dependencies.environment ?? readOpenAiEnvironment();
-  const client =
-    dependencies.client ?? getOpenAiClient(environment);
-  const history = request.history ?? [];
-  const userConversation = [
-    ...history.map(
-      (message) => `${message.role}: ${message.content}`,
-    ),
-    `user: ${request.question}`,
-  ].join("\n");
-  await moderateNativeOkfText(
-    userConversation,
-    environment,
-    client,
-  );
 
   const expectedRequestedConceptIds = directlyRequestedConceptIds(prepared);
   const expectedScopedEvidenceIds = directlyScopedEvidenceIds(
@@ -1097,7 +1064,7 @@ async function answerNativeOkfChatUnchecked(
     // In paper scope the whole paper record is the evidence set: keep every
     // canonical design-knowledge concept protected from context trimming, and
     // require the answer to cite at least one concept from this paper.
-    ...(prepared.scopePaperSlug
+    ...(prepared.scopePaperSlugs.length > 0
       ? retrieval.finalConcepts
           .filter(
             (concept) =>
@@ -1114,6 +1081,26 @@ async function answerNativeOkfChatUnchecked(
       ? turnPlan.activeProposalDraft
       : null,
   );
+
+  const environment =
+    dependencies.environment ?? readOpenAiEnvironment();
+  const client =
+    dependencies.client ?? getOpenAiClient(environment);
+  const priorScope = normalizeNativeOkfChatScope(request.conversationState?.scope);
+  const history = JSON.stringify(priorScope) === JSON.stringify(prepared.resolvedScope)
+    ? request.history ?? [] : [];
+  const userConversation = [
+    ...history.map(
+      (message) => `${message.role}: ${message.content}`,
+    ),
+    `user: ${request.question}`,
+  ].join("\n");
+  await moderateNativeOkfText(
+    userConversation,
+    environment,
+    client,
+  );
+
 
   if (prepared.intent === "synthesized-flow") {
     const grounding = await buildNativeOkfDiagramGrounding(retrieval);
@@ -1443,9 +1430,9 @@ async function answerNativeOkfChatUnchecked(
   } else if (presentationSafe && includeDiagram && prepared.diagramMode === "stored") {
     try {
       diagram = await buildGroundedStoredSourceMap(retrieval, {
-        allowNarrowExactRelationship:
-          turnPlan.requestedConceptKinds.length === 2 &&
-          retrieval.structuredAnalysis?.relationshipCheckComplete === true,
+        allowNarrowExactRelationship: hardKinds.length > 0 || prepared.scopePaperSlugs.length > 0 ||
+          (turnPlan.requestedConceptKinds.length === 2 &&
+          retrieval.structuredAnalysis?.relationshipCheckComplete === true),
       });
       if (diagram) {
         responseDiagramMode = "stored";
@@ -1510,8 +1497,8 @@ async function answerNativeOkfChatUnchecked(
       // explicitlyFilteredDiagramConceptKinds), so it must never be described as
       // "the complete stored...map".
       const provenanceSentence = earlyDeterministicDiagram.mode === "comparative"
-        ? "The diagram below shows the complete canonical stored design-knowledge relationships for both papers, kept in separate paper-labelled groups. No synthesized or invented cross-paper knowledge was added."
-        : turnPlan.mode === "STORED_FILTERED_MAP"
+        ? "The diagram below shows canonical stored design knowledge from the selected papers in separate paper-labelled groups. No synthesized or invented cross-paper knowledge was added."
+        : turnPlan.mode === "STORED_FILTERED_MAP" || hardKinds.length > 0
           ? "The diagram below shows the stored design-knowledge concepts in the explicitly requested category and the canonical relationships among them from the paper. No synthesized design knowledge was added."
           : "The diagram below shows the complete stored design-knowledge concepts and canonical relationships from the paper. No synthesized design knowledge was added.";
       answerMarkdown = `${answerMarkdown}\n\n${provenanceSentence}`;

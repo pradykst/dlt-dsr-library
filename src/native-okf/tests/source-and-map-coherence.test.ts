@@ -340,7 +340,7 @@ test("full stored paper map: provenance sentence never claims \"complete\" for a
 
   const fullResult = await answerNativeOkfChat(
     {
-      question: `What design principles are represented in "${paper.title}", and how are they related?`,
+      question: `Show the complete design map including principles and features in "${paper.title}".`,
       includeDiagram: true,
     },
     { environment: MOCK_ENVIRONMENT, client: defaultCitingMockClient() },

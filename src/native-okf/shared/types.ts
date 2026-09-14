@@ -93,6 +93,7 @@ export interface RelationshipDto {
 }
 
 export interface GraphNodeDto {
+  doi?: string;
   id: string;
   filePath: string;
   type: string;

@@ -10,6 +10,8 @@ import {
 
 import {
   createInitialNativeOkfConversationState,
+  normalizeNativeOkfChatScope,
+  nativeOkfChatScopePaperIds,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGE_CHARACTERS,
   MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES,
   nativeOkfVisibleHistoryExceedsModelContext,
@@ -32,6 +34,7 @@ import { shouldShowNativeOkfEvaluationCallout } from "../../shared/evaluation-on
 import { NATIVE_OKF_EVALUATION_SURVEY_URL } from "../../shared/public-links.ts";
 import {
   findNativeOkfScopePaper,
+  addNativeOkfScopePaper,
   nativeOkfActiveMentionQuery,
   nativeOkfSlashCommand,
   type NativeOkfScopePaper,
@@ -54,6 +57,7 @@ import { PaperScopePopover } from "./PaperScopePopover.tsx";
 const MAX_QUESTION_LENGTH = 2_000;
 
 interface ChatEntry {
+  scope?: NativeOkfChatScope;
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -146,14 +150,7 @@ function historyFromEntries(entries: readonly ChatEntry[]): NativeOkfChatHistory
     .slice(-MAX_NATIVE_OKF_MODEL_HISTORY_MESSAGES);
 }
 
-function parseResponseScope(value: unknown): NativeOkfChatScope | null {
-  if (!isRecord(value)) return null;
-  if (value.type === "corpus") return { type: "corpus" };
-  if (value.type === "paper" && typeof value.paperId === "string" && value.paperId) {
-    return { type: "paper", paperId: value.paperId };
-  }
-  return null;
-}
+const parseResponseScope = (value: unknown) => value === undefined ? null : normalizeNativeOkfChatScope(value);
 
 export interface ChatWorkbenchProps {
   /** Canonical papers for the scope selector, `@` reference, and `/paper` command. */
@@ -175,7 +172,7 @@ export function ChatWorkbench({
   variant = "page",
 }: ChatWorkbenchProps) {
   const lockedScope: NativeOkfChatScope | null = lockedPaperId
-    ? { type: "paper", paperId: lockedPaperId }
+    ? { type: "papers", paperIds: [lockedPaperId] }
     : null;
   const startingScope: NativeOkfChatScope =
     lockedScope ?? initialScope ?? { type: "corpus" };
@@ -231,14 +228,14 @@ export function ChatWorkbench({
   const includeDiagram = diagramIntentToggle.enabled;
   const historyContextTruncated =
     nativeOkfVisibleHistoryExceedsModelContext(entries.length);
-  const activePaper = scope.type === "paper"
-    ? findNativeOkfScopePaper(scope.paperId, papers)
+  const activePaper = scope.type === "papers"
+    ? findNativeOkfScopePaper(scope.paperIds[0]!, papers)
     : undefined;
 
   function changeScope(next: NativeOkfChatScope) {
-    if (lockedScope && next.type === "corpus") return;
+    if (lockedScope || JSON.stringify(next) === JSON.stringify(scope)) return;
     setScope(next);
-    setConversationState((current) => ({ ...current, scope: next }));
+    setConversationState({ ...createInitialNativeOkfConversationState(), scope: next });
   }
 
   function updateComposer(nextQuestion: string, caret?: number) {
@@ -271,6 +268,7 @@ export function ChatWorkbench({
               }
             : undefined;
           return {
+            scope: message.scope,
             id: message.id,
             role: message.role,
             content: message.content,
@@ -292,7 +290,8 @@ export function ChatWorkbench({
         const restoredScope = lockedScope ?? initialScope ??
           restored.conversationState.scope;
         setConversationState({
-          ...restored.conversationState,
+          ...(JSON.stringify(restoredScope) === JSON.stringify(restored.conversationState.scope)
+            ? restored.conversationState : createInitialNativeOkfConversationState()),
           scope: restoredScope,
         });
         setScope(restoredScope);
@@ -353,13 +352,13 @@ export function ChatWorkbench({
       const nextQuestion = `${before}${after}`.replace(/\s{2,}/gu, " ");
       updateComposer(nextQuestion, before.length);
     }
-    changeScope({ type: "paper", paperId: paper.paperId });
+    changeScope(addNativeOkfScopePaper(scope, paper.paperId));
     setMentionState(null);
     inputRef.current?.focus();
   }
 
   function selectCommandPaper(paper: NativeOkfScopePaper) {
-    changeScope({ type: "paper", paperId: paper.paperId });
+    changeScope(addNativeOkfScopePaper(scope, paper.paperId));
     updateComposer("");
     setCommandPickerOpen(false);
     inputRef.current?.focus();
@@ -400,13 +399,14 @@ export function ChatWorkbench({
     ) return;
     const priorEntries = entries;
     const userEntry: ChatEntry = {
+      scope,
       id: makeId("user"),
       role: "user",
       content: submittedQuestion,
     };
     const request: NativeOkfChatRequest = {
       question: submittedQuestion,
-      history: historyFromEntries(priorEntries),
+      history: historyFromEntries(priorEntries.filter((entry) => JSON.stringify(entry.scope ?? { type: "corpus" }) === JSON.stringify(scope))),
       scope,
       diagramPreference: diagramPreferenceForRequest(
         diagramIntentToggle,
@@ -460,6 +460,7 @@ export function ChatWorkbench({
       setScope(lockedScope ?? nextScope);
 
       const assistantEntry: ChatEntry = {
+        scope: nextScope ?? scope,
         id: makeId("assistant"),
         role: "assistant",
         content: payload.answerMarkdown,
@@ -549,9 +550,9 @@ export function ChatWorkbench({
     entries.flatMap((entry) => entry.response ? [entry.response] : []),
   );
 
-  const openFullChatHref = scope.type === "paper"
+  const openFullChatHref = scope.type === "papers"
     ? `${NATIVE_OKF_PUBLIC_ROUTES.chat}?paper=${
-        encodeURIComponent(scope.paperId)
+        encodeURIComponent(scope.paperIds[0]!)
       }`
     : NATIVE_OKF_PUBLIC_ROUTES.chat;
 
@@ -598,7 +599,7 @@ export function ChatWorkbench({
               type="button"
               onClick={clearConversation}
               aria-label="Start a new chat"
-              disabled={entries.length === 0 && !pending && !error}
+              disabled={entries.length === 0 && !pending && !error && (lockedScope !== null || scope.type === "corpus")}
               className="rounded-full border border-line bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
             >
               New chat
@@ -832,8 +833,8 @@ export function ChatWorkbench({
               {variant !== "drawer" ? (
                 <p className="text-[0.68rem] leading-4 text-muted">
                   Tip: Use <span className="font-semibold text-ink">@</span> or{" "}
-                  <span className="font-semibold text-ink">/paper</span> to select a
-                  paper and chat only with its design knowledge.
+                  <span className="font-semibold text-ink">/paper</span> to select up to
+                  five papers and chat with their design knowledge.
                 </p>
               ) : null}
             </div>
@@ -862,10 +863,11 @@ export function ChatWorkbench({
                 anchorRef={composerRef}
                 boundsRef={panelRef}
                 papers={papers}
+                selectedPaperIds={nativeOkfChatScopePaperIds(scope)}
                 heading="Reference a paper"
                 initialQuery={mentionState.query}
                 onSelect={selectMentionPaper}
-                onClose={() => setMentionState(null)}
+                onClose={() => { setMentionState(null); inputRef.current?.focus(); }}
               />
             ) : null}
             {commandPickerOpen && !lockedScope ? (
@@ -873,12 +875,13 @@ export function ChatWorkbench({
                 anchorRef={composerRef}
                 boundsRef={panelRef}
                 papers={papers}
+                selectedPaperIds={nativeOkfChatScopePaperIds(scope)}
                 heading="Select a paper"
                 initialQuery={slashCommand?.command === "paper"
                   ? slashCommand.argument
                   : ""}
                 onSelect={selectCommandPaper}
-                onClose={() => setCommandPickerOpen(false)}
+                onClose={() => { setCommandPickerOpen(false); inputRef.current?.focus(); }}
               />
             ) : null}
             <textarea
@@ -892,14 +895,14 @@ export function ChatWorkbench({
               rows={3}
               maxLength={MAX_QUESTION_LENGTH + 1}
               disabled={pending}
-              placeholder={scope.type === "paper"
-                ? "Ask about this paper — its requirements, principles, features, map, or relationships…"
+              placeholder={scope.type === "papers"
+                ? "Ask about the selected papers, their design knowledge, maps, or relationships…"
                 : "Ask about papers, requirements, principles, features, relationships, or cross-paper synthesis…"}
               className="block w-full resize-y border-0 bg-transparent px-2 py-2 text-sm leading-6 text-ink outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-2 pt-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
+              <label title="When selected, the response includes the relevant stored design map or a problem-specific DSR diagram, depending on the question." className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700">
                 <input
                   type="checkbox"
                   checked={includeDiagram}
@@ -911,7 +914,7 @@ export function ChatWorkbench({
                   disabled={pending}
                   className="h-4 w-4 rounded border-slate-300 text-blue focus:ring-blue"
                 />
-                Include diagram
+                Include a relevant diagram in the response
               </label>
 
               {diagramIntentToggle.enabled && diagramIntentToggle.autoEnabled ? (

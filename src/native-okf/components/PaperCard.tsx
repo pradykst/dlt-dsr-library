@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { paperHref } from "../shared/routes.ts";
+import { formatConceptCount } from "../shared/presentation.ts";
 import type { PaperCardDto } from "../shared/types.ts";
 
 export function PaperCard({ paper }: { paper: PaperCardDto }) {
@@ -54,9 +55,6 @@ export function PaperCard({ paper }: { paper: PaperCardDto }) {
               <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                 Linked design knowledge
               </span>
-              <span className="text-sm font-semibold text-slate-950">
-                {paper.linkedConcepts.length}
-              </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {paper.linkedTypeCounts.map((entry) => (
@@ -65,7 +63,7 @@ export function PaperCard({ paper }: { paper: PaperCardDto }) {
                   title={entry.type}
                   className="rounded-md bg-white px-2 py-1 text-[11px] font-medium text-slate-600 shadow-sm ring-1 ring-slate-200"
                 >
-                  {entry.label} {"\u00b7"} {entry.count}
+                  {formatConceptCount(entry.type, entry.count)}
                 </span>
               ))}
             </div>

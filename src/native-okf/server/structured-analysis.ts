@@ -330,7 +330,9 @@ export async function applyNativeOkfStructuredAnalysis(
   if (scopedPapers.length === 0) return retrieval;
 
   const rows: StructuredPaperEvidence[] = scopedPapers
-    .sort((left, right) => displayTitle(left).localeCompare(displayTitle(right), "en"))
+    .sort((left, right) => retrieval.completePaperContext
+      ? focus.paperConceptIds.indexOf(left.id) - focus.paperConceptIds.indexOf(right.id)
+      : displayTitle(left).localeCompare(displayTitle(right), "en"))
     .map((paper) => {
       const associated = associatedConceptsForPaper(bundle, paper);
       const requested = associated.filter((concept) => {
@@ -422,6 +424,8 @@ export async function applyNativeOkfStructuredAnalysis(
       relationshipQuery && ABSENCE_QUERY_PATTERN.test(focus.question),
     papers: visibleRows,
   };
+
+  if (retrieval.completePaperContext) return { ...retrieval, structuredAnalysis };
 
   if (!focus.corpusQuery) {
     const fitted = fitStructuredRetrieval(

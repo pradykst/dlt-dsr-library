@@ -1046,7 +1046,7 @@ test("conversation state is always versioned and bounded", () => {
 
   assert.equal(
     parsed.conversationState?.activePaperSlugs.length,
-    3,
+    5,
   );
   assert.equal(
     parsed.conversationState?.activeConceptIds.length,

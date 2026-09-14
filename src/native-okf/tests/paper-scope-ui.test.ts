@@ -270,9 +270,9 @@ test("the picker is a keyboard-navigable listbox", async () => {
 
 test("the scope chip is explicit, restricted, and keyboard-removable", async () => {
   const control = await source("components/chat/PaperScopeControl.tsx");
-  assert.match(control, /Paper scope:/u);
-  assert.match(control, /Answers and citations are restricted to this paper\./u);
-  assert.match(control, /aria-label="Clear paper scope and return to all papers"/u);
+  assert.match(control, /papers.*selected/u);
+  assert.match(control, /Answers and citations are restricted to the selected papers\./u);
+  assert.match(control, /aria-label=\{`Remove \$\{title\}`\}/u);
   assert.match(control, /All papers/u);
   assert.match(control, /onScopeChange\(\{ type: "corpus" \}\)/u);
 });
@@ -325,7 +325,7 @@ test("Open full chat from the drawer preserves the selected paper scope", async 
   // title is never used as identity and the path is never hand-written.
   assert.match(
     workbench,
-    /NATIVE_OKF_PUBLIC_ROUTES\.chat\}\?paper=\$\{\s*encodeURIComponent\(scope\.paperId\)/u,
+    /NATIVE_OKF_PUBLIC_ROUTES\.chat\}\?paper=\$\{\s*encodeURIComponent\(scope\.paperIds\[0\]!\)/u,
   );
   assert.doesNotMatch(workbench, /\?paper=\$\{[^}]*\btitle\b/u);
   const page = await readFile(
@@ -333,8 +333,8 @@ test("Open full chat from the drawer preserves the selected paper scope", async 
     "utf8",
   );
   assert.match(page, /resolvedSearchParams\.paper/u);
-  assert.match(page, /\{ type: "paper", paperId: requestedPaperId \}/u);
-  // A `?paper=` value that is not a canonical paper fails safe to corpus.
+  assert.match(page, /\{ type: "papers", paperIds: \[requestedPaperId\] \}/u);
+  // A noncanonical deep link fails closed.
   assert.match(
     page,
     /scopePapers\.some\(\(paper\) => paper\.paperId === requestedPaperId\)/u,

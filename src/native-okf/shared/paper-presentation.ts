@@ -175,6 +175,13 @@ export function buildPaperPresentation(
 }
 
 const TECHNICAL_PAPER_METADATA_KEYS = new Set([
+  "sourceevidence",
+  "sourcedocument",
+  "sourcefilename",
+  "filename",
+  "provenance",
+  "extraction",
+  "verification",
   "absolutepath",
   "bundlepath",
   "filepath",

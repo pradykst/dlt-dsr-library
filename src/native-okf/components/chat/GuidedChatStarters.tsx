@@ -36,7 +36,7 @@ export function GuidedChatStarters({ pending, onPrefill }: GuidedChatStartersPro
         ))}
       </div>
       <p className="mt-3 text-xs leading-5 text-muted">
-        Selecting a card fills the composer with an editable example — nothing is
+        Selecting a card fills the composer with an editable example. Nothing is
         sent until you press Send.
       </p>
     </section>
