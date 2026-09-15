@@ -45,6 +45,7 @@ import {
   nativeOkfSynthesisRequiresRpfPath,
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
+import { synthesisGrammarDiagnostics } from "./synthesis-grammar.ts";
 import { deriveNativeOkfSynthesisClarification } from "./synthesis-clarification.ts";
 import {
   type NativeOpenAiClient,
@@ -89,7 +90,6 @@ import {
   NATIVE_OKF_TEXT_ONLY_ANSWER_INSTRUCTION,
 } from "./prompts.ts";
 import {
-  buildComparativePaperDesignMap,
   buildGroundedStoredSourceMap,
   buildStoredPaperDesignMap,
   storedPaperMapPresentation,
@@ -153,7 +153,6 @@ export interface NativeOkfChatDependencies {
     paperConceptId: string,
     requestedKinds?: readonly import("../retrieval.ts").NativeOkfRequestedConceptKind[],
   ) => Promise<GeneratedDiagram | undefined>;
-  buildComparativePaperMap?: typeof buildComparativePaperDesignMap;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -757,8 +756,7 @@ function assertResolvedTurnPlan(prepared: PreparedNativeOkfChatRequest): void {
       (plan.resolvedPaperSlugs.length === 1 ? plan.resolvedPaperSlugs[0]! : null) ||
     (["STORED_FULL_MAP", "STORED_FILTERED_MAP"].includes(plan.mode) &&
       (plan.resolvedPaperSlug === null || plan.diagramMode !== "stored")) ||
-    (plan.mode === "STORED_COMPARISON_MAP" &&
-      (plan.resolvedPaperSlugs.length < 2 || plan.diagramMode !== "comparative")) ||
+    (plan.mode === "STORED_COMPARISON" && (plan.includeDiagram || plan.diagramMode !== null)) ||
     (plan.mode === "DESIGN_REFINEMENT" && !plan.refinementIntent) ||
     (plan.mode === "ACTIVE_DIAGRAM_QA" && plan.diagramAction !== "NONE") ||
     (plan.diagramAction === "NONE" && plan.includeDiagram) ||
@@ -792,20 +790,12 @@ export function assertUniqueSourceIds(response: NativeOkfChatResponse): void {
   throw new Error(message);
 }
 
-export async function answerNativeOkfChat(
-  input: unknown,
-  dependencies: NativeOkfChatDependencies = {},
-): Promise<NativeOkfChatResponse> {
-  const prepared = dependencies.prepared ??
-    (await prepareNativeOkfChatRequest(
-      validateNativeOkfChatRequest(input),
-      dependencies.conversationCatalog,
-    ));
-  const response = await answerNativeOkfChatUnchecked(input, {
-    ...dependencies,
-    prepared,
-  });
-  assertUniqueSourceIds(response);
+/** Final serialization boundary: exactly one canonical paper or a new proposal. */
+export async function assertNativeOkfResponseBoundary(
+  prepared: PreparedNativeOkfChatRequest,
+  response: NativeOkfChatResponse,
+): Promise<void> {
+  const fail = (): never => { throw new NativeOkfRequestError("The response could not be verified within the selected papers and concept kinds. Please try again."); };
   const allowedPapers = new Set(prepared.scopePaperSlugs);
   const kinds = hardNativeOkfConceptKinds(prepared);
   if (allowedPapers.size > 0 || kinds.length > 0) {
@@ -821,6 +811,48 @@ export async function answerNativeOkfChat(
       throw new NativeOkfRequestError("The response could not be verified within the selected papers and concept kinds. Please try again.");
     }
   }
+  if (prepared.turnPlan.mode === "STORED_COMPARISON" && response.diagram) fail();
+  if (!response.diagram || allowedPapers.size === 0) return;
+  const diagram = response.diagram;
+  const canonical = new Map(prepared.catalog.concepts.map((concept) => [concept.conceptId, concept]));
+  if (diagram.nodes.some((node) => node.sourcePaths.some((id) => {
+    const owner = canonical.get(id)?.paperSlug;
+    return !owner || !allowedPapers.has(owner);
+  }))) fail();
+  if (response.diagramMode === "synthesized") {
+    if (!["DESIGN_SYNTHESIS", "DESIGN_REFINEMENT"].includes(prepared.turnPlan.mode) ||
+      synthesisGrammarDiagnostics(diagram, { requireFullProposal: true }).length > 0) fail();
+    return;
+  }
+  if (response.diagramMode !== "stored" ||
+    !["STORED_FULL_MAP", "STORED_FILTERED_MAP"].includes(prepared.turnPlan.mode) ||
+    prepared.focusedPaperSlugs.length !== 1 || !allowedPapers.has(prepared.focusedPaperSlugs[0]!)) fail();
+  const paper = prepared.catalog.papers.find((item) => item.slug === prepared.focusedPaperSlugs[0]);
+  if (!paper) return fail();
+  const expected = await buildStoredPaperDesignMap(paper.conceptId, kinds.length ? kinds : prepared.turnPlan.diagramConceptKinds);
+  if (!expected) return fail();
+  const topology = (map: GeneratedDiagram) => JSON.stringify({
+    nodes: map.nodes.map((node) => [node.id, node.provenance, [...node.supportConceptIds].sort(), [...node.sourcePaths].sort()]).sort(),
+    edges: map.edges.map((edge) => [edge.source, edge.target, edge.label, edge.provenance, [...edge.supportConceptIds].sort()]).sort(),
+  });
+  if (topology(diagram) !== topology(expected)) fail();
+}
+
+export async function answerNativeOkfChat(
+  input: unknown,
+  dependencies: NativeOkfChatDependencies = {},
+): Promise<NativeOkfChatResponse> {
+  const prepared = dependencies.prepared ??
+    (await prepareNativeOkfChatRequest(
+      validateNativeOkfChatRequest(input),
+      dependencies.conversationCatalog,
+    ));
+  const response = await answerNativeOkfChatUnchecked(input, {
+    ...dependencies,
+    prepared,
+  });
+  assertUniqueSourceIds(response);
+  await assertNativeOkfResponseBoundary(prepared, response);
   const warnings = response.warnings ?? [];
   // Echo the resolved boundary on every response, including clarification and no evidence.
   return {
@@ -904,7 +936,6 @@ async function answerNativeOkfChatUnchecked(
     (hardKinds.length > 0 && retrieval.finalConcepts.length === 0) || (![
       "STORED_FULL_MAP",
       "STORED_FILTERED_MAP",
-      "STORED_COMPARISON_MAP",
     ].includes(turnPlan.mode) &&
     (
       retrieval.noMatch ||
@@ -931,7 +962,7 @@ async function answerNativeOkfChatUnchecked(
     };
   }
 
-  // For STORED_FULL_MAP / STORED_FILTERED_MAP / STORED_COMPARISON_MAP, the diagram
+  // For STORED_FULL_MAP / STORED_FILTERED_MAP, the diagram
   // itself is always built deterministically here (zero LLM involvement, guaranteed
   // canonical-complete) and fails closed exactly as before. What changed: on success
   // we no longer substitute the graph's count summary as the entire answer — the turn
@@ -943,7 +974,7 @@ async function answerNativeOkfChatUnchecked(
     | {
       diagram: GeneratedDiagram;
       sources: NativeOkfChatResponse["sources"];
-      mode: "stored" | "comparative";
+      mode: "stored";
       summary: string;
     }
     | undefined;
@@ -989,45 +1020,6 @@ async function answerNativeOkfChatUnchecked(
       diagram: builtDiagram,
       sources: presentation.sources,
       mode: "stored",
-      summary: presentation.summary,
-    };
-  }
-
-  if (turnPlan.mode === "STORED_COMPARISON_MAP") {
-    const paperBySlug = new Map(
-      prepared.catalog.papers.map((paper) => [paper.slug, paper]),
-    );
-    const paperConceptIds = turnPlan.focusedPaperSlugs.flatMap((slug) => {
-      const paper = paperBySlug.get(slug);
-      return paper ? [paper.conceptId] : [];
-    });
-    let presentation: Awaited<ReturnType<typeof buildComparativePaperDesignMap>>;
-    try {
-      presentation = await (
-        dependencies.buildComparativePaperMap ?? buildComparativePaperDesignMap
-      )(paperConceptIds, hardKinds);
-    } catch {
-      presentation = undefined;
-    }
-    if (!presentation) {
-      return {
-        kind: "answer",
-        presentationMode: "safe-error",
-        answerMarkdown:
-          "The comparative stored evidence map could not be assembled safely. No model-generated substitute was used.",
-        sources: [],
-        diagramMode: "comparative",
-        diagramStatus: "failed",
-        diagnosticCode: "stored-map-unavailable",
-        insufficientContext: false,
-        conversationState: completedConversationState(prepared, retrieval, []),
-        ...(retrievalDebug === undefined ? {} : { retrievalDebug }),
-      };
-    }
-    earlyDeterministicDiagram = {
-      diagram: presentation.diagram,
-      sources: presentation.sources,
-      mode: "comparative",
       summary: presentation.summary,
     };
   }
@@ -1496,9 +1488,7 @@ async function answerNativeOkfChatUnchecked(
       // user explicitly asked for an exclusively filtered subset (see
       // explicitlyFilteredDiagramConceptKinds), so it must never be described as
       // "the complete stored...map".
-      const provenanceSentence = earlyDeterministicDiagram.mode === "comparative"
-        ? "The diagram below shows canonical stored design knowledge from the selected papers in separate paper-labelled groups. No synthesized or invented cross-paper knowledge was added."
-        : turnPlan.mode === "STORED_FILTERED_MAP" || hardKinds.length > 0
+      const provenanceSentence = turnPlan.mode === "STORED_FILTERED_MAP" || hardKinds.length > 0
           ? "The diagram below shows the stored design-knowledge concepts in the explicitly requested category and the canonical relationships among them from the paper. No synthesized design knowledge was added."
           : "The diagram below shows the complete stored design-knowledge concepts and canonical relationships from the paper. No synthesized design knowledge was added.";
       answerMarkdown = `${answerMarkdown}\n\n${provenanceSentence}`;

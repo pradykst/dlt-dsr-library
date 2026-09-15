@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { publicationDoi, researcherMarkdown } from "../shared/research-presentation.ts";
+import { researcherMarkdown } from "../shared/research-presentation.ts";
+import { resolvePaperPublication } from "../shared/paper-publication.ts";
 import { formatConceptCount } from "../shared/presentation.ts";
 import type { ReactNode } from "react";
 
-import { conceptHref, isSafeExternalHref } from "../shared/links.ts";
+import { conceptHref } from "../shared/links.ts";
 import {
   buildPaperPresentation,
   publicPaperFrontmatter,
@@ -43,10 +44,7 @@ export function WorkbenchView({
     ? buildPaperPresentation(concept.markdownBody, view.linkedGroups)
     : null;
   const displayFrontmatter = publicPaperFrontmatter(frontmatter);
-  const doi = publicationDoi(concept.resource, concept.markdownBody);
-  const resourceIsSafe = Boolean(
-    concept.resource && isSafeExternalHref(concept.resource),
-  );
+  const publication = resolvePaperPublication(concept);
 
   const metadataItems = isPaper
     ? [
@@ -197,16 +195,7 @@ export function WorkbenchView({
           {isPaper ? (
             <TypeBadge type={concept.type} label={concept.typeLabel} />
           ) : null}
-          {resourceIsSafe && concept.resource ? (
-            <a
-              href={concept.resource}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue"
-            >
-              Open source resource ↗
-            </a>
-          ) : null}
+
         </>
       }
     >
@@ -256,7 +245,14 @@ export function WorkbenchView({
                   </Link>
                 </div>
               ) : null}
-              <MetadataGrid items={[...metadataItems, { label: "DOI", value: doi ? <a href={doi} target="_blank" rel="noopener noreferrer" className="break-all text-blue underline">{doi}</a> : undefined }]} />
+              <MetadataGrid items={[...metadataItems, ...(isPaper ? [
+                { label: publication.label, value: publication.href
+                  ? <a href={publication.href} target="_blank" rel="noopener noreferrer" className="break-all text-blue underline">{publication.text}</a>
+                  : publication.text },
+                { label: "Design knowledge", value: publication.githubHref
+                  ? <a href={publication.githubHref} target="_blank" rel="noopener noreferrer" className="text-blue underline">View design knowledge on GitHub</a>
+                  : "Design knowledge link unavailable" },
+              ] : [])]} />
               {concept.tags.length > 0 ? (
                 <div className="mt-5 flex flex-wrap gap-2" aria-label="Concept tags">
                   {concept.tags.map((tag) => (

@@ -9,7 +9,8 @@ export const NATIVE_OKF_PUBLIC_ROUTES = {
   home: "/",
   library: "/library",
   chat: "/chat",
-  method: "/method",
+  imprint: "/imprint",
+  privacy: "/privacy",
 } as const;
 
 /** Concise alias used by release-shell components and readiness checks. */
@@ -69,7 +70,7 @@ export const NATIVE_OKF_COMPATIBILITY_REDIRECTS = [
   },
   {
     source: "/native-okf/method",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.method,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
@@ -156,7 +157,7 @@ export const LEGACY_PUBLIC_REDIRECTS = [
   },
   {
     source: "/methodology",
-    destination: NATIVE_OKF_PUBLIC_ROUTES.method,
+    destination: NATIVE_OKF_CONTROLLED_NOT_FOUND_ROUTE,
     permanent: false,
   },
   {
@@ -196,10 +197,6 @@ export const NATIVE_OKF_CANONICAL_REWRITES = [
   { source: "/", destination: "/native-okf/release-home" },
   { source: NATIVE_OKF_PUBLIC_ROUTES.library, destination: "/native-okf" },
   { source: NATIVE_OKF_PUBLIC_ROUTES.chat, destination: "/native-okf/chat" },
-  {
-    source: NATIVE_OKF_PUBLIC_ROUTES.method,
-    destination: "/native-okf/method",
-  },
   {
     source: "/papers/:slug",
     destination: "/native-okf/papers/:slug",

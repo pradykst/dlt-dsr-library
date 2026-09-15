@@ -49,7 +49,7 @@ import { buildNativeOkfGroundedContext } from "./openai/context.ts";
 import { nativeOkfOutOfScopeCategory } from "./scope-guard.ts";
 
 const COMPARISON_PATTERN =
-  /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differ(?:s|ing|ed)?|differences?|versus|vs\.?)\b/iu;
+  /\b(?:compar(?:e|es|ed|ing|ison|ative)|contrast|differ(?:s|ing|ed)?|differences?|versus|vs\.?|overlaps?)\b|\b(?:principles?|knowledge)\s+(?:appear\s+)?across\b|\bwhat\s+does\s+paper\s+\d\s+contain\b/iu;
 const DETAIL_PATTERN =
   /\b(?:in detail|detailed|exhaustive|step[\s-]*by[\s-]*step|literature review|full methodological discussion)\b/iu;
 const IMPLEMENTS_REFERENCE_PATTERN =
@@ -102,6 +102,8 @@ const SOLVE_PROBLEM_QUESTION_PATTERN =
 // requests without depending on any domain- or paper-specific vocabulary.
 const MAKE_ARTIFACT_REQUEST_PATTERN =
   /\b(?:make|build|creat(?:e|ing)|design(?:ing)?)\s+(?:me\s+|us\s+)?(?:a|an)\s+(?:system|solution|approach|tool|app|application|platform|process|mechanism|framework|architecture)\b/iu;
+const EXPLICIT_NEW_PROPOSAL_PATTERN =
+  /\b(?:combine|create|generate|develop|design|build)\b[^.!?]{0,100}\b(?:new\s+artifact|DSR\s+proposal|problem-specific|solution)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
 const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN =
@@ -128,8 +130,6 @@ const CORPUS_QUERY_PATTERN =
   /\b(?:which|what)\s+(?:of\s+the\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bfind\s+examples?\b|\bfind\s+(?:examples?\s+(?:of|from)\s+)?(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\b(?:all|every|each)\s+(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b|\bacross\s+(?:the\s+)?(?:library|corpus|papers?|studies|articles?|works?|publications?)\b/iu;
 const STRUCTURED_QUERY_PATTERN =
   /\b(?:counts?|categories|types?|represented|formal|map(?:s|ped|ping)?|relationships?|links?|connect(?:s|ed|ing|ions?)?|unmapped|lack(?:s|ed|ing)?|without|absence|zero)\b/iu;
-const COMPARISON_DIAGRAM_FOLLOW_UP_PATTERN =
-  /\b(?:what\s+we\s+(?:just\s+)?discussed|the\s+(?:discussion|comparison)|this|that|it|those\s+(?:papers?|studies|works))\b/iu;
 const STORED_DIAGRAM_REQUEST_PATTERN =
   /\b(?:from|in)\s+(?:this|that|the|a named)\s+paper\b|\bstored\s+(?:map|relations?|knowledge)|\bsource\s+map\b|\b(?:rpf|rfp)\s+(?:map|diagram)\b|\brequirements?\s*,?\s*principles?\s*(?:and|&)\s*features?\s+from\b|\b(?:show|visuali[sz]e|diagram|flow|map)\b[^.!?]{0,140}\bpaper\b/iu;
 const OUTPUT_MISSING_PATTERN = /\b(?:something|anything)\b/iu;
@@ -191,7 +191,7 @@ export type NativeOkfAuthoritativeTurnMode =
   | "ACTIVE_DIAGRAM_QA"
   | "STORED_FULL_MAP"
   | "STORED_FILTERED_MAP"
-  | "STORED_COMPARISON_MAP"
+  | "STORED_COMPARISON"
   | "EVIDENCE_MAP"
   | "DESIGN_SYNTHESIS"
   | "DESIGN_REFINEMENT"
@@ -1038,10 +1038,11 @@ export function inferNativeOkfSynthesisIntent(
   question: string,
   state: NativeOkfConversationState,
 ): boolean {
-  if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
   if (SOLVE_PROBLEM_QUESTION_PATTERN.test(question)) return true;
   if (MAKE_ARTIFACT_REQUEST_PATTERN.test(question)) return true;
+  if (/\b(?:creat(?:e|ing)|design|generate)\s+(?:a\s+)?(?:DSR\s+proposal|problem-specific\s+mapping\s+diagram)\b|\bwhat\s+system\s+should\s+(?:I|we)\s+design\b/iu.test(question)) return true;
+  if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
   if (
     state.lastSynthesisProblem &&
     state.lastIntent === "synthesized-flow" &&
@@ -1366,7 +1367,9 @@ export async function assembleNativeOkfContextualRetrieval(
   prepared: PreparedNativeOkfChatRequest,
   retrieval: RetrievalResult,
 ): Promise<RetrievalResult> {
-  const paperSlugs = prepared.scopePaperSlugs.length > 0
+  const paperSlugs = ["STORED_FULL_MAP", "STORED_FILTERED_MAP"].includes(prepared.turnPlan.mode)
+    ? prepared.focusedPaperSlugs
+    : prepared.scopePaperSlugs.length > 0
     ? prepared.scopePaperSlugs
     : prepared.structuredReferentPaperSlugs.length > 0
     ? prepared.structuredReferentPaperSlugs
@@ -1417,7 +1420,9 @@ export async function assembleNativeOkfContextualRetrieval(
   const scoped = restrictNativeOkfRetrievalToPaperSlugs(
     prepared,
     prioritized,
-    prepared.scopePaperSlugs.length > 0 ? prepared.scopePaperSlugs : evidencePaperSlugs,
+    ["STORED_FULL_MAP", "STORED_FILTERED_MAP"].includes(prepared.turnPlan.mode)
+      ? prepared.focusedPaperSlugs
+      : prepared.scopePaperSlugs.length > 0 ? prepared.scopePaperSlugs : evidencePaperSlugs,
   );
   const analyzed = await applyNativeOkfStructuredAnalysis(scoped, {
     question: prepared.effectiveQuestion,
@@ -1437,7 +1442,7 @@ export async function assembleNativeOkfContextualRetrieval(
     });
     if (!stillTruncated) filtered.warnings = filtered.warnings.filter((warning) => warning !== truncationWarning);
   }
-  return filtered;
+  return restrictNativeOkfRetrievalToPaperSlugs(prepared, filtered, prepared.scopePaperSlugs);
 }
 
 export function hardNativeOkfConceptKinds(prepared: PreparedNativeOkfChatRequest): readonly NativeOkfRequestedConceptKind[] {
@@ -1606,10 +1611,8 @@ export async function prepareNativeOkfChatRequest(
   if (scopePaperSlugs.some((id) => !catalogPaperSlugSet.has(id))) {
     throw new NativeOkfRequestError("A selected paper is no longer in the library. Remove it or select All papers.");
   }
-  const explicitPaperSlugs = findExplicitNativeOkfPaperSlugs(
-    effectiveQuestion,
-    catalog,
-  ).filter((slug) => scopePaperSlugs.length === 0 || scopePaperSlugs.includes(slug));
+  const mentionedPaperSlugs = findExplicitNativeOkfPaperSlugs(effectiveQuestion, catalog);
+  const explicitPaperSlugs = mentionedPaperSlugs.filter((slug) => scopePaperSlugs.length === 0 || scopePaperSlugs.includes(slug));
   const ambiguousPaperReference = hasAmbiguousPaperReference(
     effectiveQuestion,
     catalog,
@@ -1737,8 +1740,17 @@ export async function prepareNativeOkfChatRequest(
     contextBase.activePaperSlugs = [...scopePaperSlugs];
     contextBase.activeComparisonPaperSlugs = comparisonRequested ? [...scopePaperSlugs] : [];
   }
+  // Keep the ordered selection as the universe, but resolve a named/ordinal
+  // subject independently. Selecting several papers does not fuse their maps.
+  const ordinalMatch = /\b(?:paper\s+([1-5])|(?:(first|second|third|fourth|fifth)\s+paper))\b/iu.exec(effectiveQuestion);
+  const ordinalIndex = ordinalMatch
+    ? ordinalMatch[1] ? Number(ordinalMatch[1]) - 1 : ["first", "second", "third", "fourth", "fifth"].indexOf(ordinalMatch[2]!.toLowerCase())
+    : -1;
+  const selectedSubject = explicitPaperSlugs.length > 0
+    ? explicitPaperSlugs
+    : ordinalIndex >= 0 ? scopePaperSlugs.slice(ordinalIndex, ordinalIndex + 1) : scopePaperSlugs;
   const focusedPaperSlugs = scopePaperSlugs.length > 0
-    ? scopePaperSlugs
+    ? comparisonRequested ? scopePaperSlugs : selectedSubject
     : structuredReferentPaperSlugs.length > 0
     ? structuredReferentPaperSlugs
     : activeComparisonPaperSlugs.length > 0
@@ -1778,8 +1790,8 @@ export async function prepareNativeOkfChatRequest(
   // user's own synthesis-shaped request, even for a single stored-paper question
   // (e.g. "What design principles are represented in \"<a quoted paper title>\"?").
   // See stripExplicitPaperTitles for why.
-  const synthesisClassificationQuestion = explicitPaperSlugs.length >= 1
-    ? stripExplicitPaperTitles(effectiveQuestion, explicitPaperSlugs, catalog)
+  const synthesisClassificationQuestion = mentionedPaperSlugs.length >= 1
+    ? stripExplicitPaperTitles(effectiveQuestion, mentionedPaperSlugs, catalog)
     : effectiveQuestion;
   let synthesisIntent = activeDraftRefinement || activeProposalRerender ||
     !activeDiagramQa && inferNativeOkfSynthesisIntent(
@@ -1798,7 +1810,9 @@ export async function prepareNativeOkfChatRequest(
     !activeDraftRefinement &&
     !activeProposalRerender &&
     !DESIGN_PROBLEM_GUIDANCE_PATTERN.test(effectiveQuestion) &&
-    !SYNTHESIS_NOVELTY_PATTERN.test(effectiveQuestion)
+    !MAKE_ARTIFACT_REQUEST_PATTERN.test(synthesisClassificationQuestion) &&
+    !SOLVE_PROBLEM_QUESTION_PATTERN.test(synthesisClassificationQuestion) &&
+    !EXPLICIT_NEW_PROPOSAL_PATTERN.test(synthesisClassificationQuestion)
   ) {
     synthesisIntent = false;
   }
@@ -1836,7 +1850,7 @@ export async function prepareNativeOkfChatRequest(
     activeDraftRefinement ||
     categoryStoredMapFollowUp ||
     (synthesisIntent && contextBase.lastDiagramRequested);
-  const includeDiagram = !activeDiagramQa &&
+  const includeDiagram = !activeDiagramQa && !(comparisonRequested && !synthesisIntent) &&
     (diagramPreference === "requested" ||
       (diagramPreference === "auto" && automaticDiagramIntent));
   const storedPaperDiagram =
@@ -1845,27 +1859,22 @@ export async function prepareNativeOkfChatRequest(
     // paper's stored map â€” "this"/"it" in e.g. "make this more robust and give an
     // updated diagram" otherwise satisfies the generic stored-map subject pattern.
     !activeDraftRefinement &&
+    !activeProposalRerender &&
+    !MAKE_ARTIFACT_REQUEST_PATTERN.test(synthesisClassificationQuestion) &&
+    !SOLVE_PROBLEM_QUESTION_PATTERN.test(synthesisClassificationQuestion) &&
+    !EXPLICIT_NEW_PROPOSAL_PATTERN.test(synthesisClassificationQuestion) &&
+    !DESIGN_PROBLEM_GUIDANCE_PATTERN.test(synthesisClassificationQuestion) &&
     includeDiagram && focusedPaperSlugs.length === 1 &&
     (
+      !synthesisIntent && scopePaperSlugs.length > 0 ||
       inferStoredPaperMapIntent(effectiveQuestion) ||
       categoryStoredMapFollowUp ||
       contextBase.lastIntent !== "synthesized-flow" &&
         inferFocusedPaperMapFollowUpIntent(effectiveQuestion)
     );
-  const comparativeDiagram =
-    !activeDraftRefinement &&
-    includeDiagram &&
-    focusedPaperSlugs.length >= 2 &&
-    (
-      (scopePaperSlugs.length >= 2 && !synthesisIntent) ||
-      COMPARISON_PATTERN.test(effectiveQuestion) ||
-      explicitPaperSlugs.length === 0 &&
-        ((contextBase.activeComparisonPaperSlugs?.length ?? 0) >= 2 ||
-          contextBase.lastIntent === "comparison" ||
-          contextBase.lastIntent === "comparative-diagram") &&
-        COMPARISON_DIAGRAM_FOLLOW_UP_PATTERN.test(effectiveQuestion)
-    );
-  if (storedPaperDiagram || comparativeDiagram) synthesisIntent = false;
+  // A comparison is prose/table even when the diagram checkbox is selected.
+  // Each canonical topology belongs to one paper; no comparative graph exists.
+  if (storedPaperDiagram) synthesisIntent = false;
   const answerMode: NativeOkfAnswerMode = DETAIL_PATTERN.test(
     effectiveQuestion,
   )
@@ -1875,8 +1884,6 @@ export async function prepareNativeOkfChatRequest(
       : "normal";
   const intent: NativeOkfConversationIntent = synthesisIntent
     ? "synthesized-flow"
-    : comparativeDiagram
-      ? "comparative-diagram"
     : includeDiagram
       ? "stored-diagram"
       : answerMode === "comparison"
@@ -1885,19 +1892,14 @@ export async function prepareNativeOkfChatRequest(
   const diagramMode: NativeOkfDiagramMode | null = includeDiagram
     ? synthesisIntent
       ? "synthesized"
-      : comparativeDiagram
-        ? "comparative"
       : "stored"
     : null;
   const preferDeterministicPaperMap =
     diagramMode === "stored" &&
     focusedPaperSlugs.length === 1;
-  const preferDeterministicComparativeMap =
-    diagramMode === "comparative" && focusedPaperSlugs.length >= 2;
+  const preferDeterministicComparativeMap = false;
   const queryMode: NativeOkfQueryMode = diagramMode === "synthesized"
     ? "SYNTHESIZED_DESIGN_DIAGRAM"
-    : preferDeterministicComparativeMap
-      ? "COMPARATIVE_EVIDENCE_DIAGRAM"
       : preferDeterministicPaperMap
         ? "STORED_PAPER_DIAGRAM"
         : synthesisIntent
@@ -1924,7 +1926,13 @@ export async function prepareNativeOkfChatRequest(
       validatedState.activePaperSlugs.length === 1 &&
         validatedState.latestValidatedSynthesisDraft !== null
     );
-  const clarification = clarificationFor(
+  const ambiguousSelectedMap = includeDiagram && !synthesisIntent &&
+    (focusedPaperSlugs.length > 1 || scopePaperSlugs.length > 0 &&
+      (focusedPaperSlugs.length !== 1 || mentionedPaperSlugs.some((slug) => !scopePaperSlugs.includes(slug))));
+  const clarification: NativeOkfClarification | null = ambiguousSelectedMap ? {
+    kind: "ambiguous-reference",
+    question: "Which selected paper's stored map would you like to open first? Specify its title or paper number in the selected order.",
+  } : clarificationFor(
     effectiveQuestion,
     ambiguousPaperReference,
     historyBoundaryMapAmbiguity,
@@ -1960,8 +1968,8 @@ export async function prepareNativeOkfChatRequest(
         ? diagramFilterKinds.length > 0
           ? "STORED_FILTERED_MAP"
           : "STORED_FULL_MAP"
-        : preferDeterministicComparativeMap
-          ? "STORED_COMPARISON_MAP"
+        : comparisonRequested && !synthesisIntent
+          ? "STORED_COMPARISON"
           : activeDraftRefinement
             ? "DESIGN_REFINEMENT"
             : synthesisIntent
@@ -1974,7 +1982,7 @@ export async function prepareNativeOkfChatRequest(
       ? "RENDER_UPDATED"
       : activeProposalRerender && includeDiagram
         ? "RENDER_EXISTING"
-        : ["STORED_FULL_MAP", "STORED_FILTERED_MAP", "STORED_COMPARISON_MAP", "EVIDENCE_MAP"]
+        : ["STORED_FULL_MAP", "STORED_FILTERED_MAP", "EVIDENCE_MAP"]
             .includes(authoritativeMode) && includeDiagram
           ? "RENDER_STORED"
           : authoritativeMode === "DESIGN_SYNTHESIS" && includeDiagram

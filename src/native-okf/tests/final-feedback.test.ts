@@ -167,20 +167,18 @@ test("a changed selection removes old history from the provider input", async ()
   assert.doesNotMatch(JSON.stringify(inputs), /STALE_EVIDENCE_SENTINEL/u);
 });
 
-test("a typed selected-paper diagram preserves isolated canonical principles without generation", async () => {
+test("a typed multi-paper diagram request clarifies which independent map to open", async () => {
   let calls = 0;
   const mock = { responses: { create: async () => { calls++; return { status: "completed", output: [], output_text: "The selected principles provide guidance [[S1]]." }; } } } as unknown as NativeOpenAiClient;
   const question = "Find relevant design principles for provenance.";
   const scope = { type: "papers" as const, paperIds: IDS.slice(0, 3) };
   const prepared = await prepareNativeOkfChatRequest({ question, scope, diagramPreference: "requested" });
-  assert.equal(prepared.turnPlan.mode, "STORED_COMPARISON_MAP");
+  assert.equal(prepared.turnPlan.mode, "CLARIFICATION");
   const response = await answerNativeOkfChat({ question, scope, diagramPreference: "requested" }, { environment: config, client: mock });
-  assert.equal(response.diagramStatus, "success");
-  assert.equal(response.diagram?.nodes.length, 13);
-  assert.ok(response.diagram?.nodes.every((node) => node.stage === "design-principle"));
-  assert.deepEqual(response.diagram?.edges, []);
-  assert.ok(response.sources.every((source) => source.type === "design-principle"));
-  assert.equal(calls, 1);
+  assert.equal(response.kind, "clarification");
+  assert.equal(response.diagram, undefined);
+  assert.deepEqual(response.sources, []);
+  assert.equal(calls, 0);
 });
 
 test("scope transitions clear stale sources, diagrams and pending clarification", async () => {

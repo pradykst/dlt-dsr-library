@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
     "/": tracedOkfBundle,
     "/library": tracedOkfBundle,
     "/chat": tracedOkfBundle,
-    "/method": tracedOkfBundle,
     "/papers/**": tracedOkfBundle,
     "/concepts/**": tracedOkfBundle,
     "/sitemap.xml": tracedOkfBundle,
