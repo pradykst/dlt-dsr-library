@@ -58,6 +58,21 @@ test("legal routes replace method exposure and all pages share footer links", as
   assert.match(await readFile("src/native-okf/components/chat/ChatWorkbench.tsx", "utf8"), /Generate mapping diagram/u);
 });
 
+test("legal pages retain project contact and omit removed institutional copy", async () => {
+  const imprint = await readFile("app/imprint/page.tsx", "utf8");
+  for (const detail of ["Research and project contact", "Max Gräser", "Research Assistant", "Information Systems Institute", "Chair of Application Systems", "Universität Leipzig", "Grimmaische Straße 12, Room I 230", "04109 Leipzig", "Germany", "+49 341 97 33605", "max.graeser@uni-leipzig.de"]) {
+    assert.ok(imprint.includes(detail), detail);
+  }
+  assert.match(imprint, /<a href="https:\/\/www\.wifa\.uni-leipzig\.de\/impressum" target="_blank" rel="noopener noreferrer">Official Faculty legal notice<\/a>/u);
+  assert.equal((imprint.match(/<section>/gu) ?? []).length, 1);
+  assert.doesNotMatch(imprint, /Institution<|Legal form|Rector|Supervisory authority|VAT|Content responsibility|Ritterstraße|Dean:|Wigardstraße/iu);
+
+  const privacy = await readFile("app/privacy/page.tsx", "utf8");
+  assert.match(privacy, /<NativeOkfShell title="Privacy"/u);
+  assert.match(privacy, /<p>Project contact: Max Gräser,/u);
+  assert.doesNotMatch(privacy, /represented by the Rector Prof\. Dr\. Eva Inés Obergfell|Ritterstraße 26, 04109 Leipzig, Germany|is responsible for this research service/u);
+});
+
 test("product-owned UI strings contain no em dashes or paper-specific literals", async () => {
   const papers = await getAllPapers();
   async function checkDirectory(directory: string): Promise<void> {

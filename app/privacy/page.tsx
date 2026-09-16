@@ -9,7 +9,7 @@ export default function PrivacyPage() {
     <div className="max-w-3xl space-y-8 text-sm leading-7 text-ink [&_h2]:mb-3 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_a]:break-words [&_a]:text-blue [&_a]:underline">
       <section>
         <h2>Controller and contact</h2>
-        <p>Universität Leipzig, represented by the Rector Prof. Dr. Eva Inés Obergfell, Ritterstraße 26, 04109 Leipzig, Germany, is responsible for this research service. Project contact: Max Gräser, <a href="mailto:max.graeser@uni-leipzig.de">max.graeser@uni-leipzig.de</a>, telephone <a href="tel:+493419733605">+49 341 97 33605</a>. Full institutional and project contact details are in the <Link href="/imprint">Imprint</Link>.</p>
+        <p>Project contact: Max Gräser, <a href="mailto:max.graeser@uni-leipzig.de">max.graeser@uni-leipzig.de</a>, telephone <a href="tel:+493419733605">+49 341 97 33605</a>. Full institutional and project contact details are in the <Link href="/imprint">Imprint</Link>.</p>
         <p className="mt-3">The University’s data protection officer can be contacted through the <a href="https://www.uni-leipzig.de/datenschutz" target="_blank" rel="noopener noreferrer">official University privacy and data protection contact page</a>.</p>
       </section>
       <section>
