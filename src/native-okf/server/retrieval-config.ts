@@ -40,11 +40,11 @@ export const SEARCH_QUOTED_PHRASE_MULTIPLIER = 1.6;
  * ranked concepts and compact required structure.
  */
 export const DEFAULT_RETRIEVAL_LIMITS: Required<RetrievalOptions> = Object.freeze({
-  lexicalSeedLimit: 8,
-  firstHopLimit: 12,
-  secondHopLimit: 6,
-  maxConcepts: 28,
-  maxContextCharacters: 76_000,
+  lexicalSeedLimit: 16,
+  firstHopLimit: 24,
+  secondHopLimit: 12,
+  maxConcepts: 56,
+  maxContextCharacters: 140_000,
   maxGraphDepth: 2,
   includeIncoming: true,
   includeOutgoing: true,
@@ -56,8 +56,8 @@ export const MAX_RETRIEVAL_LIMITS: Readonly<Record<keyof RetrievalOptions, numbe
     lexicalSeedLimit: 20,
     firstHopLimit: 40,
     secondHopLimit: 20,
-    maxConcepts: 50,
-    maxContextCharacters: 80_000,
+    maxConcepts: 100,
+    maxContextCharacters: 150_000,
     maxGraphDepth: 2,
     includeIncoming: 1,
     includeOutgoing: 1,

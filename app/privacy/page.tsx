@@ -33,7 +33,7 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>Operational and infrastructure logs</h2>
-        <p>The chat server records timestamps, generated request IDs, success or error status, HTTP status and request duration. Error entries may contain diagnostic codes and upstream HTTP status. These application outcome logs exclude question text, answer text and retrieved source content. Validation failures can additionally log technical diagnostic codes.</p>
+        <p>The chat server records timestamps, generated request IDs, success or error status, HTTP status and request duration. Model-bearing turns also record model and reasoning settings, token usage, evidence sizes, request mode, scope type, build identity and provider-call durations. Error entries may contain diagnostic codes and upstream HTTP status. These application outcome logs exclude question text, answer text and retrieved source content. Validation failures can additionally log technical diagnostic codes.</p>
         <p className="mt-3">The hosting and network infrastructure processes connection and request information to deliver and protect the service, and may retain access or security logs, including IP addresses and requested URLs. Log retention and access are controlled by the deployment operator and hosting configuration, not by browser session storage. Contact the project for the applicable retention periods and infrastructure arrangements.</p>
       </section>
       <section>

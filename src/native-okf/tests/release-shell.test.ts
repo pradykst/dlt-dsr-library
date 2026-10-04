@@ -220,7 +220,8 @@ test("legal pages provide institutional contact and operational privacy", async 
   assert.match(privacy, /OpenAI/);
   assert.match(privacy, /session storage/);
   assert.match(privacy, /operational|Operational/);
-  assert.match(imprint, /DE 141510383/);
+  assert.match(imprint, /https:\/\/www\.wifa\.uni-leipzig\.de\/impressum/u);
+  assert.match(imprint, /Research and project contact/u);
   assert.match(imprint, /max.graeser@uni-leipzig.de/);
 });
 

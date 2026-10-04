@@ -525,9 +525,9 @@ test("narrow relationships may use two nodes while broad evidence expands canoni
 });
 
 test("increased serialized context protects required evidence and never sends raw whole-corpus Markdown", async () => {
-  assert.equal(DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters, 76_000);
-  assert.equal(DEFAULT_RETRIEVAL_LIMITS.maxConcepts, 28);
-  assert.equal(MAX_RETRIEVAL_LIMITS.maxContextCharacters, 80_000);
+  assert.equal(DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters, 140_000);
+  assert.equal(DEFAULT_RETRIEVAL_LIMITS.maxConcepts, 56);
+  assert.equal(MAX_RETRIEVAL_LIMITS.maxContextCharacters, 150_000);
   const retrieval = await retrieveOkfContext("design knowledge relationships across blockchain artifacts");
   const context = buildNativeOkfGroundedContext(retrieval, "design knowledge relationships across blockchain artifacts");
   assert.ok(context.prompt.length <= retrieval.debug.limits.maxContextCharacters);

@@ -242,7 +242,8 @@ test("corpus overview computes papers with zero design requirements", async () =
   assert.ok(withoutRequirements.length > 0);
   assert.ok(withoutRequirements.length < overview.paperCount);
   assert.deepEqual(retrieval.corpusOverview, overview);
-  assert.ok(retrieval.finalConcepts.length < overview.paperCount);
+  assert.ok(retrieval.finalConcepts.length <= retrieval.debug.limits.maxConcepts);
+  assert.ok(retrieval.finalConcepts.length < retrieval.debug.searchDiagnostics.indexedConceptCount);
   assert.ok(
     overview.papers.every((paper) =>
       !Object.hasOwn(paper as unknown as object, "markdownBody")),

@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { NativeOkfModelTurnMetrics } from "./openai/telemetry.ts";
+
 /**
  * Minimal structured operational logging for the native OKF chat endpoint.
  *
@@ -30,4 +32,13 @@ export function logNativeOkfChatOutcome(entry: NativeOkfChatLogEntry): void {
   } else {
     console.info(JSON.stringify(line));
   }
+}
+
+/** Model metrics share the existing operational log; no prompts or session IDs. */
+export function logNativeOkfModelTurn(metrics: NativeOkfModelTurnMetrics): void {
+  console.info(JSON.stringify({
+    at: new Date().toISOString(),
+    scope: "native-okf-model-turn",
+    ...metrics,
+  }));
 }

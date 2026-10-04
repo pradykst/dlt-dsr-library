@@ -120,18 +120,14 @@ test("all canonical papers retain every record, full description, Markdown body 
     const ids = rows.slice(0, count).map((row) => row.id);
     const retrieval = await assembleCompletePapersContext(ids, "Compare the reusable design knowledge.");
     assert.deepEqual(retrieval, await assembleCompletePapersContext(ids, "Compare the reusable design knowledge."));
-    if (count === 5) {
-      assert.throws(() => buildNativeOkfGroundedContext(retrieval, "Compare the reusable design knowledge."), /No selected knowledge was truncated/u);
-      continue;
-    }
     const context = buildNativeOkfGroundedContext(retrieval, "Compare the reusable design knowledge.");
     assert.equal(context.sources.length, retrieval.finalConcepts.length);
-    assert.ok(context.prompt.length <= 80_000);
+    assert.ok(context.prompt.length <= 150_000);
   }
   const representative = await scoped("Compare these selected papers.", IDS);
   const context = buildNativeOkfGroundedContext(representative.retrieval, representative.prepared.effectiveQuestion);
   assert.equal(context.sources.length, representative.raw.finalConcepts.length);
-  assert.ok(context.prompt.length <= 80_000);
+  assert.ok(context.prompt.length <= 150_000);
   console.log(JSON.stringify({ contextSizes: rows }));
 });
 
@@ -155,7 +151,11 @@ test("missing requested kinds and oversized selections make zero provider calls"
   assert.equal(response.presentationMode, "no-match");
   assert.deepEqual(response.sources, []);
   assert.equal(response.diagram, undefined);
-  await assert.rejects(answerNativeOkfChat({ question: "Compare these selected papers.", scope: { type: "papers", paperIds: ["kyc-framework-ssi", "trust-enabling-capacity-exchange", "bond-markets-tokenization-tac", "ambivalence-trust-loyalty", "bemi-marketplace-interfaces"] } }, { environment: config, client: mock }), /No selected knowledge was truncated/u);
+  const oversizedIds = ["kyc-framework-ssi", "trust-enabling-capacity-exchange", "bond-markets-tokenization-tac", "ambivalence-trust-loyalty", "bemi-marketplace-interfaces"];
+  await assert.rejects(answerNativeOkfChat({ question: "Compare these selected papers.", scope: { type: "papers", paperIds: oversizedIds } }, {
+    environment: config, client: mock,
+    retrieve: (question) => assembleCompletePapersContext(oversizedIds.map((id) => `papers/${id}`), question, { maxContextCharacters: 1_000 }),
+  }), /No selected knowledge was truncated/u);
   assert.equal(calls, 0);
 });
 

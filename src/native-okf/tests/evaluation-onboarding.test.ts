@@ -176,7 +176,7 @@ test("starter component prefills editable examples and never auto-sends or calls
   assert.doesNotMatch(component, /\bfetch\s*\(/u);
   assert.doesNotMatch(component, /\/api\/native-okf/u);
   assert.doesNotMatch(component, /submitQuestion/u);
-  assert.match(component, /nothing is\s*\n?\s*sent until you press Send/u);
+  assert.match(component, /nothing is\s*\n?\s*sent until you press Send/iu);
 });
 
 test("New chat resets scope and conversation, and the @ / paper helper text is present", async () => {
@@ -234,7 +234,6 @@ test("survey URL is centralized and external links are safe and untracked", asyn
     "src/native-okf/shared/public-links.ts",
     "components/layout/SiteHeader.tsx",
     "components/layout/SiteFooter.tsx",
-    "src/native-okf/components/release/ReleaseMethod.tsx",
     "src/native-okf/components/chat/ChatWorkbench.tsx",
   ];
   const sources = await Promise.all(paths.map(source));
@@ -252,10 +251,10 @@ test("survey URL is centralized and external links are safe and untracked", asyn
   }
 });
 
-test("public navigation and Method evaluation copy meet the release boundary", async () => {
+test("public navigation keeps feedback and excludes the removed Method page", async () => {
   const header = await source("components/layout/SiteHeader.tsx");
   const footer = await source("components/layout/SiteFooter.tsx");
-  const method = await source("src/native-okf/components/release/ReleaseMethod.tsx");
+  await assert.rejects(source("src/native-okf/components/release/ReleaseMethod.tsx"), { code: "ENOENT" });
   for (const label of [
     "Home",
     "Library",
@@ -264,9 +263,8 @@ test("public navigation and Method evaluation copy meet the release boundary", a
   ]) assert.match(header, new RegExp(label, "u"));
   assert.doesNotMatch(header, />\s*Admin(?:istrator)?\s*</u);
   assert.match(footer, /Evaluation survey/u);
-  assert.match(method, /evaluated with researchers/u);
-  assert.match(method, /generated synthesis[\s\S]*researcher review/u);
-  assert.match(method, /in a new tab/u);
+  assert.doesNotMatch(header, />\s*Method\s*</u);
+  assert.doesNotMatch(footer, />\s*Method\s*</u);
 });
 
 test("deployment hygiene covers production start, ignored artifacts, and canonical sitemap", async () => {

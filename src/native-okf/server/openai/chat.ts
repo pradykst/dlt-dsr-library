@@ -77,6 +77,7 @@ import {
   OpenAiRefusalError,
 } from "./errors.ts";
 import { moderateNativeOkfText } from "./moderation.ts";
+import { NativeOkfTurnTelemetry, type NativeOkfModelTurnMetrics } from "./telemetry.ts";
 import {
   NATIVE_OKF_ACTIVE_DIAGRAM_QA_INSTRUCTION,
   NATIVE_OKF_CITATION_REPAIR_INSTRUCTION,
@@ -143,6 +144,8 @@ export type NativeOkfDiagramGenerator = (input: {
 }) => Promise<NativeOkfDiagramGenerationResult>;
 
 export interface NativeOkfChatDependencies {
+  /** Server-only observer for controlled evaluation; never part of the public answer. */
+  onModelMetrics?: (metrics: NativeOkfModelTurnMetrics) => void;
   retrieve?: (question: string) => Promise<RetrievalResult>;
   conversationCatalog?: NativeOkfConversationCatalog;
   prepared?: PreparedNativeOkfChatRequest;
@@ -842,31 +845,48 @@ export async function answerNativeOkfChat(
   input: unknown,
   dependencies: NativeOkfChatDependencies = {},
 ): Promise<NativeOkfChatResponse> {
+  const startedAt = performance.now();
   const prepared = dependencies.prepared ??
     (await prepareNativeOkfChatRequest(
       validateNativeOkfChatRequest(input),
       dependencies.conversationCatalog,
     ));
-  const response = await answerNativeOkfChatUnchecked(input, {
-    ...dependencies,
-    prepared,
-  });
-  assertUniqueSourceIds(response);
-  await assertNativeOkfResponseBoundary(prepared, response);
-  const warnings = response.warnings ?? [];
-  // Echo the resolved boundary on every response, including clarification and no evidence.
-  return {
-    ...response,
-    scope: prepared.resolvedScope,
-    ...(prepared.scopeWarning && !warnings.includes(prepared.scopeWarning)
-      ? { warnings: [prepared.scopeWarning, ...warnings] }
-      : {}),
-  };
+  const telemetry = new NativeOkfTurnTelemetry(
+    prepared.turnPlan.mode,
+    prepared.scopePaperSlugs.length > 0 ? "paper" : "corpus",
+    startedAt,
+  );
+  let status: "success" | "error" = "error";
+  try {
+    const response = await answerNativeOkfChatUnchecked(input, {
+      ...dependencies,
+      prepared,
+    }, telemetry);
+    assertUniqueSourceIds(response);
+    await assertNativeOkfResponseBoundary(prepared, response);
+    status = "success";
+    const warnings = response.warnings ?? [];
+    // Echo the resolved boundary on every response, including clarification and no evidence.
+    return {
+      ...response,
+      scope: prepared.resolvedScope,
+      ...(prepared.scopeWarning && !warnings.includes(prepared.scopeWarning)
+        ? { warnings: [prepared.scopeWarning, ...warnings] }
+        : {}),
+    };
+  } finally {
+    // Operational logging and evaluation observers cannot change answer/error semantics.
+    try {
+      const metrics = telemetry.finish(status);
+      if (metrics) dependencies.onModelMetrics?.(metrics);
+    } catch { /* Best-effort diagnostics only. */ }
+  }
 }
 
 async function answerNativeOkfChatUnchecked(
   input: unknown,
-  dependencies: NativeOkfChatDependencies = {},
+  dependencies: NativeOkfChatDependencies,
+  telemetry: NativeOkfTurnTelemetry,
 ): Promise<NativeOkfChatResponse> {
   const request = validateNativeOkfChatRequest(input);
   const prepared =
@@ -1076,8 +1096,13 @@ async function answerNativeOkfChatUnchecked(
 
   const environment =
     dependencies.environment ?? readOpenAiEnvironment();
-  const client =
-    dependencies.client ?? getOpenAiClient(environment);
+  const client = telemetry.observeClient(
+    dependencies.client ?? getOpenAiClient(environment),
+    environment,
+    context.prompt.length,
+    retrieval.debug.limits.maxContextCharacters,
+    context.sources.length,
+  );
   const priorScope = normalizeNativeOkfChatScope(request.conversationState?.scope);
   const history = JSON.stringify(priorScope) === JSON.stringify(prepared.resolvedScope)
     ? request.history ?? [] : [];

@@ -9,6 +9,7 @@ export const OPENAI_REASONING_EFFORTS = [
   "medium",
   "high",
   "xhigh",
+  "max",
 ] as const;
 
 export type OpenAiReasoningEffort = (typeof OPENAI_REASONING_EFFORTS)[number];
@@ -70,7 +71,7 @@ function optionalInteger(
 }
 
 function reasoningEffort(value: string | undefined): OpenAiReasoningEffort {
-  const normalized = (value?.trim() || "medium").toLocaleLowerCase("en");
+  const normalized = (value?.trim() || "low").toLocaleLowerCase("en");
   if ((OPENAI_REASONING_EFFORTS as readonly string[]).includes(normalized)) {
     return normalized as OpenAiReasoningEffort;
   }

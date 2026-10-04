@@ -13,6 +13,7 @@ import type {
 } from "../retrieval-types.ts";
 import { InternalNativeOkfError, RequestTooLargeError } from "./errors.ts";
 import { compactCompletePaperMarkdown } from "../complete-paper-packing.ts";
+import { MAX_RETRIEVAL_LIMITS } from "../retrieval-config.ts";
 
 export interface NativeOkfGroundedSource {
   sourceId: string;
@@ -164,11 +165,14 @@ export function buildNativeOkfGroundedContext(
   requiredConceptIds: readonly string[] = [],
   activeProposalDraft: SynthesisDraftState | null = null,
 ): NativeOkfGroundedContext {
-  const maximumCharacters = retrieval.debug.limits.maxContextCharacters;
+  const maximumCharacters = Math.min(
+    retrieval.debug.limits.maxContextCharacters,
+    MAX_RETRIEVAL_LIMITS.maxContextCharacters,
+  );
   const requiredIds = new Set(requiredConceptIds);
   const structuredIds = structuredEvidenceIds(retrieval.structuredAnalysis);
   const protectedIds = new Set([...requiredIds, ...structuredIds]);
-  let selectedConcepts = [...retrieval.finalConcepts];
+  const selectedConcepts = [...retrieval.finalConcepts];
   let includeOverview = true;
   let includeDetails = true;
   let optionalConceptsDropped = 0;
