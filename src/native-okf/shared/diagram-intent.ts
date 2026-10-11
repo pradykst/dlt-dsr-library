@@ -1,5 +1,5 @@
 const DIAGRAM_INTENT_PATTERN =
-  /\b(?:decision[\s-]+support[\s-]+flow|flowchart|diagram|flow|graph|architecture|visuali[sz]e|depict|illustrate)\b/iu;
+  /\b(?:decision[\s-]+support[\s-]+flow|r[\s-]*p[\s-]*f|flowchart|diagram|flow|graph|architecture|visuali[sz]e|depict|illustrate)\b/iu;
 
 const MAP_ACTION_PATTERN =
   /^\s*(?:please\s+|(?:can|could|would)\s+you\s+)?map\s+(?:(?:the|this|that|what|how|all|every)\s+|represented\s+|stored\s+|canonical\s+)*(?:design\s+knowledge|concepts?|relationships?|relations?|connections?|flow|evidence|requirements?|principles?|features?|what|how)\b/iu;

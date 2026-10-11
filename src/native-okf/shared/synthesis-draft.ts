@@ -21,6 +21,8 @@ import { normalizeSynthesisProblemDisplay } from "./synthesis-problem-display.ts
 
 const DRAFT_KEYS = new Set([
   "version",
+  "title",
+  "explanation",
   "problemStatement",
   "domain",
   "objective",
@@ -321,6 +323,9 @@ export function parseSynthesisDraftState(
   if (!isRecord(value) || !hasOnlyKeys(value, DRAFT_KEYS) || value.version !== 1) {
     return null;
   }
+  const title = value.title === undefined ? undefined : boundedString(value.title, 160);
+  const explanation = value.explanation === undefined ? undefined : boundedString(value.explanation, 2_000);
+  if (title === null || explanation === null) return null;
   const problemStatement = boundedString(
     value.problemStatement,
     MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS,
@@ -365,6 +370,8 @@ export function parseSynthesisDraftState(
 
   return {
     version: 1,
+    ...(title === undefined ? {} : { title }),
+    ...(explanation === undefined ? {} : { explanation }),
     problemStatement,
     domain,
     objective,

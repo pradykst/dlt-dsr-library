@@ -14,6 +14,7 @@ import type {
 import { InternalNativeOkfError, RequestTooLargeError } from "./errors.ts";
 import { compactCompletePaperMarkdown } from "../complete-paper-packing.ts";
 import { MAX_RETRIEVAL_LIMITS } from "../retrieval-config.ts";
+import { getOkfBundle } from "../cache.ts";
 
 export interface NativeOkfGroundedSource {
   sourceId: string;
@@ -93,6 +94,26 @@ function sourceCard(
     ...(concept.sourcePaper ? { sourcePaper: concept.sourcePaper } : {}),
     ...(resource ? { resource } : {}),
   };
+}
+
+/** Re-disclose preserved evidence without making it fresh evidence for patch operations. */
+export async function preservedNativeOkfSourceCards(
+  conceptIds: readonly string[],
+): Promise<NativeOkfSourceCard[]> {
+  const bundle = await getOkfBundle();
+  return [...new Set(conceptIds)].flatMap((id, index) => {
+    const concept = bundle.conceptsById.get(id);
+    if (!concept || concept.type === "paper" || concept.type === "reference") return [];
+    const sourcePaper = concept.frontmatter.source_paper;
+    const resource = safeResource(concept.resource);
+    return [{
+      sourceId: `S${index + 1}`, conceptId: id,
+      title: concept.title?.trim() || id, type: concept.type,
+      ...(concept.description ? { description: concept.description } : {}),
+      ...(typeof sourcePaper === "string" ? { sourcePaper } : {}),
+      ...(resource ? { resource } : {}),
+    }];
+  });
 }
 
 function sourceBlock(

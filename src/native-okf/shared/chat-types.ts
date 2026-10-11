@@ -466,6 +466,9 @@ export interface GeneratedDiagram {
 
 export interface SynthesisDraftState {
   version: 1;
+  /** Optional for compatibility with previously saved sessions. */
+  title?: string;
+  explanation?: string;
   problemStatement: string;
   domain: string | null;
   objective: string | null;

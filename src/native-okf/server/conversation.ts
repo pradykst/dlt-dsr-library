@@ -104,10 +104,21 @@ const MAKE_ARTIFACT_REQUEST_PATTERN =
   /\b(?:make|build|creat(?:e|ing)|design(?:ing)?)\s+(?:me\s+|us\s+)?(?:a|an)\s+(?:system|solution|approach|tool|app|application|platform|process|mechanism|framework|architecture)\b/iu;
 const EXPLICIT_NEW_PROPOSAL_PATTERN =
   /\b(?:combine|create|generate|develop|design|build)\b[^.!?]{0,100}\b(?:new\s+artifact|DSR\s+proposal|problem-specific|solution)\b/iu;
+// Classify the user's requested output and purpose, independently of domain vocabulary.
+const PROBLEM_SPECIFIC_VISUAL_PATTERN =
+  /\b(?:propose|show|give|draw|generate|create|design|develop)\b[^.!?]{0,120}\b(?:r[\s-]*p[\s-]*f|dsr|requirements?\s*,?\s*principles?\s*,?\s*(?:and\s+)?features?|design[\s-]+support|decision[\s-]+support|flow|diagram|proposal)\b[^.!?]{0,100}\b(?:for|to\s+(?:address|solve|resolve))\s+(?!this\s+paper\b|that\s+paper\b|the\s+paper\b|paper\b|it\b|this\b|that\b)\S/iu;
+const PROBLEM_SOLUTION_QUESTION_PATTERN =
+  /\bhow\s+(?:can|could|should|might)\b[^.!?]{0,240}\b(?:addressed|resolved|solved)\b/iu;
+const STATED_DESIGN_PROBLEM_PATTERN =
+  /\b(?:my|our|a\s+new)\s+(?:design\s+)?(?:problem|challenge|use\s+case)\b|\b(?:i|we)\s+(?:face|have\s+(?:a|the)\s+problem|struggle\s+with|am\s+struggling\s+with|are\s+struggling\s+with)\b|(?:^|\n)\s*problem\s*:/iu;
+const EXPLICIT_STORED_SUBJECT_PATTERN =
+  /\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|flow|knowledge|relations?|relationships?)\b|\b(?:paper|study|article)(?:'s)?\s+(?:stored\s+|design\s+)?(?:map|diagram|graph|flow)\b|\b(?:from|in|of|for)\s+(?:this\s+|that\s+|the\s+)?(?:paper|study|article)\b/iu;
+const ADDITIONAL_DESIGN_CONTEXT_PATTERN =
+  /\b(?:additional|more|further)\s+context\b|\b(?:new|additional)\s+constraint\b|\b(?:it|the\s+(?:system|artifact|proposal|flow))\s+(?:must|needs?\s+to|should\s+also)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
 const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN =
-  /\b(?:make|add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
+  /\b(?:make|add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move|refine|simplify|reduce|prune|adjust|change)\b/iu;
 const ACTIVE_DIAGRAM_EXPLICIT_EDIT_REQUEST_PATTERN =
   /^\s*(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b|\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
 const ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN =
@@ -119,7 +130,7 @@ const ACTIVE_DIAGRAM_QA_ACTION_PATTERN =
 const ACTIVE_DIAGRAM_QA_REFERENT_PATTERN =
   /\b(?:this|that|it|its|these|those|diagram|flow|proposal|what\s+you\s+(?:generated|created|proposed)|each\s+element|elements?|nodes?|arrows?|connections?|relationships?|requirements?|principles?|features?|artifacts?)\b/iu;
 const ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN =
-  /\b(?:show|display|open|render|draw|visuali[sz]e)\b/iu;
+  /\b(?:show|display|open|render|draw|generate|visuali[sz]e)\b/iu;
 const ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN =
   /\b(?:this|that|it|current|existing|same|again|diagram|flow|graph|proposal)\b/iu;
 const SYNTHESIS_STANDALONE_MUTATION_PATTERN =
@@ -591,7 +602,7 @@ function stripExplicitPaperTitles(
     for (const candidate of candidates) {
       stripped = stripped.replace(
         new RegExp(escapeRegExp(candidate), "giu"),
-        " ",
+        " paper ",
       );
     }
   }
@@ -1038,6 +1049,7 @@ export function inferNativeOkfSynthesisIntent(
   question: string,
   state: NativeOkfConversationState,
 ): boolean {
+  if (requestsProblemSpecificDesign(question)) return true;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
   if (SOLVE_PROBLEM_QUESTION_PATTERN.test(question)) return true;
   if (MAKE_ARTIFACT_REQUEST_PATTERN.test(question)) return true;
@@ -1072,6 +1084,18 @@ export function inferNativeOkfSynthesisIntent(
     );
 }
 
+function requestsProblemSpecificDesign(question: string): boolean {
+  if (EXPLICIT_NEW_PROPOSAL_PATTERN.test(question) ||
+      MAKE_ARTIFACT_REQUEST_PATTERN.test(question) ||
+      SOLVE_PROBLEM_QUESTION_PATTERN.test(question) ||
+      DESIGN_PROBLEM_GUIDANCE_PATTERN.test(question)) return true;
+  const explicitSourceMap = /\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|flow|knowledge|relations?|relationships?)\b/iu.test(question);
+  return !explicitSourceMap && PROBLEM_SPECIFIC_VISUAL_PATTERN.test(question) ||
+    !EXPLICIT_STORED_SUBJECT_PATTERN.test(question) &&
+      (PROBLEM_SOLUTION_QUESTION_PATTERN.test(question) ||
+        STATED_DESIGN_PROBLEM_PATTERN.test(question) && inferDiagramIntent(question));
+}
+
 /**
  * A mutation is a diagram refinement only when an editable validated draft is
  * active and the utterance combines an edit operation with graph/design
@@ -1082,7 +1106,9 @@ export function inferActiveSynthesisDiagramRefinement(
   state: NativeOkfConversationState,
 ): boolean {
   if (!state.latestValidatedSynthesisDraft) return false;
-  if (!ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN.test(question)) return false;
+  if (EXPLICIT_STORED_SUBJECT_PATTERN.test(question) || requestsProblemSpecificDesign(question)) return false;
+  if (!ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN.test(question) &&
+      !ADDITIONAL_DESIGN_CONTEXT_PATTERN.test(question)) return false;
   if (
     ACTIVE_DIAGRAM_QA_ACTION_PATTERN.test(question) &&
     ACTIVE_DIAGRAM_QA_REFERENT_PATTERN.test(question) &&
@@ -1196,30 +1222,11 @@ function resolvedPaperRestriction(
 
 function priorDraftForRequest(
   draft: SynthesisDraftState | null,
-  restrictedPaperSlugs: readonly string[],
-  catalog: NativeOkfConversationCatalog,
 ): SynthesisDraftState | null {
   if (!draft) return null;
-  const allowedPapers = new Set(restrictedPaperSlugs);
-  const paperByConceptId = new Map(
-    catalog.concepts.map((concept) => [
-      concept.conceptId,
-      concept.paperSlug,
-    ]),
-  );
-  const nodes = draft.nodes.filter((node) => {
-    if (node.provenance === "user-provided") return true;
-    if (allowedPapers.size === 0) return true;
-    return node.supportConceptIds.some((id) => {
-      const paperSlug = paperByConceptId.get(id);
-      return typeof paperSlug === "string" && allowedPapers.has(paperSlug);
-    });
-  });
-  const nodeIds = new Set(nodes.map((node) => node.id));
-  const edges = draft.edges.filter(
-    (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
-  );
-  return { ...draft, nodes, edges };
+  // Current-turn evidence restrictions must not silently prune a validated graph.
+  // An actual UI scope change already invalidates the draft in withScopeChangeReset.
+  return draft;
 }
 
 function clarificationFor(
@@ -1828,11 +1835,9 @@ export async function prepareNativeOkfChatRequest(
     ? restrictedPaperSlugs
     : focusedPaperSlugs;
   const priorSynthesisDraft =
-    (synthesisIntent || activeDiagramQa) && contextBase.latestValidatedSynthesisDraft
+    (activeDraftRefinement || activeProposalRerender || activeDiagramQa) && contextBase.latestValidatedSynthesisDraft
     ? priorDraftForRequest(
         contextBase.latestValidatedSynthesisDraft,
-        restrictedPaperSlugs,
-        catalog,
       )
     : null;
 
@@ -1848,6 +1853,7 @@ export async function prepareNativeOkfChatRequest(
     // diagram for a plain content question about that paper.
     !activeDiagramQa && inferDiagramIntent(synthesisClassificationQuestion) ||
     activeDraftRefinement ||
+    activeProposalRerender ||
     categoryStoredMapFollowUp ||
     (synthesisIntent && contextBase.lastDiagramRequested);
   const includeDiagram = !activeDiagramQa && !(comparisonRequested && !synthesisIntent) &&
@@ -1860,6 +1866,7 @@ export async function prepareNativeOkfChatRequest(
     // updated diagram" otherwise satisfies the generic stored-map subject pattern.
     !activeDraftRefinement &&
     !activeProposalRerender &&
+    !requestsProblemSpecificDesign(synthesisClassificationQuestion) &&
     !MAKE_ARTIFACT_REQUEST_PATTERN.test(synthesisClassificationQuestion) &&
     !SOLVE_PROBLEM_QUESTION_PATTERN.test(synthesisClassificationQuestion) &&
     !EXPLICIT_NEW_PROPOSAL_PATTERN.test(synthesisClassificationQuestion) &&
@@ -1944,7 +1951,9 @@ export async function prepareNativeOkfChatRequest(
   );
   const synthesisProblem = synthesisIntent
     ? priorSynthesisDraft?.problemStatement ??
-      contextBase.lastSynthesisProblem?.problemStatement ??
+      (requestsProblemSpecificDesign(synthesisClassificationQuestion) ||
+        SYNTHESIS_ACTION_PATTERN.test(synthesisClassificationQuestion) && SYNTHESIS_OUTPUT_PATTERN.test(synthesisClassificationQuestion)
+        ? null : contextBase.lastSynthesisProblem?.problemStatement) ??
       effectiveQuestion.slice(0, 800)
     : null;
   const liveDataRequest = isNativeOkfLiveDataRequest(effectiveQuestion);
@@ -2185,9 +2194,11 @@ export function inferActiveProposalRerender(
   state: NativeOkfConversationState,
 ): boolean {
   return Boolean(state.latestValidatedSynthesisDraft) &&
+    !EXPLICIT_STORED_SUBJECT_PATTERN.test(question) &&
+    !requestsProblemSpecificDesign(question) &&
+    !inferActiveSynthesisDiagramRefinement(question, state) &&
     ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN.test(question) &&
-    ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN.test(question) &&
-    inferDiagramIntent(question);
+    ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN.test(question);
 }
 
 /**

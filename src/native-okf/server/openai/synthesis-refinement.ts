@@ -34,9 +34,9 @@ const MAX_SUPPORT_ID_CHARACTERS = 320;
 const MAX_REPAIR_ERRORS = 12;
 const KEY_PATTERN = /^[a-z][a-z0-9-]*$/u;
 const REMOVE_REQUEST_PATTERN =
-  /\b(?:remove|delete|drop|exclude|without|replace)\b/iu;
+  /\b(?:remove|delete|drop|exclude|without|replace|simplify|reduce|prune)\b/iu;
 const UPDATE_REQUEST_PATTERN =
-  /\b(?:update|change|revise|rename|replace|make)\b/iu;
+  /\b(?:update|change|revise|rename|relabel|replace|make|refine|adjust|constraint|context|must|needs?|add|include|introduce)\b/iu;
 
 export interface SynthesisRefinementNode {
   key: string;
@@ -246,6 +246,8 @@ export const NATIVE_OKF_SYNTHESIS_REFINEMENT_INSTRUCTIONS = `Return only a graph
 
 By default preserve every existing node and edge. Add only requested information. Use updateNodes only when the user explicitly asks to change or replace a node. Use removeNodeIds or removeEdges only when the user explicitly asks to remove, exclude, delete, or replace something. An added node ID is "refine-" followed by its key; use that ID in added edges.
 
+Natural refinements and new constraints should edit the relevant existing concepts first. Do not add a parallel branch when a local content update suffices. Simplifying may remove redundant or optional elements, but must retain the core design path. Preserve the stage, category, support IDs, and wording of fields that the request does not affect. Additional context can justify a local update, never a wholesale redesign. If no justified valid edit exists, return five empty operation arrays.
+
 Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist as evidence bindings. Every added or updated node is a PROPOSED design concept; never import a stored concept as a node and never reproduce a stored source relation. Give each added edge a schema-defined relationshipType and a concise evidence-linked rationale. The prior draft is design context, never scholarly evidence for a new operation.
 
 A PRIMARY relationship connects adjacent semantic roles only (problem -> requirement -> principle -> feature -> artifact); never add a requirement -> feature, principle -> artifact, backward, or same-role primary relationship. A SECONDARY dependency uses relationshipType "depends on" (principle -> principle or feature -> feature) or "interoperates with" (feature -> feature) and never substitutes for a primary parent. Evaluation and Outcome remain optional.
@@ -263,6 +265,20 @@ const ADD_NODE_KEYS = new Set(Object.keys(ADD_NODE_SCHEMA.properties));
 const UPDATE_NODE_KEYS = new Set(Object.keys(UPDATE_NODE_SCHEMA.properties));
 const EDGE_KEYS = new Set(Object.keys(EDGE_SCHEMA.properties));
 const REMOVE_EDGE_KEYS = new Set(Object.keys(REMOVE_EDGE_SCHEMA.properties));
+
+export const NATIVE_OKF_REFINEMENT_REVIEW_INSTRUCTIONS = `Review a proposed patch to the authoritative validated design proposal. Return only the strict review verdict, never a replacement diagram.
+Approve only if EVERY operation is necessary for the latest refinementRequest and supported by the fresh allowlisted evidence. Identify the specific requested target or constraint for every addition, update, removal, and relationship change. Reject unrelated edits even when the resulting graph is valid. Reject filler, balance-driven branches, mechanically copied source concepts, unsupported domain claims, changes to unaffected provenance or stages, and unnecessary rewiring. New context should normally refine relevant existing nodes, not grow a new parallel solution. Removing or simplifying a component justifies only its removal and necessary local reconnections. A request to display the diagram justifies no edits. An empty patch is acceptable when no safe evidence-grounded change can be justified. Do not treat the prior proposal or user constraints as scholarly evidence. approved must be false if any operation fails these checks; errors must explain what to remove or correct.`;
+
+const REFINEMENT_REVIEW_FORMAT = {
+  type: "json_schema", name: "native_okf_refinement_review", strict: true,
+  schema: {
+    type: "object", additionalProperties: false, required: ["approved", "errors"],
+    properties: {
+      approved: { type: "boolean" },
+      errors: { type: "array", maxItems: 6, items: { type: "string", minLength: 1, maxLength: 240 } },
+    },
+  },
+} as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -295,7 +311,7 @@ function supportIds(
     const id = bounded(item, MAX_SUPPORT_ID_CHARACTERS);
     return id ? [id] : [];
   }))];
-  return ids.length > 0 && ids.every((id) =>
+  return value.every((item) => bounded(item, MAX_SUPPORT_ID_CHARACTERS) !== null) && ids.length > 0 && ids.every((id) =>
     grounding.eligibleStoredConceptIds.has(id)
   )
     ? ids
@@ -456,15 +472,6 @@ export function validateNativeOkfSynthesisRefinementPatch(
     "removeEdges",
   );
   if (
-    addNodes.length === 0 &&
-    updateNodes.length === 0 &&
-    removeNodeIds.length === 0 &&
-    addEdges.length === 0 &&
-    removeEdges.length === 0
-  ) {
-    errors.push("patch:no-operations");
-  }
-  if (
     (removeNodeIds.length > 0 || removeEdges.length > 0) &&
     !REMOVE_REQUEST_PATTERN.test(refinementRequest)
   ) {
@@ -475,6 +482,10 @@ export function validateNativeOkfSynthesisRefinementPatch(
   }
   const keyIds = addNodes.map((node) => `refine-${node.key}`);
   if (new Set(keyIds).size !== keyIds.length) errors.push("patch:duplicate-add-node");
+  const updateIds = updateNodes.map((node) => node.nodeId);
+  if (new Set(updateIds).size !== updateIds.length) errors.push("patch:duplicate-update-node");
+  if (new Set(removeNodeIds).size !== removeNodeIds.length) errors.push("patch:duplicate-remove-node");
+  if (updateIds.some((id) => removeNodeIds.includes(id))) errors.push("patch:conflicting-node-operations");
   return errors.length > 0
     ? { ok: false, errors: [...new Set(errors)] }
     : {
@@ -553,7 +564,7 @@ export async function applyNativeOkfSynthesisRefinementPatch(
   | { ok: false; errors: string[] }
 > {
   const existingIds = new Set(priorDraft.nodes.map((node) => node.id));
-  if (patch.removeNodeIds.includes("user-problem")) {
+  if (priorDraft.nodes.some((node) => node.stage === "problem" && patch.removeNodeIds.includes(node.id))) {
     return { ok: false, errors: ["patch:cannot-remove-problem"] };
   }
   if (patch.removeNodeIds.some((id) => !existingIds.has(id))) {
@@ -577,7 +588,7 @@ export async function applyNativeOkfSynthesisRefinementPatch(
           description: update.description,
           category: update.category,
           stage: update.stage,
-          order: orderForStage(update.stage),
+          order: update.stage === node.stage ? node.order : orderForStage(update.stage),
           sourcePaths: [...update.supportConceptIds],
           supportConceptIds: [...update.supportConceptIds],
           synthesisRationale: update.synthesisRationale,
@@ -627,15 +638,15 @@ export async function applyNativeOkfSynthesisRefinementPatch(
   if (!forwardStageOrder(nodes, edges)) {
     return { ok: false, errors: ["patch:backward-stage-edge"] };
   }
-  const preservedSupport = priorDraft.nodes.flatMap((node) => node.supportConceptIds);
+  const preservedSupport = [...priorDraft.nodes, ...priorDraft.edges].flatMap((element) => element.supportConceptIds);
   const validationGrounding = await extendNativeOkfDiagramGrounding(
     currentTurnGrounding,
     preservedSupport,
   );
   const candidate: GeneratedDiagram = {
-    title: `Design proposal refinement`,
+    title: priorDraft.title ?? "Design proposal refinement",
     explanation:
-      "A validated edit of the prior design proposal. Unmentioned nodes and relationships are preserved; new or changed elements use fresh current-turn stored support.",
+      priorDraft.explanation ?? "A validated edit of the prior design proposal. Unmentioned nodes and relationships are preserved; new or changed elements use fresh current-turn stored support.",
     nodes,
     edges,
   };
@@ -645,6 +656,14 @@ export async function applyNativeOkfSynthesisRefinementPatch(
     requireDisplayedStoredSupport: false,
   });
   if (!validation.ok) return { ok: false, errors: validation.errors };
+  // Validation may normalize fields. Never accept collateral changes to baseline elements.
+  const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+  if (priorDraft.nodes.some((node) => !removed.has(node.id) && !updates.has(node.id) &&
+      !same(node, validation.diagram.nodes.find((candidate) => candidate.id === node.id))) ||
+      edges.slice(0, edges.length - patch.addEdges.length).some((edge, index) =>
+        !same(edge, validation.diagram.edges[index]))) {
+    return { ok: false, errors: ["patch:changed-unaffected-element"] };
+  }
   const freshSupportIds = [...new Set([
     ...patch.addNodes.flatMap((node) => node.supportConceptIds),
     ...patch.updateNodes.flatMap((node) => node.supportConceptIds),
@@ -654,7 +673,7 @@ export async function applyNativeOkfSynthesisRefinementPatch(
     ok: true,
     diagram: validation.diagram,
     usedSupportConceptIds: [...new Set([
-      ...validation.diagram.nodes.flatMap((node) => node.supportConceptIds),
+      ...[...validation.diagram.nodes, ...validation.diagram.edges].flatMap((element) => element.supportConceptIds),
       ...freshSupportIds,
     ])],
   };
@@ -744,6 +763,32 @@ async function createResponse(
   });
 }
 
+async function reviewPatch(
+  options: GenerateNativeOkfSynthesisRefinementOptions,
+  patch: SynthesisRefinementPatch,
+): Promise<string[]> {
+  const response = await options.client.responses.create({
+    model: options.environment.model,
+    instructions: NATIVE_OKF_REFINEMENT_REVIEW_INSTRUCTIONS,
+    input: JSON.stringify({ ...JSON.parse(buildNativeOkfSynthesisRefinementInput(options)), proposedPatch: patch }),
+    reasoning: { effort: options.environment.reasoningEffort },
+    max_output_tokens: options.environment.diagramMaxOutputTokens,
+    text: { format: REFINEMENT_REVIEW_FORMAT },
+    tools: [], tool_choice: "none", parallel_tool_calls: false, store: false,
+  });
+  if (refused(response) || response.status === "incomplete") return ["patch:review-unavailable"];
+  try {
+    const verdict: unknown = JSON.parse(response.output_text ?? "");
+    if (!isRecord(verdict) || !onlyKeys(verdict, new Set(["approved", "errors"])) ||
+        typeof verdict.approved !== "boolean" || !Array.isArray(verdict.errors) ||
+        verdict.errors.length > 6 || verdict.errors.some((error) => !bounded(error, 240))) {
+      return ["patch:invalid-review"];
+    }
+    if (verdict.approved && verdict.errors.length === 0) return [];
+    return verdict.errors.length > 0 ? verdict.errors as string[] : ["patch:unjustified-operations"];
+  } catch { return ["patch:invalid-review"]; }
+}
+
 export async function generateNativeOkfSynthesisRefinement(
   options: GenerateNativeOkfSynthesisRefinementOptions,
 ): Promise<
@@ -764,42 +809,20 @@ export async function generateNativeOkfSynthesisRefinement(
       "This diagram applies the requested refinement to the existing design proposal. Unmentioned elements are preserved, and new or changed elements use current-turn stored support.",
     warnings,
   });
-  const first = parseResponse(await createResponse(options), options);
-  if (first.ok) {
+  let errors: string[] | undefined;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const parsed = parseResponse(await createResponse(options, errors), options);
+    if (!parsed.ok) { errors = parsed.errors; continue; }
     const applied = await applyNativeOkfSynthesisRefinementPatch(
-      options.priorDraft,
-      first.patch,
-      options.grounding,
-      options.problemStatement,
-      options.requireRpfPath,
+      options.priorDraft, parsed.patch, options.grounding, options.problemStatement, options.requireRpfPath,
     );
-    if (applied.ok) return accepted(applied, []);
-    const second = parseResponse(await createResponse(options, applied.errors), options);
-    if (second.ok) {
-      const repaired = await applyNativeOkfSynthesisRefinementPatch(
-        options.priorDraft,
-        second.patch,
-        options.grounding,
-        options.problemStatement,
-        options.requireRpfPath,
-      );
-      if (repaired.ok) {
-        return accepted(repaired, ["The synthesis refinement required one bounded repair."]);
-      }
-      return { errors: repaired.errors };
-    }
-    return { errors: second.errors };
+    if (!applied.ok) { errors = applied.errors; continue; }
+    errors = await reviewPatch(options, parsed.patch);
+    if (errors.length > 0) continue;
+    const noChanges = Object.values(parsed.patch).every((operations) => operations.length === 0);
+    return accepted(applied, noChanges
+      ? ["No safe evidence-grounded changes were justified; the prior proposal is preserved."]
+      : attempt > 0 ? ["The synthesis refinement required one bounded repair."] : []);
   }
-  const second = parseResponse(await createResponse(options, first.errors), options);
-  if (!second.ok) return { errors: second.errors };
-  const repaired = await applyNativeOkfSynthesisRefinementPatch(
-    options.priorDraft,
-    second.patch,
-    options.grounding,
-    options.problemStatement,
-    options.requireRpfPath,
-  );
-  return repaired.ok
-    ? accepted(repaired, ["The synthesis refinement required one bounded repair."])
-    : { errors: repaired.errors };
+  return { errors: errors ?? ["patch:review-unavailable"] };
 }

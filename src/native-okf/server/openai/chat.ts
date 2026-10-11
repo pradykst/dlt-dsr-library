@@ -46,6 +46,9 @@ import {
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
 import { synthesisGrammarDiagnostics } from "./synthesis-grammar.ts";
+import { validateGeneratedDiagram } from "./diagram-validation.ts";
+import { preservedNativeOkfSourceCards } from "./context.ts";
+import { extendNativeOkfDiagramGrounding } from "./diagram-grounding.ts";
 import { deriveNativeOkfSynthesisClarification } from "./synthesis-clarification.ts";
 import {
   type NativeOpenAiClient,
@@ -463,6 +466,8 @@ function synthesisDraftFromDiagram(
 ): SynthesisDraftState {
   return {
     version: 1,
+    title: diagram.title,
+    explanation: diagram.explanation,
     problemStatement:
       prepared.synthesisProblem ??
       prepared.effectiveQuestion.slice(0, 800),
@@ -479,9 +484,9 @@ function synthesisDraftFromDiagram(
 
 function proposalDiagramFromDraft(draft: SynthesisDraftState): GeneratedDiagram {
   return {
-    title: "Design proposal",
+    title: draft.title ?? "Design proposal",
     explanation:
-      "This diagram translates the current design proposal into a decision-support flow. Every node is a proposed design concept grounded in cited stored native OKF evidence; primary design-flow relationships and secondary dependencies are shown distinctly.",
+      draft.explanation ?? "This diagram translates the current design proposal into a decision-support flow. Every node is a proposed design concept grounded in cited stored native OKF evidence; primary design-flow relationships and secondary dependencies are shown distinctly.",
     nodes: draft.nodes,
     edges: draft.edges,
   };
@@ -949,6 +954,7 @@ async function answerNativeOkfChatUnchecked(
   );
   const insufficientSynthesisGrounding =
     prepared.intent === "synthesized-flow" &&
+    !prepared.priorSynthesisDraft &&
     !hasSufficientNativeOkfSynthesisGrounding(retrieval);
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
@@ -958,8 +964,8 @@ async function answerNativeOkfChatUnchecked(
       "STORED_FILTERED_MAP",
     ].includes(turnPlan.mode) &&
     (
-      retrieval.noMatch ||
-      retrieval.finalConcepts.length === 0 ||
+      (!prepared.priorSynthesisDraft && (retrieval.noMatch ||
+      retrieval.finalConcepts.length === 0)) ||
       insufficientSynthesisGrounding
     ))
   ) {
@@ -1124,14 +1130,13 @@ async function answerNativeOkfChatUnchecked(
     let diagramResult: NativeOkfDiagramGenerationResult;
     if (
       prepared.priorSynthesisDraft &&
-      includeDiagram &&
-      !turnPlan.refinementIntent
+      turnPlan.diagramAction === "RENDER_EXISTING"
     ) {
       diagramResult = {
         diagram: proposalDiagramFromDraft(prepared.priorSynthesisDraft),
         usedSupportConceptIds: [...new Set(
-          prepared.priorSynthesisDraft.nodes.flatMap((node) =>
-            node.supportConceptIds
+          [...prepared.priorSynthesisDraft.nodes, ...prepared.priorSynthesisDraft.edges].flatMap((element) =>
+            element.supportConceptIds
           ),
         )],
         warnings: [],
@@ -1171,7 +1176,25 @@ async function answerNativeOkfChatUnchecked(
       }
     }
 
+    let retainedPrior = false;
+    if (!diagramResult.diagram && prepared.priorSynthesisDraft) {
+      const priorDiagram = proposalDiagramFromDraft(prepared.priorSynthesisDraft);
+      const priorSupport = [...priorDiagram.nodes, ...priorDiagram.edges].flatMap((element) => element.supportConceptIds);
+      const extendedGrounding = await extendNativeOkfDiagramGrounding(grounding, priorSupport);
+      const validation = validateGeneratedDiagram(priorDiagram, extendedGrounding, { mode: "synthesized", requireRpfPath: true });
+      if (validation.ok) {
+        retainedPrior = true;
+        diagramResult = {
+          diagram: priorDiagram, usedSupportConceptIds: [...new Set(priorSupport)],
+          warnings: ["The requested refinement could not be validated against the design structure, latest request, and available evidence. The prior validated proposal is retained unchanged. Try specifying the target element and desired change."],
+        };
+      }
+    }
+
     if (diagramResult.diagram) {
+      const unchangedRefinement = turnPlan.refinementIntent && prepared.priorSynthesisDraft &&
+        JSON.stringify(diagramResult.diagram.nodes) === JSON.stringify(prepared.priorSynthesisDraft.nodes) &&
+        JSON.stringify(diagramResult.diagram.edges) === JSON.stringify(prepared.priorSynthesisDraft.edges);
       await moderateNativeOkfText(
         JSON.stringify(diagramResult.diagram),
         environment,
@@ -1179,17 +1202,21 @@ async function answerNativeOkfChatUnchecked(
       );
       const usedSupportConceptIds = diagramResult.usedSupportConceptIds ??
         [...new Set(
-          diagramResult.diagram.nodes.flatMap((node) => node.supportConceptIds),
+          [...diagramResult.diagram.nodes, ...diagramResult.diagram.edges].flatMap((element) => element.supportConceptIds),
         )];
-      const sourceCards = sourceCardsForConceptIds(
-        context,
-        usedSupportConceptIds,
-      );
-      const synthesisDraft = synthesisDraftFromDiagram(
+      const currentCards = sourceCardsForConceptIds(context, usedSupportConceptIds);
+      const currentIds = new Set(currentCards.map((card) => card.conceptId));
+      const sourceCards = mergeSourceCards(currentCards, await preservedNativeOkfSourceCards(
+        usedSupportConceptIds.filter((id) => !currentIds.has(id)),
+      ));
+      const synthesisDraft = (retainedPrior || unchangedRefinement || turnPlan.diagramAction === "RENDER_EXISTING") && prepared.priorSynthesisDraft
+        ? prepared.priorSynthesisDraft : synthesisDraftFromDiagram(
         prepared,
         diagramResult.diagram,
       );
-      const deterministicSummary = designProposalNarrative(
+      const deterministicSummary = retainedPrior ? diagramResult.warnings[0]! : unchangedRefinement
+        ? "No safe evidence-grounded changes were justified by the latest request. The prior validated proposal is preserved unchanged."
+        : designProposalNarrative(
         diagramResult.diagram,
         sourceCards,
         turnPlan.refinementIntent,
@@ -1205,6 +1232,7 @@ async function answerNativeOkfChatUnchecked(
         diagramStatus: includeDiagram ? "success" : null,
         synthesisDraft,
         insufficientContext: false,
+        ...(diagramResult.warnings.length ? { warnings: diagramResult.warnings } : {}),
         conversationState: completedConversationState(
           prepared,
           retrieval,
