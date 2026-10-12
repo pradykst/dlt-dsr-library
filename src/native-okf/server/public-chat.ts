@@ -203,7 +203,8 @@ export async function handlePublicNativeOkfChat(
 
   activePublicChatRequests += 1;
   try {
-    const response = await (dependencies.answer ?? answerNativeOkfChat)(body);
+    const response = dependencies.answer ? await dependencies.answer(body)
+      : await answerNativeOkfChat(body, { requestId, signal: request.signal });
     logNativeOkfChatOutcome({
       requestId,
       status: "success",

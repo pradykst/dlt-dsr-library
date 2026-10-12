@@ -23,6 +23,7 @@ import {
   synthesisProblemNodeDisplay,
 } from "../../shared/synthesis-problem-display.ts";
 import type { NativeOpenAiClient } from "./client.ts";
+import { nativeOkfModelCallOptions } from "./request-budget.ts";
 import type {
   NativeOkfDiagramGrounding,
 } from "./diagram-grounding.ts";
@@ -1127,7 +1128,7 @@ async function createPlanResponse(
     tool_choice: "none",
     parallel_tool_calls: false,
     store: false,
-  });
+  }, nativeOkfModelCallOptions(repair ? "synthesis-repair" : "synthesis-plan"));
 }
 
 async function reviewValidatedPlan(
@@ -1150,7 +1151,7 @@ async function reviewValidatedPlan(
       tool_choice: "none",
       parallel_tool_calls: false,
       store: false,
-    });
+    }, nativeOkfModelCallOptions("synthesis-quality-review"));
     const reviewed = parseResponse(
       response,
       options.grounding,

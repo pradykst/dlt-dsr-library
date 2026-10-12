@@ -14,6 +14,7 @@ import type { NativeOpenAiEnvironment } from "./env.ts";
 import { GENERATED_DIAGRAM_RESPONSE_FORMAT } from "./diagram-schema.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
 import { NATIVE_OKF_SYSTEM_PROMPT } from "./prompts.ts";
+import { nativeOkfModelCallOptions } from "./request-budget.ts";
 
 const MAX_REPAIR_ERRORS = 12;
 
@@ -194,7 +195,7 @@ async function createResponse(
     tool_choice: "none",
     parallel_tool_calls: false,
     store: false,
-  });
+  }, nativeOkfModelCallOptions(repair ? "stored-diagram-repair" : "stored-diagram"));
 }
 
 export async function generateNativeOkfDiagram(

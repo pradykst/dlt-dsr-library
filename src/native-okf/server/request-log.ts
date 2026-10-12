@@ -42,3 +42,10 @@ export function logNativeOkfModelTurn(metrics: NativeOkfModelTurnMetrics): void 
     ...metrics,
   }));
 }
+
+/** Fixed operational stage names and safe metrics only, never content/errors' messages. */
+export function logNativeOkfStage(entry: object): void {
+  try {
+    console.info(JSON.stringify({ at: new Date().toISOString(), scope: "native-okf-stage", ...entry }));
+  } catch { /* Observability must never change chat behavior. */ }
+}

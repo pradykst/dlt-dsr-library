@@ -13,12 +13,22 @@ import type {
 
 import { readOpenAiEnvironment, type NativeOpenAiEnvironment } from "./env.ts";
 
+export type NativeOkfModelStage =
+  | "text-generation" | "text-repair" | "stored-diagram" | "stored-diagram-repair"
+  | "synthesis-plan" | "synthesis-repair" | "synthesis-quality-review"
+  | "refinement-patch" | "refinement-repair" | "refinement-review" | "moderation";
+
+export interface NativeOkfModelRequestOptions extends Pick<OpenAI.RequestOptions, "timeout" | "maxRetries" | "signal"> {
+  /** Local operational label, stripped before forwarding to the SDK. */
+  nativeOkfStage?: NativeOkfModelStage;
+}
+
 export interface NativeOpenAiClient {
   responses: {
-    create(body: ResponseCreateParamsNonStreaming): Promise<Response>;
+    create(body: ResponseCreateParamsNonStreaming, options?: NativeOkfModelRequestOptions): Promise<Response>;
   };
   moderations: {
-    create(body: ModerationCreateParams): Promise<ModerationCreateResponse>;
+    create(body: ModerationCreateParams, options?: NativeOkfModelRequestOptions): Promise<ModerationCreateResponse>;
   };
 }
 

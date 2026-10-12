@@ -22,6 +22,7 @@ import {
 } from "./diagram-grounding.ts";
 import type { NativeOpenAiEnvironment } from "./env.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
+import { nativeOkfModelCallOptions } from "./request-budget.ts";
 
 const MAX_KEY_CHARACTERS = 48;
 const MAX_LABEL_CHARACTERS = 90;
@@ -760,7 +761,7 @@ async function createResponse(
     tool_choice: "none",
     parallel_tool_calls: false,
     store: false,
-  });
+  }, nativeOkfModelCallOptions(repairErrors ? "refinement-repair" : "refinement-patch"));
 }
 
 async function reviewPatch(
@@ -775,7 +776,7 @@ async function reviewPatch(
     max_output_tokens: options.environment.diagramMaxOutputTokens,
     text: { format: REFINEMENT_REVIEW_FORMAT },
     tools: [], tool_choice: "none", parallel_tool_calls: false, store: false,
-  });
+  }, nativeOkfModelCallOptions("refinement-review"));
   if (refused(response) || response.status === "incomplete") return ["patch:review-unavailable"];
   try {
     const verdict: unknown = JSON.parse(response.output_text ?? "");
@@ -811,13 +812,20 @@ export async function generateNativeOkfSynthesisRefinement(
   });
   let errors: string[] | undefined;
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const parsed = parseResponse(await createResponse(options, errors), options);
+    let parsed: ReturnType<typeof parseResponse>;
+    try { parsed = parseResponse(await createResponse(options, errors), options); }
+    catch { return { errors: ["patch:provider-unavailable"] }; }
     if (!parsed.ok) { errors = parsed.errors; continue; }
     const applied = await applyNativeOkfSynthesisRefinementPatch(
       options.priorDraft, parsed.patch, options.grounding, options.problemStatement, options.requireRpfPath,
     );
     if (!applied.ok) { errors = applied.errors; continue; }
-    errors = await reviewPatch(options, parsed.patch);
+    try { errors = await reviewPatch(options, parsed.patch); }
+    catch {
+      // Review is mandatory for accepting a patch. A transport failure cannot
+      // authorize it and does not justify another paid patch generation.
+      return { errors: ["patch:review-unavailable"] };
+    }
     if (errors.length > 0) continue;
     const noChanges = Object.values(parsed.patch).every((operations) => operations.length === 0);
     return accepted(applied, noChanges

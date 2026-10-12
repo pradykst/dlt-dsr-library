@@ -49,6 +49,7 @@ import { synthesisGrammarDiagnostics } from "./synthesis-grammar.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
 import { preservedNativeOkfSourceCards } from "./context.ts";
 import { extendNativeOkfDiagramGrounding } from "./diagram-grounding.ts";
+import { nativeOkfModelCallOptions, withNativeOkfRequestBudget } from "./request-budget.ts";
 import { deriveNativeOkfSynthesisClarification } from "./synthesis-clarification.ts";
 import {
   type NativeOpenAiClient,
@@ -147,6 +148,9 @@ export type NativeOkfDiagramGenerator = (input: {
 }) => Promise<NativeOkfDiagramGenerationResult>;
 
 export interface NativeOkfChatDependencies {
+  /** Operational metadata from the HTTP handler, never request-body data. */
+  requestId?: string;
+  signal?: AbortSignal;
   /** Server-only observer for controlled evaluation; never part of the public answer. */
   onModelMetrics?: (metrics: NativeOkfModelTurnMetrics) => void;
   retrieve?: (question: string) => Promise<RetrievalResult>;
@@ -360,7 +364,7 @@ async function createTextResponse(
       tool_choice: "none",
       parallel_tool_calls: false,
       text: { verbosity: "medium" },
-    });
+    }, nativeOkfModelCallOptions(instructions.includes(NATIVE_OKF_PRESENTATION_REPAIR_INSTRUCTION) ? "text-repair" : "text-generation"));
     return sanitizeGeneratedProse(
       extractNativeOkfResponseText(response),
       protectedStoredTitles,
@@ -860,7 +864,9 @@ export async function answerNativeOkfChat(
     prepared.turnPlan.mode,
     prepared.scopePaperSlugs.length > 0 ? "paper" : "corpus",
     startedAt,
+    dependencies.requestId,
   );
+  telemetry.recordStage("intent-classification", performance.now() - startedAt, "success");
   let status: "success" | "error" = "error";
   try {
     const response = await answerNativeOkfChatUnchecked(input, {
@@ -868,7 +874,7 @@ export async function answerNativeOkfChat(
       prepared,
     }, telemetry);
     assertUniqueSourceIds(response);
-    await assertNativeOkfResponseBoundary(prepared, response);
+    await telemetry.measureStage("response-validation", () => assertNativeOkfResponseBoundary(prepared, response));
     status = "success";
     const warnings = response.warnings ?? [];
     // Echo the resolved boundary on every response, including clarification and no evidence.
@@ -943,15 +949,15 @@ async function answerNativeOkfChatUnchecked(
   const hardKinds = hardNativeOkfConceptKinds(prepared);
   const paperBySlug = new Map(prepared.catalog.papers.map((paper) => [paper.slug, paper.conceptId]));
   const scopePaperConceptIds = prepared.scopePaperSlugs.map((slug) => paperBySlug.get(slug)!);
-  const rawRetrieval = dependencies.retrieve
+  const rawRetrieval = await telemetry.measureStage("retrieval", async () => dependencies.retrieve
     ? await dependencies.retrieve(prepared.retrievalQuestion)
     : scopePaperConceptIds.length > 0
       ? await assembleCompletePapersContext(scopePaperConceptIds, prepared.retrievalQuestion)
-      : await retrieveOkfContext(prepared.retrievalQuestion, {}, hardKinds);
-  const retrieval = await assembleNativeOkfContextualRetrieval(
+      : await retrieveOkfContext(prepared.retrievalQuestion, {}, hardKinds));
+  const retrieval = await telemetry.measureStage("retrieval-assembly", () => assembleNativeOkfContextualRetrieval(
     prepared,
     rawRetrieval,
-  );
+  ));
   const insufficientSynthesisGrounding =
     prepared.intent === "synthesized-flow" &&
     !prepared.priorSynthesisDraft &&
@@ -1091,19 +1097,23 @@ async function answerNativeOkfChatUnchecked(
           .map((concept) => concept.conceptId)
       : []),
   ])];
-  const context = buildNativeOkfGroundedContext(
+  const context = telemetry.measureStageSync("context-construction", () => buildNativeOkfGroundedContext(
     retrieval,
     turnPlan.effectiveQuestion,
     requiredConceptIds,
     turnPlan.mode === "ACTIVE_DIAGRAM_QA"
       ? turnPlan.activeProposalDraft
       : null,
-  );
+  ));
 
   const environment =
     dependencies.environment ?? readOpenAiEnvironment();
   const client = telemetry.observeClient(
-    dependencies.client ?? getOpenAiClient(environment),
+    withNativeOkfRequestBudget(dependencies.client ?? getOpenAiClient(environment), {
+      startedAt: telemetry.requestStartedAt,
+      signal: dependencies.signal,
+      moderationEnabled: environment.moderationEnabled,
+    }),
     environment,
     context.prompt.length,
     retrieval.debug.limits.maxContextCharacters,
@@ -1126,7 +1136,7 @@ async function answerNativeOkfChatUnchecked(
 
 
   if (prepared.intent === "synthesized-flow") {
-    const grounding = await buildNativeOkfDiagramGrounding(retrieval);
+    const grounding = await telemetry.measureStage("diagram-grounding", () => buildNativeOkfDiagramGrounding(retrieval));
     let diagramResult: NativeOkfDiagramGenerationResult;
     if (
       prepared.priorSynthesisDraft &&
@@ -1143,7 +1153,7 @@ async function answerNativeOkfChatUnchecked(
       };
     } else {
       try {
-        diagramResult = await (
+        diagramResult = await telemetry.measureStage("diagram-generation", () => (
           dependencies.generateDiagram ?? defaultDiagramGenerator
         )({
           client,
@@ -1165,7 +1175,7 @@ async function answerNativeOkfChatUnchecked(
           ),
           synthesisProblem: prepared.synthesisProblem,
           synthesisDomain: prepared.synthesisDomain,
-        });
+        }));
       } catch (error) {
         // A thrown error here is an infrastructure failure (the plan generator
         // returns a diagnostic code for recoverable validation failures, it does
@@ -1282,7 +1292,6 @@ async function answerNativeOkfChatUnchecked(
             diagnosticCode:
               diagramResult.diagnosticCode ?? "synthesis-plan-repair-failed",
             missingDimension: clarificationNeed.missingDimension,
-            validationReason: clarificationNeed.reason,
             round: priorRounds,
           }),
         );

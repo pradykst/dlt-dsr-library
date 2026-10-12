@@ -3,6 +3,7 @@ import "server-only";
 import type { NativeOpenAiClient } from "./client.ts";
 import type { NativeOpenAiEnvironment } from "./env.ts";
 import { normalizeOpenAiError, OpenAiModerationError } from "./errors.ts";
+import { nativeOkfModelCallOptions } from "./request-budget.ts";
 
 export const OPENAI_MODERATION_MODEL = "omni-moderation-latest";
 
@@ -17,7 +18,7 @@ export async function moderateNativeOkfText(
     const response = await client.moderations.create({
       model: OPENAI_MODERATION_MODEL,
       input: text,
-    });
+    }, nativeOkfModelCallOptions("moderation"));
     if (response.results.some((result) => result.flagged)) {
       throw new OpenAiModerationError();
     }
