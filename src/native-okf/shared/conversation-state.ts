@@ -261,6 +261,8 @@ export function compactNativeOkfConversationStateForRequest(
   const compactDraft = draft
     ? {
         version: draft.version,
+        ...(draft.title === undefined ? {} : { title: draft.title }),
+        ...(draft.explanation === undefined ? {} : { explanation: draft.explanation }),
         problemStatement: draft.problemStatement,
         domain: draft.domain,
         objective: draft.objective,

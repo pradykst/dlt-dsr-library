@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Response, ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import { loadNativeOkfConversationCatalog, prepareNativeOkfChatRequest } from "../server/conversation.ts";
-import { answerNativeOkfChat } from "../server/openai/chat.ts";
+import { answerNativeOkfChat, validateNativeOkfChatRequest } from "../server/openai/chat.ts";
 import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import { buildNativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
@@ -15,6 +15,7 @@ import { applyNativeOkfSynthesisRefinementPatch, generateNativeOkfSynthesisRefin
 import { retrieveOkfContext } from "../server/retrieval.ts";
 import { createInitialNativeOkfConversationState, type SynthesisDraftState } from "../shared/chat-types.ts";
 import { parseSynthesisDraftState } from "../shared/synthesis-draft.ts";
+import { compactNativeOkfConversationStateForRequest, parseNativeOkfConversationState } from "../shared/conversation-state.ts";
 
 const environment = readOpenAiEnvironment({ NODE_ENV: "test", OPENAI_API_KEY: "mock", OPENAI_MODEL: "mock-model" });
 const catalog = await loadNativeOkfConversationCatalog();
@@ -156,6 +157,53 @@ function updateFeature(): SynthesisRefinementPatch {
     synthesisRationale: "Adapt the cited consent and disclosure evidence to the expiry constraint.",
   }] };
 }
+
+test("client compaction preserves refined metadata through server parsing and rerender", async () => {
+  const { client: generationClient } = mockClient(() => plan());
+  const generated = await answerNativeOkfChat({ question: "Generate an RPF map for auditable clinic consent across organizations." }, {
+    conversationCatalog: catalog, retrieve: async () => retrieval, client: generationClient, environment,
+  });
+  assert.ok(generated.diagram);
+  // The client parses JSON responses, then compacts the state on each follow-up.
+  const generatedClientState = parseNativeOkfConversationState(JSON.parse(JSON.stringify(generated.conversationState)));
+  assert.ok(generatedClientState);
+  const patch = updateFeature();
+  const { client: refinementClient } = mockClient((body) => body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review" ? approved : patch);
+  const refined = await answerNativeOkfChat(JSON.parse(JSON.stringify({
+    question: "Refine the signed credential feature to expire after one day.",
+    conversationState: compactNativeOkfConversationStateForRequest(generatedClientState),
+  })), { conversationCatalog: catalog, retrieve: async () => retrieval, client: refinementClient, environment });
+  assert.ok(refined.diagram);
+  assert.equal(refined.diagram.title, generated.diagram.title);
+  assert.equal(refined.diagram.explanation, generated.diagram.explanation);
+  assert.equal(refined.diagram.nodes.find((node) => node.id === "plan-f1")?.label, patch.updateNodes[0].label);
+  const snapshot = JSON.stringify(refined.diagram);
+  const refinedClientState = parseNativeOkfConversationState(JSON.parse(JSON.stringify(refined.conversationState)));
+  assert.ok(refinedClientState);
+  const wireRequest = JSON.parse(JSON.stringify({
+    question: "Show the same diagram again",
+    conversationState: compactNativeOkfConversationStateForRequest(refinedClientState),
+  }));
+  const parsedRequest = validateNativeOkfChatRequest(wireRequest);
+  const serverState = parseNativeOkfConversationState(parsedRequest.conversationState);
+  assert.ok(serverState?.latestValidatedSynthesisDraft);
+  assert.equal(serverState.latestValidatedSynthesisDraft.title, refined.diagram.title);
+  assert.equal(serverState.latestValidatedSynthesisDraft.explanation, refined.diagram.explanation);
+  assert.deepEqual(serverState.latestValidatedSynthesisDraft.nodes, refined.diagram.nodes);
+  assert.deepEqual(serverState.latestValidatedSynthesisDraft.edges, refined.diagram.edges);
+  const { client: rerenderClient, calls } = mockClient(() => { throw new Error("Rerender must reuse the saved diagram"); });
+  const rerendered = await answerNativeOkfChat(wireRequest, {
+    conversationCatalog: catalog, retrieve: async () => retrieval, client: rerenderClient, environment,
+  });
+  assert.equal(calls.length, 0);
+  assert.equal(rerendered.diagramStatus, "success");
+  // Full node/edge equality includes identities, content, stages, provenance,
+  // sourcePaths, supportConceptIds, and synthesis rationales, as well as metadata.
+  assert.deepEqual(rerendered.diagram, refined.diagram);
+  assert.deepEqual(rerendered.conversationState?.latestValidatedSynthesisDraft, serverState.latestValidatedSynthesisDraft);
+  assert.deepEqual(new Set(rerendered.sources.map((source) => source.conceptId)), new Set(refined.sources.map((source) => source.conceptId)));
+  assert.equal(JSON.stringify(refined.diagram), snapshot, "compaction and rerender must not mutate the baseline");
+});
 
 test("localized feature update preserves all other nodes, stages, identities, provenance and edges", async () => {
   const patch = updateFeature();
