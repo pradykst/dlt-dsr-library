@@ -7,6 +7,7 @@ import { loadNativeOkfConversationCatalog, prepareNativeOkfChatRequest } from ".
 import { answerNativeOkfChat, validateNativeOkfChatRequest } from "../server/openai/chat.ts";
 import type { NativeOpenAiClient } from "../server/openai/client.ts";
 import { buildNativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
+import type { NativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import { readOpenAiEnvironment } from "../server/openai/env.ts";
 import { convertNativeOkfSynthesisPlan, type SynthesisPlan } from "../server/openai/synthesis-plan.ts";
@@ -385,5 +386,142 @@ for (const subject of ["clinic consent", "sensor evidence", "freight claims"]) {
     assert.ok(supports.every((id) => response.sources.some((source) => source.conceptId === id)));
     assert.match(response.answerMarkdown, /grounded|proposed/iu);
     assert.ok(response.diagram && validateGeneratedDiagram(response.diagram, grounding, { mode: "synthesized", requireRpfPath: true }).ok);
+  });
+}
+
+// Canonical mechanism descriptions from the actual failed marketplace replay.
+// Neither source states the researcher-specific product/consent/credential need.
+const verificationIds = ["design-knowledge/cross-org-identity-ssi-do2", "design-knowledge/blockchain-iot-sensor-data-dp2"];
+const verificationGrounding: NativeOkfDiagramGrounding = {
+  allowedConceptIds: new Set(verificationIds), eligibleStoredConceptIds: new Set(verificationIds), storedRelations: [],
+  conceptsById: new Map([
+    [verificationIds[0], { conceptId: verificationIds[0], title: "DO2 - Verification", type: "design-objective", stage: "design-objective",
+      description: "Verify certificates by checking their validity, signature, and integrity." }],
+    [verificationIds[1], { conceptId: verificationIds[1], title: "DP2 - Cross-validation certification", type: "design-principle", stage: "design-principle",
+      description: "Sensor data are certified on the basis of cross-validation." }],
+  ]),
+};
+
+function verificationFixture(subject: string) {
+  const baselinePlan = plan(subject);
+  baselinePlan.supportingStoredConceptIds = verificationIds;
+  for (const node of [...baselinePlan.requirements, ...baselinePlan.principles, ...baselinePlan.features, ...baselinePlan.artifact]) node.supportConceptIds = verificationIds;
+  baselinePlan.principles[0].label = "Make verification claims attributable and inspectable";
+  baselinePlan.principles[0].description = "Expose the claim issuer, integrity evidence, and validation status so participants can inspect verification claims.";
+  for (const edge of baselinePlan.relationships) edge.supportConceptIds = verificationIds;
+  const diagram = convertNativeOkfSynthesisPlan(baselinePlan, verificationGrounding, baselinePlan.problemSummary, true)!.diagram;
+  const draft: SynthesisDraftState = { ...prior, title: diagram.title, explanation: diagram.explanation, problemStatement: baselinePlan.problemSummary, nodes: diagram.nodes, edges: diagram.edges };
+  const patch: SynthesisRefinementPatch = { ...emptyPatch(), addNodes: [{
+    key: "independent-verification", label: `Independent ${subject} verification`, category: "Design requirement", stage: "design-requirement",
+    description: `Require independent ${subject} verification through inspectable certification evidence.`, supportConceptIds: verificationIds,
+    synthesisRationale: "The researcher specifies the requirement. Adapt the cited certificate integrity checks and cross-validation mechanism; neither paper is claimed to state this domain requirement.",
+  }], addEdges: [
+    { source: "user-problem", target: "refine-independent-verification", label: "motivates", supportConceptIds: verificationIds,
+      rationale: "The researcher's requested requirement extends the stated design problem; the cited concepts support its proposed verification mechanism." },
+    { source: "refine-independent-verification", target: "plan-p1", label: "requires", supportConceptIds: verificationIds,
+      rationale: "Inspecting attributable claims, certificate integrity, and validation status supports independent verification." },
+  ] };
+  return { draft, patch };
+}
+
+function assertVerificationReviewContext(body: ResponseCreateParamsNonStreaming, patch: SynthesisRefinementPatch) {
+  const input = JSON.parse(String(body.input));
+  assert.deepEqual(input.proposedPatch, patch);
+  assert.deepEqual(input.addedNodeIdByKey, Object.fromEntries(patch.addNodes.map((node) => [node.key, `refine-${node.key}`])));
+  const ids = new Set([...input.priorValidatedDraft.nodes.map((node: { id: string }) => node.id), ...Object.values(input.addedNodeIdByKey)]);
+  assert.ok(patch.addEdges.every((edge) => ids.has(edge.source) && ids.has(edge.target)), "the reviewer sees actual converter IDs, not unprefixed keys");
+  assert.match(body.instructions!, /It need not occur literally in a paper/u);
+  assert.match(body.instructions!, /Scholarly evidence must justify the adapted mechanism and requirement-to-principle relationship/u);
+  assert.match(body.instructions!, /Reject misleading attribution/u);
+  assert.match(body.instructions!, /structural validity alone never authorizes a patch/u);
+  assert.equal(input.freshAllowlistedConcepts.length, verificationIds.length, "the fix never expands fresh evidence");
+}
+
+for (const subject of ["product", "hospital consent", "university credential"]) {
+  test(`researcher-specified ${subject} requirement uses mechanism evidence and resolved IDs without collateral changes`, async () => {
+    const { draft, patch } = verificationFixture(subject);
+    const snapshot = JSON.stringify(draft);
+    const { client, calls } = mockClient((body, index) => {
+      if (index === 0) {
+        assert.match(body.instructions!, /An explicitly researcher-specified requirement is a proposed design constraint/u);
+        assert.match(body.instructions!, /do not invent additional product attributes/u);
+        return patch;
+      }
+      assertVerificationReviewContext(body, patch);
+      return approved;
+    });
+    const result = await generateNativeOkfSynthesisRefinement({ client, environment, grounding: verificationGrounding, priorDraft: draft,
+      problemStatement: draft.problemStatement, refinementRequest: `Add independent ${subject} verification as a requirement. Preserve everything else.`, requireRpfPath: true });
+    assert.ok("diagram" in result);
+    assert.equal(calls.length, 2, "mandatory review still runs");
+    if (!("diagram" in result)) return;
+    assert.deepEqual(result.diagram.nodes.slice(0, draft.nodes.length), draft.nodes);
+    assert.deepEqual(result.diagram.edges.slice(0, draft.edges.length), draft.edges);
+    assert.equal(result.diagram.nodes.length, draft.nodes.length + 1);
+    assert.equal(result.diagram.edges.length, draft.edges.length + 2);
+    assert.equal(result.diagram.nodes.at(-1)?.provenance, "synthesized");
+    assert.deepEqual(result.diagram.nodes.at(-1)?.supportConceptIds, verificationIds);
+    assert.equal(result.diagram.title, draft.title);
+    assert.equal(result.diagram.explanation, draft.explanation);
+    assert.equal(JSON.stringify(draft), snapshot);
+  });
+}
+
+test("review rejects overclaimed support and one repair scopes the researcher requirement without changing its mechanism", async () => {
+  const { draft, patch } = verificationFixture("product");
+  const overclaim = structuredClone(patch);
+  overclaim.addNodes[0].description = "Guarantee that every physical product attribute is independently proven correct against authoritative sources.";
+  const feedback = "Certificate validity and sensor cross-validation do not establish authoritative verification of every physical product attribute. Remove those unsupported guarantees.";
+  const { client, calls } = mockClient((body, index) => {
+    if (index === 0) return overclaim;
+    if (index === 1) { assertVerificationReviewContext(body, overclaim); return { approved: false, errors: [feedback] }; }
+    if (index === 2) { assert.deepEqual(JSON.parse(String(body.input)).validationErrors, [feedback]); return patch; }
+    assertVerificationReviewContext(body, patch);
+    return approved;
+  });
+  const result = await generateNativeOkfSynthesisRefinement({ client, environment, grounding: verificationGrounding, priorDraft: draft,
+    problemStatement: draft.problemStatement, refinementRequest: "Add independent product verification as a requirement. Preserve everything else.", requireRpfPath: true });
+  assert.equal(calls.length, 4);
+  assert.ok("diagram" in result);
+  if ("diagram" in result) {
+    assert.deepEqual(result.diagram.nodes.slice(0, draft.nodes.length), draft.nodes);
+    assert.deepEqual(result.diagram.edges.slice(0, draft.edges.length), draft.edges);
+    assert.equal(result.diagram.nodes.at(-1)?.description, patch.addNodes[0].description);
+    assert.match(result.warnings.join(" "), /one bounded repair/u);
+  }
+});
+
+for (const failure of ["unrelated branch", "unsupported relationship"]) {
+  test(`explicitly requested requirement does not authorize an ${failure}; rejected patches retain the graph`, async () => {
+    const { draft, patch } = verificationFixture("product");
+    if (failure === "unrelated branch") {
+      patch.addNodes.push({ ...patch.addNodes[0], key: "filler", label: "Additional product reporting", description: "An unrequested reporting requirement." });
+      patch.addEdges.push(
+        { ...patch.addEdges[0], target: "refine-filler" }, { ...patch.addEdges[1], source: "refine-filler" },
+      );
+    } else {
+      patch.addEdges[1].rationale = "Inspecting a certificate signature guarantees that physical product quality is independently proven.";
+    }
+    const { client, calls } = mockClient((body) => {
+      if (body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review") {
+        assertVerificationReviewContext(body, patch);
+        return { approved: false, errors: [failure] };
+      }
+      return patch;
+    });
+    const refused = await generateNativeOkfSynthesisRefinement({ client, environment, grounding: verificationGrounding, priorDraft: draft,
+      problemStatement: draft.problemStatement, refinementRequest: "Add independent product verification as a requirement. Preserve everything else.", requireRpfPath: true });
+    assert.ok("errors" in refused);
+    assert.equal(calls.length, 4, "one repair cannot bypass a repeated semantic rejection");
+    // Exercise the real chat's existing fail-closed retention with canonical evidence.
+    const state = { ...activeState, latestValidatedSynthesisDraft: draft, synthesisDraft: draft };
+    const { client: rejected } = mockClient((body) => body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review"
+      ? { approved: false, errors: [failure] } : patch);
+    const response = await answerNativeOkfChat({ question: "Add independent product verification as a requirement. Preserve everything else.", conversationState: state }, {
+      client: rejected, environment, conversationCatalog: catalog, retrieve: async () => retrieval,
+    });
+    assert.deepEqual(response.diagram?.nodes, draft.nodes);
+    assert.deepEqual(response.diagram?.edges, draft.edges);
+    assert.deepEqual(response.conversationState?.latestValidatedSynthesisDraft, draft);
   });
 }

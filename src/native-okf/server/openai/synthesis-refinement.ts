@@ -243,6 +243,8 @@ export const SYNTHESIS_REFINEMENT_RESPONSE_FORMAT = {
   schema: SYNTHESIS_REFINEMENT_JSON_SCHEMA,
 } as const;
 
+const REFINEMENT_EVIDENCE_INTERPRETATION = `Distinguish the origin of a requirement from evidence for a design mechanism. An explicitly researcher-specified requirement is a proposed design constraint from refinementRequest, not an extracted scholarly finding. It need not occur literally in a paper. State that origin in synthesisRationale, then explain the bounded adaptation of the cited mechanism to the requirement. Keep the requested requirement's scope; do not invent additional product attributes, authoritative sources, guarantees, or domain facts. Scholarly evidence must justify the adapted mechanism and requirement-to-principle relationship, not prove that the researcher needs the requirement. A problem-to-requested-requirement "motivates" link expresses the researcher's design intent; its support IDs identify relevant mechanism evidence, not an empirical finding about the user's problem. Preserve synthesized provenance for proposed requirements and relationships. Reject misleading attribution, mechanisms unsupported by the fresh allowlist, and relationships whose meaning does not fit their endpoints.`;
+
 export const NATIVE_OKF_SYNTHESIS_REFINEMENT_INSTRUCTIONS = `Return only a graph patch matching the strict schema. Edit the supplied prior validated draft; never return a replacement graph.
 
 By default preserve every existing node and edge. Add only requested information. Use updateNodes only when the user explicitly asks to change or replace a node. Use removeNodeIds or removeEdges only when the user explicitly asks to remove, exclude, delete, or replace something. An added node ID is "refine-" followed by its key; use that ID in added edges.
@@ -250,6 +252,10 @@ By default preserve every existing node and edge. Add only requested information
 Natural refinements and new constraints should edit the relevant existing concepts first. Do not add a parallel branch when a local content update suffices. Simplifying may remove redundant or optional elements, but must retain the core design path. Preserve the stage, category, support IDs, and wording of fields that the request does not affect. Additional context can justify a local update, never a wholesale redesign. If no justified valid edit exists, return five empty operation arrays.
 
 Every added or updated node and every added edge must use one to three supportConceptIds from the fresh current-turn allowlist as evidence bindings. Every added or updated node is a PROPOSED design concept; never import a stored concept as a node and never reproduce a stored source relation. Give each added edge a schema-defined relationshipType and a concise evidence-linked rationale. The prior draft is design context, never scholarly evidence for a new operation.
+
+${REFINEMENT_EVIDENCE_INTERPRETATION}
+
+A request to add a requirement normally needs only that requirement, a problem-to-requirement link, and a link to the most relevant existing principle whose mechanism addresses it. Read the existing principle's description and use the strongest relevant fresh support, rather than matching titles alone. Do not add new principles or features when the existing mechanism suffices. If it does not suffice, do not claim that it implements the requirement.
 
 A PRIMARY relationship connects adjacent semantic roles only (problem -> requirement -> principle -> feature -> artifact); never add a requirement -> feature, principle -> artifact, backward, or same-role primary relationship. A SECONDARY dependency uses relationshipType "depends on" (principle -> principle or feature -> feature) or "interoperates with" (feature -> feature) and never substitutes for a primary parent. Evaluation and Outcome remain optional.
 
@@ -268,7 +274,11 @@ const EDGE_KEYS = new Set(Object.keys(EDGE_SCHEMA.properties));
 const REMOVE_EDGE_KEYS = new Set(Object.keys(REMOVE_EDGE_SCHEMA.properties));
 
 export const NATIVE_OKF_REFINEMENT_REVIEW_INSTRUCTIONS = `Review a proposed patch to the authoritative validated design proposal. Return only the strict review verdict, never a replacement diagram.
-Approve only if EVERY operation is necessary for the latest refinementRequest and supported by the fresh allowlisted evidence. Identify the specific requested target or constraint for every addition, update, removal, and relationship change. Reject unrelated edits even when the resulting graph is valid. Reject filler, balance-driven branches, mechanically copied source concepts, unsupported domain claims, changes to unaffected provenance or stages, and unnecessary rewiring. New context should normally refine relevant existing nodes, not grow a new parallel solution. Removing or simplifying a component justifies only its removal and necessary local reconnections. A request to display the diagram justifies no edits. An empty patch is acceptable when no safe evidence-grounded change can be justified. Do not treat the prior proposal or user constraints as scholarly evidence. approved must be false if any operation fails these checks; errors must explain what to remove or correct.`;
+The patch has already passed deterministic structural and evidence-ID validation. addedNodeIdByKey gives the actual identifiers assigned to new nodes: each key becomes "refine-" plus that key. Resolve added-edge endpoints using this mapping and existing priorValidatedDraft node IDs; do not interpret a key as an unprefixed node ID. Review semantic necessity, evidence interpretation, and relationship meaning; structural validity alone never authorizes a patch.
+
+${REFINEMENT_EVIDENCE_INTERPRETATION}
+
+Approve only if EVERY operation is necessary for the latest refinementRequest and its mechanism claims and implementation relationships are supported by the fresh allowlisted evidence. Identify the specific requested target or constraint for every addition, update, removal, and relationship change. Reject unrelated edits even when the resulting graph is valid. Reject filler, balance-driven branches, mechanically copied source concepts, unsupported domain claims, changes to unaffected provenance or stages, and unnecessary rewiring. An explicitly requested new requirement may be a localized addition connected to an existing relevant principle; do not reject it merely because it adds a node or adapts a mechanism from another domain. New context should otherwise normally refine relevant existing nodes, not grow a new parallel solution. Removing or simplifying a component justifies only its removal and necessary local reconnections. A request to display the diagram justifies no edits. An empty patch is acceptable when no safe evidence-grounded change can be justified. Do not treat the prior proposal or user constraints as scholarly evidence. approved must be false if any operation fails these checks; errors must explain what to remove or correct.`;
 
 const REFINEMENT_REVIEW_FORMAT = {
   type: "json_schema", name: "native_okf_refinement_review", strict: true,
@@ -771,7 +781,11 @@ async function reviewPatch(
   const response = await options.client.responses.create({
     model: options.environment.model,
     instructions: NATIVE_OKF_REFINEMENT_REVIEW_INSTRUCTIONS,
-    input: JSON.stringify({ ...JSON.parse(buildNativeOkfSynthesisRefinementInput(options)), proposedPatch: patch }),
+    input: JSON.stringify({
+      ...JSON.parse(buildNativeOkfSynthesisRefinementInput(options)),
+      proposedPatch: patch,
+      addedNodeIdByKey: Object.fromEntries(patch.addNodes.map((node) => [node.key, convertedAddedNode(node).id])),
+    }),
     reasoning: { effort: options.environment.reasoningEffort },
     max_output_tokens: options.environment.diagramMaxOutputTokens,
     text: { format: REFINEMENT_REVIEW_FORMAT },
