@@ -824,6 +824,12 @@ export async function assertNativeOkfResponseBoundary(
     }
   }
   if (prepared.turnPlan.mode === "STORED_COMPARISON" && response.diagram) fail();
+  // Enforce proposal mode coherence in corpus scope too, before the paper-only
+  // checks below. A failed proposal must never become a stored evidence map.
+  if (["DESIGN_SYNTHESIS", "DESIGN_REFINEMENT"].includes(prepared.turnPlan.mode) &&
+    (response.diagramMode === "stored" || response.diagram &&
+      (response.diagramMode !== "synthesized" ||
+        !response.diagram.nodes.some((node) => node.provenance === "synthesized")))) fail();
   if (!response.diagram || allowedPapers.size === 0) return;
   const diagram = response.diagram;
   const canonical = new Map(prepared.catalog.concepts.map((concept) => [concept.conceptId, concept]));
@@ -1135,7 +1141,7 @@ async function answerNativeOkfChatUnchecked(
   );
 
 
-  if (prepared.intent === "synthesized-flow") {
+  if (["DESIGN_SYNTHESIS", "DESIGN_REFINEMENT"].includes(turnPlan.mode)) {
     const grounding = await telemetry.measureStage("diagram-grounding", () => buildNativeOkfDiagramGrounding(retrieval));
     let diagramResult: NativeOkfDiagramGenerationResult;
     if (

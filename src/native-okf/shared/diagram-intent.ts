@@ -48,16 +48,43 @@ export const INITIAL_DIAGRAM_INTENT_TOGGLE_STATE: DiagramIntentToggleState = {
   manuallyDisabledFor: null,
 };
 
-/** Detects only generic requests for a visual representation. */
+// A visual action plus R/P/F vocabulary does not establish a stored subject.
+const STORED_EVIDENCE_SUBJECT_PATTERN =
+  /\b(?:paper|study|article|publication|stored|canonical|represented|source|library|corpus|evidence)\b/iu;
+
+/** Indirect, prescriptive design language, independent of application domain. */
+export function inferProposedDesignIntent(question: string): boolean {
+  const normalized = question.normalize("NFKC");
+  const designOutput = /\b(?:requirements?|principles?|features?|mechanisms?|artifact|solution|system|design)\b/iu.test(normalized);
+  const personalGoal = /\b(?:i|we)\s+(?:want|need|would\s+like|plan|intend|aim)\b|\b(?:my|our)\s+(?:problem|solution|system|use\s+case)\b/iu.test(normalized);
+  const prescriptiveOutput = /\b(?:which|what)\b[^.!?]{0,100}\b(?:requirements?|principles?|features?|mechanisms?|artifact)\b[^.!?]{0,100}\b(?:can|could|may|might|should)\s+(?:i|we)\s+(?:use|apply|adapt|implement|choose)\b|\bwhat\s+(?:features?|requirements?|mechanisms?)\s+should\s+.+\s+have\b/iu.test(normalized);
+  const adaptation = /\b(?:adapt|configure|improve|customize|customise)\b[^.!?]{0,140}\b(?:for\s+(?:my|our)|to\s+(?:enable|allow|support|achieve|address))\b/iu.test(normalized);
+  const inspection = /\b(?:i|we)\s+(?:want|need|would\s+like)\s+(?:to\s+(?:see|inspect|read|understand|know|view|find|list|compare)|(?:an?\s+)?(?:explanation|summary|overview|comparison))\b|\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|knowledge)\b|\b(?:diagram|map)\s+(?:of|from|for)\s+(?:this|that|the)\s+paper\b|\bwhat\s+(?:this|that|the)\s+paper\s+(?:contains|reports|represents)\b/iu.test(normalized);
+  if (inspection && !prescriptiveOutput && !adaptation) return false;
+  return prescriptiveOutput || personalGoal && (designOutput || DIAGRAM_INTENT_PATTERN.test(normalized)) ||
+    adaptation && (designOutput || DIAGRAM_INTENT_PATTERN.test(normalized));
+}
+
+/** Stored-map intent requires an affirmative source/evidence subject. */
 export function inferStoredPaperMapIntent(question: string): boolean {
   const normalized = question.normalize("NFKC");
-  return STORED_PAPER_MAP_INTENT_PATTERN.test(normalized) ||
+  if (inferProposedDesignIntent(normalized)) return false;
+  return STORED_EVIDENCE_SUBJECT_PATTERN.test(normalized) && (
+    STORED_PAPER_MAP_INTENT_PATTERN.test(normalized) ||
     PAPER_VISUAL_ACTION_PATTERN.test(normalized) &&
       EXPLICIT_PAPER_STRUCTURE_OBJECT_PATTERN.test(normalized) ||
     SHOW_LAYER_RELATIONSHIP_PATTERN.test(normalized) ||
     PAPER_VISUAL_ACTION_PATTERN.test(normalized) &&
       PAPER_VISUAL_OBJECT_PATTERN.test(normalized) &&
-      PAPER_VISUAL_SUBJECT_PATTERN.test(normalized);
+      PAPER_VISUAL_SUBJECT_PATTERN.test(normalized));
+}
+
+/** A corpus evidence visualization must be requested, never inferred from a toggle. */
+export function inferEvidenceMapIntent(question: string): boolean {
+  return !inferProposedDesignIntent(question) &&
+    /\b(?:evidence|library|corpus|stored|retrieved|source)\b/iu.test(question) &&
+    (MAP_ACTION_PATTERN.test(question) || SHOW_VISUAL_OBJECT_PATTERN.test(question) ||
+      PAPER_VISUAL_ACTION_PATTERN.test(question) && PAPER_VISUAL_OBJECT_PATTERN.test(question));
 }
 
 /** Visual follow-up that can inherit one already validated paper focus. */
@@ -68,7 +95,10 @@ export function inferFocusedPaperMapFollowUpIntent(question: string): boolean {
       PAPER_VISUAL_OBJECT_PATTERN.test(normalized) ||
       /\bvisuali[sz]e\b/iu.test(normalized)
     ) &&
-    PAPER_VISUAL_SUBJECT_PATTERN.test(normalized);
+    (PAPER_VISUAL_SUBJECT_PATTERN.test(normalized) ||
+      // An established paper focus can resolve a short visual reference without
+      // the literal word "paper". A newly named purpose still needs routing.
+      !/\b(?:for|about|to)\b/iu.test(normalized));
 }
 
 export function inferDiagramIntent(question: string): boolean {
@@ -76,6 +106,8 @@ export function inferDiagramIntent(question: string): boolean {
   return DIAGRAM_INTENT_PATTERN.test(normalized) ||
     MAP_ACTION_PATTERN.test(normalized) ||
     SHOW_VISUAL_OBJECT_PATTERN.test(normalized) ||
+    // Keep visual recognition independent from stored/proposed classification.
+    STORED_PAPER_MAP_INTENT_PATTERN.test(normalized) ||
     inferStoredPaperMapIntent(normalized);
 }
 

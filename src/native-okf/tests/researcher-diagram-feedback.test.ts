@@ -371,11 +371,14 @@ test("rerender re-discloses evidence cited only by an unchanged relationship", a
   assert.ok(response.sources.some((source) => source.conceptId === edgeSupport));
 });
 
-for (const subject of ["clinic consent", "sensor evidence", "freight claims"]) {
+for (const subject of ["clinic consent", "sensor evidence", "freight claims", "shop access"]) {
   test(`full mocked-provider pathway synthesizes a domain proposal, not stored topology: ${subject}`, async () => {
     const proposed = plan(subject);
     const { client, calls } = mockClient(() => proposed);
-    const response = await answerNativeOkfChat({ question: `Generate an RPF map for auditable ${subject} across organizations.` }, {
+    const question = subject === "shop access"
+      ? "I want to use NFTs for allowing access to parts of my online shops. Which requirements, principles and features may I use, show me in a diagram"
+      : `We need auditable ${subject} across organizations. Which requirements could we use? Show a diagram.`;
+    const response = await answerNativeOkfChat({ question }, {
       conversationCatalog: catalog, retrieve: async () => retrieval, client, environment,
     });
     assert.equal(response.diagramMode, "synthesized");
@@ -390,6 +393,22 @@ for (const subject of ["clinic consent", "sensor evidence", "freight claims"]) {
 }
 
 // Canonical mechanism descriptions from the actual failed marketplace replay.
+test("indirect proposals fail honestly without substituting a stored source map", async () => {
+  const question = "We need auditable credentials across institutions. Which requirements could we use? Show a diagram.";
+  const invalid = mockClient(() => ({ invalid: true }));
+  const response = await answerNativeOkfChat({ question }, {
+    conversationCatalog: catalog, retrieve: async () => retrieval, client: invalid.client, environment,
+  });
+  assert.ok(invalid.calls.length > 0, "the synthesis provider must actually be invoked");
+  assert.notEqual(response.diagramMode, "stored");
+  assert.equal(response.diagram, undefined);
+  assert.ok(response.kind === "clarification" || response.diagramStatus === "failed");
+  const unavailable = mockClient(() => { throw new Error("Mock provider unavailable"); });
+  await assert.rejects(answerNativeOkfChat({ question }, {
+    conversationCatalog: catalog, retrieve: async () => retrieval, client: unavailable.client, environment,
+  }));
+});
+
 // Neither source states the researcher-specific product/consent/credential need.
 const verificationIds = ["design-knowledge/cross-org-identity-ssi-do2", "design-knowledge/blockchain-iot-sensor-data-dp2"];
 const verificationGrounding: NativeOkfDiagramGrounding = {

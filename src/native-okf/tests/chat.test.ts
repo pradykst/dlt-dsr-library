@@ -681,7 +681,7 @@ test("diagram requests suppress textual diagram syntax on both answer paths", as
 
     await answerNativeOkfChat(
       {
-        question: "Generate a flow showing the grounded fixture paper",
+        question: "Map relationships across the retrieved library evidence.",
         includeDiagram,
       },
       {

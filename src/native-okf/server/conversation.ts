@@ -31,6 +31,8 @@ import {
 import { normalizeSynthesisProblemDisplay } from "../shared/synthesis-problem-display.ts";
 import {
   inferDiagramIntent,
+  inferEvidenceMapIntent,
+  inferProposedDesignIntent,
   inferFocusedPaperMapFollowUpIntent,
   inferStoredPaperMapIntent,
 } from "../shared/diagram-intent.ts";
@@ -112,7 +114,7 @@ const PROBLEM_SOLUTION_QUESTION_PATTERN =
 const STATED_DESIGN_PROBLEM_PATTERN =
   /\b(?:my|our|a\s+new)\s+(?:design\s+)?(?:problem|challenge|use\s+case)\b|\b(?:i|we)\s+(?:face|have\s+(?:a|the)\s+problem|struggle\s+with|am\s+struggling\s+with|are\s+struggling\s+with)\b|(?:^|\n)\s*problem\s*:/iu;
 const EXPLICIT_STORED_SUBJECT_PATTERN =
-  /\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|flow|knowledge|relations?|relationships?)\b|\b(?:paper|study|article)(?:'s)?\s+(?:stored\s+|design\s+)?(?:map|diagram|graph|flow)\b|\b(?:from|in|of|for)\s+(?:this\s+|that\s+|the\s+)?(?:paper|study|article)\b/iu;
+  /\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|flow|knowledge|relations?|relationships?)\b|\b(?:paper|study|article)(?:'s)?\s+(?:(?:stored|complete|full|design)\s+)*(?:map|diagram|graph|flow)\b|\b(?:from|in|of|for)\s+(?:this\s+|that\s+|the\s+)?(?:paper|study|article)\b/iu;
 const ADDITIONAL_DESIGN_CONTEXT_PATTERN =
   /\b(?:additional|more|further)\s+context\b|\b(?:new|additional)\s+constraint\b|\b(?:it|the\s+(?:system|artifact|proposal|flow))\s+(?:must|needs?\s+to|should\s+also)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
@@ -1054,7 +1056,7 @@ export function inferNativeOkfSynthesisIntent(
   if (SOLVE_PROBLEM_QUESTION_PATTERN.test(question)) return true;
   if (MAKE_ARTIFACT_REQUEST_PATTERN.test(question)) return true;
   if (/\b(?:creat(?:e|ing)|design|generate)\s+(?:a\s+)?(?:DSR\s+proposal|problem-specific\s+mapping\s+diagram)\b|\bwhat\s+system\s+should\s+(?:I|we)\s+design\b/iu.test(question)) return true;
-  if (STORED_DIAGRAM_REQUEST_PATTERN.test(question)) return false;
+  if (STORED_DIAGRAM_REQUEST_PATTERN.test(question) || EXPLICIT_STORED_SUBJECT_PATTERN.test(question)) return false;
   if (
     state.lastSynthesisProblem &&
     state.lastIntent === "synthesized-flow" &&
@@ -1085,7 +1087,7 @@ export function inferNativeOkfSynthesisIntent(
 }
 
 function requestsProblemSpecificDesign(question: string): boolean {
-  if (EXPLICIT_NEW_PROPOSAL_PATTERN.test(question) ||
+  if (inferProposedDesignIntent(question) || EXPLICIT_NEW_PROPOSAL_PATTERN.test(question) ||
       MAKE_ARTIFACT_REQUEST_PATTERN.test(question) ||
       SOLVE_PROBLEM_QUESTION_PATTERN.test(question) ||
       DESIGN_PROBLEM_GUIDANCE_PATTERN.test(question)) return true;
@@ -1193,6 +1195,10 @@ function hasConcreteSynthesisProblem(
   question: string,
   draft: SynthesisProblemState | SynthesisDraftState | null,
 ): boolean {
+  if (!draft?.problemStatement && (
+    /^\s*(?:which|what)\s+(?:(?:design|requirements?|principles?|features?|mechanisms?|and)\b[\s,]*)+(?:can|could|may|might|should)\s+(?:i|we)\s+(?:use|apply|adapt|implement|choose)[?.!\s]*$/iu.test(question) ||
+    /^\s*what\s+(?:features?|requirements?|mechanisms?)\s+should\s+(?:it|the\s+system)\s+have[?.!\s]*$/iu.test(question)
+  )) return false;
   return inferredSynthesisDomain(question, draft) !== null ||
     meaningfulDomainTerms(question).length >= 3 ||
     Boolean(draft?.problemStatement);
@@ -1607,9 +1613,20 @@ export async function prepareNativeOkfChatRequest(
   );
   const pendingOriginal =
     validatedState.pendingClarification?.originalQuestion;
+  // Recover a short continuation even after an older answer incorrectly persisted
+  // stored-map state. Only the latest USER turn can supply the design purpose;
+  // retrieved concepts and assistant prose never establish a researcher goal.
+  const previousUserQuestion = request.history?.findLast((message) => message.role === "user")?.content;
+  const continuationProblem = !pendingOriginal && !validatedState.latestValidatedSynthesisDraft &&
+    !EXPLICIT_STORED_SUBJECT_PATTERN.test(request.question) &&
+    !/\b(?:i|we)\s+(?:want|need|would\s+like|plan|intend|aim)\b/iu.test(request.question) &&
+    (inferProposedDesignIntent(request.question) || GENERIC_DIAGRAM_PATTERN.test(request.question))
+    ? validatedState.lastSynthesisProblem?.problemStatement ??
+      (previousUserQuestion && requestsProblemSpecificDesign(previousUserQuestion) ? previousUserQuestion : null)
+    : null;
   const effectiveQuestion = pendingOriginal
     ? `${pendingOriginal}\nClarification response: ${request.question}`
-    : request.question;
+    : continuationProblem ? `${continuationProblem}\nDesign follow-up: ${request.question}` : request.question;
   const directCorpusQuery = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope)?.type === "corpus" && CORPUS_QUERY_PATTERN.test(effectiveQuestion);
   const catalogPaperSlugSet = new Set(catalog.papers.map((paper) => paper.slug));
   const requestedScope = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope);
@@ -1805,7 +1822,7 @@ export async function prepareNativeOkfChatRequest(
       synthesisClassificationQuestion,
       contextBase,
     );
-  if (corpusQuery) synthesisIntent = false;
+  if (corpusQuery && !requestsProblemSpecificDesign(synthesisClassificationQuestion)) synthesisIntent = false;
   // A comparison of >=2 explicitly named papers is not a new-design request merely
   // because the comparison-flavored question also contains a build/design-shaped word
   // (e.g. asking about "reusable mechanisms" or "which approach transfers better").
@@ -1816,6 +1833,7 @@ export async function prepareNativeOkfChatRequest(
     explicitMultiPaperComparison &&
     !activeDraftRefinement &&
     !activeProposalRerender &&
+    !inferProposedDesignIntent(synthesisClassificationQuestion) &&
     !DESIGN_PROBLEM_GUIDANCE_PATTERN.test(effectiveQuestion) &&
     !MAKE_ARTIFACT_REQUEST_PATTERN.test(synthesisClassificationQuestion) &&
     !SOLVE_PROBLEM_QUESTION_PATTERN.test(synthesisClassificationQuestion) &&
@@ -1864,6 +1882,7 @@ export async function prepareNativeOkfChatRequest(
     // synthesis draft must never be reinterpreted as a request for some retrieved
     // paper's stored map â€” "this"/"it" in e.g. "make this more robust and give an
     // updated diagram" otherwise satisfies the generic stored-map subject pattern.
+    !synthesisIntent &&
     !activeDraftRefinement &&
     !activeProposalRerender &&
     !requestsProblemSpecificDesign(synthesisClassificationQuestion) &&
@@ -1874,6 +1893,9 @@ export async function prepareNativeOkfChatRequest(
     includeDiagram && focusedPaperSlugs.length === 1 &&
     (
       !synthesisIntent && scopePaperSlugs.length > 0 ||
+      // A named paper plus an enabled diagram preference is an explicit paper
+      // subject, including ordinary paper Q&A with the checkbox selected.
+      explicitPaperSlugs.length === 1 ||
       inferStoredPaperMapIntent(effectiveQuestion) ||
       categoryStoredMapFollowUp ||
       contextBase.lastIntent !== "synthesized-flow" &&
@@ -1889,14 +1911,18 @@ export async function prepareNativeOkfChatRequest(
     : COMPARISON_PATTERN.test(effectiveQuestion)
       ? "comparison"
       : "normal";
+  const evidenceMapIntent = inferEvidenceMapIntent(synthesisClassificationQuestion);
+  const unresolvedVisualRequest = includeDiagram && !synthesisIntent && !storedPaperDiagram &&
+    !activeDiagramQa && !evidenceMapIntent && inferDiagramIntent(synthesisClassificationQuestion);
+  const renderDiagram = includeDiagram && (synthesisIntent || storedPaperDiagram || evidenceMapIntent);
   const intent: NativeOkfConversationIntent = synthesisIntent
     ? "synthesized-flow"
-    : includeDiagram
+    : renderDiagram
       ? "stored-diagram"
       : answerMode === "comparison"
         ? "comparison"
         : "answer";
-  const diagramMode: NativeOkfDiagramMode | null = includeDiagram
+  const diagramMode: NativeOkfDiagramMode | null = renderDiagram
     ? synthesisIntent
       ? "synthesized"
       : "stored"
@@ -1948,9 +1974,12 @@ export async function prepareNativeOkfChatRequest(
     focusedConceptIds,
     contextBase,
     synthesisIntent,
-  );
+  ) ?? (unresolvedVisualRequest ? {
+    kind: "ambiguous-reference",
+    question: "Would you like a proposed design for your problem, or a map of stored scholarly evidence?",
+  } : null);
   const synthesisProblem = synthesisIntent
-    ? priorSynthesisDraft?.problemStatement ??
+    ? priorSynthesisDraft?.problemStatement ?? continuationProblem ??
       (requestsProblemSpecificDesign(synthesisClassificationQuestion) ||
         SYNTHESIS_ACTION_PATTERN.test(synthesisClassificationQuestion) && SYNTHESIS_OUTPUT_PATTERN.test(synthesisClassificationQuestion)
         ? null : contextBase.lastSynthesisProblem?.problemStatement) ??
@@ -1983,7 +2012,7 @@ export async function prepareNativeOkfChatRequest(
             ? "DESIGN_REFINEMENT"
             : synthesisIntent
               ? "DESIGN_SYNTHESIS"
-              : includeDiagram
+              : renderDiagram && evidenceMapIntent
                 ? "EVIDENCE_MAP"
                 : "TEXT_QA";
   const diagramAction: NativeOkfDiagramAction =
@@ -2030,8 +2059,8 @@ export async function prepareNativeOkfChatRequest(
     effectiveQuestion,
     retrievalQuestion: contextualRetrievalQuestion(
       synthesisRetrievalQuestion,
-      retrievalPaperSlugs,
-      [...focusedConceptIds, ...activeProposalSupportIds],
+      synthesisIntent && !priorSynthesisDraft ? restrictedPaperSlugs : retrievalPaperSlugs,
+      synthesisIntent && !priorSynthesisDraft ? [] : [...focusedConceptIds, ...activeProposalSupportIds],
       catalog,
     ),
     explicitPaperSlugs,
@@ -2181,6 +2210,7 @@ export function inferActiveDiagramQa(
   state: NativeOkfConversationState,
 ): boolean {
   if (!hasActiveDiagramSubject(state)) return false;
+  if (requestsProblemSpecificDesign(question)) return false;
   if (inferActiveSynthesisDiagramRefinement(question, state)) return false;
   if (ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN.test(question) &&
       ACTIVE_DIAGRAM_RERENDER_REFERENT_PATTERN.test(question)) return false;
