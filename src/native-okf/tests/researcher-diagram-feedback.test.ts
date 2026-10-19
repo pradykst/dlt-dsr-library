@@ -10,7 +10,11 @@ import { buildNativeOkfDiagramGrounding } from "../server/openai/diagram-groundi
 import type { NativeOkfDiagramGrounding } from "../server/openai/diagram-grounding.ts";
 import { validateGeneratedDiagram } from "../server/openai/diagram-validation.ts";
 import { readOpenAiEnvironment } from "../server/openai/env.ts";
-import { convertNativeOkfSynthesisPlan, type SynthesisPlan } from "../server/openai/synthesis-plan.ts";
+import { convertNativeOkfSynthesisPlan, OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING, type SynthesisPlan } from "../server/openai/synthesis-plan.ts";
+import { generateNativeOkfDiagram } from "../server/openai/diagram.ts";
+import { AiProviderUnavailableError } from "../server/openai/errors.ts";
+import { NativeOkfBudgetTimeoutError, SYNTHESIS_QUALITY_REVIEW_TIMEOUT_MS } from "../server/openai/request-budget.ts";
+import type { NativeOkfModelTurnMetrics } from "../server/openai/telemetry.ts";
 import { applyNativeOkfSynthesisRefinementPatch, generateNativeOkfSynthesisRefinement,
   validateNativeOkfSynthesisRefinementPatch, type SynthesisRefinementPatch } from "../server/openai/synthesis-refinement.ts";
 import { retrieveOkfContext } from "../server/retrieval.ts";
@@ -72,6 +76,83 @@ function mockClient(responder: (body: ResponseCreateParamsNonStreaming, index: n
   };
   return { client, calls };
 }
+
+for (const failure of ["timeout", "unavailable"] as const) {
+  test(`validated synthesis hides only the optional review diagnostic while retaining telemetry: ${failure}`, async (t) => {
+    const logs: string[] = [];
+    t.mock.method(console, "info", (line: string) => logs.push(line));
+    const metrics: NativeOkfModelTurnMetrics[] = [];
+    const { client, calls } = mockClient((_, index) => {
+      if (index === 0) return plan();
+      throw failure === "timeout"
+        ? new NativeOkfBudgetTimeoutError("stage_deadline", SYNTHESIS_QUALITY_REVIEW_TIMEOUT_MS)
+        : new AiProviderUnavailableError(503);
+    });
+    let internalWarnings: readonly string[] = [];
+    const response = await answerNativeOkfChat({ question: "Propose a diagram for auditable clinic consent." }, {
+      conversationCatalog: catalog, retrieve: async () => retrieval, client, environment,
+      generateDiagram: async (input) => {
+        const result = await generateNativeOkfDiagram(input);
+        internalWarnings = Object.freeze(result.warnings);
+        return result;
+      },
+      onModelMetrics: (value) => metrics.push(value),
+    });
+    assert.equal(response.diagramStatus, "success");
+    assert.equal(response.diagramMode, "synthesized");
+    assert.ok(response.diagram && validateGeneratedDiagram(response.diagram, grounding, { mode: "synthesized", requireRpfPath: true }).ok);
+    assert.deepEqual(internalWarnings, [OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING]);
+    assert.equal(response.warnings, undefined, "no empty Response Notes section for the diagnostic alone");
+    assert.doesNotMatch(JSON.stringify(response), /optional proposal quality review|openai_timeout|ai_provider_unavailable/u);
+    assert.ok(response.sources.length > 0);
+    assert.equal(calls.length, 2, "generation and review behavior is unchanged");
+    assert.equal(metrics[0].status, "success");
+    const review = metrics[0].calls.find((call) => call.stage === "synthesis-quality-review")!;
+    assert.equal(review.status, "error");
+    assert.equal(review.errorCode, failure === "timeout" ? "openai_timeout" : "ai_provider_unavailable");
+    assert.equal(review.configuredTimeoutMs, SYNTHESIS_QUALITY_REVIEW_TIMEOUT_MS);
+    assert.equal(review.maxRetries, 0);
+    assert.ok(logs.some((line) => line.includes('"stage":"synthesis-quality-review"') && line.includes('"status":"error"')));
+    assert.doesNotMatch(logs.join("\n"), /mock-model.*apiKey|private provider|Propose a diagram for auditable clinic consent/u);
+  });
+}
+
+test("successful proposals retain evidence gaps, unsupported assumptions and similarly worded review limitations", async () => {
+  const actionable = [
+    "No direct evidence supports deployment across clinics; evaluate this assumption before use.",
+    "The proposed sharing mechanism assumes reliable connectivity, which is not supported by the cited evidence.",
+    "The synthesis plan required one bounded structural repair.",
+    "The optional proposal quality revision could not be applied safely; the original validated plan was retained.",
+    "The mandatory evidence review was unavailable; the prior validated proposal was retained.",
+  ];
+  const warnings = Object.freeze([OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING, ...actionable]);
+  const request = { question: "Propose a diagram for auditable clinic consent." };
+  const dependencies = { conversationCatalog: catalog, retrieve: async () => retrieval, environment,
+    client: mockClient(() => { throw new Error("No provider needed for this presentation fixture"); }).client };
+  const baseline = await answerNativeOkfChat(request, { ...dependencies,
+    generateDiagram: async () => ({ diagram: converted.diagram, warnings: [], usedSupportConceptIds: supports }) });
+  const presented = await answerNativeOkfChat(request, { ...dependencies,
+    generateDiagram: async () => ({ diagram: converted.diagram, warnings: [...warnings], usedSupportConceptIds: supports }) });
+  assert.deepEqual(presented.warnings, actionable, "meaningful Response Notes are retained in order");
+  const { warnings: _warnings, ...withoutWarnings } = presented;
+  void _warnings;
+  assert.deepEqual(withoutWarnings, baseline, "diagram, narrative, citations and validated state remain identical");
+  assert.deepEqual(warnings, [OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING, ...actionable]);
+});
+
+test("mandatory synthesis failure still reports a failure and cannot become a successful diagram", async () => {
+  const response = await answerNativeOkfChat({ question: "Propose a diagram for auditable clinic consent.",
+    conversationState: { ...createInitialNativeOkfConversationState(), synthesisClarificationRounds: 2 } }, {
+    conversationCatalog: catalog, retrieve: async () => retrieval, environment,
+    client: mockClient(() => { throw new Error("No provider needed for this failure fixture"); }).client,
+    generateDiagram: async () => ({ warnings: ["Mandatory evidence validation failed."], diagnosticCode: "synthesis-plan-repair-failed" }),
+  });
+  assert.equal(response.presentationMode, "safe-error");
+  assert.equal(response.diagramStatus, "failed");
+  assert.equal(response.diagram, undefined);
+  assert.equal(response.diagnosticCode, "synthesis-plan-repair-failed");
+  assert.match(response.answerMarkdown, /validated synthesized flow could not be produced/u);
+});
 
 for (const question of [
   "Show a DSR R-P-F flow for consent revocation across hospitals.",

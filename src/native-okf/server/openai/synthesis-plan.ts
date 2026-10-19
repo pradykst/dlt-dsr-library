@@ -35,6 +35,10 @@ import {
   type SynthesisGrammarNode,
 } from "./synthesis-grammar.ts";
 
+// Internal diagnostic; successful researcher-facing proposals omit this note.
+export const OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING =
+  "The optional proposal quality review was unavailable; deterministic validation still passed.";
+
 export const SYNTHESIS_PLAN_LIMITS = Object.freeze({
   maxTitleCharacters: 120,
   maxProblemLabelCharacters: MAX_SYNTHESIS_PROBLEM_LABEL_CHARACTERS,
@@ -1175,7 +1179,7 @@ async function reviewValidatedPlan(
   }
   return {
     plan,
-    warnings: ["The optional proposal quality review was unavailable; deterministic validation still passed."],
+    warnings: [OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING],
   };
 }
 

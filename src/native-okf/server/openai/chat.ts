@@ -46,6 +46,7 @@ import {
   prepareNativeOkfChatRequest,
 } from "../conversation.ts";
 import { synthesisGrammarDiagnostics } from "./synthesis-grammar.ts";
+import { OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING } from "./synthesis-plan.ts";
 import { validateGeneratedDiagram } from "./diagram-validation.ts";
 import { preservedNativeOkfSourceCards } from "./context.ts";
 import { extendNativeOkfDiagramGrounding } from "./diagram-grounding.ts";
@@ -1237,6 +1238,11 @@ async function answerNativeOkfChatUnchecked(
         sourceCards,
         turnPlan.refinementIntent,
       );
+      // Only a successfully validated proposal reaches this presentation path.
+      // Retain the diagnostic internally and preserve every actionable warning.
+      const researcherWarnings = diagramResult.warnings.filter(
+        (warning) => warning !== OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING,
+      );
       return {
         kind: "answer",
         presentationMode: includeDiagram ? "diagram-primary" : "text-primary",
@@ -1248,7 +1254,7 @@ async function answerNativeOkfChatUnchecked(
         diagramStatus: includeDiagram ? "success" : null,
         synthesisDraft,
         insufficientContext: false,
-        ...(diagramResult.warnings.length ? { warnings: diagramResult.warnings } : {}),
+        ...(researcherWarnings.length ? { warnings: researcherWarnings } : {}),
         conversationState: completedConversationState(
           prepared,
           retrieval,
