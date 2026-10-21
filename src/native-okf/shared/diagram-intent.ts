@@ -1,5 +1,5 @@
 const DIAGRAM_INTENT_PATTERN =
-  /\b(?:decision[\s-]+support[\s-]+flow|r[\s-]*p[\s-]*f|flowchart|diagram|flow|graph|architecture|visuali[sz]e|depict|illustrate)\b/iu;
+  /\b(?:decision[\s-]+support[\s-]+flow|r[\s-]*p[\s-]*f|flowchart|diagram|flow|graph|architecture|visuali[sz]e|depict|illustrate|sketch)\b/iu;
 
 const MAP_ACTION_PATTERN =
   /^\s*(?:please\s+|(?:can|could|would)\s+you\s+)?map\s+(?:(?:the|this|that|what|how|all|every)\s+|represented\s+|stored\s+|canonical\s+)*(?:design\s+knowledge|concepts?|relationships?|relations?|connections?|flow|evidence|requirements?|principles?|features?|what|how)\b/iu;
@@ -52,17 +52,50 @@ export const INITIAL_DIAGRAM_INTENT_TOGGLE_STATE: DiagramIntentToggleState = {
 const STORED_EVIDENCE_SUBJECT_PATTERN =
   /\b(?:paper|study|article|publication|stored|canonical|represented|source|library|corpus|evidence)\b/iu;
 
-/** Indirect, prescriptive design language, independent of application domain. */
+/** Task vocabulary, deliberately independent of the application domain. */
+const DESIGN_OUTPUT = /\b(?:requirements?|principles?|features?|mechanisms?|artifact|solution|system|architecture|design(?:\s+ideas?)?)\b/iu;
+const DESIGN_GUIDANCE = /\b(?:which|what|any)\b[^.!?]{0,140}\b(?:requirements?|principles?|features?|mechanisms?|architecture|design\s+ideas?)\b[^.!?]{0,100}\b(?:can|could|may|might|should|would|useful|help|needed)\b|\bany\s+(?:requirements?|principles?|features?)\b/iu;
+const NEW_DESIGN = /\b(?:suggest|recommend|propose|devise|outline|sketch|design|develop|create|build|adapt|configure|customi[sz]e)\b[^.!?]{0,100}\b(?:new\s+(?:design|solution|system|artifact)|(?:a|an|my|our)\s+(?:[\p{L}\p{N}-]+\s+){0,8}(?:system|solution|artifact|architecture|service|platform|process|tool|application)|design\s+(?:a|an)\s+\S+)\b/iu;
+const STATED_NEED = /\b(?:want|need|needs|would\s+like|plan|intend|aim|trying|trouble|struggl\w*|problem|challenge|difficulty|unable|cannot|can['’]t|too\s+(?:much|little|many|few)|better\s+way)\b/iu;
+const INSPECTION = /\b(?:i|we)\s+(?:want|need|would\s+like)\s+(?:to\s+(?:see|inspect|read|understand|know|view|find|list|compare)|(?:an?\s+)?(?:explanation|summary|overview|comparison))\b|\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|knowledge)\b|\b(?:diagram|map)\s+(?:of|from|for)\s+(?:this|that|the)\s+paper\b|\bwhat\s+(?:this|that|the)\s+paper\s+(?:contains|reports|represents)\b/iu;
+
+/**
+ * Enough substantive purpose to distinguish a new problem from a bare request
+ * for output or an unresolved edit ("make this safer"). These are task words,
+ * not an ontology of supported research domains.
+ */
+export function hasConcreteDesignPurpose(question: string): boolean {
+  const taskWords = /^(?:i|we|you|our|my|their|the|a|an|this|that|it|its|these|those|and|or|to|of|for|in|on|as|by|with|from|me|us|can|could|may|might|should|would|what|which|any|all|please|pls|show|draw|explain|give|suggest|recommend|propose|design|designs|requirements?|principles?|features?|mechanisms?|system|solution|artifact|architecture|diagram|flow|graph|map|theory|stage|evaluation|make|create|build|generate|add|update|remove|same|again|new|more|better|use|useful|help|have|has|need|needs|want|not|be|so|how|papers?|research|supporting|evidence)$/iu;
+  const ownedPurpose = question.match(/\bfor\s+(?:my|our)\s+([^.!?]+)/iu)?.[1];
+  if (ownedPurpose?.match(/[\p{L}\p{N}]+/gu)?.some(term => term.length >= 3 && !taskWords.test(term))) return true;
+  return question.normalize('NFKC').split(/[.!?\n]/u).some((clause) => {
+    // An edit referent alone does not establish a fresh problem.
+    if (/^\s*(?:now\s+)?(?:make|update|change|simplify)\s+(?:this|it|the\s+(?:flow|diagram|proposal))\b/iu.test(clause)) return false;
+    const terms = clause.match(/[\p{L}\p{N}]+/gu) ?? [];
+    return terms.filter((term) => term.length >= 3 && !taskWords.test(term)).length >= 3;
+  });
+}
+
+/** Resolve the requested purpose before considering its evidence subject. */
 export function inferProposedDesignIntent(question: string): boolean {
   const normalized = question.normalize("NFKC");
-  const designOutput = /\b(?:requirements?|principles?|features?|mechanisms?|artifact|solution|system|design)\b/iu.test(normalized);
-  const personalGoal = /\b(?:i|we)\s+(?:want|need|would\s+like|plan|intend|aim)\b|\b(?:my|our)\s+(?:problem|solution|system|use\s+case)\b/iu.test(normalized);
-  const prescriptiveOutput = /\b(?:which|what)\b[^.!?]{0,100}\b(?:requirements?|principles?|features?|mechanisms?|artifact)\b[^.!?]{0,100}\b(?:can|could|may|might|should)\s+(?:i|we)\s+(?:use|apply|adapt|implement|choose)\b|\bwhat\s+(?:features?|requirements?|mechanisms?)\s+should\s+.+\s+have\b/iu.test(normalized);
+  const designOutput = DESIGN_OUTPUT.test(normalized);
   const adaptation = /\b(?:adapt|configure|improve|customize|customise)\b[^.!?]{0,140}\b(?:for\s+(?:my|our)|to\s+(?:enable|allow|support|achieve|address))\b/iu.test(normalized);
-  const inspection = /\b(?:i|we)\s+(?:want|need|would\s+like)\s+(?:to\s+(?:see|inspect|read|understand|know|view|find|list|compare)|(?:an?\s+)?(?:explanation|summary|overview|comparison))\b|\b(?:stored|canonical|source|represented)\s+(?:design\s+)?(?:map|diagram|graph|knowledge)\b|\b(?:diagram|map)\s+(?:of|from|for)\s+(?:this|that|the)\s+paper\b|\bwhat\s+(?:this|that|the)\s+paper\s+(?:contains|reports|represents)\b/iu.test(normalized);
-  if (inspection && !prescriptiveOutput && !adaptation) return false;
-  return prescriptiveOutput || personalGoal && (designOutput || DIAGRAM_INTENT_PATTERN.test(normalized)) ||
-    adaptation && (designOutput || DIAGRAM_INTENT_PATTERN.test(normalized));
+  const newDesign = NEW_DESIGN.test(normalized) || hasConcreteDesignPurpose(normalized) &&
+    /\b(?:can|could|should|might|would)\s+(?:i|we|you)\b[^.!?]{0,100}\b(?:a|an)\s+(?:new|different|alternative)\s+(?:solution|system|artifact|architecture|service|platform|process|tool|application|design)\b/iu.test(normalized);
+  const guidance = DESIGN_GUIDANCE.test(normalized) || hasConcreteDesignPurpose(normalized) &&
+    /\bwhat\s+(?:can|could|should|might)\s+(?:i|we)\s+(?:build|create|develop)\b|\b(?:any|some)\s+(?:design\s+)?(?:ideas|suggestions)\b/iu.test(normalized);
+  const scholarlyDescription = /\b(?:papers?|studies|authors?)\s+(?:design(?:ed)?|propos(?:e|ed)|implement(?:ed)?|build|built|creat(?:e|ed))\b/iu.test(normalized) && !STATED_NEED.test(normalized);
+  if (scholarlyDescription) return false;
+  const sourceInspection = /\b(?:extract|retrieve|list|identify)\b[^.!?]{0,100}\b(?:from|in)\s+(?:this|that|the|selected)\s+paper\b|\b(?:from|in|of)\s+(?:this|that|the|selected)\s+paper\b/iu.test(normalized);
+  const ownPurpose = /\b(?:for\s+(?:my|our)|to\s+(?:enable|achieve|support|solve))\b/iu.test(normalized);
+  if (sourceInspection && !newDesign && !adaptation && !ownPurpose) return false;
+  if (INSPECTION.test(normalized) && !guidance && !adaptation && !newDesign) return false;
+  if (newDesign) return true;
+  if (guidance && !/\b(?:represented|stored|reported|formally\s+connected)\b/iu.test(normalized)) return true;
+  if (STATED_NEED.test(normalized) && designOutput && hasConcreteDesignPurpose(normalized) &&
+      !/\b(?:explain|describe|summari[sz]e|definition|literature\s+review)\b/iu.test(normalized)) return true;
+  return adaptation && (designOutput || DIAGRAM_INTENT_PATTERN.test(normalized));
 }
 
 /** Stored-map intent requires an affirmative source/evidence subject. */

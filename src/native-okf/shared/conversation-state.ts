@@ -34,6 +34,8 @@ const STATE_KEYS = new Set([
   "synthesisClarificationRounds",
   "lastSynthesisProblem",
   "latestValidatedSynthesisDraft",
+  "previousValidatedSynthesisDraft",
+  "pendingDesignInstruction",
   "synthesisDraft",
 ]);
 const PENDING_KEYS = new Set(["kind", "originalQuestion"]);
@@ -194,6 +196,13 @@ export function parseNativeOkfConversationState(
     value.lastSynthesisProblem === undefined || value.lastSynthesisProblem === null
       ? null
       : parseSynthesisProblemState(value.lastSynthesisProblem);
+  const previousValidatedSynthesisDraft = value.previousValidatedSynthesisDraft == null ? null
+    : parseSynthesisDraftState(value.previousValidatedSynthesisDraft);
+  const pendingDesignInstruction = value.pendingDesignInstruction == null ? null
+    : typeof value.pendingDesignInstruction === "string" ? sanitize(value.pendingDesignInstruction) : undefined;
+  if (value.previousValidatedSynthesisDraft != null && !previousValidatedSynthesisDraft ||
+      pendingDesignInstruction === undefined ||
+      (pendingDesignInstruction?.length ?? 0) > MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS) return null;
   const lastSynthesisProblem = explicitProblem ??
     (latestValidatedSynthesisDraft
       ? {
@@ -246,6 +255,8 @@ export function parseNativeOkfConversationState(
     synthesisClarificationRounds,
     lastSynthesisProblem,
     latestValidatedSynthesisDraft,
+    previousValidatedSynthesisDraft,
+    pendingDesignInstruction,
     synthesisDraft: null,
   };
 }
@@ -295,6 +306,8 @@ export function compactNativeOkfConversationStateForRequest(
     lastIntent: state.lastIntent,
     lastDiagramRequested: state.lastDiagramRequested,
     pendingClarification: state.pendingClarification,
+    ...(state.pendingDesignInstruction ? { pendingDesignInstruction: state.pendingDesignInstruction } : {}),
+    ...(state.previousValidatedSynthesisDraft ? { previousValidatedSynthesisDraft: state.previousValidatedSynthesisDraft } : {}),
     ...(state.synthesisClarificationRounds
       ? { synthesisClarificationRounds: state.synthesisClarificationRounds }
       : {}),

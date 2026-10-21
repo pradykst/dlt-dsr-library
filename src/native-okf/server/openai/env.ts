@@ -21,6 +21,9 @@ export interface NativeOpenAiEnvironment {
   moderationEnabled: boolean;
   maxOutputTokens: number;
   diagramMaxOutputTokens: number;
+  serviceTier?: "default" | "priority" | "ultrafast";
+  diagramServiceTier?: "default" | "priority" | "ultrafast";
+  synthesisReviewEnabled?: boolean;
 }
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 1_800;
@@ -90,6 +93,11 @@ export function readOpenAiEnvironment(
     apiKey: requiredValue(environment, "OPENAI_API_KEY"),
     model: requiredValue(environment, "OPENAI_MODEL"),
     reasoningEffort: reasoningEffort(environment.OPENAI_REASONING_EFFORT),
+    synthesisReviewEnabled: environment.OPENAI_SYNTHESIS_REVIEW_ENABLED?.trim()
+      ? optionalBoolean(environment.OPENAI_SYNTHESIS_REVIEW_ENABLED, "OPENAI_SYNTHESIS_REVIEW_ENABLED") : true,
+    serviceTier: (environment.OPENAI_SERVICE_TIER?.trim() || "default") as NativeOpenAiEnvironment["serviceTier"],
+    ...(environment.OPENAI_DIAGRAM_SERVICE_TIER?.trim()
+      ? { diagramServiceTier: environment.OPENAI_DIAGRAM_SERVICE_TIER.trim() as NativeOpenAiEnvironment["diagramServiceTier"] } : {}),
     moderationEnabled: optionalBoolean(
       environment.OPENAI_ENABLE_MODERATION,
       "OPENAI_ENABLE_MODERATION",
@@ -108,6 +116,13 @@ export function readOpenAiEnvironment(
       ),
     ),
   };
+
+  if (environment.OPENAI_SERVICE_TIER?.trim() && !["default", "priority", "ultrafast"].includes(environment.OPENAI_SERVICE_TIER.trim())) {
+    throw new OpenAiConfigurationError("OPENAI_SERVICE_TIER must be default, priority or ultrafast.");
+  }
+  if (environment.OPENAI_DIAGRAM_SERVICE_TIER?.trim() && !["default", "priority", "ultrafast"].includes(environment.OPENAI_DIAGRAM_SERVICE_TIER.trim())) {
+    throw new OpenAiConfigurationError("OPENAI_DIAGRAM_SERVICE_TIER must be default, priority or ultrafast.");
+  }
 
   if (environment === process.env) cachedEnvironment = parsed;
   return parsed;

@@ -474,6 +474,7 @@ function renderGroundedPrompt(
         constraints: activeProposalDraft.constraints,
         nodes: activeProposalDraft.nodes.map((node) => ({
           id: node.id,
+          positionWithinStage: activeProposalDraft.nodes.filter(other => other.stage === node.stage).findIndex(other => other.id === node.id) + 1,
           label: node.label,
           description: node.description,
           stage: node.stage,

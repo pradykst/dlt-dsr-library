@@ -6,6 +6,7 @@ import type {
   GeneratedDiagram,
   NativeOkfDiagramMode,
   SynthesisDraftState,
+  NativeOkfRefinementDiagnostic,
 } from "../../shared/chat-types.ts";
 import type { NativeOpenAiClient } from "./client.ts";
 import type { NativeOkfGroundedContext } from "./context.ts";
@@ -28,6 +29,8 @@ export const NATIVE_OKF_STORED_DIAGRAM_INSTRUCTIONS = `Create a stored source ma
 
 
 export interface GenerateNativeOkfDiagramOptions {
+  diagramNodeOrder?: readonly string[];
+  onRefinementDiagnostic?: (diagnostic: NativeOkfRefinementDiagnostic) => void;
   client: NativeOpenAiClient;
   environment: NativeOpenAiEnvironment;
   context: NativeOkfGroundedContext;
@@ -223,7 +226,9 @@ export async function generateNativeOkfDiagram(
       constraints: options.priorDraft?.constraints ?? [],
       grounding: options.grounding,
       priorDraft: options.priorDraft ?? null,
+      diagramNodeOrder: options.diagramNodeOrder,
       requireRpfPath: options.requireRpfPath === true,
+      onRefinementDiagnostic: options.onRefinementDiagnostic,
     });
   }
 

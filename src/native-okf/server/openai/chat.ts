@@ -16,8 +16,10 @@ import {
   type NativeOkfDiagramMode,
   type NativeOkfSafeDiagnosticCode,
   type SynthesisDraftState,
+  type NativeOkfRefinementDiagnostic,
 } from "../../shared/chat-types.ts";
 import { sanitizeGeneratedProse } from "../../shared/generated-prose.ts";
+import { DESIGN_EDIT_REVERT, orderedDesignNodes } from "../../shared/design-edit-context.ts";
 import { parseNativeOkfConversationState } from "../../shared/conversation-state.ts";
 import type {
   NativeOkfConversationCatalog,
@@ -112,6 +114,7 @@ export const MAX_NATIVE_OKF_REQUEST_BYTES = 96_000;
 const MIN_MEANINGFUL_QUESTION_CHARACTERS = 3;
 const ALLOWED_REQUEST_KEYS = new Set([
   "question",
+  "diagramNodeOrder",
   "history",
   "scope",
   "diagramPreference",
@@ -135,6 +138,8 @@ export interface NativeOkfDiagramGenerationResult {
 }
 
 export type NativeOkfDiagramGenerator = (input: {
+  diagramNodeOrder?: readonly string[];
+  onRefinementDiagnostic?: (diagnostic: NativeOkfRefinementDiagnostic) => void;
   client: NativeOpenAiClient;
   environment: NativeOpenAiEnvironment;
   context: NativeOkfGroundedContext;
@@ -285,6 +290,7 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
     const pendingOriginal =
       parsedState.pendingClarification?.originalQuestion;
     const pendingMatchesHistory = pendingOriginal === undefined ||
+      Boolean(parsedState.latestValidatedSynthesisDraft && parsedState.pendingDesignInstruction) ||
       recentHistory.some(
         (message) =>
           message.role === "user" &&
@@ -297,8 +303,17 @@ export function validateNativeOkfChatRequest(input: unknown): NativeOkfChatReque
       ? parsedState
       : { ...parsedState, pendingClarification: null };
   }
+  const nodeOrder = input.diagramNodeOrder;
+  if (nodeOrder !== undefined) {
+    const nodes = conversationState?.latestValidatedSynthesisDraft?.nodes ?? [];
+    if (!Array.isArray(nodeOrder) || nodeOrder.length !== nodes.length ||
+        new Set(nodeOrder).size !== nodeOrder.length || nodeOrder.some(id => typeof id !== "string" || !nodes.some(node => node.id === id))) {
+      throw new NativeOkfRequestError("Displayed diagram references must match the active proposal.");
+    }
+  }
   return {
     question,
+    ...(nodeOrder === undefined ? {} : { diagramNodeOrder: nodeOrder as string[] }),
     ...(recentHistory.length > 0 ? { history: recentHistory } : {}),
     ...(scope === undefined ? {} : { scope }),
     ...(input.includeDiagram === undefined
@@ -965,6 +980,14 @@ async function answerNativeOkfChatUnchecked(
     prepared,
     rawRetrieval,
   ));
+  // Full-map completeness does not imply that a requested prose category
+  // exists. Keep the no-match/zero-provider-call path for absent paper kinds,
+  // without using those topic words to trim the canonical diagram.
+  const missingRequestedPaperKinds = turnPlan.mode === "STORED_FULL_MAP" &&
+    prepared.requestedConceptKinds.length > 0 &&
+    !retrieval.finalConcepts.some(concept => prepared.requestedConceptKinds.includes(
+      nativeOkfRequestedKindForType(concept.type)!,
+    ));
   const insufficientSynthesisGrounding =
     prepared.intent === "synthesized-flow" &&
     !prepared.priorSynthesisDraft &&
@@ -972,7 +995,7 @@ async function answerNativeOkfChatUnchecked(
   const retrievalDebug = developmentRetrievalDebug(retrieval);
 
   if (
-    (hardKinds.length > 0 && retrieval.finalConcepts.length === 0) || (![
+    missingRequestedPaperKinds || (hardKinds.length > 0 && retrieval.finalConcepts.length === 0) || (![
       "STORED_FULL_MAP",
       "STORED_FILTERED_MAP",
     ].includes(turnPlan.mode) &&
@@ -985,7 +1008,7 @@ async function answerNativeOkfChatUnchecked(
     return {
       kind: "answer",
       presentationMode: "no-match",
-      answerMarkdown: hardKinds.length > 0
+      answerMarkdown: hardKinds.length > 0 || missingRequestedPaperKinds
         ? "No relevant concepts of the requested kind were found within the current paper scope. Try another topic or change the selected papers."
         : INSUFFICIENT_CONTEXT_ANSWER,
       sources: [],
@@ -1108,8 +1131,8 @@ async function answerNativeOkfChatUnchecked(
     retrieval,
     turnPlan.effectiveQuestion,
     requiredConceptIds,
-    turnPlan.mode === "ACTIVE_DIAGRAM_QA"
-      ? turnPlan.activeProposalDraft
+    turnPlan.mode === "ACTIVE_DIAGRAM_QA" && turnPlan.activeProposalDraft
+      ? { ...turnPlan.activeProposalDraft, nodes: orderedDesignNodes(turnPlan.activeProposalDraft, request.diagramNodeOrder) }
       : null,
   ));
 
@@ -1158,6 +1181,17 @@ async function answerNativeOkfChatUnchecked(
         )],
         warnings: [],
       };
+    } else if (prepared.priorSynthesisDraft && DESIGN_EDIT_REVERT.test(request.question)) {
+      const previous = prepared.validatedState.previousValidatedSynthesisDraft;
+      if (!previous) {
+        diagramResult = { warnings: ["There is no previous accepted edit available to undo. The current proposal is unchanged."] };
+      } else {
+        const { restoreNativeOkfSynthesisDraft, refinementFailureSummary } = await import("./synthesis-refinement.ts");
+        const restored = await restoreNativeOkfSynthesisDraft({ client, environment, grounding,
+          priorDraft: prepared.priorSynthesisDraft, refinementRequest: request.question,
+          problemStatement: prepared.priorSynthesisDraft.problemStatement, requireRpfPath: true }, previous);
+        diagramResult = "diagram" in restored ? restored : { warnings: [refinementFailureSummary(restored.errors)] };
+      }
     } else {
       try {
         diagramResult = await telemetry.measureStage("diagram-generation", () => (
@@ -1167,6 +1201,8 @@ async function answerNativeOkfChatUnchecked(
           environment,
           context,
           question: turnPlan.effectiveQuestion,
+          diagramNodeOrder: request.diagramNodeOrder,
+          onRefinementDiagnostic: diagnostic => telemetry.recordRefinementDiagnostic(diagnostic),
           answerMarkdown: "",
           mode: "synthesized",
           grounding,
@@ -1203,7 +1239,7 @@ async function answerNativeOkfChatUnchecked(
         retainedPrior = true;
         diagramResult = {
           diagram: priorDiagram, usedSupportConceptIds: [...new Set(priorSupport)],
-          warnings: ["The requested refinement could not be validated against the design structure, latest request, and available evidence. The prior validated proposal is retained unchanged. Try specifying the target element and desired change."],
+          warnings: diagramResult.warnings.length ? diagramResult.warnings : ["The requested refinement could not be validated against the design structure, latest request, and available evidence. The prior validated proposal is retained unchanged. Try specifying the target element and desired change."],
         };
       }
     }
@@ -1232,7 +1268,7 @@ async function answerNativeOkfChatUnchecked(
         diagramResult.diagram,
       );
       const deterministicSummary = retainedPrior ? diagramResult.warnings[0]! : unchangedRefinement
-        ? "No safe evidence-grounded changes were justified by the latest request. The prior validated proposal is preserved unchanged."
+        ? diagramResult.deterministicSummary ?? "No safe evidence-grounded changes were justified by the latest request. The prior validated proposal is preserved unchanged."
         : designProposalNarrative(
         diagramResult.diagram,
         sourceCards,

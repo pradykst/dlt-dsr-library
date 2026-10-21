@@ -5,6 +5,10 @@ import { loadNativeOkfConversationCatalog, prepareNativeOkfChatRequest } from ".
 import { assertNativeOkfResponseBoundary, validateNativeOkfChatRequest } from "../server/openai/chat.ts";
 import { createInitialNativeOkfConversationState } from "../shared/chat-types.ts";
 import { inferStoredPaperMapIntent } from "../shared/diagram-intent.ts";
+import { buildStoredPaperDesignMap } from "../server/openai/stored-source-map.ts";
+import { answerNativeOkfChat } from "../server/openai/chat.ts";
+import { readOpenAiEnvironment } from "../server/openai/env.ts";
+import type { NativeOpenAiClient } from "../server/openai/client.ts";
 
 const catalog = await loadNativeOkfConversationCatalog();
 const paper = catalog.papers[0]!;
@@ -119,4 +123,112 @@ test("serialization rejects a stored-map response on a corpus synthesis turn", a
     answerMarkdown: "A proposal", sources: [], insufficientContext: false,
     diagramMode: "stored", diagram: { title: "Stored source map", explanation: "", nodes: [], edges: [] },
   }));
+});
+
+const naturalDesignRequests = [
+  "We have trouble tracing refurbished industrial components between suppliers. Which requirements and design features could help us? Please draw the connections.",
+  "Universities need a better way to verify qualifications shared with employers. What principles and features may be useful? Show a diagram.",
+  "Our application shares too much personal information between companies. What architecture, requirements and features would make this safer? Show the relationships.",
+  "Need a system where people can prove they own something without showing all their data. Any requirements and features? diagram pls",
+  "Can you use what the papers teach us to help design a more reliable cross-company product verification service? I'd like a diagram.",
+  "Using the Blockchain for the IoT paper as supporting research, suggest a new design for verifying industrial equipment maintenance. Show a diagram.",
+  // Held-out formulations: conditional, third-person, informal and descriptive.
+  "If a cooperative cannot reconcile members' permissions, which requirements and mechanisms would help? Show a diagram.",
+  "Museums need a better way to authenticate loans shared with galleries. What principles and features may be useful? Show a diagram.",
+  "Rental bookings keep getting allocated twice by independent agencies. Any requirements and features? diagram pls",
+  "Our service loses track of delegated account permissions. What requirements would make this safer? Show the relationships.",
+  "Based on this paper, recommend a new architecture for verifying volunteer training records. Show a diagram.",
+  "Could you help design a low-maintenance regional equipment booking service? Show a diagram.",
+  "We have difficulty reconciling laboratory sample custody between facilities. Which requirements could help us? Show a diagram.",
+];
+
+for (const question of naturalDesignRequests) test(`design purpose generalizes across preferences and evidence scopes: ${question}`, async () => {
+  for (const diagramPreference of ["auto", "requested", "suppressed"] as const) {
+    for (const scope of [{ type: "corpus" as const }, { type: "papers" as const, paperIds: [paper.slug] }]) {
+      const p = await prepareNativeOkfChatRequest({ question, scope, diagramPreference }, catalog);
+      assert.equal(p.turnPlan.mode, "DESIGN_SYNTHESIS");
+      assert.equal(p.turnPlan.diagramAction, diagramPreference === "suppressed" ? "NONE" : "RENDER_NEW_SYNTHESIS");
+      assert.equal(p.clarification, null);
+      assert.equal(p.diagramMode, diagramPreference === "suppressed" ? null : "synthesized");
+      if (diagramPreference !== "suppressed") await assert.rejects(assertNativeOkfResponseBoundary(p, {
+        kind: "answer", presentationMode: "diagram-primary", diagramStatus: "success", answerMarkdown: "Stored map", sources: [], insufficientContext: false,
+        diagramMode: "stored", diagram: { title: "Stored source map", explanation: "", nodes: [], edges: [] },
+      }));
+    }
+  }
+});
+
+test("new indirect problems replace stale paper focus rather than inheriting its output purpose", async () => {
+  const prior = { ...createInitialNativeOkfConversationState(), activePaperSlugs: [paper.slug], lastIntent: "stored-diagram" as const, lastDiagramRequested: true };
+  for (const question of naturalDesignRequests.slice(0, 6)) {
+    const p = await prepareNativeOkfChatRequest({ question, conversationState: prior }, catalog);
+    assert.equal(p.turnPlan.mode, "DESIGN_SYNTHESIS");
+    assert.equal(p.turnPlan.diagramAction, "RENDER_NEW_SYNTHESIS");
+    assert.equal(p.priorSynthesisDraft, null);
+  }
+});
+
+test("abbreviated canonical paper inspection uses complete repository maps", async () => {
+  const question = "Display the actual design requirements, principles, features and stored relationships from Designing Trust Enabling Blockchain Systems.";
+  const p = await prepareNativeOkfChatRequest({ question }, catalog);
+  assert.equal(p.turnPlan.mode, "STORED_FULL_MAP");
+  assert.equal(p.turnPlan.diagramAction, "RENDER_STORED");
+  assert.deepEqual(p.explicitPaperSlugs, ["trust-enabling-capacity-exchange"]);
+  const expected = await buildStoredPaperDesignMap("papers/trust-enabling-capacity-exchange");
+  assert.equal(expected?.nodes.length, 39);
+  assert.equal(expected?.edges.length, 67);
+  const client = { responses: { create: async () => ({ status: "completed", output: [], output_text: "The paper represents stored design knowledge." }) } } as unknown as NativeOpenAiClient;
+  const result = await answerNativeOkfChat({ question }, { client, environment: readOpenAiEnvironment({ NODE_ENV: "test", OPENAI_API_KEY: "mock", OPENAI_MODEL: "mock" }) });
+  assert.equal(result.diagramMode, "stored");
+  assert.deepEqual(result.diagram, expected);
+  await assertNativeOkfResponseBoundary(p, result);
+});
+
+test("topic-wide comparisons do not resolve topic tokens as ambiguous paper titles", async () => {
+  for (const question of ["Compare how the papers address privacy and trust using blockchain.", "Contrast how the literature treats accountability and confidentiality.", "Compare the different studies on inter-organizational identity."]) {
+    for (const includeDiagram of [true, false]) {
+      const p = await prepareNativeOkfChatRequest({ question, includeDiagram }, catalog);
+      assert.equal(p.turnPlan.mode, "STORED_COMPARISON");
+      assert.equal(p.turnPlan.diagramAction, "NONE");
+      assert.equal(p.clarification, null);
+      assert.deepEqual(p.focusedPaperSlugs, []);
+      assert.equal(p.corpusQuery, true);
+    }
+  }
+});
+
+test("factual descriptions, genuine missing subjects and ambiguous title prefixes remain conservative", async () => {
+  for (const question of ["What is selective disclosure?", "Describe how the authors designed a new system for sharing records.", "Explain the requirements represented in this paper."]) {
+    const p = await prepareNativeOkfChatRequest({ question, includeDiagram: true }, catalog);
+    assert.notEqual(p.turnPlan.mode, "DESIGN_SYNTHESIS", question);
+    assert.equal(p.turnPlan.diagramAction, "NONE", question);
+  }
+  for (const question of ["Any requirements and features? diagram pls", "Which requirements could I use?", "Make this safer.", "Show me the diagram."]) {
+    const p = await prepareNativeOkfChatRequest({ question }, catalog);
+    assert.equal(p.turnPlan.mode, "CLARIFICATION", question);
+    assert.equal(p.turnPlan.diagramAction, "NONE", question);
+  }
+  const ambiguous = await prepareNativeOkfChatRequest({ question: "Show the stored map from Designing portable records for shared networks." }, {
+    papers: ["one", "two"].map(slug => ({ slug, conceptId: `papers/${slug}`, title: `Designing portable records for shared networks: ${slug}` })), concepts: [],
+  });
+  assert.equal(ambiguous.turnPlan.mode, "CLARIFICATION");
+  assert.equal(ambiguous.turnPlan.diagramAction, "NONE");
+});
+
+test("an unresolved named canonical subject never becomes an arbitrary evidence map or stale paper", async () => {
+  for (const conversationState of [undefined, { ...createInitialNativeOkfConversationState(), activePaperSlugs: [paper.slug], lastIntent: "stored-diagram" as const }]) {
+    const question = 'Show the canonical stored design map from "An Uncatalogued Research Title".';
+    const p = await prepareNativeOkfChatRequest({ question, conversationState }, catalog);
+    assert.equal(p.turnPlan.mode, "CLARIFICATION");
+    assert.equal(p.turnPlan.diagramAction, "NONE");
+    assert.match(p.clarification!.question, /full title or select/u);
+  }
+});
+
+test("modal wording about extracting paper knowledge is inspection rather than new design", async () => {
+  for (const question of ["Which mechanisms could we extract from this paper?", "What features would be useful to identify in this paper?"]) {
+    const p = await prepareNativeOkfChatRequest({ question, diagramPreference: "suppressed", scope: { type: "papers", paperIds: [paper.slug] } }, catalog);
+    assert.equal(p.turnPlan.mode, "TEXT_QA");
+    assert.equal(p.turnPlan.diagramAction, "NONE");
+  }
 });

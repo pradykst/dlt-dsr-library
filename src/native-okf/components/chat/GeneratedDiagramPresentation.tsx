@@ -626,11 +626,15 @@ function GeneratedDiagramCanvas({
 export function GeneratedDiagramPresentation({
   diagram,
   sources = [],
+  onDisplayNodeOrder,
 }: {
   diagram: GeneratedDiagram;
+  onDisplayNodeOrder?: (order: string[], diagram: GeneratedDiagram) => void;
   sources?: readonly NativeOkfSourceCard[];
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const displayOrderCallback = useRef(onDisplayNodeOrder);
+  useEffect(() => { displayOrderCallback.current = onDisplayNodeOrder; }, [onDisplayNodeOrder]);
   const orientationTouched = useRef(false);
   const [orientation, setOrientation] =
     useState<DiagramOrientation>("horizontal");
@@ -660,6 +664,9 @@ export function GeneratedDiagramPresentation({
       .then((nextLayout) => {
         if (!active) return;
         setLayout(nextLayout);
+        displayOrderCallback.current?.([...nextLayout.nodes].sort((left, right) =>
+          (orientation === "horizontal" ? left.position.y - right.position.y : left.position.x - right.position.x) ||
+          left.id.localeCompare(right.id, "en")).map(node => node.id), diagram);
       })
       .catch(() => {
         if (!active) return;

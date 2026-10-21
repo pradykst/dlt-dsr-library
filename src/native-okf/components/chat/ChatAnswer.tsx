@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import type {
   NativeOkfChatResponse,
   NativeOkfSourceCard,
+  GeneratedDiagram,
 } from "../../shared/chat-types.ts";
 import { assistantResponseClipboardText } from "../../shared/assistant-copy.ts";
 import {
@@ -271,9 +272,11 @@ function diagnosticText(value: unknown): string {
 export function ChatAnswer({
   response,
   messageId,
+  onDisplayNodeOrder,
 }: {
   response: NativeOkfChatResponse;
   messageId: string;
+  onDisplayNodeOrder?: (order: string[], diagram: GeneratedDiagram) => void;
 }) {
   const anchorPrefix = `chat-${messageId}`;
   const primaryMarkdown = response.deterministicSummary ?? response.answerMarkdown;
@@ -322,7 +325,7 @@ export function ChatAnswer({
 
       {response.diagram ? (
         <div className="space-y-3">
-          <GeneratedDiagramView diagram={response.diagram} sources={response.sources} />
+          <GeneratedDiagramView diagram={response.diagram} sources={response.sources} onDisplayNodeOrder={onDisplayNodeOrder} />
           {evidenceFallback ? (
             <div
               role="status"

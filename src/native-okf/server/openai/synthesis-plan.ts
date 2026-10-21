@@ -9,6 +9,7 @@ import type {
   GeneratedDiagramNode,
   SynthesisRelationshipType,
   SynthesisDraftState,
+  NativeOkfRefinementDiagnostic,
 } from "../../shared/chat-types.ts";
 import {
   MAX_NATIVE_OKF_SYNTHESIS_DIAGRAM_EDGES,
@@ -103,6 +104,8 @@ export interface SynthesisPlan {
 export type DesignProposalPlan = SynthesisPlan;
 
 export interface GenerateNativeOkfSynthesisPlanOptions {
+  diagramNodeOrder?: readonly string[];
+  onRefinementDiagnostic?: (diagnostic: NativeOkfRefinementDiagnostic) => void;
   client: NativeOpenAiClient;
   environment: NativeOpenAiEnvironment;
   problemStatement: string;
@@ -346,6 +349,8 @@ Every node in requirements, principles, features, artifact, evaluation, and outc
 Semantic roles: a Requirement states WHAT the artifact must achieve, ensure, prevent, or preserve (never a technology or an implementation step). A Design Principle is a prescriptive, generalizable rule for HOW one or more requirements are addressed (not a restatement of the requirement, not a technology name). A Design Feature is a concrete mechanism, component, interface, or protocol behavior that operationalizes one or more principles. The Artifact integrates the selected features.
 
 The researcher's stated purpose and constraints determine the proposed mechanisms. Select evidence for its academic applicability to each mechanism, never merely because it was retrieved or connected to another source. A source about a different application can justify a transferable principle only when its description actually supports that principle. Do not import unrelated domain mechanisms to complete the graph. Distinguish the researcher's constraints from your proposed adaptations, and acknowledge in descriptions or coverageRationale when evidence supports only a general principle rather than the proposed implementation. Never claim a paper tested or proved the newly proposed design.
+
+Make the evidence boundary explicit where it matters: distinguish direct mechanism support from a transferable principle and from proposed engineering details. A broad integrity or infrastructure requirement does not validate a detailed authentication, authorization, cryptographic or deployment protocol. In a mechanism's description, identify such details as proposed adaptations and state critical assumptions or remaining validation. Use the strongest relevant allowed source; do not attach a nominally related citation as technical proof. A user-provided requirement expresses a design need, not a scholarly finding. In coverageRationale, summarize the main evidence gaps without claiming the new artifact was evaluated. Write compact, complete sentences, preferably below 240 characters and always within the 300-character limit. Keep the core mechanism and its important limitation; omit incidental detail rather than ending mid-clause.
 
 Relationship grammar. PRIMARY design flow is the fixed chain problem -> requirement -> principle -> feature -> artifact; a PRIMARY relationship connects two adjacent roles only. Do not emit requirement -> feature, requirement -> artifact, principle -> artifact, problem -> principle, or any backward or same-role PRIMARY relationship. If an intermediate design concept is genuinely needed, synthesize it. SECONDARY relationships express same-role ordering only and use relationshipType "depends on" (principle -> principle, or feature -> feature) or "interoperates with" (feature -> feature); they never replace a primary parent and never complete the core chain. Evaluation and Outcome are optional post-artifact information and are never required.
 
@@ -879,10 +884,8 @@ function convertedNode(
   const rationale = adaptedFromExact
     ? `Adapted for this problem from the stored native OKF concept ${supportingTitles.join("; ")}.`
     : supportingTitles.length > 0
-      ? `Proposed for this problem, grounded in the stored native OKF concept${
-          supportingTitles.length === 1 ? "" : "s"
-        } ${supportingTitles.join("; ")}.`
-      : "Proposed for this problem and grounded in the listed stored native OKF concepts.";
+      ? "Proposed adaptation informed by the listed stored concepts. The sources support related design knowledge; implementation details and assumptions require validation."
+      : "Proposed engineering adaptation requiring evidence and implementation validation.";
   return {
     id: `plan-${entry.node.key}`,
     label: truncate(entry.node.label, 90),
@@ -1141,6 +1144,7 @@ async function reviewValidatedPlan(
   options: GenerateNativeOkfSynthesisPlanOptions,
   plan: SynthesisPlan,
 ): Promise<{ plan: SynthesisPlan; warnings: string[] }> {
+  if (options.environment.synthesisReviewEnabled === false) return { plan, warnings: [] };
   try {
     const response = await options.client.responses.create({
       model: options.environment.model,
@@ -1163,7 +1167,11 @@ async function reviewValidatedPlan(
       options.grounding,
       options.requireRpfPath === true,
     );
-    if (reviewed.ok) {
+    // An optional revision cannot erase readable mechanisms or limitations by
+    // filling the schema limit mid-clause. Keep the already validated baseline.
+    if (reviewed.ok && [...reviewed.plan.requirements, ...reviewed.plan.principles, ...reviewed.plan.features,
+        ...reviewed.plan.artifact, ...reviewed.plan.evaluation, ...reviewed.plan.outcome]
+      .every(node => /[.!?]["”']?$/u.test(node.description))) {
       return {
         plan: {
           ...reviewed.plan,
@@ -1187,7 +1195,7 @@ export async function generateNativeOkfSynthesisPlan(
   options: GenerateNativeOkfSynthesisPlanOptions,
 ): Promise<GeneratedNativeOkfSynthesisPlan> {
   if (options.priorDraft) {
-    const { generateNativeOkfSynthesisRefinement } = await import(
+    const { generateNativeOkfSynthesisRefinement, refinementFailureSummary } = await import(
       "./synthesis-refinement.ts"
     );
     const refinement = await generateNativeOkfSynthesisRefinement({
@@ -1197,7 +1205,9 @@ export async function generateNativeOkfSynthesisPlan(
       problemStatement: options.problemStatement,
       grounding: options.grounding,
       priorDraft: options.priorDraft,
+      diagramNodeOrder: options.diagramNodeOrder,
       requireRpfPath: options.requireRpfPath === true,
+      onRefinementDiagnostic: options.onRefinementDiagnostic,
     });
     if ("diagram" in refinement) {
       return {
@@ -1209,7 +1219,8 @@ export async function generateNativeOkfSynthesisPlan(
     }
     return {
       usedSupportConceptIds: [],
-      warnings: [],
+      warnings: [refinementFailureSummary(refinement.errors)],
+      deterministicSummary: refinementFailureSummary(refinement.errors),
       diagnosticCode: "synthesis-plan-repair-failed",
     };
   }

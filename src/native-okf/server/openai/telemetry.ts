@@ -7,6 +7,7 @@ import { normalizeOpenAiError, RequestTooLargeError } from "./errors.ts";
 import { NativeOkfBudgetTimeoutError, NATIVE_OKF_CHAT_BUDGET_MS } from "./request-budget.ts";
 import { DEFAULT_RETRIEVAL_LIMITS, MAX_RETRIEVAL_LIMITS } from "../retrieval-config.ts";
 import { logNativeOkfModelTurn, logNativeOkfStage } from "../request-log.ts";
+import type { NativeOkfRefinementDiagnostic } from "../../shared/chat-types.ts";
 
 /** Includes instructions, history, repair drafts and structured-output schemas. */
 // Offline near-cap acceptance reaches 240,812 bytes with canonical evidence,
@@ -15,11 +16,13 @@ export const MAX_NATIVE_OKF_MODEL_REQUEST_BYTES = 290_000;
 
 /** Exact whole-request UTF-8 measurement, shared by the guard and offline audit. */
 export function nativeOkfModelRequestBytes(body: ResponseCreateParamsNonStreaming): number {
-  return Buffer.byteLength(JSON.stringify({ ...body, service_tier: "default" }), "utf8");
+  return Buffer.byteLength(JSON.stringify({ ...body, service_tier: body.service_tier ?? "default" }), "utf8");
 }
 
 export interface NativeOkfModelCallMetrics {
   stage: NativeOkfModelStage;
+  requestedServiceTier?: string;
+  effectiveServiceTier?: string | null;
   configuredTimeoutMs: number;
   maxRetries: number;
   errorCode?: string;
@@ -48,6 +51,7 @@ export interface NativeOkfModelTurnMetrics {
   maxOutputTokens: number;
   diagramMaxOutputTokens: number;
   groundedContextCharacters: number;
+  optionalSynthesisReviewEnabled?: boolean;
   groundedContextBudget: number;
   groundedSourceCount: number;
   defaultContextBudget: number;
@@ -70,7 +74,7 @@ export interface NativeOkfModelTurnMetrics {
 }
 
 export type NativeOkfExecutionStage = "intent-classification" | "retrieval" | "retrieval-assembly"
-  | "context-construction" | "diagram-grounding" | "diagram-generation" | "response-validation";
+  | "context-construction" | "diagram-grounding" | "diagram-generation" | "response-validation" | "refinement-validation";
 export interface NativeOkfStageMetrics {
   stage: NativeOkfExecutionStage;
   durationMs: number;
@@ -108,6 +112,10 @@ export class NativeOkfTurnTelemetry {
   }
 
   get requestStartedAt(): number { return this.startedAt; }
+
+  recordRefinementDiagnostic(diagnostic: NativeOkfRefinementDiagnostic): void {
+    this.stageEvent("refinement-validation", "completed", { status: "rejected", ...diagnostic });
+  }
 
   private stageEvent(stage: NativeOkfExecutionStage | NativeOkfModelStage, event: "started" | "completed", fields: object = {}): void {
     // Only fixed stage labels, aggregate numbers and normalized error codes enter fields.
@@ -160,7 +168,13 @@ export class NativeOkfTurnTelemetry {
       } },
       responses: {
         create: async (body: ResponseCreateParamsNonStreaming, requestOptions) => {
-          const standardBody = { ...body, service_tier: "default" as const };
+          const stage = requestOptions?.nativeOkfStage ?? "text-generation";
+          const tier = stage.startsWith("synthesis-") || stage.startsWith("refinement-")
+            ? environment.diagramServiceTier ?? environment.serviceTier ?? "default" : environment.serviceTier ?? "default";
+          const standardBody = { ...body,
+            // The installed SDK predates the documented Ultrafast literal;
+            // the server allowlist above limits this to supported API tiers.
+            service_tier: tier as ResponseCreateParamsNonStreaming["service_tier"] };
           const requestBytes = nativeOkfModelRequestBytes(standardBody);
           if (requestBytes > MAX_NATIVE_OKF_MODEL_REQUEST_BYTES) {
             throw new RequestTooLargeError(
@@ -172,7 +186,8 @@ export class NativeOkfTurnTelemetry {
             stage: requestOptions?.nativeOkfStage ?? "text-generation",
             configuredTimeoutMs: requestOptions?.timeout ?? OPENAI_REQUEST_TIMEOUT_MS,
             maxRetries: requestOptions?.maxRetries ?? OPENAI_MAX_RETRIES,
-            model: body.model ?? environment.model,
+            model: standardBody.model ?? environment.model,
+            requestedServiceTier: standardBody.service_tier ?? "default",
             reasoningEffort: body.reasoning?.effort ?? null,
             status: "error",
             inputTokens: null,
@@ -188,6 +203,7 @@ export class NativeOkfTurnTelemetry {
           try {
             const response = await client.responses.create(standardBody, requestOptions);
             metrics.model = response.model || body.model || environment.model;
+            metrics.effectiveServiceTier = response.service_tier ?? null;
             metrics.status = response.status ?? "unknown";
             const incompleteReason = response.incomplete_details?.reason;
             if (incompleteReason === "max_output_tokens" || incompleteReason === "content_filter") metrics.incompleteReason = incompleteReason;
@@ -230,6 +246,7 @@ export class NativeOkfTurnTelemetry {
       maxOutputTokens: environment.maxOutputTokens,
       diagramMaxOutputTokens: environment.diagramMaxOutputTokens,
       groundedContextCharacters: this.contextCharacters,
+      optionalSynthesisReviewEnabled: environment.synthesisReviewEnabled !== false,
       groundedContextBudget: this.contextBudget,
       groundedSourceCount: this.sourceCount,
       defaultContextBudget: DEFAULT_RETRIEVAL_LIMITS.maxContextCharacters,
