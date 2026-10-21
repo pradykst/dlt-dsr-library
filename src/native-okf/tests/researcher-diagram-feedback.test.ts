@@ -21,6 +21,8 @@ import { retrieveOkfContext } from "../server/retrieval.ts";
 import { createInitialNativeOkfConversationState, type SynthesisDraftState } from "../shared/chat-types.ts";
 import { parseSynthesisDraftState } from "../shared/synthesis-draft.ts";
 import { compactNativeOkfConversationStateForRequest, parseNativeOkfConversationState } from "../shared/conversation-state.ts";
+import { clarificationConversationState, completedConversationState } from "../server/conversation.ts";
+import { buildNativeOkfSynthesisRefinementInput } from "../server/openai/synthesis-refinement.ts";
 
 const environment = readOpenAiEnvironment({ NODE_ENV: "test", OPENAI_API_KEY: "mock", OPENAI_MODEL: "mock-model" });
 const catalog = await loadNativeOkfConversationCatalog();
@@ -411,6 +413,42 @@ test("malformed semantic review fails closed; empty patch preserves the graph", 
   }
 });
 
+test("simplification may update an affected dependent but still requires semantic approval", async () => {
+  const existing = prior.nodes.find(node => node.id === "plan-f1")!;
+  const patch: SynthesisRefinementPatch = { ...emptyPatch(), removeNodeIds: ["plan-f2"], updateNodes: [{
+    nodeId: existing.id, label: existing.label, description: "The credential carries the essential consent evidence without an optional audit dashboard.",
+    category: existing.category, stage: existing.stage, supportConceptIds: existing.supportConceptIds,
+    synthesisRationale: "Retain the core consent mechanism while removing optional reporting.",
+  }] };
+  const request = "Remove redundant components without changing the main design.";
+  assert.equal(validateNativeOkfSynthesisRefinementPatch(patch, grounding, request).ok, true);
+  assert.equal(validateNativeOkfSynthesisRefinementPatch(patch, grounding, "Explain the diagram.").ok, false);
+  for (const approve of [true, false]) {
+    const { client, calls } = mockClient(body => body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review"
+      ? { approved: approve, errors: approve ? [] : ["The content update is not justified by the removal."] } : patch);
+    const result = await generateNativeOkfSynthesisRefinement({ client, environment, refinementRequest: request,
+      problemStatement: prior.problemStatement, priorDraft: prior, grounding, requireRpfPath: true });
+    if (approve) {
+      assert.ok("diagram" in result);
+      assert.equal(calls.length, 2);
+      assert.deepEqual(result.diagram.nodes.filter(n => n.id !== existing.id), prior.nodes.filter(n => n.id !== existing.id && n.id !== "plan-f2"));
+      assert.deepEqual(result.diagram.edges, prior.edges.filter(e => e.source !== "plan-f2" && e.target !== "plan-f2"));
+    } else {
+      assert.ok("errors" in result, "A schema-valid simplification cannot authorize itself");
+      assert.equal(calls.length, 4);
+    }
+  }
+});
+
+test("proposed engineering details are not rendered as direct scholarly validation", () => {
+  const result = convertNativeOkfSynthesisPlan(plan(), grounding, plan().problemSummary, true);
+  assert.ok(result);
+  for (const node of result.diagram.nodes.filter(node => node.provenance === "synthesized")) {
+    assert.match(node.synthesisRationale!, /Proposed adaptation.*implementation details and assumptions require validation/iu);
+    assert.deepEqual(node.sourcePaths, node.supportConceptIds);
+  }
+});
+
 test("subsequent edits use the last accepted graph and a rejected turn preserves that newer baseline", async () => {
   const { client } = mockClient((_, index) => index === 0 ? updateFeature() : approved);
   const first = await answerNativeOkfChat({ question: "Refine the signed credential feature to expire after one day.", conversationState: activeState }, {
@@ -625,3 +663,177 @@ for (const failure of ["unrelated branch", "unsupported relationship"]) {
     assert.deepEqual(response.conversationState?.latestValidatedSynthesisDraft, draft);
   });
 }
+
+test("explicit incident-edge removals remain valid when their node is removed", async () => {
+  const patch = emptyPatch();
+  patch.removeNodeIds = ["plan-f2"];
+  patch.removeEdges = prior.edges.filter(edge => edge.source === "plan-f2" || edge.target === "plan-f2")
+    .map(({ source, target, label }) => ({ source, target, label }));
+  const result = await applyNativeOkfSynthesisRefinementPatch(prior, patch, grounding, prior.problemStatement, true);
+  assert.ok(result.ok, JSON.stringify(result));
+  assert.deepEqual(result.diagram.nodes, prior.nodes.filter(node => node.id !== "plan-f2"));
+  assert.deepEqual(result.diagram.edges, prior.edges.filter(edge => edge.source !== "plan-f2" && edge.target !== "plan-f2"));
+  patch.removeEdges.push({ source: "plan-f1", target: "plan-a1", label: "nonexistent" });
+  assert.deepEqual(await applyNativeOkfSynthesisRefinementPatch(prior, patch, grounding, prior.problemStatement, true),
+    { ok: false, errors: ["patch:unknown-remove-edge"] });
+});
+
+test("natural split and merge authorize localized operations with a complete baseline", async () => {
+  const patch = emptyPatch();
+  patch.removeNodeIds = ["plan-f2"];
+  for (const question of ["Split the last requirement into privacy and verification cost; update its downstream design.", "Merge the two overlapping features."]) {
+    assert.ok(validateNativeOkfSynthesisRefinementPatch(patch, grounding, question, prior).ok);
+    const prepared = await prepareNativeOkfChatRequest({ question, conversationState: activeState }, catalog);
+    assert.equal(prepared.turnPlan.mode, "DESIGN_REFINEMENT");
+    assert.equal(prepared.turnPlan.diagramAction, "RENDER_UPDATED");
+    assert.deepEqual(prepared.priorSynthesisDraft, prior);
+  }
+  const input = JSON.parse(buildNativeOkfSynthesisRefinementInput({ client: mockClient(() => approved).client,
+    environment, grounding, priorDraft: prior, refinementRequest: "Split the last requirement.", problemStatement: prior.problemStatement, requireRpfPath: true }));
+  assert.deepEqual(input.priorValidatedDraft.nodes, prior.nodes);
+  assert.deepEqual(input.priorValidatedDraft.edges, prior.edges);
+  assert.deepEqual(input.orderedNodeReferences["design-requirement"].map((n: {id:string}) => n.id), ["plan-r1"]);
+  assert.ok(!input.allowedExistingNodeIds.includes("plan-a1"), "artifact identity is outside an implicit downstream edit");
+});
+
+test("deferred edits use researcher instructions, survive clarification and preserve full pending text", async () => {
+  const instruction = "Separate the final requirement into controlled disclosure and low verification cost. " +
+    "Preserve the existing identity and all unaffected evidence. ".repeat(12) + "Keep ongoing staff effort low, not just transaction fees.";
+  const question = "Could you incorporate that into it?";
+  const prepared = await prepareNativeOkfChatRequest({ question, conversationState: activeState,
+    history: [{ role: "user", content: instruction }, { role: "assistant", content: "A suggested unrelated new system." }] }, catalog);
+  assert.equal(prepared.turnPlan.mode, "DESIGN_REFINEMENT");
+  assert.ok(prepared.effectiveQuestion.includes(instruction));
+  assert.ok(!prepared.effectiveQuestion.includes("unrelated new system"));
+  const discussion = await prepareNativeOkfChatRequest({ question: "Before editing, we should split the last requirement into disclosure and cost. What do you think?", conversationState: activeState }, catalog);
+  assert.equal(discussion.turnPlan.mode, "ACTIVE_DIAGRAM_QA");
+  const discussionState = completedConversationState(discussion, retrieval, [], prior);
+  assert.ok(discussionState.pendingDesignInstruction?.includes("disclosure and cost"));
+  const afterDiscussion = await prepareNativeOkfChatRequest({ question, conversationState: discussionState }, catalog);
+  assert.equal(afterDiscussion.turnPlan.mode, "DESIGN_REFINEMENT");
+  const missing = await prepareNativeOkfChatRequest({ question, conversationState: activeState }, catalog);
+  assert.equal(missing.turnPlan.mode, "CLARIFICATION");
+  assert.match(missing.clarification!.question, /Which change/);
+  const clarificationState = { ...clarificationConversationState(missing), pendingDesignInstruction: instruction };
+  const parsedRequest = validateNativeOkfChatRequest({ question: "proposed design for my problem", conversationState: compactNativeOkfConversationStateForRequest(clarificationState) });
+  const resumed = await prepareNativeOkfChatRequest(parsedRequest, catalog);
+  assert.equal(resumed.turnPlan.mode, "DESIGN_REFINEMENT");
+  assert.ok(resumed.effectiveQuestion.includes(instruction));
+  assert.deepEqual(resumed.priorSynthesisDraft, prior);
+});
+
+test("rename can preserve old scholarly bindings without authorizing new claims from them", async () => {
+  const node = prior.nodes.find(node => node.id === "plan-f1")!;
+  const patch = emptyPatch();
+  patch.updateNodes.push({ nodeId: node.id, label: "Evidence check", description: node.description,
+    category: node.category, stage: node.stage, supportConceptIds: node.supportConceptIds, synthesisRationale: node.synthesisRationale! });
+  const noFreshSupport = { ...grounding, eligibleStoredConceptIds: new Set<string>() };
+  const parsed = validateNativeOkfSynthesisRefinementPatch(patch, noFreshSupport, "Rename the first feature to Evidence check.", prior);
+  assert.ok(parsed.ok, JSON.stringify(parsed));
+  patch.updateNodes[0]!.description = "A different, ungrounded mechanism.";
+  assert.equal(validateNativeOkfSynthesisRefinementPatch(patch, noFreshSupport, "Rename the first feature.", prior).ok, false);
+});
+
+test("reviewed no-op explains existing coverage and does not claim an edit occurred", async () => {
+  const reason = "The existing evidence requirement and signed-credential feature already provide the requested verification; another requirement would repeat that obligation.";
+  const { client } = mockClient(body => body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review"
+    ? { approved: true, errors: [], summary: reason } : emptyPatch());
+  const r = await answerNativeOkfChat({ question: "Add independent verification without duplicating anything.", conversationState: activeState },
+    { client, environment, conversationCatalog: catalog, retrieve: async () => retrieval });
+  assert.equal(r.answerMarkdown, reason);
+  assert.deepEqual(r.synthesisDraft, prior);
+  assert.deepEqual(r.diagram?.nodes, prior.nodes);
+  assert.deepEqual(r.diagram?.edges, prior.edges);
+});
+
+test("undo restores an accepted revision exactly only after mandatory review", async () => {
+  const changed = structuredClone(prior);
+  changed.nodes.find(node => node.id === "plan-f1")!.label = "Renamed feature";
+  const state = { ...activeState, latestValidatedSynthesisDraft: changed, previousValidatedSynthesisDraft: prior };
+  for (const allow of [true, false]) {
+    const { client, calls } = mockClient(() => ({ approved: allow, errors: allow ? [] : ["Not an authorized restoration"], summary: allow ? "Restored the previous feature name." : "Restoration not justified." }));
+    const r = await answerNativeOkfChat({ question: "Undo the last edit.", conversationState: state },
+      { client, environment, conversationCatalog: catalog, retrieve: async () => retrieval });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(r.synthesisDraft, allow ? prior : changed);
+    assert.deepEqual(r.diagram?.edges, prior.edges);
+    assert.ok(String(calls[0]!.input).includes("restorePreviouslyValidatedDraft"));
+  }
+});
+
+test("processing tiers follow task stages at the real request boundary", async () => {
+  const { NativeOkfTurnTelemetry } = await import("../server/openai/telemetry.ts");
+  const seen: ResponseCreateParamsNonStreaming[] = [];
+  const { client: underlying } = mockClient(body => { seen.push(body); return approved; });
+  const metrics = new NativeOkfTurnTelemetry("DESIGN_REFINEMENT", "corpus");
+  const client = metrics.observeClient(underlying, { ...environment, serviceTier: "priority", diagramServiceTier: "ultrafast" }, 100, 140000, 2);
+  await client.responses.create({ model: "ordinary-model", input: "x" }, { nativeOkfStage: "refinement-review" });
+  await client.responses.create({ model: "ordinary-model", input: "x" }, { nativeOkfStage: "text-generation" });
+  assert.equal(String(seen[0]!.service_tier), "ultrafast");
+  assert.equal(seen[0]!.model, "ordinary-model");
+  assert.equal(seen[1]!.service_tier, "priority");
+  assert.equal(seen[1]!.model, "ordinary-model");
+});
+
+test("displayed order resolves a positional edit without changing draft ordering or unrelated fields", async () => {
+  const order = prior.nodes.map(node => node.id).reverse();
+  const target = prior.nodes.find(node => node.id === "plan-f2")!;
+  const patch = emptyPatch();
+  patch.updateNodes.push({ nodeId: target.id, label: "Review evidence", description: target.description,
+    category: target.category, stage: target.stage, supportConceptIds: target.supportConceptIds, synthesisRationale: target.synthesisRationale! });
+  const { client } = mockClient(body => {
+    const payload = JSON.parse(String(body.input));
+    assert.equal(payload.orderedNodeReferences["design-feature"][0].id, target.id);
+    return body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review" ? approved : patch;
+  });
+  const r = await answerNativeOkfChat(validateNativeOkfChatRequest({ question: "Rename the first feature to Review evidence.",
+    diagramNodeOrder: order, conversationState: activeState }), { client, environment, conversationCatalog: catalog, retrieve: async () => retrieval });
+  assert.deepEqual(r.diagram?.nodes, prior.nodes.map(node => node.id === target.id ? { ...node, label: "Review evidence" } : node));
+  assert.deepEqual(r.diagram?.edges, prior.edges);
+  assert.throws(() => validateNativeOkfChatRequest({ question: "Rename it.", diagramNodeOrder: ["unknown"], conversationState: activeState }), /Displayed diagram references/);
+});
+
+test("optional synthesis review can be disabled without disabling mandatory edit review", async () => {
+  const { generateNativeOkfSynthesisPlan } = await import("../server/openai/synthesis-plan.ts");
+  const { client, calls } = mockClient(() => plan());
+  const r = await generateNativeOkfSynthesisPlan({ client, environment: { ...environment, synthesisReviewEnabled: false },
+    grounding, problemStatement: plan().problemSummary, refinementRequest: "Propose a diagram.", domain: "clinic consent",
+    objective: null, constraints: [], priorDraft: null, requireRpfPath: true });
+  assert.ok(r.diagram);
+  assert.equal(calls.length, 1);
+  const { client: edits, calls: editCalls } = mockClient(body => body.text?.format?.type === "json_schema" && body.text.format.name === "native_okf_refinement_review" ? approved : emptyPatch());
+  await generateNativeOkfSynthesisRefinement({ client: edits, environment: { ...environment, synthesisReviewEnabled: false },
+    grounding, priorDraft: prior, problemStatement: prior.problemStatement, refinementRequest: "Remove redundant features if any.", requireRpfPath: true });
+  assert.equal(editCalls.length, 2, "mandatory semantic review remains required even for a no-op");
+});
+
+test("optional revision cannot replace complete descriptions with unfinished text", async () => {
+  const { generateNativeOkfSynthesisPlan } = await import("../server/openai/synthesis-plan.ts");
+  const damaged = plan(); damaged.features[0]!.description = "Proposed service evidence whose identity binding and validation";
+  const { client } = mockClient((_, index) => index === 0 ? plan() : damaged);
+  const r = await generateNativeOkfSynthesisPlan({ client, environment, grounding, problemStatement: plan().problemSummary,
+    refinementRequest: "Propose a diagram.", domain: "clinic consent", objective: null, constraints: [], priorDraft: null, requireRpfPath: true });
+  assert.equal(r.diagram?.nodes.find(node => node.id === "plan-f1")?.description, prior.nodes.find(node => node.id === "plan-f1")!.description);
+  assert.ok(r.warnings.includes(OPTIONAL_SYNTHESIS_REVIEW_UNAVAILABLE_WARNING));
+});
+
+test("multi-message corrections survive pending-instruction compaction", async () => {
+  const first = await prepareNativeOkfChatRequest({ question: "Before editing, consider splitting disclosure from verification effort. What do you think?", conversationState: activeState }, catalog);
+  const pending = completedConversationState(first, retrieval, [], prior);
+  const correction = await prepareNativeOkfChatRequest({ question: "No, I mean staff time too, not just fees.", conversationState: pending }, catalog);
+  assert.equal(correction.turnPlan.mode, "ACTIVE_DIAGRAM_QA");
+  const corrected = completedConversationState(correction, retrieval, [], prior);
+  const apply = await prepareNativeOkfChatRequest({ question: "Please apply that to it.", conversationState: compactNativeOkfConversationStateForRequest(corrected) }, catalog);
+  assert.equal(apply.turnPlan.mode, "DESIGN_REFINEMENT");
+  assert.match(apply.effectiveQuestion, /staff time/);
+  assert.match(apply.effectiveQuestion, /disclosure/);
+});
+
+test("active positional references and prospective artifact requests use the intended subject", async () => {
+  const rename = await prepareNativeOkfChatRequest({ question: "Rename the second principle to Bounded release.", conversationState: activeState }, catalog);
+  assert.equal(rename.turnPlan.mode, "DESIGN_REFINEMENT");
+  const fresh = await prepareNativeOkfChatRequest({ question: "Could we explore an alternative platform for sharing accountable volunteer shift records? Show a diagram." }, catalog);
+  assert.equal(fresh.turnPlan.mode, "DESIGN_SYNTHESIS");
+  const vague = await prepareNativeOkfChatRequest({ question: "Please build anything.", diagramPreference: "suppressed" }, catalog);
+  assert.equal(vague.turnPlan.mode, "CLARIFICATION");
+});

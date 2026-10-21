@@ -200,6 +200,8 @@ export function nativeOkfChatScopePaperId(
 
 export interface NativeOkfChatRequest {
   question: string;
+  /** Current rendered proposal order; only existing draft IDs, never graph content. */
+  diagramNodeOrder?: string[];
   history?: NativeOkfChatHistoryMessage[];
   /**
    * The scope the composer is in when this turn is submitted. Authoritative for
@@ -234,7 +236,7 @@ export const MAX_NATIVE_OKF_ACTIVE_PAPERS = MAX_NATIVE_OKF_SELECTED_PAPERS;
 export const MAX_NATIVE_OKF_ACTIVE_STRUCTURED_RESULT_PAPERS = 64;
 export const MAX_NATIVE_OKF_ACTIVE_CONCEPTS = 8;
 export const MAX_NATIVE_OKF_ACTIVE_SOURCES = 12;
-export const MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS = 500;
+export const MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS = 6_000;
 export const MAX_NATIVE_OKF_SYNTHESIS_PROBLEM_CHARACTERS = 800;
 export const MAX_NATIVE_OKF_SYNTHESIS_DOMAIN_CHARACTERS = 120;
 export const MAX_NATIVE_OKF_SYNTHESIS_OBJECTIVE_CHARACTERS = 300;
@@ -303,6 +305,10 @@ export interface NativeOkfConversationState {
   synthesisClarificationRounds?: number;
   lastSynthesisProblem?: SynthesisProblemState | null;
   latestValidatedSynthesisDraft?: SynthesisDraftState | null;
+  /** One accepted edit of undo history, never a source of scholarly evidence. */
+  previousValidatedSynthesisDraft?: SynthesisDraftState | null;
+  /** Researcher-authored change discussed or awaiting clarification; survives history compaction. */
+  pendingDesignInstruction?: string | null;
   /**
    * Accepted only as a session-contract migration placeholder. New responses
    * never place a draft here; validated drafts live in the field above.
@@ -475,6 +481,13 @@ export interface SynthesisDraftState {
   constraints: string[];
   nodes: GeneratedDiagramNode[];
   edges: GeneratedDiagramEdge[];
+}
+
+/** Safe operational categories; contains no researcher text, node IDs or source content. */
+export interface NativeOkfRefinementDiagnostic {
+  phase: string;
+  attempt: number;
+  errorCodes: string[];
 }
 
 export interface SynthesisProblemState {

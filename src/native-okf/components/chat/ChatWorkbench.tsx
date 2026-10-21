@@ -4,6 +4,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
   useEffect,
+  useCallback,
   useRef,
   useState,
 } from "react";
@@ -19,6 +20,7 @@ import {
   type NativeOkfChatRequest,
   type NativeOkfChatResponse,
   type NativeOkfChatScope,
+  type GeneratedDiagram,
 } from "../../shared/chat-types.ts";
 import {
   clearNativeOkfChatSession,
@@ -211,6 +213,11 @@ export function ChatWorkbench({
   /** Content region every paper picker popover stays inside on desktop. */
   const panelRef = useRef<HTMLElement | null>(null);
   const skipNextSessionWrite = useRef(false);
+  const displayedDiagram = useRef<{ order: string[]; graph: string } | null>(null);
+  const captureDisplayedOrder = useCallback((order: string[], diagram: GeneratedDiagram) => {
+    displayedDiagram.current = { order, graph: JSON.stringify({ nodes: diagram.nodes, edges: diagram.edges }) };
+  }, []);
+  const activeDiagramEntryId = entries.findLast(entry => entry.response?.diagramMode === "synthesized" && entry.response.diagram)?.id;
 
   const sessionKey = lockedPaperId
     ? `native-okf-chat-session:paper:${lockedPaperId}`
@@ -406,6 +413,9 @@ export function ChatWorkbench({
     };
     const request: NativeOkfChatRequest = {
       question: submittedQuestion,
+      ...(conversationState.latestValidatedSynthesisDraft && displayedDiagram.current?.graph === JSON.stringify({
+        nodes: conversationState.latestValidatedSynthesisDraft.nodes, edges: conversationState.latestValidatedSynthesisDraft.edges,
+      }) ? { diagramNodeOrder: displayedDiagram.current.order } : {}),
       history: historyFromEntries(priorEntries.filter((entry) => JSON.stringify(entry.scope ?? { type: "corpus" }) === JSON.stringify(scope))),
       scope,
       diagramPreference: diagramPreferenceForRequest(
@@ -685,7 +695,8 @@ export function ChatWorkbench({
                           Design knowledge assistant
                         </p>
                         {entry.response ? (
-                          <ChatAnswer response={entry.response} messageId={entry.id} />
+                          <ChatAnswer response={entry.response} messageId={entry.id}
+                            onDisplayNodeOrder={entry.id === activeDiagramEntryId ? captureDisplayedOrder : undefined} />
                         ) : (
                           <p className="text-sm text-muted">{entry.content}</p>
                         )}

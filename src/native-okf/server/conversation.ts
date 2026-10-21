@@ -1,5 +1,6 @@
 ﻿import "server-only";
 
+import { DESIGN_EDIT_ACTION, DESIGN_EDIT_CORRECTION, DESIGN_EDIT_DISCUSSION, isDeferredDesignEdit, resolveDesignEditContext } from "../shared/design-edit-context.ts";
 import type {
   NativeOkfChatRequest,
   NativeOkfChatScope,
@@ -35,6 +36,7 @@ import {
   inferProposedDesignIntent,
   inferFocusedPaperMapFollowUpIntent,
   inferStoredPaperMapIntent,
+  hasConcreteDesignPurpose,
 } from "../shared/diagram-intent.ts";
 import { getAllConcepts, getAllPapers } from "./repository.ts";
 import {
@@ -119,8 +121,7 @@ const ADDITIONAL_DESIGN_CONTEXT_PATTERN =
   /\b(?:additional|more|further)\s+context\b|\b(?:new|additional)\s+constraint\b|\b(?:it|the\s+(?:system|artifact|proposal|flow))\s+(?:must|needs?\s+to|should\s+also)\b/iu;
 const SYNTHESIS_REFINEMENT_PATTERN =
   /\b(?:make|add|remove|keep|replace|simpl(?:e|er|ify)|revise|focus|use only|exclude|base (?:it|the revision))\b/iu;
-const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN =
-  /\b(?:make|add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move|refine|simplify|reduce|prune|adjust|change)\b/iu;
+const ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN = DESIGN_EDIT_ACTION;
 const ACTIVE_DIAGRAM_EXPLICIT_EDIT_REQUEST_PATTERN =
   /^\s*(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b|\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:add|include|insert|introduce|connect|link|attach|remove|delete|drop|exclude|rename|relabel|update|revise|replace|move)\b/iu;
 const ACTIVE_DIAGRAM_EDIT_OBJECT_PATTERN =
@@ -569,6 +570,8 @@ export function validateNativeOkfConversationState(
     synthesisClarificationRounds: state.synthesisClarificationRounds ?? 0,
     lastSynthesisProblem,
     latestValidatedSynthesisDraft,
+    previousValidatedSynthesisDraft: validateSynthesisDraftAgainstCatalog(state.previousValidatedSynthesisDraft ?? null, catalog),
+    pendingDesignInstruction: state.pendingDesignInstruction ?? null,
     synthesisDraft: null,
   };
 }
@@ -662,6 +665,15 @@ function paperMentionScore(
   if (titlePrefix.length >= 10 && normalizedQuestion.includes(titlePrefix)) {
     return 9_000 + titlePrefix.length;
   }
+  // An abbreviated title is an identity only when its leading phrase is
+  // substantial and explicitly introduced as research material. Equal prefixes
+  // remain equal-ranked candidates and therefore clarify rather than guess.
+  const leadingTitle = normalizedTitle.split(" ").slice(0, 5).join(" ");
+  if (normalizedTitle.split(" ").length > 5 &&
+      /\b(?:from|paper|study|article|publication)\b|["“]/u.test(question.toLowerCase()) &&
+      normalizedQuestion.includes(leadingTitle)) {
+    return 8_800 + leadingTitle.length;
+  }
   // A full author name is as distinctive as a slug match â€” resolves even without
   // an accompanying word like "paper" or "study".
   const authorNameMatch = paperAuthorFullNames(paper).find((name) =>
@@ -722,6 +734,9 @@ function rankedPaperMentions(
     }))
     .filter(({ score }) => score > 0);
   const anchored = mentions.filter(({ score }) => score >= 8_000);
+  // Topic words shared by several titles do not name those papers. A corpus
+  // comparison has a plural research subject, not an ambiguous singular paper.
+  if (anchored.length === 0 && isCorpusTopicComparison(question)) return [];
   const hasPaperReferenceCue =
     /\b(?:papers?|stud(?:y|ies)|articles?|works?|publications?)\b/iu.test(question) ||
     MULTI_PAPER_MENTION_PATTERN.test(question);
@@ -770,6 +785,11 @@ export function findExplicitNativeOkfPaperSlugs(
   return rankedPaperMentions(question, catalog)
     .map(({ paper }) => paper.slug)
     .slice(0, MAX_NATIVE_OKF_ACTIVE_PAPERS);
+}
+
+function isCorpusTopicComparison(question: string): boolean {
+  return COMPARISON_PATTERN.test(question) &&
+    /\b(?:(?:the|all|different)\s+(?:papers|studies)|literature|library|corpus)\b/iu.test(question);
 }
 
 function hasAmbiguousPaperReference(
@@ -1051,6 +1071,7 @@ export function inferNativeOkfSynthesisIntent(
   question: string,
   state: NativeOkfConversationState,
 ): boolean {
+  if (/^\s*(?:please\s+)?(?:make|create|build|generate)\s+(?:(?:me|us)\s+)?(?:something|anything)\b/iu.test(question)) return true;
   if (requestsProblemSpecificDesign(question)) return true;
   if (/\bhow should .+ be solved\b/iu.test(question)) return true;
   if (SOLVE_PROBLEM_QUESTION_PATTERN.test(question)) return true;
@@ -1108,6 +1129,7 @@ export function inferActiveSynthesisDiagramRefinement(
   state: NativeOkfConversationState,
 ): boolean {
   if (!state.latestValidatedSynthesisDraft) return false;
+  if (DESIGN_EDIT_DISCUSSION.test(question)) return false;
   if (EXPLICIT_STORED_SUBJECT_PATTERN.test(question) || requestsProblemSpecificDesign(question)) return false;
   if (!ACTIVE_DIAGRAM_EDIT_ACTION_PATTERN.test(question) &&
       !ADDITIONAL_DESIGN_CONTEXT_PATTERN.test(question)) return false;
@@ -1200,7 +1222,7 @@ function hasConcreteSynthesisProblem(
     /^\s*what\s+(?:features?|requirements?|mechanisms?)\s+should\s+(?:it|the\s+system)\s+have[?.!\s]*$/iu.test(question)
   )) return false;
   return inferredSynthesisDomain(question, draft) !== null ||
-    meaningfulDomainTerms(question).length >= 3 ||
+    hasConcreteDesignPurpose(question) ||
     Boolean(draft?.problemStatement);
 }
 
@@ -1246,7 +1268,8 @@ function clarificationFor(
   synthesisIntent: boolean,
 ): NativeOkfClarification | null {
   if (
-    synthesisIntent &&
+    (synthesisIntent || /^\s*(?:make|adapt|simplify)\s+(?:this|it)\b/iu.test(question) &&
+      state.activePaperSlugs.length === 0 && state.activeConceptIds.length === 0) &&
     SYNTHESIS_REFINEMENT_PATTERN.test(question) &&
     !state.lastSynthesisProblem &&
     !state.latestValidatedSynthesisDraft &&
@@ -1257,7 +1280,8 @@ function clarificationFor(
     // deliberately excludes the looser "3 meaningful words" fallback used by
     // hasConcreteSynthesisProblem below: a bare mutation request like "make the flow
     // privacy preserving" can reach that word count without stating any real domain.
-    inferredSynthesisDomain(question, null) === null
+    inferredSynthesisDomain(question, null) === null &&
+    !hasConcreteDesignPurpose(question)
   ) {
     return {
       kind: "missing-domain",
@@ -1290,7 +1314,8 @@ function clarificationFor(
   if (
     synthesisIntent &&
     !state.lastSynthesisProblem &&
-    OUTPUT_MISSING_PATTERN.test(question)
+    OUTPUT_MISSING_PATTERN.test(question) &&
+    !/\b(?:system|solution|artifact|architecture|design\s+proposal)\b/iu.test(question)
   ) {
     return {
       kind: "missing-output-type",
@@ -1323,6 +1348,7 @@ function clarificationFor(
   if (
     (FIRST_CONCEPT_PATTERN.test(question) ||
       SECOND_CONCEPT_PATTERN.test(question)) &&
+    !state.latestValidatedSynthesisDraft &&
     explicitConceptIds.length === 0 &&
     focusedConceptIds.length === 0
   ) {
@@ -1459,6 +1485,9 @@ export async function assembleNativeOkfContextualRetrieval(
 }
 
 export function hardNativeOkfConceptKinds(prepared: PreparedNativeOkfChatRequest): readonly NativeOkfRequestedConceptKind[] {
+  // A full canonical diagram is its own evidence universe. Prose topic words
+  // must not silently drop other formal kinds (including meta-requirements).
+  if (prepared.turnPlan.mode === "STORED_FULL_MAP") return [];
   if (["DESIGN_SYNTHESIS", "DESIGN_REFINEMENT", "ACTIVE_DIAGRAM_QA"].includes(prepared.turnPlan.mode)) return [];
   // A classification question explicitly includes mechanisms of other formal kinds.
   if (/\bas\s+(?:a\s+)?design\b[^.!?]{0,100}\bor\s+(?:an?\s+)?implementation mechanism/iu.test(prepared.effectiveQuestion)) return [];
@@ -1597,6 +1626,8 @@ function withScopeChangeReset(
     lastSynthesisProblem: null,
     synthesisClarificationRounds: 0,
     latestValidatedSynthesisDraft: null,
+    previousValidatedSynthesisDraft: null,
+    pendingDesignInstruction: null,
     synthesisDraft: null,
   };
 }
@@ -1624,10 +1655,17 @@ export async function prepareNativeOkfChatRequest(
     ? validatedState.lastSynthesisProblem?.problemStatement ??
       (previousUserQuestion && requestsProblemSpecificDesign(previousUserQuestion) ? previousUserQuestion : null)
     : null;
-  const effectiveQuestion = pendingOriginal
-    ? `${pendingOriginal}\nClarification response: ${request.question}`
-    : continuationProblem ? `${continuationProblem}\nDesign follow-up: ${request.question}` : request.question;
-  const directCorpusQuery = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope)?.type === "corpus" && CORPUS_QUERY_PATTERN.test(effectiveQuestion);
+  const deferredEdit = validatedState.latestValidatedSynthesisDraft
+    ? resolveDesignEditContext(request.question, validatedState.pendingDesignInstruction, request.history ?? []) : null;
+  const editContinuation = validatedState.latestValidatedSynthesisDraft && pendingOriginal
+    ? validatedState.pendingDesignInstruction || pendingOriginal : null;
+  const correctionContext = validatedState.latestValidatedSynthesisDraft && validatedState.pendingDesignInstruction &&
+    DESIGN_EDIT_CORRECTION.test(request.question) && !requestsProblemSpecificDesign(request.question)
+    ? `${validatedState.pendingDesignInstruction}\nResearcher correction: ${request.question}` : null;
+  const effectiveQuestion = deferredEdit ?? correctionContext ?? (pendingOriginal
+    ? `${editContinuation ?? pendingOriginal}\nClarification response: ${request.question}`
+    : continuationProblem ? `${continuationProblem}\nDesign follow-up: ${request.question}` : request.question);
+  let directCorpusQuery = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope)?.type === "corpus" && CORPUS_QUERY_PATTERN.test(effectiveQuestion);
   const catalogPaperSlugSet = new Set(catalog.papers.map((paper) => paper.slug));
   const requestedScope = normalizeNativeOkfChatScope(request.scope ?? validatedState.scope);
   if (!requestedScope) throw new NativeOkfRequestError("The selected paper scope is invalid.");
@@ -1636,6 +1674,7 @@ export async function prepareNativeOkfChatRequest(
     throw new NativeOkfRequestError("A selected paper is no longer in the library. Remove it or select All papers.");
   }
   const mentionedPaperSlugs = findExplicitNativeOkfPaperSlugs(effectiveQuestion, catalog);
+  if (requestedScope.type === "corpus" && mentionedPaperSlugs.length === 0 && isCorpusTopicComparison(effectiveQuestion)) directCorpusQuery = true;
   const explicitPaperSlugs = mentionedPaperSlugs.filter((slug) => scopePaperSlugs.length === 0 || scopePaperSlugs.includes(slug));
   const ambiguousPaperReference = hasAmbiguousPaperReference(
     effectiveQuestion,
@@ -1661,14 +1700,14 @@ export async function prepareNativeOkfChatRequest(
       : Number.MAX_SAFE_INTEGER;
     return leftPosition - rightPosition;
   });
-  const detectedExplicitConceptIds = findExplicitConceptIds(
+  const detectedExplicitConceptIds = (directCorpusQuery && isCorpusTopicComparison(effectiveQuestion) ? [] : findExplicitConceptIds(
     questionWithoutResolvedPaperMentions(
       effectiveQuestion,
       explicitPaperSlugs,
       catalog,
     ),
     catalog,
-  ).filter((id) => scopePaperSlugs.length === 0 || catalog.concepts.some((concept) => concept.conceptId === id && concept.paperSlug && scopePaperSlugs.includes(concept.paperSlug)));
+  )).filter((id) => scopePaperSlugs.length === 0 || catalog.concepts.some((concept) => concept.conceptId === id && concept.paperSlug && scopePaperSlugs.includes(concept.paperSlug)));
   const currentTurnComparisonRequested = COMPARISON_PATTERN.test(
     effectiveQuestion,
   );
@@ -1799,11 +1838,11 @@ export async function prepareNativeOkfChatRequest(
   const diagramFilterKinds = explicitlyFilteredDiagramConceptKinds(
     categoryQuestion,
   );
-  const activeDraftRefinement = inferActiveSynthesisDiagramRefinement(
+  const activeDraftRefinement = Boolean(deferredEdit || editContinuation) || inferActiveSynthesisDiagramRefinement(
     effectiveQuestion,
     contextBase,
   );
-  const activeDiagramQa = inferActiveDiagramQa(effectiveQuestion, contextBase);
+  const activeDiagramQa = !activeDraftRefinement && inferActiveDiagramQa(effectiveQuestion, contextBase);
   const activeProposalRerender = inferActiveProposalRerender(
     effectiveQuestion,
     contextBase,
@@ -1962,7 +2001,19 @@ export async function prepareNativeOkfChatRequest(
   const ambiguousSelectedMap = includeDiagram && !synthesisIntent &&
     (focusedPaperSlugs.length > 1 || scopePaperSlugs.length > 0 &&
       (focusedPaperSlugs.length !== 1 || mentionedPaperSlugs.some((slug) => !scopePaperSlugs.includes(slug))));
-  const clarification: NativeOkfClarification | null = ambiguousSelectedMap ? {
+  const storedSubject = effectiveQuestion.match(/\b(?:from|for|of|in)\s+([^.!?]+)/iu)?.[1]?.trim();
+  const unresolvedNamedStoredPaper = !synthesisIntent && includeDiagram &&
+    inferStoredPaperMapIntent(effectiveQuestion) && mentionedPaperSlugs.length === 0 && storedSubject &&
+    !/^(?:(?:this|that|the|selected|current|previous|first|second|third|fourth|fifth)\s+)*(?:paper|study|article)(?:\s+[1-5])?(?:\s+(?:again|please))?$/iu.test(storedSubject) &&
+    !/^(?:the\s+)?(?:library|corpus|evidence)\b/iu.test(storedSubject);
+  const clarification: NativeOkfClarification | null = validatedState.latestValidatedSynthesisDraft &&
+    isDeferredDesignEdit(request.question) && !deferredEdit && !pendingOriginal ? {
+    kind: "ambiguous-reference",
+    question: "Which change should I apply to the current proposal? Describe the affected element and the intended change.",
+  } : unresolvedNamedStoredPaper ? {
+    kind: "ambiguous-reference",
+    question: "I could not identify the requested paper. Specify its full title or select it from the paper list.",
+  } : ambiguousSelectedMap ? {
     kind: "ambiguous-reference",
     question: "Which selected paper's stored map would you like to open first? Specify its title or paper number in the selected order.",
   } : clarificationFor(
@@ -2144,6 +2195,8 @@ export function clarificationConversationState(
         MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS,
       ),
     },
+    pendingDesignInstruction: prepared.priorSynthesisDraft || prepared.validatedState.latestValidatedSynthesisDraft
+      ? prepared.validatedState.pendingDesignInstruction || prepared.effectiveQuestion : null,
   };
 }
 
@@ -2210,6 +2263,7 @@ export function inferActiveDiagramQa(
   state: NativeOkfConversationState,
 ): boolean {
   if (!hasActiveDiagramSubject(state)) return false;
+  if (state.latestValidatedSynthesisDraft && DESIGN_EDIT_DISCUSSION.test(question)) return true;
   if (requestsProblemSpecificDesign(question)) return false;
   if (inferActiveSynthesisDiagramRefinement(question, state)) return false;
   if (ACTIVE_DIAGRAM_RERENDER_ACTION_PATTERN.test(question) &&
@@ -2436,6 +2490,17 @@ export function completedConversationState(
         }
       : prepared.validatedState.lastSynthesisProblem,
     latestValidatedSynthesisDraft,
+    previousValidatedSynthesisDraft: prepared.turnPlan.refinementIntent && prepared.priorSynthesisDraft &&
+      JSON.stringify(latestValidatedSynthesisDraft) !== JSON.stringify(prepared.priorSynthesisDraft)
+      ? prepared.priorSynthesisDraft
+      : prepared.turnPlan.mode === "DESIGN_SYNTHESIS" && prepared.turnPlan.diagramAction !== "RENDER_EXISTING"
+        ? null : prepared.validatedState.previousValidatedSynthesisDraft ?? null,
+    pendingDesignInstruction: prepared.turnPlan.mode === "ACTIVE_DIAGRAM_QA" &&
+      DESIGN_EDIT_ACTION.test(prepared.effectiveQuestion)
+      ? prepared.effectiveQuestion.slice(0, MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS)
+      : prepared.turnPlan.mode === "DESIGN_REFINEMENT" && prepared.priorSynthesisDraft &&
+          JSON.stringify(latestValidatedSynthesisDraft) === JSON.stringify(prepared.priorSynthesisDraft)
+        ? prepared.effectiveQuestion.slice(0, MAX_NATIVE_OKF_PENDING_QUESTION_CHARACTERS) : null,
     synthesisDraft: null,
   };
 }
